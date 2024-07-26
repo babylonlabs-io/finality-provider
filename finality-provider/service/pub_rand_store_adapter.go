@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/babylonchain/finality-provider/finality-provider/store"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cometbft/cometbft/crypto/merkle"
 )

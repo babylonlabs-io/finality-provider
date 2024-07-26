@@ -8,9 +8,9 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/spf13/cobra"
 
-	fpcmd "github.com/babylonchain/finality-provider/finality-provider/cmd"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/util"
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 // CommandInit returns the init command of fpd daemon that starts the config dir.

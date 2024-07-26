@@ -9,7 +9,7 @@ import (
 
 	math "cosmossdk.io/math"
 	types "github.com/babylonchain/babylon/x/finality/types"
-	types0 "github.com/babylonchain/finality-provider/types"
+	types0 "github.com/babylonlabs-io/finality-provider/types"
 	btcec "github.com/btcsuite/btcd/btcec/v2"
 	schnorr "github.com/btcsuite/btcd/btcec/v2/schnorr"
 	gomock "github.com/golang/mock/gomock"

@@ -11,7 +11,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/babylonchain/finality-provider/finality-provider/store"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonchain/babylon/testutil/datagen"
@@ -21,10 +21,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/stretchr/testify/require"
 
-	"github.com/babylonchain/finality-provider/codec"
-	"github.com/babylonchain/finality-provider/finality-provider/proto"
-	"github.com/babylonchain/finality-provider/finality-provider/service"
-	"github.com/babylonchain/finality-provider/types"
+	"github.com/babylonlabs-io/finality-provider/codec"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 func GenRandomByteArray(r *rand.Rand, length uint64) []byte {

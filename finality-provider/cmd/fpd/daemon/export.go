@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"cosmossdk.io/math"
-	fpcmd "github.com/babylonchain/finality-provider/finality-provider/cmd"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	dc "github.com/babylonchain/finality-provider/finality-provider/service/client"
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"

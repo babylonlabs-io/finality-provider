@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/babylonchain/finality-provider/finality-provider/proto"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 )
 
 type FinalityProviderServiceGRpcClient struct {

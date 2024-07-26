@@ -19,7 +19,7 @@ import (
 	btcctypes "github.com/babylonchain/babylon/x/btccheckpoint/types"
 	btclctypes "github.com/babylonchain/babylon/x/btclightclient/types"
 	bstypes "github.com/babylonchain/babylon/x/btcstaking/types"
-	"github.com/babylonchain/finality-provider/clientcontroller"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -29,12 +29,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	fpcc "github.com/babylonchain/finality-provider/clientcontroller"
-	"github.com/babylonchain/finality-provider/eotsmanager/client"
-	eotsconfig "github.com/babylonchain/finality-provider/eotsmanager/config"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/finality-provider/service"
-	"github.com/babylonchain/finality-provider/types"
+	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 var (

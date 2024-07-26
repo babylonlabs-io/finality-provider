@@ -24,8 +24,8 @@ import (
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/types"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 var _ ClientController = &BabylonController{}

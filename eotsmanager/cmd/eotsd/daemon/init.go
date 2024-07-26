@@ -7,8 +7,8 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/urfave/cli"
 
-	eotscfg "github.com/babylonchain/finality-provider/eotsmanager/config"
-	"github.com/babylonchain/finality-provider/util"
+	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 var InitCommand = cli.Command{

@@ -9,9 +9,9 @@ import (
 	bbnparams "github.com/babylonchain/babylon/app/params"
 	bbn "github.com/babylonchain/babylon/types"
 	btcstktypes "github.com/babylonchain/babylon/x/btcstaking/types"
-	"github.com/babylonchain/finality-provider/eotsmanager"
-	"github.com/babylonchain/finality-provider/eotsmanager/config"
-	"github.com/babylonchain/finality-provider/log"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/log"
 	"github.com/urfave/cli"
 )
 

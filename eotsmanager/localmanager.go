@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/babylonchain/finality-provider/metrics"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 
 	"github.com/babylonchain/babylon/crypto/eots"
 	bbntypes "github.com/babylonchain/babylon/types"
@@ -18,10 +18,10 @@ import (
 	"github.com/lightningnetwork/lnd/kvdb"
 	"go.uber.org/zap"
 
-	"github.com/babylonchain/finality-provider/codec"
-	"github.com/babylonchain/finality-provider/eotsmanager/randgenerator"
-	"github.com/babylonchain/finality-provider/eotsmanager/store"
-	eotstypes "github.com/babylonchain/finality-provider/eotsmanager/types"
+	"github.com/babylonlabs-io/finality-provider/codec"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/randgenerator"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
+	eotstypes "github.com/babylonlabs-io/finality-provider/eotsmanager/types"
 )
 
 const (

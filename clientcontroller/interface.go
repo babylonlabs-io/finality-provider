@@ -10,8 +10,8 @@ import (
 	"go.uber.org/zap"
 
 	finalitytypes "github.com/babylonchain/babylon/x/finality/types"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/types"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 const (

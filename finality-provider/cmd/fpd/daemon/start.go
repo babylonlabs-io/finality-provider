@@ -12,11 +12,11 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
-	fpcmd "github.com/babylonchain/finality-provider/finality-provider/cmd"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/finality-provider/service"
-	"github.com/babylonchain/finality-provider/log"
-	"github.com/babylonchain/finality-provider/util"
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/log"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 // CommandStart returns the start command of fpd daemon.

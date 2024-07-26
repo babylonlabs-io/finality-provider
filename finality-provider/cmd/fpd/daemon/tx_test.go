@@ -23,10 +23,10 @@ import (
 	bbn "github.com/babylonchain/babylon/types"
 
 	btcstakingtypes "github.com/babylonchain/babylon/x/btcstaking/types"
-	fpcmd "github.com/babylonchain/finality-provider/finality-provider/cmd"
-	"github.com/babylonchain/finality-provider/finality-provider/cmd/fpd/daemon"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/testutil"
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 )
 
 func FuzzNewValidateSignedFinalityProviderCmd(f *testing.F) {
