@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	bbntypes "github.com/babylonchain/babylon/types"
-	btcstakingtypes "github.com/babylonchain/babylon/x/btcstaking/types"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 

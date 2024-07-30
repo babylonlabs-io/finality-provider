@@ -8,8 +8,8 @@ import (
 
 	"github.com/babylonlabs-io/finality-provider/metrics"
 
-	"github.com/babylonchain/babylon/crypto/eots"
-	bbntypes "github.com/babylonchain/babylon/types"
+	"github.com/babylonlabs-io/babylon/crypto/eots"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"

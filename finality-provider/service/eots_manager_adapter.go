@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 
-	bbntypes "github.com/babylonchain/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"

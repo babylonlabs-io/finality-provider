@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	sdkmath "cosmossdk.io/math"
-	bbntypes "github.com/babylonchain/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

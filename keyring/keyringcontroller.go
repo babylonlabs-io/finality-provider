@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	bstypes "github.com/babylonchain/babylon/x/btcstaking/types"
+	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"

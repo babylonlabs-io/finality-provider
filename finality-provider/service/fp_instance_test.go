@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/babylonchain/babylon/testutil/datagen"
-	ftypes "github.com/babylonchain/babylon/x/finality/types"
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"

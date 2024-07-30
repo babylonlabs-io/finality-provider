@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	sdkErr "cosmossdk.io/errors"
-	btcstakingtypes "github.com/babylonchain/babylon/x/btcstaking/types"
-	finalitytypes "github.com/babylonchain/babylon/x/finality/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 )
 
 // these errors are considered unrecoverable because they indicate

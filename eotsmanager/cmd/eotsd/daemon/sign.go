@@ -9,7 +9,7 @@ import (
 	"io"
 	"os"
 
-	bbntypes "github.com/babylonchain/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/log"

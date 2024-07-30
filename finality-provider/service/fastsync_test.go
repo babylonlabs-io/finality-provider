@@ -4,8 +4,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/babylonchain/babylon/testutil/datagen"
-	ftypes "github.com/babylonchain/babylon/x/finality/types"
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 

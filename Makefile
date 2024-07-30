@@ -1,7 +1,7 @@
 BUILDDIR ?= $(CURDIR)/build
 TOOLS_DIR := tools
 
-BABYLON_PKG := github.com/babylonchain/babylon/cmd/babylond
+BABYLON_PKG := github.com/babylonlabs-io/babylon/cmd/babylond
 
 GO_BIN := ${GOPATH}/bin
 BTCD_BIN := $(GO_BIN)/btcd

@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/babylonchain/babylon/app"
+	"github.com/babylonlabs-io/babylon/app"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 )
 

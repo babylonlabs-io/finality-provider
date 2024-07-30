@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	sdkmath "cosmossdk.io/math"
-	bbntypes "github.com/babylonchain/babylon/types"
-	btcstakingtypes "github.com/babylonchain/babylon/x/btcstaking/types"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"

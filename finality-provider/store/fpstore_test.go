@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/babylonchain/babylon/testutil/datagen"
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/stretchr/testify/require"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/config"

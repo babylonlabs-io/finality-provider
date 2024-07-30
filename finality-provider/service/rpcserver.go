@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 
 	"cosmossdk.io/math"
-	bbntypes "github.com/babylonchain/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc"
 

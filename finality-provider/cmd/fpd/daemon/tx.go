@@ -7,8 +7,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 
-	btcstakingcli "github.com/babylonchain/babylon/x/btcstaking/client/cli"
-	btcstakingtypes "github.com/babylonchain/babylon/x/btcstaking/types"
+	btcstakingcli "github.com/babylonlabs-io/babylon/x/btcstaking/client/cli"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 	authcli "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
