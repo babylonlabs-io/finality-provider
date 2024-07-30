@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/babylonchain/finality-provider/util"
+	"github.com/babylonlabs-io/finality-provider/util"
 
 	zaplogfmt "github.com/jsternberg/zap-logfmt"
 	"go.uber.org/zap"

@@ -1,5 +1,5 @@
 version: v1
-name: buf.build/babylonchain/btc-finality-provider
+name: buf.build/babylonlabs-io/finality-provider
 deps:
   - buf.build/cosmos/cosmos-sdk:v0.50.0
   - buf.build/cosmos/cosmos-proto:1935555c206d4afb9e94615dfd0fad31

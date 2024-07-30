@@ -4,7 +4,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
-	"github.com/babylonchain/finality-provider/eotsmanager/types"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/types"
 )
 
 type EOTSManager interface {

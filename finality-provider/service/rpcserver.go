@@ -7,13 +7,13 @@ import (
 	"sync/atomic"
 
 	"cosmossdk.io/math"
-	bbntypes "github.com/babylonchain/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc"
 
-	"github.com/babylonchain/finality-provider/finality-provider/proto"
-	"github.com/babylonchain/finality-provider/types"
-	"github.com/babylonchain/finality-provider/version"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/babylonlabs-io/finality-provider/version"
 )
 
 // rpcServer is the main RPC server for the Finality Provider daemon that handles

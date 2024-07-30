@@ -7,8 +7,8 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"github.com/golang/mock/gomock"
 
-	"github.com/babylonchain/finality-provider/testutil/mocks"
-	"github.com/babylonchain/finality-provider/types"
+	"github.com/babylonlabs-io/finality-provider/testutil/mocks"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 const TestPubRandNum = 25

@@ -18,15 +18,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/babylonchain/babylon/app"
-	"github.com/babylonchain/babylon/testutil/datagen"
-	bbn "github.com/babylonchain/babylon/types"
+	"github.com/babylonlabs-io/babylon/app"
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	bbn "github.com/babylonlabs-io/babylon/types"
 
-	btcstakingtypes "github.com/babylonchain/babylon/x/btcstaking/types"
-	fpcmd "github.com/babylonchain/finality-provider/finality-provider/cmd"
-	"github.com/babylonchain/finality-provider/finality-provider/cmd/fpd/daemon"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/testutil"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 )
 
 func FuzzNewValidateSignedFinalityProviderCmd(f *testing.F) {
