@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	sdkclient "github.com/babylonchain/babylon-finality-gadget/sdk/client"
-	"github.com/babylonchain/babylon-finality-gadget/sdk/cwclient"
 	e2eutils "github.com/babylonchain/finality-provider/itest"
 	"github.com/babylonchain/finality-provider/testutil/log"
+	sdkclient "github.com/babylonlabs-io/babylon-finality-gadget/sdk/client"
+	"github.com/babylonlabs-io/babylon-finality-gadget/sdk/cwclient"
 	"github.com/stretchr/testify/require"
 )
 
