@@ -89,7 +89,7 @@ func TestOpMultipleFinalityProviders(t *testing.T) {
 	testBlock, err := ctm.getOpCCAtIndex(1).QueryBlock(targetBlockHeight)
 	require.NoError(t, err)
 	queryParams := cwclient.L2Block{
-		BlockHeight:    testBlock.Height, // 1
+		BlockHeight:    testBlock.Height,
 		BlockHash:      hex.EncodeToString(testBlock.Hash),
 		BlockTimestamp: 12345, // doesn't matter b/c the BTC client is mocked
 	}
