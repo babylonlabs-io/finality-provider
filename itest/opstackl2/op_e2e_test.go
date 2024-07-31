@@ -66,32 +66,13 @@ func TestOpMultipleFinalityProviders(t *testing.T) {
 	})
 
 	// wait until the BTC staking is activated
-	l2BlockAfterActivation := uint64(0)
-	require.Eventually(t, func() bool {
-		// query latest block
-		latestBlockHeight, err := ctm.getOpCCAtIndex(0).QueryLatestBlockHeight()
-		require.NoError(t, err)
-		latestBlock, err := ctm.getOpCCAtIndex(0).QueryEthBlock(latestBlockHeight)
-		require.NoError(t, err)
-		l2BlockAfterActivation = latestBlock.Number.Uint64()
-
-		// query the BTC staking activated timestamp
-		activatedTimestamp, err := ctm.SdkClient.QueryBtcStakingActivatedTimestamp()
-		if err != nil {
-			t.Logf(log.Prefix("Failed to query BTC staking activated timestamp: %v"), err)
-			return false
-		}
-		t.Logf(log.Prefix("Activated timestamp %d"), activatedTimestamp)
-
-		return latestBlock.Time >= activatedTimestamp
-	}, 30*ctm.getL2BlockTime(), ctm.getL2BlockTime())
-	t.Logf(log.Prefix("found a L2 block after BTC staking activation: %d"), l2BlockAfterActivation)
+	l2BlockAfterActivation := ctm.waitForBTCStakingActivation(t)
 
 	// check both FPs have committed their first public randomness
 	// TODO: we might use go routine to do this in parallel
 	for i := 0; i < n; i++ {
 		// wait for the first block to be finalized since BTC staking is activated
-		e2eutils.WaitForFpPubRandCommittedAtTargetHeight(t, fpList[i], l2BlockAfterActivation)
+		e2eutils.WaitForFpPubRandCommittedReachTargetHeight(t, fpList[i], l2BlockAfterActivation)
 	}
 
 	// both FP will sign the first block
@@ -155,29 +136,11 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 	fpInstance := fpList[0]
 
 	// wait until the BTC staking is activated
-	activatedL2Block := uint64(0)
-	require.Eventually(t, func() bool {
-		// query latest block
-		latestBlockHeight, err := ctm.getOpCCAtIndex(0).QueryLatestBlockHeight()
-		require.NoError(t, err)
-		latestBlock, err := ctm.getOpCCAtIndex(0).QueryEthBlock(latestBlockHeight)
-		require.NoError(t, err)
-		activatedL2Block = latestBlock.Number.Uint64()
-
-		// query the BTC staking activated timestamp
-		activatedTimestamp, err := ctm.SdkClient.QueryBtcStakingActivatedTimestamp()
-		if err != nil {
-			t.Logf(log.Prefix("Failed to query BTC staking activated timestamp: %v"), err)
-			return false
-		}
-		t.Logf(log.Prefix("Activated timestamp %d"), activatedTimestamp)
-
-		return latestBlock.Time >= activatedTimestamp
-	}, 30*ctm.getL2BlockTime(), ctm.getL2BlockTime())
+	l2BlockAfterActivation := ctm.waitForBTCStakingActivation(t)
 
 	// wait for the first block to be finalized since BTC staking is activated
-	e2eutils.WaitForFpPubRandCommittedAtTargetHeight(t, fpInstance, activatedL2Block)
-	ctm.WaitForBlockFinalized(t, activatedL2Block)
+	e2eutils.WaitForFpPubRandCommittedReachTargetHeight(t, fpInstance, l2BlockAfterActivation)
+	ctm.WaitForBlockFinalized(t, l2BlockAfterActivation)
 
 	// stop the FP instance
 	fpStopErr := fpInstance.Stop()

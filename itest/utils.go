@@ -87,7 +87,7 @@ func GenerateCovenantCommittee(
 	return covenantPrivKeys, covenantPubKeys
 }
 
-func WaitForFpPubRandCommittedAtTargetHeight(t *testing.T, fpIns *service.FinalityProviderInstance, targetHeight uint64) {
+func WaitForFpPubRandCommittedReachTargetHeight(t *testing.T, fpIns *service.FinalityProviderInstance, targetHeight uint64) {
 	var lastCommittedHeight uint64
 	var err error
 	require.Eventually(t, func() bool {
@@ -101,7 +101,7 @@ func WaitForFpPubRandCommittedAtTargetHeight(t *testing.T, fpIns *service.Finali
 }
 
 func WaitForFpPubRandCommitted(t *testing.T, fpIns *service.FinalityProviderInstance) {
-	WaitForFpPubRandCommittedAtTargetHeight(t, fpIns, 1)
+	WaitForFpPubRandCommittedReachTargetHeight(t, fpIns, 1)
 }
 
 func DefaultFpConfig(keyringDir, homeDir string) *config.Config {

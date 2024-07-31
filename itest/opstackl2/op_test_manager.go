@@ -905,6 +905,29 @@ func queryFirstOrLastPublicRandCommit(
 	return resp, nil
 }
 
+func (ctm *OpL2ConsumerTestManager) waitForBTCStakingActivation(t *testing.T) uint64 {
+	var l2BlockAfterActivation uint64
+	require.Eventually(t, func() bool {
+		latestBlockHeight, err := ctm.getOpCCAtIndex(0).QueryLatestBlockHeight()
+		require.NoError(t, err)
+		latestBlock, err := ctm.getOpCCAtIndex(0).QueryEthBlock(latestBlockHeight)
+		require.NoError(t, err)
+		l2BlockAfterActivation = latestBlock.Number.Uint64()
+
+		activatedTimestamp, err := ctm.SdkClient.QueryBtcStakingActivatedTimestamp()
+		if err != nil {
+			t.Logf(log.Prefix("Failed to query BTC staking activated timestamp: %v"), err)
+			return false
+		}
+		t.Logf(log.Prefix("Activated timestamp %d"), activatedTimestamp)
+
+		return latestBlock.Time >= activatedTimestamp
+	}, 30*ctm.getL2BlockTime(), ctm.getL2BlockTime())
+
+	t.Logf(log.Prefix("found a L2 block after BTC staking activation: %d"), l2BlockAfterActivation)
+	return l2BlockAfterActivation
+}
+
 func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
 	t.Log("Stopping test manager")
 	var err error
