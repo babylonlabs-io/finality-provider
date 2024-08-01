@@ -132,7 +132,7 @@ func DefaultFpConfigWithPorts(keyringDir, homeDir string, fpRpcPort, fpMetricsPo
 
 // ParseRespBTCDelToBTCDel parses an BTC delegation response to BTC Delegation
 // adapted from
-// https://github.com/babylonlabs-io/babylon/blob/1a3c50da64885452c8d669fcea2a2fad78c8a028/test/e2e/btc_staking_e2e_test.go#L548
+// https://github.com/babylonlabs-io/babylon-private/blob/74a24c962ce2cf64e5216edba9383fe0b460070c/test/e2e/btc_staking_e2e_test.go#L773
 func ParseRespBTCDelToBTCDel(
 	resp *bstypes.BTCDelegationResponse,
 ) (btcDel *bstypes.BTCDelegation, err error) {
