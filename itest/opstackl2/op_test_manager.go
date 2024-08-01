@@ -14,8 +14,6 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
-	bbncfg "github.com/babylonchain/babylon/client/config"
-	bbntypes "github.com/babylonchain/babylon/types"
 	api "github.com/babylonchain/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonchain/finality-provider/clientcontroller/babylon"
 	"github.com/babylonchain/finality-provider/clientcontroller/opstackl2"
@@ -32,6 +30,8 @@ import (
 	"github.com/babylonlabs-io/babylon-finality-gadget/sdk/btcclient"
 	sdkclient "github.com/babylonlabs-io/babylon-finality-gadget/sdk/client"
 	sdkcfg "github.com/babylonlabs-io/babylon-finality-gadget/sdk/config"
+	bbncfg "github.com/babylonlabs-io/babylon/client/config"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	ope2e "github.com/ethereum-optimism/optimism/op-e2e"
@@ -728,7 +728,7 @@ func (ctm *OpL2ConsumerTestManager) SetupFinalityProviders(
 	stakingParams []stakingParam,
 ) []*service.FinalityProviderInstance {
 	// A BTC delegation has to stake to at least one Babylon finality provider
-	// https://github.com/babylonchain/babylon-private/blob/3d8f190c9b0c0795f6546806e3b8582de716cd60/x/btcstaking/keeper/msg_server.go#L220
+	// https://github.com/babylonlabs-io/babylon-private/blob/3d8f190c9b0c0795f6546806e3b8582de716cd60/x/btcstaking/keeper/msg_server.go#L220
 	// So we have to register a Babylon chain FP
 	bbnFpPk := ctm.RegisterBabylonFinalityProvider(t)
 

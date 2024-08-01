@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"cosmossdk.io/math"
-	bbntypes "github.com/babylonchain/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"

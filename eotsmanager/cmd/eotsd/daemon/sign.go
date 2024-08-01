@@ -9,10 +9,10 @@ import (
 	"io"
 	"os"
 
-	bbntypes "github.com/babylonchain/babylon/types"
 	"github.com/babylonchain/finality-provider/eotsmanager"
 	"github.com/babylonchain/finality-provider/eotsmanager/config"
 	"github.com/babylonchain/finality-provider/log"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/urfave/cli"
 )

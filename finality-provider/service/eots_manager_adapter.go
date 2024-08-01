@@ -3,8 +3,8 @@ package service
 import (
 	"fmt"
 
-	bbntypes "github.com/babylonchain/babylon/types"
 	"github.com/babylonchain/finality-provider/types"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/cometbft/cometbft/crypto/tmhash"

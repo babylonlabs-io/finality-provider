@@ -14,8 +14,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/cobra"
 
-	bbn "github.com/babylonchain/babylon/types"
-	btcstktypes "github.com/babylonchain/babylon/x/btcstaking/types"
+	bbn "github.com/babylonlabs-io/babylon/types"
+	btcstktypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 )
 
 // FinalityProviderSigned wraps the finality provider by adding the

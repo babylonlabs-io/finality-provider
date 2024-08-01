@@ -4,7 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 
-	btcstakingcli "github.com/babylonchain/babylon/x/btcstaking/client/cli"
+	btcstakingcli "github.com/babylonlabs-io/babylon/x/btcstaking/client/cli"
 	authcli "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 )
 

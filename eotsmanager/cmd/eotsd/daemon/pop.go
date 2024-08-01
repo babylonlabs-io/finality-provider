@@ -6,12 +6,12 @@ import (
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	bbnparams "github.com/babylonchain/babylon/app/params"
-	bbn "github.com/babylonchain/babylon/types"
-	btcstktypes "github.com/babylonchain/babylon/x/btcstaking/types"
 	"github.com/babylonchain/finality-provider/eotsmanager"
 	"github.com/babylonchain/finality-provider/eotsmanager/config"
 	"github.com/babylonchain/finality-provider/log"
+	bbnparams "github.com/babylonlabs-io/babylon/app/params"
+	bbn "github.com/babylonlabs-io/babylon/types"
+	btcstktypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/urfave/cli"
 )
 

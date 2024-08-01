@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/babylonchain/babylon/testutil/datagen"
 	ccapi "github.com/babylonchain/finality-provider/clientcontroller/api"
 	"github.com/babylonchain/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonchain/finality-provider/eotsmanager/config"
@@ -20,6 +19,7 @@ import (
 	"github.com/babylonchain/finality-provider/metrics"
 	"github.com/babylonchain/finality-provider/testutil"
 	"github.com/babylonchain/finality-provider/types"
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
 )
 
 func FuzzCommitPubRandList(f *testing.F) {

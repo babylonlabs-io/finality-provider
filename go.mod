@@ -10,9 +10,9 @@ require (
 	cosmossdk.io/math v1.3.0
 	github.com/CosmWasm/wasmd v0.51.0
 	github.com/avast/retry-go/v4 v4.5.1
-	github.com/babylonchain/babylon v0.9.0-rc.2
 	github.com/babylonchain/babylon-sdk/demo v0.0.0-20240705194516-4e2c5650cde8
-	github.com/babylonlabs-io/babylon-finality-gadget v0.0.0-20240731203740-07d2ddabc4fb
+	github.com/babylonlabs-io/babylon v0.9.0-rc.2
+	github.com/babylonlabs-io/babylon-finality-gadget v0.0.0-20240801002122-6d6bca47ec56
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/btcsuite/btcd/btcutil v1.1.5
@@ -46,6 +46,7 @@ require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd // indirect
 	github.com/btcsuite/websocket v0.0.0-20150119174127-31079b680792 // indirect
+	github.com/cosmos/ibc-go/modules/light-clients/08-wasm v0.0.0-20240429153234-e1e6da7e4ead // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/protolambda/ctxlock v0.1.0 // indirect
 )
@@ -438,7 +439,7 @@ require (
 replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
-	github.com/babylonchain/babylon => github.com/babylonchain/babylon-private v0.9.0-rc.2.0.20240717044248-3d8f190c9b0c
+	github.com/babylonlabs-io/babylon => github.com/babylonlabs-io/babylon-private v0.9.0-rc.3.0.20240801001431-74a24c962ce2
 	github.com/cockroachdb/pebble => github.com/cockroachdb/pebble v0.0.0-20231018212520-f6cde3fc2fa4
 	github.com/ethereum-optimism/optimism => github.com/babylonlabs-io/optimism v1.8.1-0.20240731214220-e7d71bf38866
 	github.com/ethereum/go-ethereum => github.com/ethereum-optimism/op-geth v1.101315.1-rc.5

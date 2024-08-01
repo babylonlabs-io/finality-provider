@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/babylonchain/babylon/types"
+	"github.com/babylonlabs-io/babylon/types"
 	"github.com/stretchr/testify/require"
 )
 

@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/babylonchain/babylon/testutil/datagen"
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 

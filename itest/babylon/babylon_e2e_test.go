@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/babylonchain/babylon/testutil/datagen"
 	e2eutils "github.com/babylonchain/finality-provider/itest"
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
 
