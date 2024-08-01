@@ -6,7 +6,7 @@ import "gogoproto/gogo.proto";
 import "cosmos/staking/v1beta1/staking.proto";
 import "cosmos_proto/cosmos.proto";
 
-option go_package = "github.com/babylonchain/finality-provider/finality-provider/proto";
+option go_package = "github.com/babylonlabs-io/finality-provider/finality-provider/proto";
 
 service FinalityProviders {
     // GetInfo returns the information of the daemon

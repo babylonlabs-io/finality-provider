@@ -11,10 +11,10 @@ import (
 	"github.com/cosmos/go-bip39"
 	"github.com/urfave/cli"
 
-	"github.com/babylonchain/finality-provider/eotsmanager"
-	"github.com/babylonchain/finality-provider/eotsmanager/config"
-	"github.com/babylonchain/finality-provider/log"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/log"
 )
 
 type KeyOutput struct {

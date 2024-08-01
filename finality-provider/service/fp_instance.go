@@ -19,14 +19,14 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
-	fpcc "github.com/babylonchain/finality-provider/clientcontroller"
-	ccapi "github.com/babylonchain/finality-provider/clientcontroller/api"
-	"github.com/babylonchain/finality-provider/eotsmanager"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/finality-provider/proto"
-	"github.com/babylonchain/finality-provider/finality-provider/store"
-	"github.com/babylonchain/finality-provider/metrics"
-	"github.com/babylonchain/finality-provider/types"
+	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
+	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	"github.com/babylonlabs-io/finality-provider/metrics"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 type FinalityProviderInstance struct {

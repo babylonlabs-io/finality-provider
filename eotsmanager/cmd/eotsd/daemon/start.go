@@ -8,11 +8,11 @@ import (
 	"github.com/lightningnetwork/lnd/signal"
 	"github.com/urfave/cli"
 
-	"github.com/babylonchain/finality-provider/eotsmanager"
-	"github.com/babylonchain/finality-provider/eotsmanager/config"
-	eotsservice "github.com/babylonchain/finality-provider/eotsmanager/service"
-	"github.com/babylonchain/finality-provider/log"
-	"github.com/babylonchain/finality-provider/util"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	eotsservice "github.com/babylonlabs-io/finality-provider/eotsmanager/service"
+	"github.com/babylonlabs-io/finality-provider/log"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 var StartCommand = cli.Command{

@@ -9,10 +9,10 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
-	ccapi "github.com/babylonchain/finality-provider/clientcontroller/api"
-	cfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/metrics"
-	"github.com/babylonchain/finality-provider/types"
+	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/metrics"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 var (

@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	dcli "github.com/babylonchain/finality-provider/eotsmanager/cmd/eotsd/daemon"
-	"github.com/babylonchain/finality-provider/testutil"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbn "github.com/babylonlabs-io/babylon/types"
 	btcstktypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	dcli "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"

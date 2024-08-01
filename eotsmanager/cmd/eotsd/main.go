@@ -6,7 +6,7 @@ import (
 
 	"github.com/urfave/cli"
 
-	dcli "github.com/babylonchain/finality-provider/eotsmanager/cmd/eotsd/daemon"
+	dcli "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 )
 
 func fatal(err error) {

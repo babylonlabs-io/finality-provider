@@ -11,22 +11,22 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/babylonchain/finality-provider/clientcontroller"
-	e2eutils "github.com/babylonchain/finality-provider/itest"
-	base_test_manager "github.com/babylonchain/finality-provider/itest/test-manager"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller"
+	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
+	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	bbncc "github.com/babylonchain/finality-provider/clientcontroller/babylon"
-	"github.com/babylonchain/finality-provider/eotsmanager/client"
-	eotsconfig "github.com/babylonchain/finality-provider/eotsmanager/config"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/finality-provider/service"
-	"github.com/babylonchain/finality-provider/types"
+	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 type BaseTestManager = base_test_manager.BaseTestManager

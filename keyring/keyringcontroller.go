@@ -12,7 +12,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
 
-	"github.com/babylonchain/finality-provider/types"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 const (

@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	math "cosmossdk.io/math"
-	types "github.com/babylonchain/finality-provider/types"
+	types "github.com/babylonlabs-io/finality-provider/types"
 	btcec "github.com/btcsuite/btcd/btcec/v2"
 	schnorr "github.com/btcsuite/btcd/btcec/v2/schnorr"
 	gomock "github.com/golang/mock/gomock"

@@ -6,8 +6,8 @@ import (
 	"time"
 
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
-	"github.com/babylonchain/finality-provider/cosmwasmclient/config"
-	"github.com/babylonchain/finality-provider/cosmwasmclient/query"
+	"github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
+	"github.com/babylonlabs-io/finality-provider/cosmwasmclient/query"
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	"github.com/cosmos/relayer/v2/relayer/chains/cosmos"
 	"go.uber.org/zap"

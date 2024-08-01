@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	e2eutils "github.com/babylonchain/finality-provider/itest"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
 
-	"github.com/babylonchain/finality-provider/finality-provider/proto"
-	"github.com/babylonchain/finality-provider/types"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 // TestFinalityProviderLifeCycle tests the whole life cycle of a finality-provider

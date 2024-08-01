@@ -46,11 +46,11 @@ the [official Go installation guide](https://golang.org/doc/install).
 To get started, clone the repository to your local machine from Github:
 
 ```bash
-git clone https://github.com/babylonchain/finality-provider.git
+git clone https://github.com/babylonlabs-io/finality-provider.git
 ```
 
 You can choose a specific version from
-the [official releases page](https://github.com/babylonchain/finality-provider/releases)
+the [official releases page](https://github.com/babylonlabs-io/finality-provider/releases)
 
 ```bash
 cd finality-provider # cd into the project directory

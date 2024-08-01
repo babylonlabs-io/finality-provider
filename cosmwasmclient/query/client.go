@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/babylonchain/finality-provider/cosmwasmclient/config"
+	"github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
 )

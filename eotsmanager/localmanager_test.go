@@ -10,10 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/babylonchain/finality-provider/eotsmanager"
-	eotscfg "github.com/babylonchain/finality-provider/eotsmanager/config"
-	"github.com/babylonchain/finality-provider/eotsmanager/types"
-	"github.com/babylonchain/finality-provider/testutil"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/types"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 )
 
 var (

@@ -1,4 +1,4 @@
-module github.com/babylonchain/finality-provider
+module github.com/babylonlabs-io/finality-provider
 
 go 1.21
 

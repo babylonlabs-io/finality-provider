@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/babylon/app"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 )
 
 // PersistClientCtx persist some vars from the cmd or config to the client context.

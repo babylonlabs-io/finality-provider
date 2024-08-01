@@ -9,8 +9,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/jessevdk/go-flags"
 
-	"github.com/babylonchain/finality-provider/metrics"
-	"github.com/babylonchain/finality-provider/util"
+	"github.com/babylonlabs-io/finality-provider/metrics"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 const (

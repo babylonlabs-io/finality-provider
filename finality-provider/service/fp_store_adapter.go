@@ -11,8 +11,8 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"go.uber.org/zap"
 
-	"github.com/babylonchain/finality-provider/finality-provider/proto"
-	"github.com/babylonchain/finality-provider/finality-provider/store"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 )
 
 type createFinalityProviderResponse struct {

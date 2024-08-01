@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
-	dcli "github.com/babylonchain/finality-provider/eotsmanager/cmd/eotsd/daemon"
-	"github.com/babylonchain/finality-provider/testutil"
+	dcli "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
 

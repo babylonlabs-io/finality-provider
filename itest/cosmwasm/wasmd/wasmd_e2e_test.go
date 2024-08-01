@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	common "github.com/babylonchain/finality-provider/itest"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	common "github.com/babylonlabs-io/finality-provider/itest"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"

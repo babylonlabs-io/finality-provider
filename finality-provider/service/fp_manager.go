@@ -12,12 +12,12 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
-	ccapi "github.com/babylonchain/finality-provider/clientcontroller/api"
-	"github.com/babylonchain/finality-provider/eotsmanager"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/finality-provider/proto"
-	"github.com/babylonchain/finality-provider/finality-provider/store"
-	"github.com/babylonchain/finality-provider/metrics"
+	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 )
 
 const instanceTerminatingMsg = "terminating the finality-provider instance due to critical error"

@@ -3,12 +3,12 @@ package clientcontroller
 import (
 	"fmt"
 
-	"github.com/babylonchain/finality-provider/clientcontroller/api"
-	"github.com/babylonchain/finality-provider/clientcontroller/babylon"
-	"github.com/babylonchain/finality-provider/clientcontroller/cosmwasm"
-	"github.com/babylonchain/finality-provider/clientcontroller/opstackl2"
-	cosmwasmcfg "github.com/babylonchain/finality-provider/cosmwasmclient/config"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/cosmwasm"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/opstackl2"
+	cosmwasmcfg "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"go.uber.org/zap"
 )
 

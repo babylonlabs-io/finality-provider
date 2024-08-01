@@ -12,9 +12,9 @@ import (
 	"github.com/jessevdk/go-flags"
 	"go.uber.org/zap/zapcore"
 
-	eotscfg "github.com/babylonchain/finality-provider/eotsmanager/config"
-	"github.com/babylonchain/finality-provider/metrics"
-	"github.com/babylonchain/finality-provider/util"
+	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/metrics"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 const (

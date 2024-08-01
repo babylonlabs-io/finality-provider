@@ -9,8 +9,8 @@ import (
 
 	"encoding/hex"
 
-	"github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/chaincfg"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"

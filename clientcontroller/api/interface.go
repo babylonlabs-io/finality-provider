@@ -5,7 +5,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
-	"github.com/babylonchain/finality-provider/types"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 type ClientController interface {

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	e2eutils "github.com/babylonchain/finality-provider/itest"
 	"github.com/babylonlabs-io/babylon/btcstaking"
 	asig "github.com/babylonlabs-io/babylon/crypto/schnorr-adaptor-signature"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
@@ -13,14 +12,15 @@ import (
 	btcctypes "github.com/babylonlabs-io/babylon/x/btccheckpoint/types"
 	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
-	bbncc "github.com/babylonchain/finality-provider/clientcontroller/babylon"
-	"github.com/babylonchain/finality-provider/types"
+	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 type BaseTestManager struct {

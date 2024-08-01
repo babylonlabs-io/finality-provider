@@ -9,9 +9,9 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/stretchr/testify/require"
 
-	"github.com/babylonchain/finality-provider/eotsmanager/config"
-	"github.com/babylonchain/finality-provider/eotsmanager/store"
-	"github.com/babylonchain/finality-provider/testutil"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 )
 
 // FuzzEOTSStore tests save and show EOTS key names properly
