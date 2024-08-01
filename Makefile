@@ -1,7 +1,7 @@
 BUILDDIR ?= $(CURDIR)/build
 TOOLS_DIR := tools
 
-BABYLON_PKG := github.com/babylonchain/babylon/cmd/babylond
+BABYLON_PKG := github.com/babylonlabs-io/babylon/cmd/babylond
 WASMD_PKG   := github.com/CosmWasm/wasmd/cmd/wasmd
 BCD_PKG     := github.com/babylonchain/babylon-sdk/demo/cmd/bcd
 
@@ -121,7 +121,7 @@ test-e2e-op-ci: clean-e2e install-babylond
 	"xargs go test -race -mod=readonly -timeout=25m -v $(PACKAGES_E2E_OP) -count=1 --tags=e2e_op --run" \
 	--split-by=name --timings-type=name
 
-DEVNET_REPO_URL := https://github.com/babylonchain/op-e2e-devnet
+DEVNET_REPO_URL := https://github.com/babylonlabs-io/op-e2e-devnet
 TARGET_DIR := ./itest/opstackl2/devnet-data
 
 .PHONY: op-e2e-devnet

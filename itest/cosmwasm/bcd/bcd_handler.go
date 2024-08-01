@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	common "github.com/babylonchain/finality-provider/itest"
+	common "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/stretchr/testify/require"
 )
 

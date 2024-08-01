@@ -7,17 +7,17 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	bbntypes "github.com/babylonchain/babylon/types"
-	btcstakingtypes "github.com/babylonchain/babylon/x/btcstaking/types"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
-	ccapi "github.com/babylonchain/finality-provider/clientcontroller/api"
-	"github.com/babylonchain/finality-provider/eotsmanager"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/finality-provider/proto"
-	"github.com/babylonchain/finality-provider/finality-provider/store"
-	"github.com/babylonchain/finality-provider/metrics"
+	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 )
 
 const instanceTerminatingMsg = "terminating the finality-provider instance due to critical error"
@@ -249,7 +249,7 @@ func (fpm *FinalityProviderManager) StartAll() error {
 	for _, fp := range storedFps {
 		if fp.Status == proto.FinalityProviderStatus_CREATED || fp.Status == proto.FinalityProviderStatus_SLASHED {
 			fpm.logger.Info("the finality provider cannot be started with status",
-				zap.String("btc-pk", fp.GetBIP340BTCPK().MarshalHex()),
+				zap.String("eots-pk", fp.GetBIP340BTCPK().MarshalHex()),
 				zap.String("status", fp.Status.String()))
 			continue
 		}

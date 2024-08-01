@@ -131,7 +131,7 @@ this value and specify a custom address using the `--rpc-listener` flag.
 This will also start all the registered finality provider instances except for
 slashed ones added in [step](#5-create-and-register-a-finality-provider). To start
 the daemon with a specific finality provider instance, use the
-`--btc-pk` flag followed by the hex string of the BTC public key of the finality
+`--eots-pk` flag followed by the hex string of the BTC public key of the finality
 provider (`btc_pk_hex`) obtained
 in [step](#5-create-and-register-a-finality-provider).
 
@@ -175,7 +175,7 @@ the hash of the Babylon finality provider registration transaction.
 
 ```bash
 fpd register-finality-provider \
-  --btc-pk d0fc4db48643fbb4339dc4bbf15f272411716b0d60f18bdfeb3861544bf5ef63
+  --eots-pk d0fc4db48643fbb4339dc4bbf15f272411716b0d60f18bdfeb3861544bf5ef63
 {
   "tx_hash": "800AE5BBDADE974C5FA5BD44336C7F1A952FAB9F5F9B43F7D4850BA449319BAA"
 }
@@ -219,11 +219,11 @@ fpd list-finality-providers
 After the creation of the finality provider in the local db, it is possible
 to export the finality provider information through the `fpd export-finality-provider` command.
 This command connects with the `fpd` daemon to retrieve the finality
-provider previously created using the flag `--btc-pk` as key.
+provider previously created using the flag `--eots-pk` as key.
 
 This command also has several flag options:
 
-- `--btc-pk` the hex string of the BTC public key.
+- `--eots-pk` the hex string of the BTC public key.
 - `--daemon-address` the RPC server address of `fpd` daemon.
 - `--signed` signs the finality provider with the chain key of the PoS
 chain secured as a proof of untempered exported data.
@@ -235,7 +235,7 @@ passphrase is required.
 - `--hd-path` the hd derivation path of the private key.
 
 ```shell
-$ fpd export-finality-provider --btc-pk 02face5996b2792114677604ec9dfad4fe66eeace3df92dab834754add5bdd7077 \
+$ fpd export-finality-provider --eots-pk 02face5996b2792114677604ec9dfad4fe66eeace3df92dab834754add5bdd7077 \
 --home ./export-fp/fpd --key-name finality-provider --signed
 ```
 

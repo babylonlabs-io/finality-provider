@@ -8,16 +8,16 @@ import (
 	"strconv"
 
 	"cosmossdk.io/math"
-	bbntypes "github.com/babylonchain/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	fpcmd "github.com/babylonchain/finality-provider/finality-provider/cmd"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	dc "github.com/babylonchain/finality-provider/finality-provider/service/client"
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 )
 
 var (
@@ -217,7 +217,7 @@ func runCommandLsFP(cmd *cobra.Command, args []string) error {
 // CommandInfoFP returns the finality-provider-info command by connecting to the fpd daemon.
 func CommandInfoFP() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "finality-provider-info [fp-pk-btc-hex]",
+		Use:     "finality-provider-info [fp-eots-pk-hex]",
 		Aliases: []string{"fpi"},
 		Short:   "List finality providers stored in the database.",
 		Example: fmt.Sprintf(`fpd finality-provider-info --daemon-address %s`, defaultFpdDaemonAddress),
@@ -257,7 +257,7 @@ func runCommandInfoFP(cmd *cobra.Command, args []string) error {
 // CommandRegisterFP returns the register-finality-provider command by connecting to the fpd daemon.
 func CommandRegisterFP() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "register-finality-provider [fp-pk-btc-hex]",
+		Use:     "register-finality-provider [fp-eots-pk-hex]",
 		Aliases: []string{"rfp"},
 		Short:   "Register a created finality provider to Babylon.",
 		Example: fmt.Sprintf(`fpd register-finality-provider --daemon-address %s`, defaultFpdDaemonAddress),
@@ -305,7 +305,7 @@ func runCommandRegisterFP(cmd *cobra.Command, args []string) error {
 // CommandAddFinalitySig returns the add-finality-sig command by connecting to the fpd daemon.
 func CommandAddFinalitySig() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "add-finality-sig [fp-pk-btc-hex] [block-height]",
+		Use:     "add-finality-sig [fp-eots-pk-hex] [block-height]",
 		Aliases: []string{"afs"},
 		Short:   "Send a finality signature to the consumer chain. This command should only be used for presentation/testing purposes",
 		Example: fmt.Sprintf(`fpd add-finality-sig --daemon-address %s`, defaultFpdDaemonAddress),

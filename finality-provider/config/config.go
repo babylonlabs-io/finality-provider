@@ -12,9 +12,9 @@ import (
 	"github.com/jessevdk/go-flags"
 	"go.uber.org/zap/zapcore"
 
-	eotscfg "github.com/babylonchain/finality-provider/eotsmanager/config"
-	"github.com/babylonchain/finality-provider/metrics"
-	"github.com/babylonchain/finality-provider/util"
+	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/metrics"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 const (
@@ -187,22 +187,13 @@ func (cfg *Config) Validate() error {
 	// Multiple networks can't be selected simultaneously.  Count number of
 	// network flags passed; assign active network params
 	// while we're at it.
-	switch cfg.BitcoinNetwork {
-	case "mainnet":
-		cfg.BTCNetParams = chaincfg.MainNetParams
-	case "testnet":
-		cfg.BTCNetParams = chaincfg.TestNet3Params
-	case "regtest":
-		cfg.BTCNetParams = chaincfg.RegressionNetParams
-	case "simnet":
-		cfg.BTCNetParams = chaincfg.SimNetParams
-	case "signet":
-		cfg.BTCNetParams = chaincfg.SigNetParams
-	default:
-		return fmt.Errorf("invalid network: %v", cfg.BitcoinNetwork)
+	btcNetConfig, err := NetParamsBTC(cfg.BitcoinNetwork)
+	if err != nil {
+		return err
 	}
+	cfg.BTCNetParams = btcNetConfig
 
-	_, err := net.ResolveTCPAddr("tcp", cfg.RpcListener)
+	_, err = net.ResolveTCPAddr("tcp", cfg.RpcListener)
 	if err != nil {
 		return fmt.Errorf("invalid RPC listener address %s, %w", cfg.RpcListener, err)
 	}
@@ -217,4 +208,22 @@ func (cfg *Config) Validate() error {
 
 	// All good, return the sanitized result.
 	return nil
+}
+
+// NetParamsBTC parses the BTC net params from config.
+func NetParamsBTC(btcNet string) (p chaincfg.Params, err error) {
+	switch btcNet {
+	case "mainnet":
+		return chaincfg.MainNetParams, nil
+	case "testnet":
+		return chaincfg.TestNet3Params, nil
+	case "regtest":
+		return chaincfg.RegressionNetParams, nil
+	case "simnet":
+		return chaincfg.SimNetParams, nil
+	case "signet":
+		return chaincfg.SigNetParams, nil
+	default:
+		return p, fmt.Errorf("invalid network: %v", btcNet)
+	}
 }

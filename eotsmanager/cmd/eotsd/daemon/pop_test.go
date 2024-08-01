@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/babylonchain/babylon/testutil/datagen"
-	bbn "github.com/babylonchain/babylon/types"
-	btcstktypes "github.com/babylonchain/babylon/x/btcstaking/types"
-	dcli "github.com/babylonchain/finality-provider/eotsmanager/cmd/eotsd/daemon"
-	"github.com/babylonchain/finality-provider/testutil"
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	bbn "github.com/babylonlabs-io/babylon/types"
+	btcstktypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	dcli "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
@@ -43,8 +43,8 @@ func FuzzPoPExport(f *testing.F) {
 
 		bbnAddr := datagen.GenRandomAccount().GetAddress()
 
-		btcPkFlag := fmt.Sprintf("--btc-pk=%s", keyOut.PubKeyHex)
-		exportedPoP := appRunPoPExport(r, t, app, []string{bbnAddr.String(), hFlag, btcPkFlag})
+		eotsBtcPkFlag := fmt.Sprintf("--eots-pk=%s", keyOut.PubKeyHex)
+		exportedPoP := appRunPoPExport(r, t, app, []string{bbnAddr.String(), hFlag, eotsBtcPkFlag})
 		pop, err := btcstktypes.NewPoPBTCFromHex(exportedPoP.PoPHex)
 		require.NoError(t, err)
 

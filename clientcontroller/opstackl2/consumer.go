@@ -10,13 +10,13 @@ import (
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	bbnapp "github.com/babylonchain/babylon/app"
-	bbntypes "github.com/babylonchain/babylon/types"
-	"github.com/babylonchain/finality-provider/clientcontroller/api"
-	cwclient "github.com/babylonchain/finality-provider/cosmwasmclient/client"
-	cwconfig "github.com/babylonchain/finality-provider/cosmwasmclient/config"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/types"
+	bbnapp "github.com/babylonlabs-io/babylon/app"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
+	cwconfig "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
@@ -244,7 +244,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
 // This interface function only used for checking if the FP is eligible for submitting sigs.
 // Now we can simply hardcode the voting power to true
-// TODO: see this issue https://github.com/babylonchain/finality-provider/issues/390 for more details
+// TODO: see this issue https://github.com/babylonlabs-io/finality-provider/issues/390 for more details
 func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
 	return true, nil
 }

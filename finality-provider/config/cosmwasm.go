@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/babylonchain/finality-provider/cosmwasmclient/config"
+	"github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
 	"github.com/cosmos/btcutil/bech32"
 )
 

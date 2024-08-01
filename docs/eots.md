@@ -127,8 +127,8 @@ You can use your key to create a Schnorr signature over arbitrary data
 through the `eotsd sign-schnorr` command.
 The command takes as an argument the file path, hashes the file content using
 sha256, and signs the hash with the EOTS private key in Schnorr format by the
-given `key-name` or `btc-pk`. If both flags `--key-name` and `--btc-pk` are
-provided, `btc-pk` takes priority.
+given `key-name` or `eots-pk`. If both flags `--key-name` and `--eots-pk` are
+provided, `eots-pk` takes priority.
 
 ```shell
 eotsd sign-schnorr /path/to/data/file --home /path/to/eotsd/home/ --key-name my-key-name --keyring-backend file
@@ -146,12 +146,12 @@ You can verify the Schnorr signature signed in the previous step through
 the `eptsd veify-schnorr-sig` command.
 The command takes as an argument the file path, hashes the file content using
 sha256 to generate the signed data, and verifies the signature from the `--signature`
-flag using the given public key from the `--btc-pk` flag.
+flag using the given public key from the `--eots-pk` flag.
 If the signature is valid, you will see `Verification is successful!` in the output.
 Otherwise, an error message will be printed out.
 
 ```shell
-eotsd verify-schnorr-sig /path/to/data/file --btc-pk 50b106208c921b5e8a1c45494306fe1fc2cf68f33b8996420867dc7667fde383 \
+eotsd verify-schnorr-sig /path/to/data/file --eots-pk 50b106208c921b5e8a1c45494306fe1fc2cf68f33b8996420867dc7667fde383 \
 --signature b91fc06b30b78c0ca66a7e033184d89b61cd6ab572329b20f6052411ab83502effb5c9a1173ed69f20f6502a741eeb5105519bb3f67d37612bc2bcce411f8d72 \
 --keyring-backend file
 ```

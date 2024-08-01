@@ -1,5 +1,5 @@
 version: v1
-name: buf.build/babylonchain/eotsmanager
+name: buf.build/babylonlabs-io/eotsmanager
 deps:
 breaking:
   use:

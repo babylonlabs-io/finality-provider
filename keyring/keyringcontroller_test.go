@@ -8,17 +8,17 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/babylonchain/babylon/types"
+	"github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/stretchr/testify/require"
 
-	eotscfg "github.com/babylonchain/finality-provider/eotsmanager/config"
+	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 
-	fpkr "github.com/babylonchain/finality-provider/keyring"
+	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 
-	"github.com/babylonchain/finality-provider/eotsmanager"
-	"github.com/babylonchain/finality-provider/testutil"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 )
 
 var (

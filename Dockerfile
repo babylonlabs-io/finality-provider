@@ -14,15 +14,15 @@ RUN apk add --no-cache --update openssh git make build-base linux-headers libc-d
 
 RUN mkdir -p /root/.ssh && ssh-keyscan github.com >> /root/.ssh/known_hosts
 RUN git config --global url."git@github.com:".insteadOf "https://github.com/"
-ENV GOPRIVATE=github.com/babylonchain/*
+ENV GOPRIVATE=github.com/babylonlabs-io/*
 
 # Build
-WORKDIR /go/src/github.com/babylonchain/finality-provider
+WORKDIR /go/src/github.com/babylonlabs-io/finality-provider
 # Cache dependencies
-COPY go.mod go.sum /go/src/github.com/babylonchain/finality-provider/
+COPY go.mod go.sum /go/src/github.com/babylonlabs-io/finality-provider/
 RUN --mount=type=secret,id=sshKey,target=/root/.ssh/id_rsa go mod download
 # Copy the rest of the files
-COPY ./ /go/src/github.com/babylonchain/finality-provider/
+COPY ./ /go/src/github.com/babylonlabs-io/finality-provider/
 
 # Cosmwasm - Download correct libwasmvm version
 RUN WASMVM_VERSION=$(grep github.com/CosmWasm/wasmvm go.mod | cut -d' ' -f2) && \
@@ -45,8 +45,8 @@ RUN addgroup --gid 1138 -S finality-provider && adduser --uid 1138 -S finality-p
 
 RUN apk add bash curl jq
 
-COPY --from=builder /go/src/github.com/babylonchain/finality-provider/build/fpd /bin/fpd
-COPY --from=builder /go/src/github.com/babylonchain/finality-provider/build/eotsd /bin/eotsd
+COPY --from=builder /go/src/github.com/babylonlabs-io/finality-provider/build/fpd /bin/fpd
+COPY --from=builder /go/src/github.com/babylonlabs-io/finality-provider/build/eotsd /bin/eotsd
 
 WORKDIR /home/finality-provider
 RUN chown -R finality-provider /home/finality-provider
