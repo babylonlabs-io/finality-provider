@@ -728,7 +728,7 @@ func (ctm *OpL2ConsumerTestManager) SetupFinalityProviders(
 	stakingParams []stakingParam,
 ) []*service.FinalityProviderInstance {
 	// A BTC delegation has to stake to at least one Babylon finality provider
-	// https://github.com/babylonlabs-io/babylon-private/blob/3d8f190c9b0c0795f6546806e3b8582de716cd60/x/btcstaking/keeper/msg_server.go#L220
+	// https://github.com/babylonlabs-io/babylon-private/blob/74a24c962ce2cf64e5216edba9383fe0b460070c/x/btcstaking/keeper/msg_server.go#L220
 	// So we have to register a Babylon chain FP
 	bbnFpPk := ctm.RegisterBabylonFinalityProvider(t)
 
