@@ -334,6 +334,12 @@ func (cc *OPStackL2ConsumerController) QueryBlock(height uint64) (*types.BlockIn
 	}, nil
 }
 
+// Note: this is specific to the OPStackL2ConsumerController and only used for testing
+// QueryBlock returns the Ethereum block from a RPC call
+func (cc *OPStackL2ConsumerController) QueryEthBlock(height uint64) (*ethtypes.Header, error) {
+	return cc.opl2Client.HeaderByNumber(context.Background(), new(big.Int).SetUint64(height))
+}
+
 // QueryIsBlockFinalized returns whether the given the L2 block number has been finalized
 func (cc *OPStackL2ConsumerController) QueryIsBlockFinalized(height uint64) (bool, error) {
 	l2Block, err := cc.QueryLatestFinalizedBlock()

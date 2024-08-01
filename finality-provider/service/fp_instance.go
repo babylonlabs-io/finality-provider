@@ -433,7 +433,8 @@ func (fp *FinalityProviderInstance) tryFastSync(targetBlockHeight uint64) (*Fast
 		return nil, fmt.Errorf("the start height %v should not be higher than the current block %v", startHeight, targetBlockHeight)
 	}
 
-	fp.logger.Debug("the finality-provider is entering fast sync")
+	fp.logger.Debug("the finality-provider is entering fast sync",
+		zap.Uint64("start_height", startHeight), zap.Uint64("target_block_height", targetBlockHeight))
 
 	return fp.FastSync(startHeight, targetBlockHeight)
 }

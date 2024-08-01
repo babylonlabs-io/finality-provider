@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	sdkclient "github.com/babylonchain/babylon-finality-gadget/sdk/client"
-	"github.com/babylonchain/babylon-finality-gadget/sdk/cwclient"
 	e2eutils "github.com/babylonchain/finality-provider/itest"
 	"github.com/babylonchain/finality-provider/testutil/log"
+	sdkclient "github.com/babylonlabs-io/babylon-finality-gadget/sdk/client"
+	"github.com/babylonlabs-io/babylon-finality-gadget/sdk/cwclient"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,7 +36,7 @@ func TestOpSubmitFinalitySignature(t *testing.T) {
 	testBlock := testBlocks[0]
 
 	// wait for the fp sign
-	ctm.WaitForFpVoteAtHeight(t, fpInstance, testBlock.Height)
+	ctm.WaitForFpVoteReachHeight(t, fpInstance, testBlock.Height)
 	queryParams := cwclient.L2Block{
 		BlockHeight:    testBlock.Height,
 		BlockHash:      hex.EncodeToString(testBlock.Hash),
@@ -65,21 +65,26 @@ func TestOpMultipleFinalityProviders(t *testing.T) {
 		{e2eutils.StakingTime, e2eutils.StakingAmount},
 	})
 
+	// wait until the BTC staking is activated
+	l2BlockAfterActivation := ctm.waitForBTCStakingActivation(t)
+
 	// check both FPs have committed their first public randomness
 	// TODO: we might use go routine to do this in parallel
 	for i := 0; i < n; i++ {
-		e2eutils.WaitForFpPubRandCommitted(t, fpList[i])
+		// wait for the first block to be finalized since BTC staking is activated
+		e2eutils.WaitForFpPubRandCommittedReachTargetHeight(t, fpList[i], l2BlockAfterActivation)
 	}
 
 	// both FP will sign the first block
-	targetBlockHeight := ctm.WaitForTargetBlockPubRand(t, fpList)
+	targetBlockHeight := ctm.WaitForTargetBlockPubRand(t, fpList, l2BlockAfterActivation)
+	t.Logf(log.Prefix("targetBlockHeight %d"), targetBlockHeight)
 
-	ctm.WaitForFpVoteAtHeight(t, fpList[0], targetBlockHeight)
+	ctm.WaitForFpVoteReachHeight(t, fpList[0], targetBlockHeight)
 	// stop the first FP instance
 	fpStopErr := fpList[0].Stop()
 	require.NoError(t, fpStopErr)
 
-	ctm.WaitForFpVoteAtHeight(t, fpList[1], targetBlockHeight)
+	ctm.WaitForFpVoteReachHeight(t, fpList[1], targetBlockHeight)
 
 	testBlock, err := ctm.getOpCCAtIndex(1).QueryBlock(targetBlockHeight)
 	require.NoError(t, err)
@@ -103,7 +108,7 @@ func TestOpMultipleFinalityProviders(t *testing.T) {
 	// select a block that the first FP has not processed yet to give to the second FP to sign
 	testNextBlockHeight := fpList[0].GetLastVotedHeight() + 1
 	t.Logf(log.Prefix("Test next block height %d"), testNextBlockHeight)
-	ctm.WaitForFpVoteAtHeight(t, fpList[1], testNextBlockHeight)
+	ctm.WaitForFpVoteReachHeight(t, fpList[1], testNextBlockHeight)
 
 	testNextBlock, err := ctm.getOpCCAtIndex(1).QueryBlock(testNextBlockHeight)
 	require.NoError(t, err)
@@ -130,9 +135,12 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 	})
 	fpInstance := fpList[0]
 
-	// wait for the first block to be finalized
-	e2eutils.WaitForFpPubRandCommitted(t, fpInstance)
-	ctm.WaitForNextFinalizedBlock(t, uint64(1))
+	// wait until the BTC staking is activated
+	l2BlockAfterActivation := ctm.waitForBTCStakingActivation(t)
+
+	// wait for the first block to be finalized since BTC staking is activated
+	e2eutils.WaitForFpPubRandCommittedReachTargetHeight(t, fpInstance, l2BlockAfterActivation)
+	ctm.WaitForBlockFinalized(t, l2BlockAfterActivation)
 
 	// stop the FP instance
 	fpStopErr := fpInstance.Stop()
@@ -172,7 +180,7 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 	t.Logf(log.Prefix("Restarted the FP instance"))
 
 	// wait for next finalized block > stuckHeight
-	nextFinalizedHeight := ctm.WaitForNextFinalizedBlock(t, stuckHeight)
+	nextFinalizedHeight := ctm.WaitForBlockFinalized(t, stuckHeight+1)
 	t.Logf(log.Prefix(
 		"OP chain fianlity is recovered, the latest finalized block height %d",
 	), nextFinalizedHeight)

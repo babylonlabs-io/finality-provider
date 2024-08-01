@@ -14,9 +14,6 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/babylonchain/babylon-finality-gadget/sdk/btcclient"
-	sdkclient "github.com/babylonchain/babylon-finality-gadget/sdk/client"
-	sdkcfg "github.com/babylonchain/babylon-finality-gadget/sdk/config"
 	bbncfg "github.com/babylonchain/babylon/client/config"
 	bbntypes "github.com/babylonchain/babylon/types"
 	api "github.com/babylonchain/finality-provider/clientcontroller/api"
@@ -32,6 +29,9 @@ import (
 	"github.com/babylonchain/finality-provider/metrics"
 	"github.com/babylonchain/finality-provider/testutil/log"
 	"github.com/babylonchain/finality-provider/types"
+	"github.com/babylonlabs-io/babylon-finality-gadget/sdk/btcclient"
+	sdkclient "github.com/babylonlabs-io/babylon-finality-gadget/sdk/client"
+	sdkcfg "github.com/babylonlabs-io/babylon-finality-gadget/sdk/config"
 	"github.com/btcsuite/btcd/btcec/v2"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	ope2e "github.com/ethereum-optimism/optimism/op-e2e"
@@ -66,7 +66,7 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 	testDir, err := e2eutils.BaseDir("fpe2etest")
 	require.NoError(t, err)
 
-	logger := createLogger(t, zapcore.DebugLevel)
+	logger := createLogger(t, zapcore.ErrorLevel)
 
 	// generate covenant committee
 	covenantQuorum := 2
@@ -438,7 +438,7 @@ func deployCwContract(
 	opFinalityGadgetInitMsg := map[string]interface{}{
 		"admin":            cwClient.MustGetAddr(),
 		"consumer_id":      opConsumerId,
-		"activated_height": 0,
+		"activated_height": 0, // TODO: remove once we get rid of this field
 		"is_enabled":       true,
 	}
 	opFinalityGadgetInitMsgBytes, err := json.Marshal(opFinalityGadgetInitMsg)
@@ -546,7 +546,7 @@ func (ctm *OpL2ConsumerTestManager) getL2BlockTime() time.Duration {
 	return time.Duration(ctm.OpSystem.Cfg.DeployConfig.L2BlockTime) * time.Second
 }
 
-func (ctm *OpL2ConsumerTestManager) WaitForFpVoteAtHeight(
+func (ctm *OpL2ConsumerTestManager) WaitForFpVoteReachHeight(
 	t *testing.T,
 	fpIns *service.FinalityProviderInstance,
 	height uint64,
@@ -560,49 +560,51 @@ func (ctm *OpL2ConsumerTestManager) WaitForFpVoteAtHeight(
 
 /* wait for the target block height that the two FPs both have PubRand commitments
  * the algorithm should be:
- * 1. wait until both FPs have their first PubRand commitments. get the start height of the commitments
- * 2. for the FP that has the smaller start height, wait until it catches up to the other FP's first PubRand commitment
+ * - query LastPubRandCommit for both FPs until both have a commitment that has blockHeight >= l2BlockAfterActivation
+ * - record the two block heights to be A and B. assume A <= B
+ * - wait for FP(A) to catch up to have commitment that covers block B
+ * - return B
  */
 // TODO: there are always two FPs, so we can simplify the logic and data structure. supporting more FPs will require a
 // refactor and more complex algorithm
 func (ctm *OpL2ConsumerTestManager) WaitForTargetBlockPubRand(
 	t *testing.T,
 	fpList []*service.FinalityProviderInstance,
+	l2BlockAfterActivation uint64,
 ) uint64 {
 	require.Equal(t, 2, len(fpList), "The below algorithm only supports two FPs")
 	var firstFpCommittedPubRand, secondFpCommittedPubRand, targetBlockHeight uint64
 
-	// wait until both FPs have their first PubRand commitments
+	// wait until both FPs have a PubRand commitment that covers blocks >= l2BlockAfterActivation
 	require.Eventually(t, func() bool {
-		if firstFpCommittedPubRand != 0 && secondFpCommittedPubRand != 0 {
-			return true
-		}
-		if firstFpCommittedPubRand == 0 {
-			firstPRCommit, err := queryFirstPublicRandCommit(
+		if firstFpCommittedPubRand < l2BlockAfterActivation {
+			firstFpPRCommit, err := queryLastPublicRandCommit(
 				ctm.getOpCCAtIndex(0),
 				fpList[0].GetBtcPk(),
 			)
 			require.NoError(t, err)
-			if firstPRCommit != nil {
-				firstFpCommittedPubRand = firstPRCommit.StartHeight
+			if firstFpPRCommit != nil {
+				firstFpCommittedPubRand = firstFpPRCommit.StartHeight + firstFpPRCommit.NumPubRand - 1
 			}
 		}
-		if secondFpCommittedPubRand == 0 {
-			secondPRCommit, err := queryFirstPublicRandCommit(
+		if secondFpCommittedPubRand < l2BlockAfterActivation {
+			secondFpPRCommit, err := queryLastPublicRandCommit(
 				ctm.getOpCCAtIndex(1),
 				fpList[1].GetBtcPk(),
 			)
 			require.NoError(t, err)
-			if secondPRCommit != nil {
-				secondFpCommittedPubRand = secondPRCommit.StartHeight
+			if secondFpPRCommit != nil {
+				secondFpCommittedPubRand = secondFpPRCommit.StartHeight + secondFpPRCommit.NumPubRand - 1
 			}
 		}
-		return false
+		return firstFpCommittedPubRand >= l2BlockAfterActivation && secondFpCommittedPubRand >= l2BlockAfterActivation
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
+	t.Logf(log.Prefix("firstFpCommittedPubRand %d, secondFpCommittedPubRand %d"),
+		firstFpCommittedPubRand, secondFpCommittedPubRand)
 
-	// find the FP's index with the smaller first committed pubrand index in `fpList`
+	// find the FP's index whose PubRand commitment is for the block with the smaller height
 	i := 0
-	targetBlockHeight = secondFpCommittedPubRand // the target block is the one with larger start height
+	targetBlockHeight = secondFpCommittedPubRand // the target block is the one with larger height
 	if firstFpCommittedPubRand > secondFpCommittedPubRand {
 		i = 1
 		targetBlockHeight = firstFpCommittedPubRand
@@ -791,18 +793,18 @@ func (ctm *OpL2ConsumerTestManager) RegisterBabylonFinalityProvider(
 	return babylonFpPk
 }
 
-func (ctm *OpL2ConsumerTestManager) WaitForNextFinalizedBlock(
+func (ctm *OpL2ConsumerTestManager) WaitForBlockFinalized(
 	t *testing.T,
 	checkedHeight uint64,
 ) uint64 {
 	finalizedBlockHeight := uint64(0)
 	require.Eventually(t, func() bool {
 		// doesn't matter which FP we use to query. so we use the first consumer FP
-		nextFinalizedBlock, err := ctm.getOpCCAtIndex(0).QueryLatestFinalizedBlock()
+		latestFinalizedBlock, err := ctm.getOpCCAtIndex(0).QueryLatestFinalizedBlock()
 		require.NoError(t, err)
-		finalizedBlockHeight = nextFinalizedBlock.Height
-		return finalizedBlockHeight > checkedHeight
-	}, e2eutils.EventuallyWaitTimeOut, 5*time.Duration(ctm.OpSystem.Cfg.DeployConfig.L2BlockTime)*time.Second)
+		finalizedBlockHeight = latestFinalizedBlock.Height
+		return finalizedBlockHeight >= checkedHeight
+	}, e2eutils.EventuallyWaitTimeOut, 5*ctm.getL2BlockTime())
 	return finalizedBlockHeight
 }
 
@@ -840,11 +842,36 @@ func queryFirstPublicRandCommit(
 	opcc *opstackl2.OPStackL2ConsumerController,
 	fpPk *btcec.PublicKey,
 ) (*types.PubRandCommit, error) {
+	return queryFirstOrLastPublicRandCommit(opcc, fpPk, true)
+}
+
+// query the FP has its last PubRand commitment
+func queryLastPublicRandCommit(
+	opcc *opstackl2.OPStackL2ConsumerController,
+	fpPk *btcec.PublicKey,
+) (*types.PubRandCommit, error) {
+	return queryFirstOrLastPublicRandCommit(opcc, fpPk, false)
+}
+
+// query the FP has its first or last PubRand commitment
+func queryFirstOrLastPublicRandCommit(
+	opcc *opstackl2.OPStackL2ConsumerController,
+	fpPk *btcec.PublicKey,
+	first bool,
+) (*types.PubRandCommit, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-	queryMsg := &opstackl2.QueryMsg{
-		FirstPubRandCommit: &opstackl2.PubRandCommit{
-			BtcPkHex: fpPubKey.MarshalHex(),
-		},
+	var queryMsg *opstackl2.QueryMsg
+	queryMsgInternal := &opstackl2.PubRandCommit{
+		BtcPkHex: fpPubKey.MarshalHex(),
+	}
+	if first {
+		queryMsg = &opstackl2.QueryMsg{
+			FirstPubRandCommit: queryMsgInternal,
+		}
+	} else {
+		queryMsg = &opstackl2.QueryMsg{
+			LastPubRandCommit: queryMsgInternal,
+		}
 	}
 
 	jsonData, err := json.Marshal(queryMsg)
@@ -876,6 +903,29 @@ func queryFirstPublicRandCommit(
 	}
 
 	return resp, nil
+}
+
+func (ctm *OpL2ConsumerTestManager) waitForBTCStakingActivation(t *testing.T) uint64 {
+	var l2BlockAfterActivation uint64
+	require.Eventually(t, func() bool {
+		latestBlockHeight, err := ctm.getOpCCAtIndex(0).QueryLatestBlockHeight()
+		require.NoError(t, err)
+		latestBlock, err := ctm.getOpCCAtIndex(0).QueryEthBlock(latestBlockHeight)
+		require.NoError(t, err)
+		l2BlockAfterActivation = latestBlock.Number.Uint64()
+
+		activatedTimestamp, err := ctm.SdkClient.QueryBtcStakingActivatedTimestamp()
+		if err != nil {
+			t.Logf(log.Prefix("Failed to query BTC staking activated timestamp: %v"), err)
+			return false
+		}
+		t.Logf(log.Prefix("Activated timestamp %d"), activatedTimestamp)
+
+		return latestBlock.Time >= activatedTimestamp
+	}, 30*ctm.getL2BlockTime(), ctm.getL2BlockTime())
+
+	t.Logf(log.Prefix("found a L2 block after BTC staking activation: %d"), l2BlockAfterActivation)
+	return l2BlockAfterActivation
 }
 
 func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
