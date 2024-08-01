@@ -11,7 +11,7 @@ require (
 	github.com/CosmWasm/wasmd v0.51.0
 	github.com/avast/retry-go/v4 v4.5.1
 	github.com/babylonchain/babylon-sdk/demo v0.0.0-20240705194516-4e2c5650cde8
-	github.com/babylonlabs-io/babylon v0.9.0-rc.2
+	github.com/babylonlabs-io/babylon v0.9.0
 	github.com/babylonlabs-io/babylon-finality-gadget v0.0.0-20240801002122-6d6bca47ec56
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2

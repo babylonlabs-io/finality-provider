@@ -14,7 +14,7 @@ RUN apk add --no-cache --update openssh git make build-base linux-headers libc-d
 
 RUN mkdir -p /root/.ssh && ssh-keyscan github.com >> /root/.ssh/known_hosts
 RUN git config --global url."git@github.com:".insteadOf "https://github.com/"
-ENV GOPRIVATE=github.com/babylonchain/*
+ENV GOPRIVATE=github.com/babylonlabs-io/*
 
 # Build
 WORKDIR /go/src/github.com/babylonlabs-io/finality-provider

@@ -7,7 +7,7 @@ toolchain go1.21.4
 require (
 	github.com/CosmWasm/wasmd v0.51.0
 	github.com/babylonchain/babylon-sdk/demo v0.0.0-20240705194516-4e2c5650cde8
-	github.com/babylonlabs-io/babylon v0.9.0-rc.2
+	github.com/babylonlabs-io/babylon v0.9.0
 )
 
 require (
