@@ -6,16 +6,16 @@ import (
 	"fmt"
 
 	"cosmossdk.io/math"
-	fpcmd "github.com/babylonchain/finality-provider/finality-provider/cmd"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	dc "github.com/babylonchain/finality-provider/finality-provider/service/client"
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/cobra"
 
-	bbn "github.com/babylonchain/babylon/types"
-	btcstktypes "github.com/babylonchain/babylon/x/btcstaking/types"
+	bbn "github.com/babylonlabs-io/babylon/types"
+	btcstktypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 )
 
 // FinalityProviderSigned wraps the finality provider by adding the

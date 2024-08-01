@@ -8,9 +8,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 
-	fpcmd "github.com/babylonchain/finality-provider/finality-provider/cmd"
-	"github.com/babylonchain/finality-provider/finality-provider/cmd/fpd/daemon"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 )
 
 // NewRootCmd creates a new root command for fpd. It is called once in the main function.

@@ -7,12 +7,12 @@ import (
 
 	sdkErr "cosmossdk.io/errors"
 	"cosmossdk.io/math"
-	bbnclient "github.com/babylonchain/babylon/client/client"
-	bbntypes "github.com/babylonchain/babylon/types"
-	btcctypes "github.com/babylonchain/babylon/x/btccheckpoint/types"
-	btclctypes "github.com/babylonchain/babylon/x/btclightclient/types"
-	btcstakingtypes "github.com/babylonchain/babylon/x/btcstaking/types"
-	finalitytypes "github.com/babylonchain/babylon/x/finality/types"
+	bbnclient "github.com/babylonlabs-io/babylon/client/client"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
+	btcctypes "github.com/babylonlabs-io/babylon/x/btccheckpoint/types"
+	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil"
@@ -24,8 +24,8 @@ import (
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/types"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 var _ ClientController = &BabylonController{}

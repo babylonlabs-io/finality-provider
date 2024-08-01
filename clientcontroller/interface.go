@@ -9,9 +9,9 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"go.uber.org/zap"
 
-	finalitytypes "github.com/babylonchain/babylon/x/finality/types"
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 const (

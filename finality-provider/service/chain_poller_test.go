@@ -10,12 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	fpcfg "github.com/babylonchain/finality-provider/finality-provider/config"
-	"github.com/babylonchain/finality-provider/finality-provider/service"
-	"github.com/babylonchain/finality-provider/metrics"
-	"github.com/babylonchain/finality-provider/testutil"
-	"github.com/babylonchain/finality-provider/testutil/mocks"
-	"github.com/babylonchain/finality-provider/types"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/metrics"
+	"github.com/babylonlabs-io/finality-provider/testutil"
+	"github.com/babylonlabs-io/finality-provider/testutil/mocks"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 // FuzzChainPoller_Start tests the poller polling blocks
