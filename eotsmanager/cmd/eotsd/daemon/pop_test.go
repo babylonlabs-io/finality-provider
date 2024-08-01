@@ -43,8 +43,8 @@ func FuzzPoPExport(f *testing.F) {
 
 		bbnAddr := datagen.GenRandomAccount().GetAddress()
 
-		btcPkFlag := fmt.Sprintf("--btc-pk=%s", keyOut.PubKeyHex)
-		exportedPoP := appRunPoPExport(r, t, app, []string{bbnAddr.String(), hFlag, btcPkFlag})
+		eotsBtcPkFlag := fmt.Sprintf("--eots-pk=%s", keyOut.PubKeyHex)
+		exportedPoP := appRunPoPExport(r, t, app, []string{bbnAddr.String(), hFlag, eotsBtcPkFlag})
 		pop, err := btcstktypes.NewPoPBTCFromHex(exportedPoP.PoPHex)
 		require.NoError(t, err)
 

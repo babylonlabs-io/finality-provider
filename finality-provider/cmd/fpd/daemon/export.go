@@ -30,9 +30,9 @@ type FinalityProviderSigned struct {
 // CommandExportFP returns the export-finality-provider command by loading the fp and export the data.
 func CommandExportFP() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "export-finality-provider [fp-btc-pk-hex]",
+		Use:     "export-finality-provider [fp-eots-pk-hex]",
 		Aliases: []string{"exfp"},
-		Short:   "It exports the finality provider by the given BTC public key.",
+		Short:   "It exports the finality provider by the given EOTS public key.",
 		Example: fmt.Sprintf(`fpd export-finality-provider --daemon-address %s`, defaultFpdDaemonAddress),
 		Args:    cobra.NoArgs,
 		RunE:    fpcmd.RunEWithClientCtx(runCommandExportFP),

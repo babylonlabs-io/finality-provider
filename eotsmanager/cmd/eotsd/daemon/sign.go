@@ -28,9 +28,9 @@ var SignSchnorrSig = cli.Command{
 	Name:      "sign-schnorr",
 	Usage:     "Signs a Schnorr signature over arbitrary data with the EOTS private key.",
 	UsageText: "sign-schnorr [file-path]",
-	Description: `Read the file received as argument, hash it with
-	sha256 and sign based on the Schnorr key associated with the key-name or btc-pk flag.
-	If the both flags are supplied, btc-pk takes priority`,
+	Description: fmt.Sprintf(`Read the file received as argument, hash it with
+	sha256 and sign based on the Schnorr key associated with the %s or %s flag.
+	If the both flags are supplied, %s takes priority`, keyNameFlag, eotsPkFlag, eotsPkFlag),
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  homeFlag,
@@ -42,7 +42,7 @@ var SignSchnorrSig = cli.Command{
 			Usage: "The name of the key to load private key for signing",
 		},
 		cli.StringFlag{
-			Name:  fpPkFlag,
+			Name:  eotsPkFlag,
 			Usage: "The public key of the finality-provider to load private key for signing",
 		},
 		cli.StringFlag{
@@ -65,7 +65,7 @@ var VerifySchnorrSig = cli.Command{
 	UsageText: "verify-schnorr-sig [file-path]",
 	Flags: []cli.Flag{
 		cli.StringFlag{
-			Name:     fpPkFlag,
+			Name:     eotsPkFlag,
 			Usage:    "The EOTS public key that will be used to verify the signature",
 			Required: true,
 		},
@@ -79,7 +79,7 @@ var VerifySchnorrSig = cli.Command{
 }
 
 func SignSchnorrVerify(ctx *cli.Context) error {
-	fpPkStr := ctx.String(fpPkFlag)
+	fpPkStr := ctx.String(eotsPkFlag)
 	signatureHex := ctx.String(signatureFlag)
 
 	args := ctx.Args()
@@ -123,7 +123,7 @@ func SignSchnorrVerify(ctx *cli.Context) error {
 
 func SignSchnorr(ctx *cli.Context) error {
 	keyName := ctx.String(keyNameFlag)
-	fpPkStr := ctx.String(fpPkFlag)
+	fpPkStr := ctx.String(eotsPkFlag)
 	passphrase := ctx.String(passphraseFlag)
 	keyringBackend := ctx.String(keyringBackendFlag)
 
@@ -134,7 +134,7 @@ func SignSchnorr(ctx *cli.Context) error {
 	}
 
 	if len(fpPkStr) == 0 && len(keyName) == 0 {
-		return fmt.Errorf("at least one of the flags: %s, %s needs to be informed", keyNameFlag, fpPkFlag)
+		return fmt.Errorf("at least one of the flags: %s, %s needs to be informed", keyNameFlag, eotsPkFlag)
 	}
 
 	homePath, err := getHomeFlag(ctx)

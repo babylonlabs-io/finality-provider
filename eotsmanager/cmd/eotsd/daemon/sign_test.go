@@ -52,13 +52,13 @@ func FuzzSignAndVerifySchnorrSig(f *testing.F) {
 		fpInfoPath := filepath.Join(tempDir, "fpInfo.json")
 		writeFpInfoToFile(r, t, fpInfoPath, keyOut.PubKeyHex)
 
-		btcPkFlag := fmt.Sprintf("--btc-pk=%s", keyOut.PubKeyHex)
-		dataSignedBtcPk := appRunSignSchnorr(r, t, app, []string{fpInfoPath, hFlag, btcPkFlag})
-		err = app.Run([]string{"eotsd", "verify-schnorr-sig", fpInfoPath, btcPkFlag, fmt.Sprintf("--signature=%s", dataSignedBtcPk.SchnorrSignatureHex)})
+		eotsBtcPkFlag := fmt.Sprintf("--eots-pk=%s", keyOut.PubKeyHex)
+		dataSignedBtcPk := appRunSignSchnorr(r, t, app, []string{fpInfoPath, hFlag, eotsBtcPkFlag})
+		err = app.Run([]string{"eotsd", "verify-schnorr-sig", fpInfoPath, eotsBtcPkFlag, fmt.Sprintf("--signature=%s", dataSignedBtcPk.SchnorrSignatureHex)})
 		require.NoError(t, err)
 
 		dataSignedKeyName := appRunSignSchnorr(r, t, app, []string{fpInfoPath, hFlag, keyNameFlag})
-		err = app.Run([]string{"eotsd", "verify-schnorr-sig", fpInfoPath, btcPkFlag, fmt.Sprintf("--signature=%s", dataSignedKeyName.SchnorrSignatureHex)})
+		err = app.Run([]string{"eotsd", "verify-schnorr-sig", fpInfoPath, eotsBtcPkFlag, fmt.Sprintf("--signature=%s", dataSignedKeyName.SchnorrSignatureHex)})
 		require.NoError(t, err)
 
 		// check if both generated signatures match
@@ -66,13 +66,13 @@ func FuzzSignAndVerifySchnorrSig(f *testing.F) {
 		require.Equal(t, dataSignedBtcPk.SchnorrSignatureHex, dataSignedKeyName.SchnorrSignatureHex)
 		require.Equal(t, dataSignedBtcPk.SignedDataHashHex, dataSignedKeyName.SignedDataHashHex)
 
-		// sign with both keys and btc-pk, should give btc-pk preference
-		dataSignedBoth := appRunSignSchnorr(r, t, app, []string{fpInfoPath, hFlag, btcPkFlag, keyNameFlag})
+		// sign with both keys and eots-pk, should give eots-pk preference
+		dataSignedBoth := appRunSignSchnorr(r, t, app, []string{fpInfoPath, hFlag, eotsBtcPkFlag, keyNameFlag})
 		require.Equal(t, dataSignedBoth, dataSignedKeyName)
 
-		// the keyname can even be from a invalid keyname, since it gives btc-pk preference
+		// the keyname can even be from a invalid keyname, since it gives eots-pk preference
 		badKeyname := "badKeyName"
-		dataSignedBothBadKeyName := appRunSignSchnorr(r, t, app, []string{fpInfoPath, hFlag, btcPkFlag, fmt.Sprintf("--key-name=%s", badKeyname)})
+		dataSignedBothBadKeyName := appRunSignSchnorr(r, t, app, []string{fpInfoPath, hFlag, eotsBtcPkFlag, fmt.Sprintf("--key-name=%s", badKeyname)})
 		require.Equal(t, badKeyname, dataSignedBothBadKeyName.KeyName)
 		require.Equal(t, dataSignedBtcPk.PubKeyHex, dataSignedBothBadKeyName.PubKeyHex)
 		require.Equal(t, dataSignedBtcPk.SchnorrSignatureHex, dataSignedBothBadKeyName.SchnorrSignatureHex)

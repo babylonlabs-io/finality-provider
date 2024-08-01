@@ -113,5 +113,5 @@ A finality provider receives BTC delegations through delegators
 interacting with Babylon and choosing it as the recipient of their delegations.
 To perform a self-delegation,
 the operator can either visit the staking web app we provide,
-or run the Babylon [BTC Staker program](https://github.com/babylonchain/btc-staker) once.
+or run the Babylon [BTC Staker program](https://github.com/babylonlabs-io/btc-staker) once.
 The BTC staker connects to a Bitcoin wallet and Babylon to perform delegations.

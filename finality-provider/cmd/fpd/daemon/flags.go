@@ -2,7 +2,7 @@ package daemon
 
 const (
 	forceFlag            = "force"
-	fpPkFlag             = "btc-pk"
+	fpEotsPkFlag         = "eots-pk"
 	rpcListenerFlag      = "rpc-listener"
 	fpdDaemonAddressFlag = "daemon-address"
 	keyNameFlag          = "key-name"

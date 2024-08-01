@@ -29,7 +29,7 @@ func CommandStart() *cobra.Command {
 		Args:    cobra.NoArgs,
 		RunE:    fpcmd.RunEWithClientCtx(runStartCmd),
 	}
-	cmd.Flags().String(fpPkFlag, "", "The public key of the finality-provider to start")
+	cmd.Flags().String(fpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
 	cmd.Flags().String(passphraseFlag, "", "The pass phrase used to decrypt the private key")
 	cmd.Flags().String(rpcListenerFlag, "", "The address that the RPC server listens to")
 	return cmd
@@ -43,9 +43,9 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, args []string) error {
 	homePath = util.CleanAndExpandPath(homePath)
 	flags := cmd.Flags()
 
-	fpStr, err := flags.GetString(fpPkFlag)
+	fpStr, err := flags.GetString(fpEotsPkFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpPkFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", fpEotsPkFlag, err)
 	}
 
 	rpcListener, err := flags.GetString(rpcListenerFlag)

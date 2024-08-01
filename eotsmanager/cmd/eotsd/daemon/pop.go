@@ -20,7 +20,7 @@ func init() {
 }
 
 // PoPExport the data for exporting the PoP.
-// The PubKeyHex is the public key of the finality provider BTC key to load
+// The PubKeyHex is the public key of the finality provider EOTS key to load
 // the private key and sign the AddressSiged.
 type PoPExport struct {
 	PubKeyHex      string `json:"pub_key_hex"`
@@ -33,8 +33,8 @@ var ExportPoPCommand = cli.Command{
 	Usage:     "Exports the Proof of Possession by signing over the finality provider's Babylon address with the EOTS private key.",
 	UsageText: "pop-export [bbn-address]",
 	Description: `Parse the address received as argument, hash it with
-	sha256 and sign based on the EOTS key associated with the key-name or btc-pk flag.
-	If the both flags are supplied, btc-pk takes priority. Use the generated signature
+	sha256 and sign based on the EOTS key associated with the key-name or eots-pk flag.
+	If the both flags are supplied, eots-pk takes priority. Use the generated signature
 	to build a Proof of Possession and export it.`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
@@ -47,7 +47,7 @@ var ExportPoPCommand = cli.Command{
 			Usage: "The name of the key to load private key for signing",
 		},
 		cli.StringFlag{
-			Name:  fpPkFlag,
+			Name:  eotsPkFlag,
 			Usage: "The public key of the finality-provider to load private key for signing",
 		},
 		cli.StringFlag{
@@ -66,7 +66,7 @@ var ExportPoPCommand = cli.Command{
 
 func ExportPoP(ctx *cli.Context) error {
 	keyName := ctx.String(keyNameFlag)
-	fpPkStr := ctx.String(fpPkFlag)
+	fpPkStr := ctx.String(eotsPkFlag)
 	passphrase := ctx.String(passphraseFlag)
 	keyringBackend := ctx.String(keyringBackendFlag)
 
@@ -78,7 +78,7 @@ func ExportPoP(ctx *cli.Context) error {
 	}
 
 	if len(fpPkStr) == 0 && len(keyName) == 0 {
-		return fmt.Errorf("at least one of the flags: %s, %s needs to be informed", keyNameFlag, fpPkFlag)
+		return fmt.Errorf("at least one of the flags: %s, %s needs to be informed", keyNameFlag, eotsPkFlag)
 	}
 
 	homePath, err := getHomeFlag(ctx)

@@ -36,7 +36,7 @@ func runInitCmd(ctx client.Context, cmd *cobra.Command, args []string) error {
 	homePath = util.CleanAndExpandPath(homePath)
 	force, err := cmd.Flags().GetBool(forceFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpPkFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", fpEotsPkFlag, err)
 	}
 
 	if util.FileExists(homePath) && !force {
