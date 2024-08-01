@@ -12,7 +12,7 @@ require (
 	github.com/avast/retry-go/v4 v4.5.1
 	github.com/babylonchain/babylon-sdk/demo v0.0.0-20240705194516-4e2c5650cde8
 	github.com/babylonlabs-io/babylon v0.9.0
-	github.com/babylonlabs-io/babylon-finality-gadget v0.0.0-20240801002122-6d6bca47ec56
+	github.com/babylonlabs-io/babylon-finality-gadget v0.0.0-20240801151637-036cb072d0af
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/btcsuite/btcd/btcutil v1.1.5
@@ -381,7 +381,7 @@ require (
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	github.com/zondax/hid v0.9.2 // indirect
 	github.com/zondax/ledger-go v0.14.3 // indirect
-	go.etcd.io/bbolt v1.3.8 // indirect
+	go.etcd.io/bbolt v1.3.10 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.10 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.10 // indirect
 	go.etcd.io/etcd/client/v2 v2.305.10 // indirect

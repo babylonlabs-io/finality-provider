@@ -14,9 +14,14 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	fgclient "github.com/babylonlabs-io/babylon-finality-gadget/client"
+	"github.com/babylonlabs-io/babylon-finality-gadget/db"
+	"github.com/babylonlabs-io/babylon-finality-gadget/finalitygadget"
+	fgcfg "github.com/babylonlabs-io/babylon-finality-gadget/finalitygadget/config"
 	"github.com/babylonlabs-io/babylon-finality-gadget/sdk/btcclient"
 	sdkclient "github.com/babylonlabs-io/babylon-finality-gadget/sdk/client"
 	sdkcfg "github.com/babylonlabs-io/babylon-finality-gadget/sdk/config"
+	fgsrv "github.com/babylonlabs-io/babylon-finality-gadget/server"
 	bbncfg "github.com/babylonlabs-io/babylon/client/config"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	api "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
@@ -37,6 +42,7 @@ import (
 	ope2e "github.com/ethereum-optimism/optimism/op-e2e"
 	optestlog "github.com/ethereum-optimism/optimism/op-service/testlog"
 	gethlog "github.com/ethereum/go-ethereum/log"
+	sig "github.com/lightningnetwork/lnd/signal"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -52,13 +58,16 @@ type BaseTestManager = base_test_manager.BaseTestManager
 
 type OpL2ConsumerTestManager struct {
 	BaseTestManager
-	BabylonHandler    *e2eutils.BabylonNodeHandler
-	BabylonFpApp      *service.FinalityProviderApp
-	ConsumerFpApps    []*service.FinalityProviderApp
-	EOTSServerHandler *e2eutils.EOTSServerHandler
-	BaseDir           string
-	SdkClient         *sdkclient.SdkClient
-	OpSystem          *ope2e.System
+	BabylonHandler       *e2eutils.BabylonNodeHandler
+	BabylonFpApp         *service.FinalityProviderApp
+	ConsumerFpApps       []*service.FinalityProviderApp
+	EOTSServerHandler    *e2eutils.EOTSServerHandler
+	BaseDir              string
+	SdkClient            *sdkclient.SdkClient
+	FinalityGadgetServer *fgsrv.Server
+	FinalityGadgetClient *fgclient.FinalityGadgetGrpcClient
+	Db                   *db.BBoltHandler
+	OpSystem             *ope2e.System
 }
 
 func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2ConsumerTestManager {
@@ -109,18 +118,59 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 	require.NoError(t, err)
 	t.Logf(log.Prefix("Register consumer %s to Babylon"), opConsumerId)
 
+	// Define finality gadget configs
+	cfg := fgcfg.Config{
+		L2RPCHost:         opL2ConsumerConfig.OPStackL2RPCAddress,
+		BitcoinRPCHost:    trimLeadingHttp(opSys.Cfg.DeployConfig.BabylonFinalityGadgetBitcoinRpc),
+		FGContractAddress: opSys.Cfg.DeployConfig.BabylonFinalityGadgetContractAddress,
+		BBNChainID:        opSys.Cfg.DeployConfig.BabylonFinalityGadgetChainID,
+		BBNRPCAddress:     opL2ConsumerConfig.RPCAddr,
+		DBFilePath:        "data.db",
+		GRPCServerPort:    "8080",
+		PollInterval:      time.Second * time.Duration(10),
+	}
+
+	// Init local DB for storing and querying blocks
+	db, err := db.NewBBoltHandler(cfg.DBFilePath)
+	require.NoError(t, err)
+	defer db.Close()
+	err = db.TryCreateInitialBuckets()
+	require.NoError(t, err)
+
+	// Create finality gadget
+	fg, err := finalitygadget.NewFinalityGadget(&cfg, db)
+	require.NoError(t, err)
+
+	// Start grpc server
+	// Hook interceptor for os signals.
+	shutdownInterceptor, err := sig.Intercept()
+	require.NoError(t, err)
+	srv := fgsrv.NewFinalityGadgetServer(&cfg, db, fg, shutdownInterceptor)
+	go func() {
+		err = srv.RunUntilShutdown()
+		require.NoError(t, err)
+	}()
+
+	// Create grpc client
+	hostAddr := "localhost:" + cfg.GRPCServerPort
+	client, err := fgclient.NewFinalityGadgetGrpcClient(db, hostAddr)
+	require.NoError(t, err)
+
 	ctm := &OpL2ConsumerTestManager{
 		BaseTestManager: BaseTestManager{
 			BBNClient:        babylonClient,
 			CovenantPrivKeys: covenantPrivKeys,
 		},
-		BabylonHandler:    bh,
-		EOTSServerHandler: eotsHandler,
-		BabylonFpApp:      babylonFpApp,
-		ConsumerFpApps:    consumerFpApps,
-		BaseDir:           testDir,
-		SdkClient:         sdkClient,
-		OpSystem:          opSys,
+		BabylonHandler:       bh,
+		EOTSServerHandler:    eotsHandler,
+		BabylonFpApp:         babylonFpApp,
+		ConsumerFpApps:       consumerFpApps,
+		BaseDir:              testDir,
+		SdkClient:            sdkClient,
+		FinalityGadgetServer: srv,
+		FinalityGadgetClient: client,
+		Db:                   db,
+		OpSystem:             opSys,
 	}
 
 	ctm.WaitForServicesStart(t)
@@ -928,6 +978,12 @@ func (ctm *OpL2ConsumerTestManager) waitForBTCStakingActivation(t *testing.T) ui
 	return l2BlockAfterActivation
 }
 
+func (ctm *OpL2ConsumerTestManager) checkLatestBlock(t *testing.T, exp uint64) {
+	block, err := ctm.FinalityGadgetClient.GetLatestBlock()
+	require.NoError(t, err)
+	require.Equal(t, exp, block.BlockHeight)
+}
+
 func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
 	t.Log("Stopping test manager")
 	var err error
@@ -948,5 +1004,7 @@ func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
 	require.NoError(t, err)
 	ctm.EOTSServerHandler.Stop()
 	err = os.RemoveAll(ctm.BaseDir)
+	require.NoError(t, err)
+	err = ctm.Db.Close()
 	require.NoError(t, err)
 }

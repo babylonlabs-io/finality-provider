@@ -5,6 +5,7 @@ package e2etest_op
 
 import (
 	"encoding/hex"
+	"fmt"
 	"testing"
 	"time"
 
@@ -184,4 +185,52 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 	t.Logf(log.Prefix(
 		"OP chain fianlity is recovered, the latest finalized block height %d",
 	), nextFinalizedHeight)
+}
+
+func TestFinalityGadget(t *testing.T) {
+	// start the consumer manager
+	ctm := StartOpL2ConsumerManager(t, 2)
+	defer ctm.Stop(t)
+
+	// register, get BTC delegations, and start FPs
+	n := 2
+	fpList := ctm.SetupFinalityProviders(t, n, []stakingParam{
+		// for the first FP, we give it more power b/c it will be used later
+		{e2eutils.StakingTime, 3 * e2eutils.StakingAmount},
+		{e2eutils.StakingTime, e2eutils.StakingAmount},
+	})
+
+	// check both FPs have committed their first public randomness
+	// TODO: we might use go routine to do this in parallel
+	for i := 0; i < n; i++ {
+		e2eutils.WaitForFpPubRandCommitted(t, fpList[i])
+	}
+
+	// wait until the BTC staking is activated
+	l2BlockAfterActivation := ctm.waitForBTCStakingActivation(t)
+
+	// both FP will sign the first block
+	targetBlockHeight := ctm.WaitForTargetBlockPubRand(t, fpList, l2BlockAfterActivation)
+	ctm.WaitForFpVoteReachHeight(t, fpList[0], targetBlockHeight)
+	ctm.WaitForFpVoteReachHeight(t, fpList[1], targetBlockHeight)
+	t.Logf(log.Prefix("Both FP instances signed the first block"))
+
+	// both FP will sign the second block
+	ctm.WaitForFpVoteReachHeight(t, fpList[0], targetBlockHeight+1)
+	ctm.WaitForFpVoteReachHeight(t, fpList[1], targetBlockHeight+1)
+	t.Logf(log.Prefix("Both FP instances signed the second block"))
+
+	// run the finality gadget
+	t.Logf(log.Prefix("Starting finality gadget"))
+	err := ctm.FinalityGadgetServer.RunUntilShutdown()
+	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		block, err := ctm.FinalityGadgetClient.GetLatestBlock()
+		require.NoError(t, err)
+		return block.BlockHeight == targetBlockHeight+1
+	}, 5*time.Second, time.Second, "Failed to process blocks")
+
+	// get latest finalized block via API and check response
+	fmt.Printf("targetBlockHeight: %d\n", targetBlockHeight)
+	ctm.checkLatestBlock(t, targetBlockHeight+1)
 }
