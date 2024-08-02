@@ -91,7 +91,7 @@ func StartBcdTestManager(t *testing.T) *BcdTestManager {
 	cfg.CosmwasmConfig.KeyDirectory = wh.dataDir
 	// make random contract address for now to avoid validation errors, later we will update it with the correct address in the test
 	cfg.CosmwasmConfig.BtcStakingContractAddress = datagen.GenRandomAccount().GetAddress().String()
-	cfg.ChainName = fpcc.WasmConsumerChainName
+	cfg.ChainType = fpcc.WasmConsumerChainType
 	cfg.CosmwasmConfig.AccountPrefix = "bbnc"
 	cfg.CosmwasmConfig.ChainID = bcdChainID
 	cfg.CosmwasmConfig.RPCAddr = fmt.Sprintf("http://localhost:%d", bcdRpcPort)

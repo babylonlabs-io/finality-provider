@@ -66,7 +66,7 @@ func NewFinalityProviderAppFromConfig(
 	}
 	consumerCon, err := fpcc.NewConsumerController(cfg, logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create rpc client for the consumer chain %s: %v", cfg.ChainName, err)
+		return nil, fmt.Errorf("failed to create rpc client for the consumer chain %s: %v", cfg.ChainType, err)
 	}
 	// if the EOTSManagerAddress is empty, run a local EOTS manager;
 	// otherwise connect a remote one with a gRPC client
