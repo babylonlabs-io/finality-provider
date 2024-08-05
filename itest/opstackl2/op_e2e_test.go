@@ -4,12 +4,13 @@
 package e2etest_op
 
 import (
+	"context"
 	"encoding/hex"
 	"testing"
 	"time"
 
-	sdkclient "github.com/babylonlabs-io/babylon-finality-gadget/sdk/client"
-	"github.com/babylonlabs-io/babylon-finality-gadget/sdk/cwclient"
+	sdkclient "github.com/babylonlabs-io/finality-gadget/sdk/client"
+	"github.com/babylonlabs-io/finality-gadget/sdk/cwclient"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/testutil/log"
 	"github.com/stretchr/testify/require"
@@ -17,7 +18,7 @@ import (
 
 // tests the finality signature submission to the op-finality-gadget contract
 func TestOpSubmitFinalitySignature(t *testing.T) {
-	ctm := StartOpL2ConsumerManager(t, 1)
+	ctm := StartOpL2ConsumerManager(t, 1, false)
 	defer ctm.Stop(t)
 
 	consumerFpPkList := ctm.RegisterConsumerFinalityProvider(t, 1)
@@ -46,7 +47,7 @@ func TestOpSubmitFinalitySignature(t *testing.T) {
 	// note: QueryFinalityProviderHasPower is hardcode to return true so FPs can still submit finality sigs even if they
 	// don't have voting power. But the finality sigs will not be counted at tally time.
 	_, err = ctm.SdkClient.QueryIsBlockBabylonFinalized(queryParams)
-	require.ErrorIs(t, err, sdkclient.ErrNoFpHasVotingPower)
+	require.ErrorIs(t, err, sdkclient.ErrBtcStakingNotActivated)
 	t.Logf(log.Prefix("Expected no voting power"))
 }
 
@@ -54,7 +55,7 @@ func TestOpSubmitFinalitySignature(t *testing.T) {
 // 1. block has both two FP signs, so it would be finalized
 // 2. block has only one FP with smaller power (1/4) signs, so it would not be considered as finalized
 func TestOpMultipleFinalityProviders(t *testing.T) {
-	ctm := StartOpL2ConsumerManager(t, 2)
+	ctm := StartOpL2ConsumerManager(t, 2, false)
 	defer ctm.Stop(t)
 
 	// register, get BTC delegations, and start FPs
@@ -125,7 +126,7 @@ func TestOpMultipleFinalityProviders(t *testing.T) {
 }
 
 func TestFinalityStuckAndRecover(t *testing.T) {
-	ctm := StartOpL2ConsumerManager(t, 1)
+	ctm := StartOpL2ConsumerManager(t, 1, false)
 	defer ctm.Stop(t)
 
 	// register, get BTC delegations, and start FPs
@@ -184,4 +185,56 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 	t.Logf(log.Prefix(
 		"OP chain fianlity is recovered, the latest finalized block height %d",
 	), nextFinalizedHeight)
+}
+
+func TestFinalityGadget(t *testing.T) {
+	// start the consumer manager
+	ctm := StartOpL2ConsumerManager(t, 2, true)
+	defer ctm.Stop(t)
+
+	// register, get BTC delegations, and start FPs
+	n := 2
+	fpList := ctm.SetupFinalityProviders(t, n, []stakingParam{
+		// for the first FP, we give it more power b/c it will be used later
+		{e2eutils.StakingTime, 3 * e2eutils.StakingAmount},
+		{e2eutils.StakingTime, e2eutils.StakingAmount},
+	})
+
+	// check both FPs have committed their first public randomness
+	// TODO: we might use go routine to do this in parallel
+	for i := 0; i < n; i++ {
+		e2eutils.WaitForFpPubRandCommitted(t, fpList[i])
+	}
+
+	// wait until the BTC staking is activated
+	l2BlockAfterActivation := ctm.waitForBTCStakingActivation(t)
+
+	// both FP will sign the first block
+	targetBlockHeight := ctm.WaitForTargetBlockPubRand(t, fpList, l2BlockAfterActivation)
+	ctm.WaitForFpVoteReachHeight(t, fpList[0], targetBlockHeight)
+	ctm.WaitForFpVoteReachHeight(t, fpList[1], targetBlockHeight)
+	t.Logf(log.Prefix("Both FP instances signed the first block"))
+
+	// both FP will sign the second block
+	ctm.WaitForFpVoteReachHeight(t, fpList[0], targetBlockHeight+1)
+	ctm.WaitForFpVoteReachHeight(t, fpList[1], targetBlockHeight+1)
+	t.Logf(log.Prefix("Both FP instances signed the second block"))
+
+	// run the finality gadget
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		t.Logf(log.Prefix("Starting finality gadget"))
+		err := ctm.FinalityGadget.ProcessBlocks(ctx)
+		require.NoError(t, err)
+	}()
+
+	// check latest block
+	require.Eventually(t, func() bool {
+		block, err := ctm.FinalityGadgetClient.GetLatestBlock()
+		require.NoError(t, err)
+		return block.BlockHeight > targetBlockHeight+6
+	}, 40*time.Second, 5*time.Second, "Failed to process blocks")
+
+	// stop the finality gadget
+	cancel()
 }

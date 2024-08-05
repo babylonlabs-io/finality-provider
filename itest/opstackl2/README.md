@@ -12,4 +12,7 @@ Then run the following command to start the e2e tests:
 
 ```bash
 $ make test-e2e-op
+
+# Filter specific test
+$ make test-e2e-op Filter=TestFinalityGadget
 ```
