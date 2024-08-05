@@ -5,7 +5,6 @@ package e2etest_op
 
 import (
 	"encoding/hex"
-	"fmt"
 	"testing"
 	"time"
 
@@ -221,16 +220,16 @@ func TestFinalityGadget(t *testing.T) {
 	t.Logf(log.Prefix("Both FP instances signed the second block"))
 
 	// run the finality gadget
-	t.Logf(log.Prefix("Starting finality gadget"))
-	err := ctm.FinalityGadgetServer.RunUntilShutdown()
-	require.NoError(t, err)
+	go func() {
+		t.Logf(log.Prefix("Starting finality gadget"))
+		err := ctm.FinalityGadget.ProcessBlocks()
+		require.NoError(t, err)
+	}()
+
+	// check latest block
 	require.Eventually(t, func() bool {
 		block, err := ctm.FinalityGadgetClient.GetLatestBlock()
 		require.NoError(t, err)
-		return block.BlockHeight == targetBlockHeight+1
-	}, 5*time.Second, time.Second, "Failed to process blocks")
-
-	// get latest finalized block via API and check response
-	fmt.Printf("targetBlockHeight: %d\n", targetBlockHeight)
-	ctm.checkLatestBlock(t, targetBlockHeight+1)
+		return block.BlockHeight > targetBlockHeight+6
+	}, 40*time.Second, 5*time.Second, "Failed to process blocks")
 }

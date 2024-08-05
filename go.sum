@@ -300,8 +300,8 @@ github.com/babylonchain/babylon-sdk/demo v0.0.0-20240705194516-4e2c5650cde8 h1:V
 github.com/babylonchain/babylon-sdk/demo v0.0.0-20240705194516-4e2c5650cde8/go.mod h1:X4QovCWMwqMjoTriu18w4gfqX1sYqOWRnZwXGYD8bnE=
 github.com/babylonchain/babylon-sdk/x v0.0.0-20240705194516-4e2c5650cde8 h1:W8jr9BHOLD9RJviI6TmnWPwZpMSjliQNIbNuflBx6vo=
 github.com/babylonchain/babylon-sdk/x v0.0.0-20240705194516-4e2c5650cde8/go.mod h1:Ojrlnwh9z7fvmTUzYH4Tk+8hWSctCrZYWiC5+t4X32I=
-github.com/babylonlabs-io/babylon-finality-gadget v0.0.0-20240801151637-036cb072d0af h1:dMjsU7c7PV3XamSscfIp++3AHXtwQQTe7yKKq39B61g=
-github.com/babylonlabs-io/babylon-finality-gadget v0.0.0-20240801151637-036cb072d0af/go.mod h1:+7ssrcyvdI/X7dqU8e2/wVMAAwlFqSQh3RwObQsoeOY=
+github.com/babylonlabs-io/babylon-finality-gadget v0.0.0-20240805113957-c2b799ee30f5 h1:VR4/NyySQc5ar7mqX3O6S3X2pR/hL64mRuNJIXKfGdw=
+github.com/babylonlabs-io/babylon-finality-gadget v0.0.0-20240805113957-c2b799ee30f5/go.mod h1:+7ssrcyvdI/X7dqU8e2/wVMAAwlFqSQh3RwObQsoeOY=
 github.com/babylonlabs-io/babylon-private v0.9.0-rc.3.0.20240801001431-74a24c962ce2 h1:sFsAJkrYe1eIkKzWTn4sj7G6QrPQ3IK33/UlOVgeA5M=
 github.com/babylonlabs-io/babylon-private v0.9.0-rc.3.0.20240801001431-74a24c962ce2/go.mod h1:pyFZgF85gUhfiCJKbYjnxo5+9prDkti48tW4FDEu9js=
 github.com/babylonlabs-io/optimism v1.8.1-0.20240731214220-e7d71bf38866 h1:FjrkthFS4JRGCckPh/uTdznhqwQOzjD8JJ0blcrS1VY=
