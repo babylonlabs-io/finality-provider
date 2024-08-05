@@ -4,6 +4,7 @@
 package e2etest_op
 
 import (
+	"context"
 	"encoding/hex"
 	"testing"
 	"time"
@@ -220,9 +221,10 @@ func TestFinalityGadget(t *testing.T) {
 	t.Logf(log.Prefix("Both FP instances signed the second block"))
 
 	// run the finality gadget
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		t.Logf(log.Prefix("Starting finality gadget"))
-		err := ctm.FinalityGadget.ProcessBlocks()
+		err := ctm.FinalityGadget.ProcessBlocks(ctx)
 		require.NoError(t, err)
 	}()
 
@@ -232,4 +234,7 @@ func TestFinalityGadget(t *testing.T) {
 		require.NoError(t, err)
 		return block.BlockHeight > targetBlockHeight+6
 	}, 40*time.Second, 5*time.Second, "Failed to process blocks")
+
+	// stop the finality gadget
+	cancel()
 }
