@@ -12,7 +12,7 @@ require (
 	github.com/avast/retry-go/v4 v4.5.1
 	github.com/babylonchain/babylon-sdk/demo v0.0.0-20240705194516-4e2c5650cde8
 	github.com/babylonlabs-io/babylon v0.9.0
-	github.com/babylonlabs-io/babylon-finality-gadget v0.0.0-20240805131414-fb077df2023c
+	github.com/babylonlabs-io/finality-gadget v0.1.0
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/btcsuite/btcd/btcutil v1.1.5
@@ -440,8 +440,9 @@ replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 	github.com/babylonlabs-io/babylon => github.com/babylonlabs-io/babylon-private v0.9.0-rc.3.0.20240801001431-74a24c962ce2
+	github.com/babylonlabs-io/finality-gadget => github.com/babylonlabs-io/finality-gadget v0.0.0-20240805210950-4ff43c720b6a
 	github.com/cockroachdb/pebble => github.com/cockroachdb/pebble v0.0.0-20231018212520-f6cde3fc2fa4
-	github.com/ethereum-optimism/optimism => github.com/babylonlabs-io/optimism v1.8.1-0.20240731214220-e7d71bf38866
+	github.com/ethereum-optimism/optimism => github.com/babylonlabs-io/optimism v1.8.1-0.20240804005223-75f4cdcfed28
 	github.com/ethereum/go-ethereum => github.com/ethereum-optimism/op-geth v1.101315.1-rc.5
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7

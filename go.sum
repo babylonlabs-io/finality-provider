@@ -300,12 +300,12 @@ github.com/babylonchain/babylon-sdk/demo v0.0.0-20240705194516-4e2c5650cde8 h1:V
 github.com/babylonchain/babylon-sdk/demo v0.0.0-20240705194516-4e2c5650cde8/go.mod h1:X4QovCWMwqMjoTriu18w4gfqX1sYqOWRnZwXGYD8bnE=
 github.com/babylonchain/babylon-sdk/x v0.0.0-20240705194516-4e2c5650cde8 h1:W8jr9BHOLD9RJviI6TmnWPwZpMSjliQNIbNuflBx6vo=
 github.com/babylonchain/babylon-sdk/x v0.0.0-20240705194516-4e2c5650cde8/go.mod h1:Ojrlnwh9z7fvmTUzYH4Tk+8hWSctCrZYWiC5+t4X32I=
-github.com/babylonlabs-io/babylon-finality-gadget v0.0.0-20240805131414-fb077df2023c h1:RgaS4KpJ5VQm04TJeg+GDUhLrwOGgiFWYJ/2Cv8f3+o=
-github.com/babylonlabs-io/babylon-finality-gadget v0.0.0-20240805131414-fb077df2023c/go.mod h1:+7ssrcyvdI/X7dqU8e2/wVMAAwlFqSQh3RwObQsoeOY=
 github.com/babylonlabs-io/babylon-private v0.9.0-rc.3.0.20240801001431-74a24c962ce2 h1:sFsAJkrYe1eIkKzWTn4sj7G6QrPQ3IK33/UlOVgeA5M=
 github.com/babylonlabs-io/babylon-private v0.9.0-rc.3.0.20240801001431-74a24c962ce2/go.mod h1:pyFZgF85gUhfiCJKbYjnxo5+9prDkti48tW4FDEu9js=
-github.com/babylonlabs-io/optimism v1.8.1-0.20240731214220-e7d71bf38866 h1:FjrkthFS4JRGCckPh/uTdznhqwQOzjD8JJ0blcrS1VY=
-github.com/babylonlabs-io/optimism v1.8.1-0.20240731214220-e7d71bf38866/go.mod h1:MAppo9HosEUwyUCNnvJxJb3GQr5iP72HYb0Xv5YY4JE=
+github.com/babylonlabs-io/finality-gadget v0.0.0-20240805210950-4ff43c720b6a h1:wMQ0sCWzwjXMXkww3kr5N0MgjizmulVGKvNcvyTEGhg=
+github.com/babylonlabs-io/finality-gadget v0.0.0-20240805210950-4ff43c720b6a/go.mod h1:+BICJA7mUJpfYOSYds1G5w6nLO0gKVe9XwdmpIUiXmk=
+github.com/babylonlabs-io/optimism v1.8.1-0.20240804005223-75f4cdcfed28 h1:1xw+4A+IAvHff0f02UsXR1h0bg04Xn726ZvEAwrc/7Y=
+github.com/babylonlabs-io/optimism v1.8.1-0.20240804005223-75f4cdcfed28/go.mod h1:cVDnobSCpjb8XIfy8/8tlnm1gkO9lV2xfCezG/7YacY=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/benbjohnson/clock v1.3.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/benbjohnson/clock v1.3.5 h1:VvXlSJBzZpA/zum6Sj74hxwYI2DIxRWuNIoXAzHZz5o=
