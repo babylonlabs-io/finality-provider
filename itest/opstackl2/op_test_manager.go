@@ -71,7 +71,7 @@ type OpL2ConsumerTestManager struct {
 	OpSystem             *ope2e.System
 }
 
-func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2ConsumerTestManager {
+func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8, runFinalityGadget bool) *OpL2ConsumerTestManager {
 	defaultlog.SetOutput(os.Stdout)
 
 	// Setup base dir and logger
@@ -138,32 +138,41 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 		PollInterval:      time.Second * time.Duration(10),
 	}
 
-	// Init local DB for storing and querying blocks
-	db, err := db.NewBBoltHandler(cfg.DBFilePath)
-	require.NoError(t, err)
-	err = db.TryCreateInitialBuckets()
-	require.NoError(t, err)
-	t.Logf(log.Prefix("Init local DB for finality gadget server"))
-
-	// Create finality gadget
-	fg, err := finalitygadget.NewFinalityGadget(&cfg, db)
-	require.NoError(t, err)
-	t.Logf(log.Prefix("Created finality gadget"))
-
-	// Start grpc server
-	// Hook interceptor for os signals.
-	srv := fgsrv.NewFinalityGadgetServer(&cfg, db, fg, shutdownInterceptor)
-	go func() {
-		err = srv.RunUntilShutdown()
+	// Start finality gadget
+	var database *db.BBoltHandler
+	var finalityGadget *finalitygadget.FinalityGadget
+	var client *fgclient.FinalityGadgetGrpcClient
+	if runFinalityGadget {
+		// Init local DB for storing and querying blocks
+		db, err := db.NewBBoltHandler(cfg.DBFilePath)
 		require.NoError(t, err)
-	}()
-	t.Logf(log.Prefix("Started finality gadget grpc server"))
+		database = db
+		err = db.TryCreateInitialBuckets()
+		require.NoError(t, err)
+		t.Logf(log.Prefix("Init local DB for finality gadget server"))
 
-	// Create grpc client
-	hostAddr := "localhost:" + cfg.GRPCServerPort
-	client, err := fgclient.NewFinalityGadgetGrpcClient(db, hostAddr)
-	require.NoError(t, err)
-	t.Logf(log.Prefix("Started finality gadget grpc client"))
+		// Create finality gadget
+		fg, err := finalitygadget.NewFinalityGadget(&cfg, db)
+		require.NoError(t, err)
+		finalityGadget = fg
+		t.Logf(log.Prefix("Created finality gadget"))
+
+		// Start grpc server
+		// Hook interceptor for os signals.
+		srv := fgsrv.NewFinalityGadgetServer(&cfg, db, fg, shutdownInterceptor)
+		go func() {
+			err = srv.RunUntilShutdown()
+			require.NoError(t, err)
+		}()
+		t.Logf(log.Prefix("Started finality gadget grpc server"))
+
+		// Create grpc client
+		hostAddr := "localhost:" + cfg.GRPCServerPort
+		fgClient, err := fgclient.NewFinalityGadgetGrpcClient(db, hostAddr)
+		require.NoError(t, err)
+		client = fgClient
+		t.Logf(log.Prefix("Started finality gadget grpc client"))
+	}
 
 	ctm := &OpL2ConsumerTestManager{
 		BaseTestManager: BaseTestManager{
@@ -176,9 +185,9 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 		ConsumerFpApps:       consumerFpApps,
 		BaseDir:              testDir,
 		SdkClient:            sdkClient,
-		FinalityGadget:       fg,
+		FinalityGadget:       finalityGadget,
 		FinalityGadgetClient: client,
-		Db:                   db,
+		Db:                   database,
 		OpSystem:             opSys,
 	}
 
@@ -1010,17 +1019,19 @@ func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
 		t.Logf(log.Prefix("Stopped Consumer FP App %d"), i)
 	}
 
-	err = ctm.FinalityGadget.DeleteDB()
-	require.NoError(t, err)
+	if ctm.FinalityGadget != nil {
+		err = ctm.FinalityGadget.DeleteDB()
+		require.NoError(t, err)
+		ctm.FinalityGadget.Close()
+		err = ctm.FinalityGadgetClient.Close()
+		require.NoError(t, err)
+		err = ctm.Db.Close()
+		require.NoError(t, err)
+	}
 	ctm.OpSystem.Close()
 	err = ctm.BabylonHandler.Stop()
 	require.NoError(t, err)
 	ctm.EOTSServerHandler.Stop()
 	err = os.RemoveAll(ctm.BaseDir)
-	require.NoError(t, err)
-	ctm.FinalityGadget.Close()
-	err = ctm.FinalityGadgetClient.Close()
-	require.NoError(t, err)
-	err = ctm.Db.Close()
 	require.NoError(t, err)
 }

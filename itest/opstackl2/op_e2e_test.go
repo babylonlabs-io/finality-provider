@@ -17,7 +17,7 @@ import (
 
 // tests the finality signature submission to the op-finality-gadget contract
 func TestOpSubmitFinalitySignature(t *testing.T) {
-	ctm := StartOpL2ConsumerManager(t, 1)
+	ctm := StartOpL2ConsumerManager(t, 1, false)
 	defer ctm.Stop(t)
 
 	consumerFpPkList := ctm.RegisterConsumerFinalityProvider(t, 1)
@@ -54,7 +54,7 @@ func TestOpSubmitFinalitySignature(t *testing.T) {
 // 1. block has both two FP signs, so it would be finalized
 // 2. block has only one FP with smaller power (1/4) signs, so it would not be considered as finalized
 func TestOpMultipleFinalityProviders(t *testing.T) {
-	ctm := StartOpL2ConsumerManager(t, 2)
+	ctm := StartOpL2ConsumerManager(t, 2, false)
 	defer ctm.Stop(t)
 
 	// register, get BTC delegations, and start FPs
@@ -125,7 +125,7 @@ func TestOpMultipleFinalityProviders(t *testing.T) {
 }
 
 func TestFinalityStuckAndRecover(t *testing.T) {
-	ctm := StartOpL2ConsumerManager(t, 1)
+	ctm := StartOpL2ConsumerManager(t, 1, false)
 	defer ctm.Stop(t)
 
 	// register, get BTC delegations, and start FPs
@@ -188,7 +188,7 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 
 func TestFinalityGadget(t *testing.T) {
 	// start the consumer manager
-	ctm := StartOpL2ConsumerManager(t, 2)
+	ctm := StartOpL2ConsumerManager(t, 2, true)
 	defer ctm.Stop(t)
 
 	// register, get BTC delegations, and start FPs
