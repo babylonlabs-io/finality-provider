@@ -1,0 +1,21 @@
+name: ci
+
+on:
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  lint_test:
+    uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@v0.1.0
+    secrets: inherit
+    with:
+      run-unit-tests: true
+      run-integration-tests: true
+      run-lint: true
+
+  docker_pipeline:
+    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.1.0
+    secrets: inherit
+    with:
+      publish: false

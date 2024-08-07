@@ -3,7 +3,7 @@ TOOLS_DIR := tools
 
 BABYLON_PKG := github.com/babylonlabs-io/babylon/cmd/babylond
 WASMD_PKG   := github.com/CosmWasm/wasmd/cmd/wasmd
-BCD_PKG     := github.com/babylonchain/babylon-sdk/demo/cmd/bcd
+BCD_PKG     := github.com/babylonlabs-io/babylon-sdk/demo/cmd/bcd
 
 GO_BIN := ${GOPATH}/bin
 BTCD_BIN := $(GO_BIN)/btcd
@@ -56,7 +56,7 @@ $(BUILDDIR)/:
 	mkdir -p $(BUILDDIR)/
 
 build-docker:
-	$(DOCKER) build --secret id=sshKey,src=${BBN_PRIV_DEPLOY_KEY} --tag babylonchain/finality-provider -f Dockerfile \
+	$(DOCKER) build --secret id=sshKey,src=${BBN_PRIV_DEPLOY_KEY} --tag babylonlabs-io/finality-provider -f Dockerfile \
 		$(shell git rev-parse --show-toplevel)
 
 .PHONY: build build-docker
