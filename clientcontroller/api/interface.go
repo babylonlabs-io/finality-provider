@@ -2,10 +2,10 @@ package api
 
 import (
 	"cosmossdk.io/math"
+	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-
-	"github.com/babylonlabs-io/finality-provider/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
@@ -13,6 +13,9 @@ const (
 )
 
 type ClientController interface {
+	// GetKeyAddress returns the address of the Babylon key in the keyring
+	GetKeyAddress() sdk.AccAddress
+
 	// RegisterFinalityProvider registers a finality provider to the consumer chain
 	// it returns tx hash and error. The address of the finality provider will be
 	// the signer of the msg.

@@ -8,6 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -54,10 +55,8 @@ func FuzzCreatePoP(f *testing.F) {
 		require.NoError(t, err)
 		btcPk, err := types.NewBIP340PubKey(btcPkBytes)
 		require.NoError(t, err)
-		keyInfo, err := kc.CreateChainKey(passphrase, hdPath, "")
-		require.NoError(t, err)
 
-		fpAddr := keyInfo.AccAddress
+		fpAddr := datagen.GenRandomAccount().GetAddress()
 		fpRecord, err := em.KeyRecord(btcPk.MustMarshal(), passphrase)
 		require.NoError(t, err)
 		pop, err := kc.CreatePop(fpAddr, fpRecord.PrivKey)
