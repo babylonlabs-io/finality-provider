@@ -11,6 +11,7 @@ import (
 	types "github.com/babylonlabs-io/finality-provider/types"
 	btcec "github.com/btcsuite/btcd/btcec/v2"
 	schnorr "github.com/btcsuite/btcd/btcec/v2/schnorr"
+	types0 "github.com/cosmos/cosmos-sdk/types"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -49,6 +50,20 @@ func (m *MockClientController) Close() error {
 func (mr *MockClientControllerMockRecorder) Close() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockClientController)(nil).Close))
+}
+
+// GetKeyAddress mocks base method.
+func (m *MockClientController) GetKeyAddress() types0.AccAddress {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKeyAddress")
+	ret0, _ := ret[0].(types0.AccAddress)
+	return ret0
+}
+
+// GetKeyAddress indicates an expected call of GetKeyAddress.
+func (mr *MockClientControllerMockRecorder) GetKeyAddress() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeyAddress", reflect.TypeOf((*MockClientController)(nil).GetKeyAddress))
 }
 
 // QueryFinalityProviderSlashed mocks base method.

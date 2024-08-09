@@ -386,14 +386,12 @@ func (app *FinalityProviderApp) handleCreateFinalityProviderRequest(req *createF
 		return nil, err
 	}
 
-	fpAddr, err := kr.Address(req.passPhrase)
-	if err != nil {
+	if !kr.HasKey(req.passPhrase) {
 		// the chain key does not exist, should create the chain key first
-		keyInfo, err := kr.CreateChainKey(req.passPhrase, req.hdPath, "")
+		_, err := kr.CreateChainKey(req.passPhrase, req.hdPath, "")
 		if err != nil {
 			return nil, fmt.Errorf("failed to create chain key %s: %w", req.keyName, err)
 		}
-		fpAddr = keyInfo.AccAddress
 	}
 
 	// 2. create EOTS key
@@ -409,6 +407,9 @@ func (app *FinalityProviderApp) handleCreateFinalityProviderRequest(req *createF
 	if err != nil {
 		return nil, fmt.Errorf("failed to get finality-provider record: %w", err)
 	}
+
+	// get the Babylon address used by the finality provider
+	fpAddr := app.cc.GetKeyAddress()
 
 	// 3. create proof-of-possession
 	pop, err := kr.CreatePop(fpAddr, fpRecord.PrivKey)
@@ -489,10 +490,7 @@ func (app *FinalityProviderApp) StoreFinalityProvider(
 	if err != nil {
 		return nil, err
 	}
-	fpAddr, err := kr.Address(passPhrase)
-	if err != nil {
-		return nil, err
-	}
+	fpAddr := app.cc.GetKeyAddress()
 
 	// 2. create EOTS key
 	fpPkBytes, err := app.eotsManager.CreateKey(keyName, passPhrase, hdPath)

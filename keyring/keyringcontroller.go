@@ -99,17 +99,12 @@ func (kc *ChainKeyringController) CreateChainKey(passphrase, hdPath, mnemonic st
 	}
 
 	privKey := record.GetLocal().PrivKey.GetCachedValue()
-	accAddress, err := record.GetAddress()
-	if err != nil {
-		return nil, err
-	}
 
 	switch v := privKey.(type) {
 	case *sdksecp256k1.PrivKey:
 		sk, pk := btcec.PrivKeyFromBytes(v.Key)
 		return &types.ChainKeyInfo{
 			Name:       kc.fpName,
-			AccAddress: accAddress,
 			PublicKey:  pk,
 			PrivateKey: sk,
 			Mnemonic:   mnemonic,
@@ -126,15 +121,12 @@ func (kc *ChainKeyringController) CreatePop(fpAddr sdk.AccAddress, btcPrivKey *b
 	return bstypes.NewPoPBTC(fpAddr, btcPrivKey)
 }
 
-// Address returns the address from the keyring
-func (kc *ChainKeyringController) Address(passphrase string) (sdk.AccAddress, error) {
+// HasKey returns whether the key with the given passphrase exists in the keyring
+func (kc *ChainKeyringController) HasKey(passphrase string) bool {
 	kc.input.Reset(passphrase)
-	k, err := kc.kr.Key(kc.fpName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get address: %w", err)
-	}
+	_, err := kc.kr.Key(kc.fpName)
 
-	return k.GetAddress()
+	return err == nil
 }
 
 func (kc *ChainKeyringController) GetChainPrivKey(passphrase string) (*sdksecp256k1.PrivKey, error) {
