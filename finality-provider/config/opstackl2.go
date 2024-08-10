@@ -11,8 +11,9 @@ import (
 )
 
 type OPStackL2Config struct {
-	OPStackL2RPCAddress     string `long:"opstackl2-rpc-address" description:"the rpc address of the op-stack-l2 node to connect to"`
-	OPFinalityGadgetAddress string `long:"op-finality-gadget" description:"the contract address of the op-finality-gadget"`
+	OPStackL2RPCAddress      string `long:"opstackl2-rpc-address" description:"the rpc address of the op-stack-l2 node to connect to"`
+	OPFinalityGadgetAddress  string `long:"op-finality-gadget" description:"the contract address of the op-finality-gadget"`
+	BabylonFinalityGadgetRpc string `long:"babylon-finality-gadget-rpc" description:"the rpc address of babylon op finality gadget"`
 	// Below configurations are needed for the Babylon client
 	Key            string        `long:"key" description:"name of the babylon key to sign transactions with"`
 	ChainID        string        `long:"chain-id" description:"chain id of the babylon chain to connect to"`
@@ -40,6 +41,12 @@ func (cfg *OPStackL2Config) Validate() error {
 	}
 	if !strings.HasPrefix(cfg.OPFinalityGadgetAddress, cfg.AccountPrefix) {
 		return fmt.Errorf("op-finality-gadget: invalid address prefix: %w", err)
+	}
+	if cfg.BabylonFinalityGadgetRpc == "" {
+		return fmt.Errorf("babylon-finality-gadget-rpc is required")
+	}
+	if _, err := url.Parse(cfg.BabylonFinalityGadgetRpc); err != nil {
+		return fmt.Errorf("babylon-finality-gadget-rpc is not correctly formatted: %w", err)
 	}
 	if _, err := url.Parse(cfg.RPCAddr); err != nil {
 		return fmt.Errorf("rpc-addr is not correctly formatted: %w", err)

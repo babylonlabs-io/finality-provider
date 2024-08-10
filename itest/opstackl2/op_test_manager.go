@@ -18,12 +18,9 @@ import (
 	bbncfg "github.com/babylonlabs-io/babylon/client/config"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	fgclient "github.com/babylonlabs-io/finality-gadget/client"
+	fgcfg "github.com/babylonlabs-io/finality-gadget/config"
 	"github.com/babylonlabs-io/finality-gadget/db"
 	"github.com/babylonlabs-io/finality-gadget/finalitygadget"
-	fgcfg "github.com/babylonlabs-io/finality-gadget/finalitygadget/config"
-	"github.com/babylonlabs-io/finality-gadget/sdk/btcclient"
-	sdkclient "github.com/babylonlabs-io/finality-gadget/sdk/client"
-	sdkcfg "github.com/babylonlabs-io/finality-gadget/sdk/config"
 	fgsrv "github.com/babylonlabs-io/finality-gadget/server"
 	api "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
@@ -64,21 +61,21 @@ type OpL2ConsumerTestManager struct {
 	ConsumerFpApps       []*service.FinalityProviderApp
 	EOTSServerHandler    *e2eutils.EOTSServerHandler
 	BaseDir              string
-	SdkClient            *sdkclient.SdkClient
 	FinalityGadget       *finalitygadget.FinalityGadget
 	FinalityGadgetClient *fgclient.FinalityGadgetGrpcClient
-	Db                   *db.BBoltHandler
+	Db                   db.IDatabaseHandler
+	DbPath               string
 	OpSystem             *ope2e.System
 }
 
-func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8, runFinalityGadget bool) *OpL2ConsumerTestManager {
+func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2ConsumerTestManager {
 	defaultlog.SetOutput(os.Stdout)
 
 	// Setup base dir and logger
 	testDir, err := e2eutils.BaseDir("fpe2etest")
 	require.NoError(t, err)
 
-	logger := createLogger(t, zapcore.ErrorLevel)
+	logger := createLogger(t, zapcore.DebugLevel)
 
 	// generate covenant committee
 	covenantQuorum := 2
@@ -90,14 +87,15 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8, runFinalityG
 	err = bh.Start()
 	require.NoError(t, err)
 
+	// specify Babylon finality gadget rpc
+	babylonFinalityGadgetRpcPort := "8080"
+	babylonFinalityGadgetRpc := "localhost:" + babylonFinalityGadgetRpcPort
+
 	// deploy op-finality-gadget contract and start op stack system
-	opL2ConsumerConfig, opSys := startExtSystemsAndCreateConsumerCfg(t, logger, bh)
+	opL2ConsumerConfig, opSys := startExtSystemsAndCreateConsumerCfg(t, logger, bh, babylonFinalityGadgetRpc)
 	// TODO: this is a hack to try to fix a flaky data race
 	// https://github.com/babylonchain/finality-provider/issues/528
 	time.Sleep(5 * time.Second)
-
-	// init SDK client
-	sdkClient := initSdkClient(opSys, opL2ConsumerConfig, t)
 
 	// create shutdown interceptor
 	shutdownInterceptor, err := signal.Intercept()
@@ -126,53 +124,42 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8, runFinalityG
 	require.NoError(t, err)
 	t.Logf(log.Prefix("Register consumer %s to Babylon"), opConsumerId)
 
-	// Define finality gadget configs
+	// define finality gadget configs
 	cfg := fgcfg.Config{
 		L2RPCHost:         opL2ConsumerConfig.OPStackL2RPCAddress,
-		BitcoinRPCHost:    trimLeadingHttp(opSys.Cfg.DeployConfig.BabylonFinalityGadgetBitcoinRpc),
-		FGContractAddress: opSys.Cfg.DeployConfig.BabylonFinalityGadgetContractAddress,
-		BBNChainID:        opSys.Cfg.DeployConfig.BabylonFinalityGadgetChainID,
+		BitcoinRPCHost:    "rpc.ankr.com/btc",
+		FGContractAddress: opL2ConsumerConfig.OPFinalityGadgetAddress,
+		BBNChainID:        "chain-test",
 		BBNRPCAddress:     opL2ConsumerConfig.RPCAddr,
 		DBFilePath:        "data.db",
-		GRPCServerPort:    "8080",
+		GRPCServerPort:    babylonFinalityGadgetRpcPort,
 		PollInterval:      time.Second * time.Duration(10),
 	}
 
+	// Init local DB for storing and querying blocks
+	db, err := db.NewBBoltHandler(cfg.DBFilePath, logger)
+	require.NoError(t, err)
+	err = db.CreateInitialSchema()
+	require.NoError(t, err)
+	t.Logf(log.Prefix("Init local DB for finality gadget server"))
+
 	// Start finality gadget
-	var database *db.BBoltHandler
-	var finalityGadget *finalitygadget.FinalityGadget
-	var client *fgclient.FinalityGadgetGrpcClient
-	if runFinalityGadget {
-		// Init local DB for storing and querying blocks
-		db, err := db.NewBBoltHandler(cfg.DBFilePath)
-		require.NoError(t, err)
-		database = db
-		err = db.TryCreateInitialBuckets()
-		require.NoError(t, err)
-		t.Logf(log.Prefix("Init local DB for finality gadget server"))
+	fg, err := finalitygadget.NewFinalityGadget(&cfg, db, logger)
+	require.NoError(t, err)
+	t.Logf(log.Prefix("Created finality gadget"))
 
-		// Create finality gadget
-		fg, err := finalitygadget.NewFinalityGadget(&cfg, db)
+	// Start finality gadget server
+	srv := fgsrv.NewFinalityGadgetServer(&cfg, db, fg, shutdownInterceptor, logger)
+	go func() {
+		err = srv.RunUntilShutdown()
 		require.NoError(t, err)
-		finalityGadget = fg
-		t.Logf(log.Prefix("Created finality gadget"))
+	}()
+	t.Logf(log.Prefix("Started finality gadget grpc server"))
 
-		// Start grpc server
-		// Hook interceptor for os signals.
-		srv := fgsrv.NewFinalityGadgetServer(&cfg, db, fg, shutdownInterceptor)
-		go func() {
-			err = srv.RunUntilShutdown()
-			require.NoError(t, err)
-		}()
-		t.Logf(log.Prefix("Started finality gadget grpc server"))
-
-		// Create grpc client
-		hostAddr := "localhost:" + cfg.GRPCServerPort
-		fgClient, err := fgclient.NewFinalityGadgetGrpcClient(db, hostAddr)
-		require.NoError(t, err)
-		client = fgClient
-		t.Logf(log.Prefix("Started finality gadget grpc client"))
-	}
+	// Create grpc client
+	client, err := fgclient.NewFinalityGadgetGrpcClient(babylonFinalityGadgetRpc)
+	require.NoError(t, err)
+	t.Logf(log.Prefix("Started finality gadget grpc client"))
 
 	ctm := &OpL2ConsumerTestManager{
 		BaseTestManager: BaseTestManager{
@@ -184,10 +171,10 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8, runFinalityG
 		BabylonFpApp:         babylonFpApp,
 		ConsumerFpApps:       consumerFpApps,
 		BaseDir:              testDir,
-		SdkClient:            sdkClient,
-		FinalityGadget:       finalityGadget,
+		FinalityGadget:       fg,
 		FinalityGadgetClient: client,
-		Db:                   database,
+		Db:                   db,
+		DbPath:               cfg.DBFilePath,
 		OpSystem:             opSys,
 	}
 
@@ -464,24 +451,6 @@ func startEotsManagers(
 	return eh, eotsClients
 }
 
-func initSdkClient(
-	opSys *ope2e.System,
-	opL2ConsumerConfig *fpcfg.OPStackL2Config,
-	t *testing.T,
-) *sdkclient.SdkClient {
-	// We pass in an external Bitcoin RPC address but otherwise use the default configs.
-	btcConfig := btcclient.DefaultBTCConfig()
-	// The RPC url must be trimmed to remove the http:// or https:// prefix.
-	btcConfig.RPCHost = trimLeadingHttp(opSys.Cfg.DeployConfig.BabylonFinalityGadgetBitcoinRpc)
-	sdkClient, err := sdkclient.NewClient(&sdkcfg.Config{
-		ChainID:      opSys.Cfg.DeployConfig.BabylonFinalityGadgetChainID,
-		ContractAddr: opL2ConsumerConfig.OPFinalityGadgetAddress,
-		BTCConfig:    btcConfig,
-	})
-	require.NoError(t, err)
-	return sdkClient
-}
-
 func deployCwContract(
 	t *testing.T,
 	logger *zap.Logger,
@@ -732,6 +701,7 @@ func startExtSystemsAndCreateConsumerCfg(
 	t *testing.T,
 	logger *zap.Logger,
 	bh *e2eutils.BabylonNodeHandler,
+	babylonFinalityGadgetRpc string,
 ) (*fpcfg.OPStackL2Config, *ope2e.System) {
 	// create consumer config
 	// TODO: using babylon node key dir is a hack. we should fix it
@@ -739,23 +709,19 @@ func startExtSystemsAndCreateConsumerCfg(
 
 	// DefaultSystemConfig load the op deploy config from devnet-data folder
 	opSysCfg := ope2e.DefaultSystemConfig(t)
-	require.Equal(
-		t,
-		e2eutils.ChainID,
-		opSysCfg.DeployConfig.BabylonFinalityGadgetChainID,
-		"should be chain-test in devnetL1.json that means to connect with the Babylon localnet",
-	)
 	opConsumerId := getConsumerChainId(&opSysCfg)
 
 	// deploy op-finality-gadget contract
 	cwContractAddress := deployCwContract(t, logger, opL2ConsumerConfig, opConsumerId)
 
-	// replace the contract address
-	opSysCfg.DeployConfig.BabylonFinalityGadgetContractAddress = cwContractAddress
 	// supress OP system logs
 	opSysCfg.Loggers["verifier"] = optestlog.Logger(t, gethlog.LevelError).New("role", "verifier")
 	opSysCfg.Loggers["sequencer"] = optestlog.Logger(t, gethlog.LevelError).New("role", "sequencer")
 	opSysCfg.Loggers["batcher"] = optestlog.Logger(t, gethlog.LevelError).New("role", "watcher")
+
+	// specify babylon finality gadget rpc address
+	opL2ConsumerConfig.BabylonFinalityGadgetRpc = babylonFinalityGadgetRpc
+	opSysCfg.DeployConfig.BabylonFinalityGadgetRpc = babylonFinalityGadgetRpc
 
 	// start op stack system
 	opSys, err := opSysCfg.Start(t)
@@ -871,6 +837,10 @@ func (ctm *OpL2ConsumerTestManager) WaitForBlockFinalized(
 	require.Eventually(t, func() bool {
 		// doesn't matter which FP we use to query. so we use the first consumer FP
 		latestFinalizedBlock, err := ctm.getOpCCAtIndex(0).QueryLatestFinalizedBlock()
+		if err != nil {
+			t.Logf(log.Prefix("failed to query latest finalized block %s"), err.Error())
+			return false
+		}
 		require.NoError(t, err)
 		finalizedBlockHeight = latestFinalizedBlock.Height
 		return finalizedBlockHeight >= checkedHeight
@@ -984,7 +954,7 @@ func (ctm *OpL2ConsumerTestManager) waitForBTCStakingActivation(t *testing.T) ui
 		require.NoError(t, err)
 		l2BlockAfterActivation = latestBlock.Number.Uint64()
 
-		activatedTimestamp, err := ctm.SdkClient.QueryBtcStakingActivatedTimestamp()
+		activatedTimestamp, err := ctm.FinalityGadget.QueryBtcStakingActivatedTimestamp()
 		if err != nil {
 			t.Logf(log.Prefix("Failed to query BTC staking activated timestamp: %v"), err)
 			return false
@@ -999,7 +969,7 @@ func (ctm *OpL2ConsumerTestManager) waitForBTCStakingActivation(t *testing.T) ui
 }
 
 func (ctm *OpL2ConsumerTestManager) checkLatestBlock(t *testing.T, exp uint64) {
-	block, err := ctm.FinalityGadgetClient.GetLatestBlock()
+	block, err := ctm.FinalityGadget.QueryLatestFinalizedBlock()
 	require.NoError(t, err)
 	require.Equal(t, exp, block.BlockHeight)
 }
@@ -1019,15 +989,17 @@ func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
 		t.Logf(log.Prefix("Stopped Consumer FP App %d"), i)
 	}
 
-	if ctm.FinalityGadget != nil {
-		err = ctm.FinalityGadget.DeleteDB()
+	err = ctm.FinalityGadgetClient.Close()
+	require.NoError(t, err)
+	if ctm.DbPath != "" {
+		err = os.Remove(ctm.DbPath)
 		require.NoError(t, err)
-		ctm.FinalityGadget.Close()
-		err = ctm.FinalityGadgetClient.Close()
-		require.NoError(t, err)
+	}
+	if ctm.Db != nil {
 		err = ctm.Db.Close()
 		require.NoError(t, err)
 	}
+	ctm.FinalityGadget.Close()
 	ctm.OpSystem.Close()
 	err = ctm.BabylonHandler.Stop()
 	require.NoError(t, err)
