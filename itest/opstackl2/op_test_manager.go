@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	defaultlog "log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -68,8 +67,6 @@ type OpL2ConsumerTestManager struct {
 }
 
 func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2ConsumerTestManager {
-	defaultlog.SetOutput(os.Stdout)
-
 	// Setup base dir and logger
 	testDir, err := e2eutils.BaseDir("fpe2etest")
 	require.NoError(t, err)
