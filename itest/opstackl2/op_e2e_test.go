@@ -4,12 +4,12 @@
 package e2etest_op
 
 import (
+	"context"
 	"encoding/hex"
 	"testing"
 	"time"
 
-	sdkclient "github.com/babylonlabs-io/babylon-finality-gadget/sdk/client"
-	"github.com/babylonlabs-io/babylon-finality-gadget/sdk/cwclient"
+	fgtypes "github.com/babylonlabs-io/finality-gadget/types"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/testutil/log"
 	"github.com/stretchr/testify/require"
@@ -37,7 +37,7 @@ func TestOpSubmitFinalitySignature(t *testing.T) {
 
 	// wait for the fp sign
 	ctm.WaitForFpVoteReachHeight(t, fpInstance, testBlock.Height)
-	queryParams := cwclient.L2Block{
+	queryBlock := &fgtypes.Block{
 		BlockHeight:    testBlock.Height,
 		BlockHash:      hex.EncodeToString(testBlock.Hash),
 		BlockTimestamp: 12345, // doesn't matter b/c the BTC client is mocked
@@ -45,8 +45,8 @@ func TestOpSubmitFinalitySignature(t *testing.T) {
 
 	// note: QueryFinalityProviderHasPower is hardcode to return true so FPs can still submit finality sigs even if they
 	// don't have voting power. But the finality sigs will not be counted at tally time.
-	_, err = ctm.SdkClient.QueryIsBlockBabylonFinalized(queryParams)
-	require.ErrorIs(t, err, sdkclient.ErrNoFpHasVotingPower)
+	_, err = ctm.FinalityGadget.QueryIsBlockBabylonFinalized(queryBlock)
+	require.ErrorIs(t, err, fgtypes.ErrBtcStakingNotActivated)
 	t.Logf(log.Prefix("Expected no voting power"))
 }
 
@@ -88,12 +88,12 @@ func TestOpMultipleFinalityProviders(t *testing.T) {
 
 	testBlock, err := ctm.getOpCCAtIndex(1).QueryBlock(targetBlockHeight)
 	require.NoError(t, err)
-	queryParams := cwclient.L2Block{
+	queryBlock := &fgtypes.Block{
 		BlockHeight:    testBlock.Height,
 		BlockHash:      hex.EncodeToString(testBlock.Hash),
 		BlockTimestamp: 12345, // doesn't matter b/c the BTC client is mocked
 	}
-	finalized, err := ctm.SdkClient.QueryIsBlockBabylonFinalized(queryParams)
+	finalized, err := ctm.FinalityGadget.QueryIsBlockBabylonFinalized(queryBlock)
 	require.NoError(t, err)
 	require.Equal(t, true, finalized)
 	t.Logf(log.Prefix("Test case 1: block %d is finalized"), testBlock.Height)
@@ -112,13 +112,13 @@ func TestOpMultipleFinalityProviders(t *testing.T) {
 
 	testNextBlock, err := ctm.getOpCCAtIndex(1).QueryBlock(testNextBlockHeight)
 	require.NoError(t, err)
-	queryNextParams := cwclient.L2Block{
+	queryNextBlock := &fgtypes.Block{
 		BlockHeight:    testNextBlock.Height,
 		BlockHash:      hex.EncodeToString(testNextBlock.Hash),
 		BlockTimestamp: 12345, // doesn't matter b/c the BTC client is mocked
 	}
 	// testNextBlock only have 1/4 total voting power
-	nextFinalized, err := ctm.SdkClient.QueryIsBlockBabylonFinalized(queryNextParams)
+	nextFinalized, err := ctm.FinalityGadget.QueryIsBlockBabylonFinalized(queryNextBlock)
 	require.NoError(t, err)
 	require.Equal(t, false, nextFinalized)
 	t.Logf(log.Prefix("Test case 2: block %d is not finalized"), testNextBlock.Height)
@@ -184,4 +184,59 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 	t.Logf(log.Prefix(
 		"OP chain fianlity is recovered, the latest finalized block height %d",
 	), nextFinalizedHeight)
+}
+
+func TestFinalityGadgetServer(t *testing.T) {
+	// start the consumer manager
+	ctm := StartOpL2ConsumerManager(t, 2)
+	defer ctm.Stop(t)
+
+	// register, get BTC delegations, and start FPs
+	n := 2
+	fpList := ctm.SetupFinalityProviders(t, n, []stakingParam{
+		// for the first FP, we give it more power b/c it will be used later
+		{e2eutils.StakingTime, 3 * e2eutils.StakingAmount},
+		{e2eutils.StakingTime, e2eutils.StakingAmount},
+	})
+
+	// check both FPs have committed their first public randomness
+	// TODO: we might use go routine to do this in parallel
+	for i := 0; i < n; i++ {
+		e2eutils.WaitForFpPubRandCommitted(t, fpList[i])
+	}
+
+	// wait until the BTC staking is activated
+	l2BlockAfterActivation := ctm.waitForBTCStakingActivation(t)
+
+	// both FP will sign the first block
+	targetBlockHeight := ctm.WaitForTargetBlockPubRand(t, fpList, l2BlockAfterActivation)
+	ctm.WaitForFpVoteReachHeight(t, fpList[0], targetBlockHeight)
+	ctm.WaitForFpVoteReachHeight(t, fpList[1], targetBlockHeight)
+	t.Logf(log.Prefix("Both FP instances signed the first block"))
+
+	// both FP will sign the second block
+	ctm.WaitForFpVoteReachHeight(t, fpList[0], targetBlockHeight+1)
+	ctm.WaitForFpVoteReachHeight(t, fpList[1], targetBlockHeight+1)
+	t.Logf(log.Prefix("Both FP instances signed the second block"))
+
+	// start finality gadget processing blocks
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		t.Logf(log.Prefix("Starting finality gadget"))
+		err := ctm.FinalityGadget.ProcessBlocks(ctx)
+		require.NoError(t, err)
+	}()
+
+	// check latest block
+	require.Eventually(t, func() bool {
+		block, err := ctm.FinalityGadget.QueryLatestFinalizedBlock()
+		if block == nil {
+			return false
+		}
+		require.NoError(t, err)
+		return block.BlockHeight > targetBlockHeight+6
+	}, 40*time.Second, 5*time.Second, "Failed to process blocks")
+
+	// stop the finality gadget
+	cancel()
 }
