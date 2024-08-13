@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	BabylonConsumerChainName   = "babylon"
-	OPStackL2ConsumerChainName = "OPStackL2"
-	WasmConsumerChainName      = "wasm"
+	BabylonConsumerChainType   = "babylon"
+	OPStackL2ConsumerChainType = "OPStackL2"
+	WasmConsumerChainType      = "wasm"
 )
 
 // NewClientController TODO: this is always going to be babylon so rename accordingly
@@ -34,18 +34,18 @@ func NewConsumerController(config *fpcfg.Config, logger *zap.Logger) (api.Consum
 		err error
 	)
 
-	switch config.ChainName {
-	case BabylonConsumerChainName:
+	switch config.ChainType {
+	case BabylonConsumerChainType:
 		ccc, err = babylon.NewBabylonConsumerController(config.BabylonConfig, &config.BTCNetParams, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
 		}
-	case OPStackL2ConsumerChainName:
+	case OPStackL2ConsumerChainType:
 		ccc, err = opstackl2.NewOPStackL2ConsumerController(config.OPStackL2Config, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create OPStack L2 consumer client: %w", err)
 		}
-	case WasmConsumerChainName:
+	case WasmConsumerChainType:
 		wasmEncodingCfg := cosmwasmcfg.GetWasmdEncodingConfig()
 		ccc, err = cosmwasm.NewCosmwasmConsumerController(config.CosmwasmConfig, wasmEncodingCfg, logger)
 		if err != nil {
