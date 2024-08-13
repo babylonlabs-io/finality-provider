@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
@@ -298,29 +299,22 @@ func (wc *CosmwasmConsumerController) QueryLastPublicRandCommit(fpPk *btcec.Publ
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
 
-	if len(dataFromContract.Data) == 0 {
+	if dataFromContract == nil || dataFromContract.Data == nil || len(dataFromContract.Data.Bytes()) == 0 || strings.Contains(string(dataFromContract.Data), "null") {
 		// expected when there is no PR commit at all
 		return nil, nil
 	}
 
 	// Define a response struct
-	var commitResp PubRandCommitResponse
-	err = json.Unmarshal(dataFromContract.Data, &commitResp)
+	var commit fptypes.PubRandCommit
+	err = json.Unmarshal(dataFromContract.Data.Bytes(), &commit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
-
-	commit := &fptypes.PubRandCommit{
-		StartHeight: commitResp.StartHeight,
-		NumPubRand:  commitResp.NumPubRand,
-		Commitment:  commitResp.Commitment,
-	}
-
 	if err := commit.Validate(); err != nil {
 		return nil, err
 	}
 
-	return commit, nil
+	return &commit, nil
 }
 
 func (wc *CosmwasmConsumerController) QueryIsBlockFinalized(height uint64) (bool, error) {

@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	BabylonChainName = "Babylon"
+	BABYLON_CHAIN_NAME = "Babylon"
 )
 
 var _ api.ConsumerController = &OPStackL2ConsumerController{}
@@ -87,7 +87,7 @@ func NewCwClient(cwConfig *cwconfig.CosmwasmConfig, logger *zap.Logger) (*cwclie
 
 	cwClient, err := cwclient.New(
 		cwConfig,
-		BabylonChainName,
+		BABYLON_CHAIN_NAME,
 		cwEncodingCfg,
 		logger,
 	)

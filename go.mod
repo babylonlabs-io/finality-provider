@@ -11,7 +11,7 @@ require (
 	github.com/CosmWasm/wasmd v0.52.0
 	github.com/avast/retry-go/v4 v4.5.1
 	github.com/babylonlabs-io/babylon v0.9.0
-	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20240802071655-9fd2ddd5158b
+	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20240813062800-00e11abf5338
 	github.com/babylonlabs-io/finality-gadget v0.1.1-0.20240813005904-2fa76c30cb74
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
@@ -46,7 +46,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20240802071655-9fd2ddd5158b // indirect
+	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20240813062800-00e11abf5338 // indirect
 	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd // indirect
 	github.com/btcsuite/websocket v0.0.0-20150119174127-31079b680792 // indirect
 	github.com/cosmos/ibc-go/modules/apps/callbacks v0.2.1-0.20231113120333-342c00b0f8bd // indirect

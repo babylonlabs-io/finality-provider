@@ -8,10 +8,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
-const (
-	babylonConsumerChainName = "babylon"
-)
-
 type ClientController interface {
 	// RegisterFinalityProvider registers a finality provider to the consumer chain
 	// it returns tx hash and error. The address of the finality provider will be

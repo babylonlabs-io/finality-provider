@@ -1020,7 +1020,7 @@ func (fp *FinalityProviderInstance) lastCommittedPublicRandWithRetry() (*types.P
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		fp.logger.Debug(
-			"failed to query babylon for the last committed public randomness",
+			"failed to query the last committed public randomness",
 			zap.Uint("attempt", n+1),
 			zap.Uint("max_attempts", RtyAttNum),
 			zap.Error(err),

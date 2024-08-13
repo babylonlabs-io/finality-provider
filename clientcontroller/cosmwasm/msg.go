@@ -219,11 +219,5 @@ type QueryMsgLastPubRandCommit struct {
 }
 
 type LastPubRandCommitQuery struct {
-	BtcPkHex string  `json:"btc_pk_hex"`
-	Limit    *uint64 `json:"limit,omitempty"`
-}
-type PubRandCommitResponse struct {
-	StartHeight uint64 `json:"start_height"`
-	NumPubRand  uint64 `json:"num_pub_rand"`
-	Commitment  []byte `json:"commitment"`
+	BtcPkHex string `json:"btc_pk_hex"`
 }
