@@ -55,7 +55,7 @@ var (
 // Config is the main config for the fpd cli command
 type Config struct {
 	LogLevel                 string        `long:"loglevel" description:"Logging level for all subsystems" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal"`
-	ChainType                string        `long:"chaintype" description:"the type of the consumer chain"`
+	ChainType                string        `long:"chaintype" description:"the type of the consumer chain (babylon/OPStackL2/wasm)"`
 	NumPubRand               uint64        `long:"numPubRand" description:"The number of Schnorr public randomness for each commitment"`
 	NumPubRandMax            uint64        `long:"numpubrandmax" description:"The upper bound of the number of Schnorr public randomness for each commitment"`
 	MinRandHeightGap         uint64        `long:"minrandheightgap" description:"The minimum gap between the last committed rand height and the current Babylon block height"`
