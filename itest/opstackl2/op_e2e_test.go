@@ -234,7 +234,9 @@ func TestFinalityGadgetServer(t *testing.T) {
 			return false
 		}
 		require.NoError(t, err)
-		return block.BlockHeight > targetBlockHeight+6
+		// check N blocks are processed as finalized
+		// we pick a small N = 5 here to minimize the test time
+		return block.BlockHeight > targetBlockHeight+5
 	}, 40*time.Second, 5*time.Second, "Failed to process blocks")
 
 	// stop the finality gadget
