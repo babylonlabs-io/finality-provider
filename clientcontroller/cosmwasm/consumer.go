@@ -281,11 +281,9 @@ func (wc *CosmwasmConsumerController) QueryLastPublicRandCommit(fpPk *btcec.Publ
 	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	// Construct the query message
-	count := uint64(1)
 	queryMsgStruct := QueryMsgLastPubRandCommit{
 		LastPubRandCommit: LastPubRandCommitQuery{
 			BtcPkHex: fpBtcPk.MarshalHex(),
-			Limit:    &count,
 		},
 	}
 
