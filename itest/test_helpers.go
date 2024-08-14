@@ -123,13 +123,10 @@ func genRandomFinalityProvider() cosmwasm.NewFinalityProvider {
 			Details:         "details",
 		},
 		Commission: "0.05",
-		BabylonPK: &cosmwasm.PubKey{
-			Key: []byte("mock_pub_rand"),
-		},
-		BTCPKHex: "1",
-		Pop: &cosmwasm.ProofOfPossession{
+		Addr:       datagen.GenRandomAccount().Address,
+		BTCPKHex:   "1",
+		Pop: &cosmwasm.ProofOfPossessionBtc{
 			BTCSigType: 0,
-			BabylonSig: []byte("mock_babylon_sig"),
 			BTCSig:     []byte("mock_btc_sig"),
 		},
 		ConsumerID: "osmosis-1",
@@ -236,6 +233,7 @@ func convertBTCDelegationToActiveBtcDelegation(mockDel *bstypes.BTCDelegation) c
 	}
 
 	return cosmwasm.ActiveBtcDelegation{
+		StakerAddr:           mockDel.StakerAddr,
 		BTCPkHex:             mockDel.BtcPk.MarshalHex(),
 		FpBtcPkList:          fpBtcPkList,
 		StartHeight:          mockDel.StartHeight,

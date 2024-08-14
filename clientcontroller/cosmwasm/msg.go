@@ -64,9 +64,9 @@ type IndexedBlock struct {
 type NewFinalityProvider struct {
 	Description *FinalityProviderDescription `json:"description,omitempty"`
 	Commission  string                       `json:"commission"`
-	BabylonPK   *PubKey                      `json:"babylon_pk,omitempty"`
+	Addr        string                       `json:"addr"`
 	BTCPKHex    string                       `json:"btc_pk_hex"`
-	Pop         *ProofOfPossession           `json:"pop,omitempty"`
+	Pop         *ProofOfPossessionBtc        `json:"pop,omitempty"`
 	ConsumerID  string                       `json:"consumer_id"`
 }
 
@@ -78,13 +78,8 @@ type FinalityProviderDescription struct {
 	Details         string `json:"details"`
 }
 
-type PubKey struct {
-	Key []byte `json:"key"`
-}
-
-type ProofOfPossession struct {
+type ProofOfPossessionBtc struct {
 	BTCSigType int32  `json:"btc_sig_type"`
-	BabylonSig []byte `json:"babylon_sig"`
 	BTCSig     []byte `json:"btc_sig"`
 }
 
@@ -108,6 +103,7 @@ type BtcUndelegationInfo struct {
 }
 
 type ActiveBtcDelegation struct {
+	StakerAddr           string                      `json:"staker_addr"`
 	BTCPkHex             string                      `json:"btc_pk_hex"`
 	FpBtcPkList          []string                    `json:"fp_btc_pk_list"`
 	StartHeight          uint64                      `json:"start_height"`
