@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
@@ -281,11 +282,9 @@ func (wc *CosmwasmConsumerController) QueryLastPublicRandCommit(fpPk *btcec.Publ
 	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	// Construct the query message
-	count := uint64(1)
 	queryMsgStruct := QueryMsgLastPubRandCommit{
 		LastPubRandCommit: LastPubRandCommitQuery{
 			BtcPkHex: fpBtcPk.MarshalHex(),
-			Limit:    &count,
 		},
 	}
 
@@ -300,40 +299,22 @@ func (wc *CosmwasmConsumerController) QueryLastPublicRandCommit(fpPk *btcec.Publ
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
 
-	// Define a response struct
-	var commits []PubRandCommitResponse
-	err = json.Unmarshal(dataFromContract.Data, &commits)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
-	}
-
-	if len(commits) == 0 {
+	if dataFromContract == nil || dataFromContract.Data == nil || len(dataFromContract.Data.Bytes()) == 0 || strings.Contains(string(dataFromContract.Data), "null") {
 		// expected when there is no PR commit at all
-		// `get_pub_rand_commit`'s return type is Vec<PubRandCommit> and it can be
-		// empty vector if no results found
 		return nil, nil
 	}
 
-	if len(commits) > 1 {
-		return nil, fmt.Errorf("expected length to be 1, but got :%d", len(commits))
+	// Define a response struct
+	var commit fptypes.PubRandCommit
+	err = json.Unmarshal(dataFromContract.Data.Bytes(), &commit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
-
-	// Convert the response to the expected map format
-	var commit *fptypes.PubRandCommit = nil
-	for _, commitRes := range commits {
-		commitCopy := commitRes // create a copy to avoid referencing the loop variable
-		commit = &fptypes.PubRandCommit{
-			StartHeight: commitCopy.StartHeight,
-			NumPubRand:  commitCopy.NumPubRand,
-			Commitment:  commitCopy.Commitment,
-		}
-	}
-
 	if err := commit.Validate(); err != nil {
 		return nil, err
 	}
 
-	return commit, nil
+	return &commit, nil
 }
 
 func (wc *CosmwasmConsumerController) QueryIsBlockFinalized(height uint64) (bool, error) {
