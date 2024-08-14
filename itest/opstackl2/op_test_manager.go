@@ -7,10 +7,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	defaultlog "log"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -69,8 +67,6 @@ type OpL2ConsumerTestManager struct {
 }
 
 func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2ConsumerTestManager {
-	defaultlog.SetOutput(os.Stdout)
-
 	// Setup base dir and logger
 	testDir, err := e2eutils.BaseDir("fpe2etest")
 	require.NoError(t, err)
@@ -129,7 +125,7 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 		L2RPCHost:         opL2ConsumerConfig.OPStackL2RPCAddress,
 		BitcoinRPCHost:    "rpc.ankr.com/btc",
 		FGContractAddress: opL2ConsumerConfig.OPFinalityGadgetAddress,
-		BBNChainID:        "chain-test",
+		BBNChainID:        e2eutils.ChainID,
 		BBNRPCAddress:     opL2ConsumerConfig.RPCAddr,
 		DBFilePath:        "data.db",
 		GRPCServerPort:    babylonFinalityGadgetRpcPort,
@@ -527,11 +523,6 @@ func mockOpL2ConsumerCtrlConfig(nodeDataDir string) *fpcfg.OPStackL2Config {
 	}
 }
 
-func trimLeadingHttp(s string) string {
-	t := strings.TrimPrefix(s, "http://")
-	return strings.TrimPrefix(t, "https://")
-}
-
 func (ctm *OpL2ConsumerTestManager) WaitForServicesStart(t *testing.T) {
 	require.Eventually(t, func() bool {
 		params, err := ctm.BBNClient.QueryStakingParams()
@@ -841,7 +832,6 @@ func (ctm *OpL2ConsumerTestManager) WaitForBlockFinalized(
 			t.Logf(log.Prefix("failed to query latest finalized block %s"), err.Error())
 			return false
 		}
-		require.NoError(t, err)
 		finalizedBlockHeight = latestFinalizedBlock.Height
 		return finalizedBlockHeight >= checkedHeight
 	}, e2eutils.EventuallyWaitTimeOut, 5*ctm.getL2BlockTime())
