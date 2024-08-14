@@ -7,7 +7,7 @@ toolchain go1.21.4
 require (
 	github.com/CosmWasm/wasmd v0.52.0
 	github.com/babylonlabs-io/babylon v0.9.0
-	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20240813062800-00e11abf5338
+	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20240814002132-55e711397a82
 )
 
 require (
@@ -39,7 +39,7 @@ require (
 	github.com/DataDog/zstd v1.5.5 // indirect
 	github.com/aead/siphash v1.0.1 // indirect
 	github.com/aws/aws-sdk-go v1.44.312 // indirect
-	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20240813062800-00e11abf5338 // indirect
+	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20240814002132-55e711397a82 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bgentry/speakeasy v0.1.1-0.20220910012023-760eaf8b6816 // indirect
