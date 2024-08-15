@@ -431,22 +431,9 @@ func (fp *FinalityProviderInstance) hasVotingPower(b *types.BlockInfo) (bool, er
 	return true, nil
 }
 
-func (fp *FinalityProviderInstance) hasRandomness(b *types.BlockInfo) (bool, error) {
-	lastCommittedHeight, err := fp.GetLastCommittedHeight()
-	if err != nil {
-		return false, err
-	}
-	if b.Height > lastCommittedHeight {
-		fp.logger.Debug(
-			"the finality provider has not committed public randomness for the height",
-			zap.String("pk", fp.GetBtcPkHex()),
-			zap.Uint64("block_height", b.Height),
-			zap.Uint64("last_committed_height", lastCommittedHeight),
-		)
-		return false, nil
-	}
-
-	return true, nil
+func (fp *FinalityProviderInstance) hasTimestampedRandomness(blockHeight uint64) (bool, error) {
+	// TODO add retry
+	return fp.cc.QueryIsPubRandTimestamped(blockHeight)
 }
 
 func (fp *FinalityProviderInstance) reportCriticalErr(err error) {
@@ -477,7 +464,7 @@ func (fp *FinalityProviderInstance) retryCheckRandomnessUntilBlockFinalized(targ
 			zap.String("pk", fp.GetBtcPkHex()),
 			zap.Uint64("target_block_height", targetBlock.Height),
 		)
-		hasRand, err := fp.hasRandomness(targetBlock)
+		hasRand, err := fp.hasTimestampedRandomness(targetBlock.Height)
 		if err != nil {
 			fp.logger.Debug(
 				"failed to check last committed randomness",

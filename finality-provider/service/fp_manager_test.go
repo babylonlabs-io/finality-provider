@@ -60,6 +60,7 @@ func FuzzStatusUpdate(f *testing.F) {
 
 		votingPower := uint64(r.Intn(2))
 		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), currentHeight).Return(votingPower, nil).AnyTimes()
+		mockClientController.EXPECT().QueryIsPubRandTimestamped(gomock.Any()).Return(true, nil).AnyTimes()
 		mockClientController.EXPECT().SubmitFinalitySig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&types.TxResponse{TxHash: ""}, nil).AnyTimes()
 		var slashedHeight uint64
 		if votingPower == 0 {

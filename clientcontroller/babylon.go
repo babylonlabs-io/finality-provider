@@ -12,6 +12,7 @@ import (
 	btcctypes "github.com/babylonlabs-io/babylon/x/btccheckpoint/types"
 	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	ckpttypes "github.com/babylonlabs-io/babylon/x/checkpointing/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -374,6 +375,30 @@ func (bc *BabylonController) QueryBestBlock() (*types.BlockInfo, error) {
 	return blocks[0], nil
 }
 
+func (bc *BabylonController) QueryIsPubRandTimestamped(height uint64) (bool, error) {
+	epochParamResp, err := bc.bbnClient.EpochingParams()
+	if err != nil {
+		return false, fmt.Errorf("failed to query epoching params: %w", err)
+	}
+
+	// TODO should implement the height epoch conversion as Babylon library
+	committedEpoch, err := fromHeightToEpoch(height, epochParamResp.Params.EpochInterval)
+	if err != nil {
+		return false, fmt.Errorf("failed to get the epoch number of height %d", height)
+	}
+
+	lastFinalizedEpochResp, err := bc.bbnClient.LatestEpochFromStatus(ckpttypes.Finalized)
+	if err != nil {
+		return false, fmt.Errorf("failed to query last finalized epoch: %w", err)
+	}
+
+	if committedEpoch > lastFinalizedEpochResp.RawCheckpoint.EpochNum {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func (bc *BabylonController) queryCometBestBlock() (*types.BlockInfo, error) {
 	ctx, cancel := getContextWithCancel(bc.cfg.Timeout)
 	// this will return 20 items at max in the descending order (highest first)
@@ -588,4 +613,17 @@ func (bc *BabylonController) SubmitCovenantSigs(
 	}
 
 	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
+}
+
+func fromHeightToEpoch(height, epochInterval uint64) (uint64, error) {
+	if height == 0 {
+		return 0, fmt.Errorf("block height should be positive")
+	}
+
+	epochNum := height / epochInterval
+	if height%epochInterval > 0 {
+		epochNum++
+	}
+
+	return epochNum, nil
 }

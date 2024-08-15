@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
@@ -65,6 +66,9 @@ type ClientController interface {
 	// QueryActivatedHeight returns the activated height of the consumer chain
 	// error will be returned if the consumer chain has not been activated
 	QueryActivatedHeight() (uint64, error)
+
+	// QueryIsPubRandTimestamped returns whether the public randomness at the given height has been BTC-timestamped
+	QueryIsPubRandTimestamped(height uint64) (bool, error)
 
 	Close() error
 }

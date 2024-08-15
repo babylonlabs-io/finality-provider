@@ -62,8 +62,8 @@ func (fp *FinalityProviderInstance) FastSync(startHeight, endHeight uint64) (*Fa
 				fp.metrics.IncrementFpTotalBlocksWithoutVotingPower(fp.GetBtcPkHex())
 				continue
 			}
-			// check whether the randomness has been committed
-			hasRand, err := fp.hasRandomness(b)
+			// check whether there is timestamped public randomness on Babylon for the height
+			hasRand, err := fp.hasTimestampedRandomness(b.Height)
 			if err != nil {
 				return nil, err
 			}
