@@ -62,14 +62,6 @@ func (fp *FinalityProviderInstance) FastSync(startHeight, endHeight uint64) (*Fa
 				fp.metrics.IncrementFpTotalBlocksWithoutVotingPower(fp.GetBtcPkHex())
 				continue
 			}
-			// check whether there is timestamped public randomness on Babylon for the height
-			hasRand, err := fp.hasTimestampedRandomness(b.Height)
-			if err != nil {
-				return nil, err
-			}
-			if !hasRand {
-				break
-			}
 			// all good, add the block for catching up
 			catchUpBlocks = append(catchUpBlocks, b)
 		}

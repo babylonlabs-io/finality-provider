@@ -157,21 +157,6 @@ func (mr *MockClientControllerMockRecorder) QueryFinalityProviderVotingPower(fpP
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderVotingPower", reflect.TypeOf((*MockClientController)(nil).QueryFinalityProviderVotingPower), fpPk, blockHeight)
 }
 
-// QueryIsPubRandTimestamped mocks base method.
-func (m *MockClientController) QueryIsPubRandTimestamped(height uint64) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryIsPubRandTimestamped", height)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// QueryIsPubRandTimestamped indicates an expected call of QueryIsPubRandTimestamped.
-func (mr *MockClientControllerMockRecorder) QueryIsPubRandTimestamped(height interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryIsPubRandTimestamped", reflect.TypeOf((*MockClientController)(nil).QueryIsPubRandTimestamped), height)
-}
-
 // QueryLastCommittedPublicRand mocks base method.
 func (m *MockClientController) QueryLastCommittedPublicRand(fpPk *btcec.PublicKey, count uint64) (map[uint64]*types.PubRandCommitResponse, error) {
 	m.ctrl.T.Helper()

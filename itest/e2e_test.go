@@ -33,7 +33,7 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 	fpIns := fpInsList[0]
 
 	// check the public randomness is committed
-	tm.WaitForFpPubRandCommitted(t, fpIns)
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
 
 	// send a BTC delegation
 	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, stakingTime, stakingAmount)
@@ -65,7 +65,7 @@ func TestDoubleSigning(t *testing.T) {
 	fpIns := fpInsList[0]
 
 	// check the public randomness is committed
-	tm.WaitForFpPubRandCommitted(t, fpIns)
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
 
 	// send a BTC delegation
 	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, stakingTime, stakingAmount)
@@ -127,7 +127,7 @@ func TestMultipleFinalityProviders(t *testing.T) {
 		go func(fpi *service.FinalityProviderInstance) {
 			defer tm.Wg.Done()
 			// check the public randomness is committed
-			tm.WaitForFpPubRandCommitted(t, fpi)
+			tm.WaitForFpPubRandTimestamped(t, fpi)
 			// send a BTC delegation
 			_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpi.GetBtcPk()}, stakingTime, stakingAmount)
 		}(fpIns)
@@ -161,7 +161,7 @@ func TestFastSync(t *testing.T) {
 	fpIns := fpInsList[0]
 
 	// check the public randomness is committed
-	tm.WaitForFpPubRandCommitted(t, fpIns)
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
 
 	// send a BTC delegation
 	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, stakingTime, stakingAmount)

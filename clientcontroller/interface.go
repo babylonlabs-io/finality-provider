@@ -67,9 +67,6 @@ type ClientController interface {
 	// error will be returned if the consumer chain has not been activated
 	QueryActivatedHeight() (uint64, error)
 
-	// QueryIsPubRandTimestamped returns whether the public randomness at the given height has been BTC-timestamped
-	QueryIsPubRandTimestamped(height uint64) (bool, error)
-
 	Close() error
 }
 
