@@ -957,12 +957,6 @@ func (ctm *OpL2ConsumerTestManager) waitForBTCStakingActivation(t *testing.T) ui
 	return l2BlockAfterActivation
 }
 
-func (ctm *OpL2ConsumerTestManager) checkLatestBlock(t *testing.T, exp uint64) {
-	block, err := ctm.FinalityGadget.QueryLatestFinalizedBlock()
-	require.NoError(t, err)
-	require.Equal(t, exp, block.BlockHeight)
-}
-
 func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
 	t.Log("Stopping test manager")
 	var err error
