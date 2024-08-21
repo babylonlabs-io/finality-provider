@@ -84,8 +84,7 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 	require.NoError(t, err)
 
 	// specify Babylon finality gadget rpc
-	babylonFinalityGadgetRpcPort := "8080"
-	babylonFinalityGadgetRpc := "localhost:" + babylonFinalityGadgetRpcPort
+	babylonFinalityGadgetRpc := "localhost:8080"
 
 	// deploy op-finality-gadget contract and start op stack system
 	opL2ConsumerConfig, opSys := startExtSystemsAndCreateConsumerCfg(t, logger, bh, babylonFinalityGadgetRpc)
@@ -123,12 +122,12 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 	// define finality gadget configs
 	cfg := fgcfg.Config{
 		L2RPCHost:         opL2ConsumerConfig.OPStackL2RPCAddress,
-		BitcoinRPCHost:    "rpc.ankr.com/btc",
+		BitcoinRPCHost:    "mock-btc-client",
 		FGContractAddress: opL2ConsumerConfig.OPFinalityGadgetAddress,
 		BBNChainID:        e2eutils.ChainID,
 		BBNRPCAddress:     opL2ConsumerConfig.RPCAddr,
 		DBFilePath:        "data.db",
-		GRPCServerPort:    babylonFinalityGadgetRpcPort,
+		GRPCListener:      babylonFinalityGadgetRpc,
 		PollInterval:      time.Second * time.Duration(10),
 	}
 
@@ -956,12 +955,6 @@ func (ctm *OpL2ConsumerTestManager) waitForBTCStakingActivation(t *testing.T) ui
 
 	t.Logf(log.Prefix("found a L2 block after BTC staking activation: %d"), l2BlockAfterActivation)
 	return l2BlockAfterActivation
-}
-
-func (ctm *OpL2ConsumerTestManager) checkLatestBlock(t *testing.T, exp uint64) {
-	block, err := ctm.FinalityGadget.QueryLatestFinalizedBlock()
-	require.NoError(t, err)
-	require.Equal(t, exp, block.BlockHeight)
 }
 
 func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
