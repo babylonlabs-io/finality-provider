@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	"math/big"
 
 	sdkErr "cosmossdk.io/errors"
@@ -41,6 +42,7 @@ type OPStackL2ConsumerController struct {
 	Cfg        *fpcfg.OPStackL2Config
 	CwClient   *cwclient.Client
 	opl2Client *ethclient.Client
+	bbnClient  *bbnclient.Client
 	logger     *zap.Logger
 }
 
@@ -66,10 +68,26 @@ func NewOPStackL2ConsumerController(
 		return nil, fmt.Errorf("failed to create OPStack L2 client: %w", err)
 	}
 
+	bbnConfig := opl2Cfg.ToBBNConfig()
+	babylonConfig := fpcfg.BBNConfigToBabylonConfig(&bbnConfig)
+
+	if err := babylonConfig.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid config for Babylon client: %w", err)
+	}
+
+	bc, err := bbnclient.New(
+		&babylonConfig,
+		logger,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
+	}
+
 	return &OPStackL2ConsumerController{
 		opl2Cfg,
 		cwClient,
 		opl2Client,
+		bc,
 		logger,
 	}, nil
 }
@@ -248,7 +266,37 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 // Now we can simply hardcode the voting power to true
 // TODO: see this issue https://github.com/babylonlabs-io/finality-provider/issues/390 for more details
 func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
-	return true, nil
+	l2Block, err := cc.opl2Client.BlockByNumber(context.Background(), big.NewInt(int64(blockHeight)))
+	if err != nil {
+		return false, err
+	}
+	l2Timestamp := l2Block.Time()
+
+	// this will return 20 items at max in the descending order (highest first)
+	chainInfo, err := cc.CwClient.RPCClient.BlockchainInfo(context.Background(), 0, 0)
+	if err != nil {
+		return false, err
+	}
+
+	// find the closest bbn block: bbn timestamp <= l2 timestamp
+	var bbnBlockHeight uint64
+	for _, b := range chainInfo.BlockMetas {
+		bbnBlockTime := uint64(b.Header.Time.Unix())
+		if bbnBlockTime <= l2Timestamp {
+			bbnBlockHeight = uint64(b.Header.Height)
+			break
+		}
+	}
+
+	res, err := cc.bbnClient.QueryClient.FinalityProviderPowerAtHeight(
+		bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex(),
+		bbnBlockHeight,
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed to query the finality provider's voting power at height %d: %w", blockHeight, err)
+	}
+
+	return res.VotingPower > 0, nil
 }
 
 // QueryLatestFinalizedBlock returns the finalized L2 block from a RPC call
