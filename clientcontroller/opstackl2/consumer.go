@@ -298,9 +298,7 @@ func (cc *OPStackL2ConsumerController) QueryLatestFinalizedBlock() (*types.Block
 	if err != nil {
 		return nil, err
 	}
-	if l2Block.Number.Uint64() == 0 {
-		return nil, nil
-	}
+
 	return &types.BlockInfo{
 		Height: l2Block.Number.Uint64(),
 		Hash:   l2Block.Hash().Bytes(),
