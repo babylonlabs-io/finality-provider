@@ -272,20 +272,11 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec
 	}
 	l2Timestamp := l2Block.Time()
 
-	// this will return 20 items at max in the descending order (highest first)
-	chainInfo, err := cc.CwClient.RPCClient.BlockchainInfo(context.Background(), 0, 0)
+	// find the latest block of babylon chain and search from 0 to the latest block to see if there exists
+	// a block that has a close timestamp of previous l2 block timestamp.
+	bbnBlockHeight, err := cc.GetBlockHeightByL2Timestamp(l2Timestamp)
 	if err != nil {
 		return false, err
-	}
-
-	// find the closest bbn block: bbn timestamp <= l2 timestamp
-	var bbnBlockHeight uint64
-	for _, b := range chainInfo.BlockMetas {
-		bbnBlockTime := uint64(b.Header.Time.Unix())
-		if bbnBlockTime <= l2Timestamp {
-			bbnBlockHeight = uint64(b.Header.Height)
-			break
-		}
 	}
 
 	res, err := cc.bbnClient.QueryClient.FinalityProviderPowerAtHeight(
@@ -533,4 +524,41 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 func (cc *OPStackL2ConsumerController) Close() error {
 	cc.opl2Client.Close()
 	return cc.CwClient.Stop()
+}
+
+func (cc *OPStackL2ConsumerController) GetBlockHeightByL2Timestamp(l2Timestamp uint64) (uint64, error) {
+	blockStatus, err := cc.bbnClient.RPCClient.Status(context.Background())
+	if err != nil {
+		return 0, err
+	}
+
+	bbnLatestBlockHeight := blockStatus.SyncInfo.LatestBlockHeight
+	lowerBound := int64(0)
+	upperBound := bbnLatestBlockHeight
+
+	for lowerBound <= upperBound {
+		midHeight := lowerBound + (upperBound-lowerBound)/2
+
+		bbnBlock, err := cc.bbnClient.RPCClient.Block(context.Background(), &midHeight)
+		if err != nil {
+			return 0, err
+		}
+		bbnBlockTimestamp := bbnBlock.Block.Time.Unix()
+
+		if bbnBlockTimestamp < int64(l2Timestamp) {
+			lowerBound = midHeight + 1
+		} else if bbnBlockTimestamp > int64(l2Timestamp) {
+			upperBound = midHeight - 1
+		} else {
+			return uint64(midHeight), nil
+		}
+	}
+
+	// timestamp is in the future (not in the most-work fully-validated chain)
+	// so we cannot determine the height from the timestamp
+	if lowerBound > bbnLatestBlockHeight {
+		return 0, nil
+	}
+
+	return uint64(lowerBound) - 1, nil
 }
