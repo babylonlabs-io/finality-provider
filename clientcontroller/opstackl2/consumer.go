@@ -298,6 +298,9 @@ func (cc *OPStackL2ConsumerController) QueryLatestFinalizedBlock() (*types.Block
 	if err != nil {
 		return nil, err
 	}
+	if l2Block.Number.Uint64() == 0 {
+		return nil, nil
+	}
 	return &types.BlockInfo{
 		Height: l2Block.Number.Uint64(),
 		Hash:   l2Block.Hash().Bytes(),
@@ -538,6 +541,11 @@ func (cc *OPStackL2ConsumerController) GetBlockHeightByL2Timestamp(l2Timestamp u
 
 	for lowerBound <= upperBound {
 		midHeight := lowerBound + (upperBound-lowerBound)/2
+
+		// special case when the timestamp is near the genesis block
+		if midHeight == 0 {
+			return 1, nil
+		}
 
 		bbnBlock, err := cc.bbnClient.RPCClient.Block(context.Background(), &midHeight)
 		if err != nil {
