@@ -831,6 +831,9 @@ func (ctm *OpL2ConsumerTestManager) WaitForBlockFinalized(
 			t.Logf(log.Prefix("failed to query latest finalized block %s"), err.Error())
 			return false
 		}
+		if latestFinalizedBlock == nil {
+			return false
+		}
 		finalizedBlockHeight = latestFinalizedBlock.Height
 		return finalizedBlockHeight >= checkedHeight
 	}, e2eutils.EventuallyWaitTimeOut, 5*ctm.getL2BlockTime())

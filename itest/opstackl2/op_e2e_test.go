@@ -158,6 +158,9 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 	require.Eventually(t, func() bool {
 		latestFinalizedBlock, err := ctm.getOpCCAtIndex(1).QueryLatestFinalizedBlock()
 		require.NoError(t, err)
+		if latestFinalizedBlock == nil {
+			return false
+		}
 		stuckHeight := latestFinalizedBlock.Height
 		return lastVotedHeight == stuckHeight
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
@@ -166,6 +169,7 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 	time.Sleep(5 * ctm.getL1BlockTime())
 	latestFinalizedBlock, err := ctm.getOpCCAtIndex(1).QueryLatestFinalizedBlock()
 	require.NoError(t, err)
+	require.NotNil(t, latestFinalizedBlock)
 	stuckHeight := latestFinalizedBlock.Height
 	require.Equal(t, lastVotedHeight, stuckHeight)
 	t.Logf(log.Prefix("OP chain block finalized head stuck at height %d"), stuckHeight)
