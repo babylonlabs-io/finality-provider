@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math"
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"math/big"
 
 	sdkErr "cosmossdk.io/errors"
@@ -266,28 +268,50 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 // Now we can simply hardcode the voting power to true
 // TODO: see this issue https://github.com/babylonlabs-io/finality-provider/issues/390 for more details
 func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
-	l2Block, err := cc.opl2Client.BlockByNumber(context.Background(), big.NewInt(int64(blockHeight)))
-	if err != nil {
-		return false, err
-	}
-	l2Timestamp := l2Block.Time()
+	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
+	var nextKey []byte = nil
 
-	// find the latest block of babylon chain and search from 0 to the latest block to see if there exists
-	// a block that has a close timestamp of previous l2 block timestamp.
-	bbnBlockHeight, err := cc.GetBlockHeightByL2Timestamp(l2Timestamp)
-	if err != nil {
-		return false, err
+	hasActiveDelegation := false
+	for {
+		pagination := &sdkquerytypes.PageRequest{
+			Key:   nextKey,
+			Limit: 100,
+		}
+		// queries the BTCStaking module for all delegations of a finality provider
+		resp, err := cc.bbnClient.QueryClient.FinalityProviderDelegations(fpBtcPkHex, pagination)
+		if err != nil {
+			return false, err
+		}
+		for _, btcDels := range resp.BtcDelegatorDelegations {
+			// early return if the delegation is active
+			if hasActiveDelegation {
+				break
+			}
+			for _, btcDel := range btcDels.Dels {
+				activate, delErr := cc.isDelegationActive(btcDel)
+				if delErr != nil {
+					continue
+				}
+				if activate {
+					hasActiveDelegation = true
+					break
+				}
+			}
+		}
+
+		// early return if the delegation is active
+		if hasActiveDelegation {
+			break
+		}
+
+		if resp.Pagination == nil || resp.Pagination.NextKey == nil {
+			break
+		}
+		nextKey = resp.Pagination.NextKey
 	}
 
-	res, err := cc.bbnClient.QueryClient.FinalityProviderPowerAtHeight(
-		bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex(),
-		bbnBlockHeight,
-	)
-	if err != nil {
-		return false, fmt.Errorf("failed to query the finality provider's voting power at height %d: %w", blockHeight, err)
-	}
+	return hasActiveDelegation, nil
 
-	return res.VotingPower > 0, nil
 }
 
 // QueryLatestFinalizedBlock returns the finalized L2 block from a RPC call
@@ -535,44 +559,31 @@ func (cc *OPStackL2ConsumerController) Close() error {
 	return cc.CwClient.Stop()
 }
 
-func (cc *OPStackL2ConsumerController) GetBlockHeightByL2Timestamp(l2Timestamp uint64) (uint64, error) {
-	blockStatus, err := cc.bbnClient.RPCClient.Status(context.Background())
+func (cc *OPStackL2ConsumerController) isDelegationActive(
+	btcDel *btcstakingtypes.BTCDelegationResponse,
+) (bool, error) {
+
+	btcstakingParams, err := cc.bbnClient.QueryClient.BTCStakingParams()
 	if err != nil {
-		return 0, err
+		return false, err
 	}
 
-	bbnLatestBlockHeight := blockStatus.SyncInfo.LatestBlockHeight
-	lowerBound := int64(0)
-	upperBound := bbnLatestBlockHeight
+	covQuorum := btcstakingParams.GetParams().CovenantQuorum
+	ud := btcDel.UndelegationResponse
 
-	for lowerBound <= upperBound {
-		midHeight := lowerBound + (upperBound-lowerBound)/2
-
-		// special case when the timestamp is near the genesis block
-		if midHeight == 0 {
-			return 1, nil
-		}
-
-		bbnBlock, err := cc.bbnClient.RPCClient.Block(context.Background(), &midHeight)
-		if err != nil {
-			return 0, err
-		}
-		bbnBlockTimestamp := bbnBlock.Block.Time.Unix()
-
-		if bbnBlockTimestamp < int64(l2Timestamp) {
-			lowerBound = midHeight + 1
-		} else if bbnBlockTimestamp > int64(l2Timestamp) {
-			upperBound = midHeight - 1
-		} else {
-			return uint64(midHeight), nil
-		}
+	if len(ud.GetDelegatorUnbondingSigHex()) > 0 {
+		return false, nil
 	}
 
-	// timestamp is in the future (not in the most-work fully-validated chain)
-	// so we cannot determine the height from the timestamp
-	if lowerBound > bbnLatestBlockHeight {
-		return 0, nil
+	if uint32(len(btcDel.CovenantSigs)) < covQuorum {
+		return false, nil
+	}
+	if len(ud.CovenantUnbondingSigList) < int(covQuorum) {
+		return false, nil
+	}
+	if len(ud.CovenantSlashingSigs) < int(covQuorum) {
+		return false, nil
 	}
 
-	return uint64(lowerBound) - 1, nil
+	return true, nil
 }
