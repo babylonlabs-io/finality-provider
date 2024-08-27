@@ -434,7 +434,10 @@ func (fp *FinalityProviderInstance) tryFastSync(targetBlockHeight uint64) (*Fast
 	}
 
 	fp.logger.Debug("the finality-provider is entering fast sync",
-		zap.Uint64("start_height", startHeight), zap.Uint64("target_block_height", targetBlockHeight))
+		zap.String("pk", fp.GetBtcPkHex()),
+		zap.Uint64("start_height", startHeight),
+		zap.Uint64("target_block_height", targetBlockHeight),
+	)
 
 	return fp.FastSync(startHeight, targetBlockHeight)
 }

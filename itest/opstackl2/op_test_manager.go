@@ -102,7 +102,7 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 		testDir,
 		bh,
 		opL2ConsumerConfig,
-		numOfConsumerFPs+1,
+		numOfConsumerFPs,
 		logger,
 		&shutdownInterceptor,
 		t,
@@ -765,7 +765,7 @@ func (ctm *OpL2ConsumerTestManager) SetupFinalityProviders(
 	for i := 0; i < n; i++ {
 		ctm.InsertBTCDelegation(
 			t,
-			[]*btcec.PublicKey{bbnFpPk.MustToBTCPK(), consumerFpPkList[0].MustToBTCPK()},
+			[]*btcec.PublicKey{bbnFpPk.MustToBTCPK(), consumerFpPkList[i].MustToBTCPK()},
 			stakingParams[i].stakingTime,
 			stakingParams[i].stakingAmount,
 		)

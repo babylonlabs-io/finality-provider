@@ -27,7 +27,7 @@ func TestOpSubmitFinalitySignature(t *testing.T) {
 
 	e2eutils.WaitForFpPubRandCommitted(t, fpInstance)
 	// query the first committed pub rand
-	opcc := ctm.getOpCCAtIndex(1)
+	opcc := ctm.getOpCCAtIndex(0)
 	committedPubRand, err := queryFirstPublicRandCommit(opcc, fpInstance.GetBtcPk())
 	require.NoError(t, err)
 	committedStartHeight := committedPubRand.StartHeight
@@ -65,8 +65,9 @@ func TestOpMultipleFinalityProviders(t *testing.T) {
 		{e2eutils.StakingTime, e2eutils.StakingAmount},
 	})
 
-	// wait until the BTC staking is activated
-	l2BlockAfterActivation := ctm.waitForBTCStakingActivation(t)
+	// BTC delegations are activated after SetupFinalityProviders
+	l2BlockAfterActivation, err := ctm.getOpCCAtIndex(0).QueryLatestBlockHeight()
+	require.NoError(t, err)
 
 	// check both FPs have committed their first public randomness
 	// TODO: we might use go routine to do this in parallel
@@ -156,7 +157,7 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 	t.Logf(log.Prefix("last voted height %d"), lastVotedHeight)
 	// wait until the block finalized
 	require.Eventually(t, func() bool {
-		latestFinalizedBlock, err := ctm.getOpCCAtIndex(1).QueryLatestFinalizedBlock()
+		latestFinalizedBlock, err := ctm.getOpCCAtIndex(0).QueryLatestFinalizedBlock()
 		require.NoError(t, err)
 		if latestFinalizedBlock == nil {
 			return false
@@ -167,7 +168,7 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 
 	// check the finality gets stuck. wait for a while to make sure it is stuck
 	time.Sleep(5 * ctm.getL1BlockTime())
-	latestFinalizedBlock, err := ctm.getOpCCAtIndex(1).QueryLatestFinalizedBlock()
+	latestFinalizedBlock, err := ctm.getOpCCAtIndex(0).QueryLatestFinalizedBlock()
 	require.NoError(t, err)
 	require.NotNil(t, latestFinalizedBlock)
 	stuckHeight := latestFinalizedBlock.Height
