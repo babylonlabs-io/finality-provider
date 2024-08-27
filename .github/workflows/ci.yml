@@ -17,7 +17,7 @@ jobs:
       go-private-repos: "github.com/babylonlabs-io/babylon-private"
 
   docker_pipeline:
-    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.1.0
+    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@hiep/go-pull-private
     secrets: inherit
     with:
       publish: false
