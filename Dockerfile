@@ -12,6 +12,10 @@ RUN apk add --no-cache --update openssh git make build-base linux-headers libc-d
                                 libzmq-static libsodium-static gcc
 
 
+RUN --mount=type=secret,id=GO_PRIVATE_TOKEN \ <<EOT
+  set -e
+  git config --global url."https://${{ secrets.GO_PRIVATE_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
 # Build
 WORKDIR /go/src/github.com/babylonlabs-io/finality-provider
 # Cache dependencies
