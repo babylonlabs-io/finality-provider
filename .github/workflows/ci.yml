@@ -21,3 +21,4 @@ jobs:
     secrets: inherit
     with:
       publish: false
+      go-private-repos: "github.com/babylonlabs-io/babylon-private"
