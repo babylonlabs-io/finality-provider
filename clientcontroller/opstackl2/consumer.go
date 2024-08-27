@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/big"
 
 	sdkErr "cosmossdk.io/errors"
@@ -358,19 +359,19 @@ func (cc *OPStackL2ConsumerController) QueryActivatedHeight() (uint64, error) {
 	finalityGadgetClient, err := fgclient.NewFinalityGadgetGrpcClient(cc.Cfg.BabylonFinalityGadgetRpc)
 	if err != nil {
 		cc.logger.Error("failed to initialize Babylon Finality Gadget Grpc client", zap.Error(err))
-		return 0, err
+		return math.MaxUint64, err
 	}
 
 	activatedTimestamp, err := finalityGadgetClient.QueryBtcStakingActivatedTimestamp()
 	if err != nil {
 		cc.logger.Error("failed to query BTC staking activate timestamp", zap.Error(err))
-		return 0, err
+		return math.MaxUint64, err
 	}
 
 	l2BlockNumber, err := cc.GetBlockNumberByTimestamp(context.Background(), activatedTimestamp)
 	if err != nil {
 		cc.logger.Error("failed to convert L2 block number from the given BTC staking activation timestamp", zap.Error(err))
-		return 0, err
+		return math.MaxUint64, err
 	}
 
 	return l2BlockNumber, nil
@@ -439,18 +440,18 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 	// Check if the target timestamp is after the latest block
 	latestBlock, err := cc.opl2Client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		return 0, err
+		return math.MaxUint64, err
 	}
 	if targetTimestamp > latestBlock.Time {
-		return 0, nil
+		return math.MaxUint64, fmt.Errorf("target timestamp %d is after the latest block timestamp %d", targetTimestamp, latestBlock.Time)
 	}
 	// Check if the target timestamp is before the first block
 	firstBlock, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(1))
 	if err != nil {
-		return 0, err
+		return math.MaxUint64, err
 	}
 	if targetTimestamp < firstBlock.Time {
-		return 0, nil
+		return uint64(1), nil
 	}
 
 	lowerBound := uint64(1)
@@ -460,7 +461,7 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 		midBlockNumber := (lowerBound + upperBound) / 2
 		block, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(int64(midBlockNumber)))
 		if err != nil {
-			return 0, err
+			return math.MaxUint64, err
 		}
 
 		if block.Time < targetTimestamp {
