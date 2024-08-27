@@ -7,11 +7,14 @@ on:
 
 jobs:
   lint_test:
-    uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@v0.1.0
+    uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@vhiep/go-pull-private
+    secrets: inherit
     with:
       run-unit-tests: true
       run-integration-tests: true
       run-lint: true
+      run-build: true
+      go-private-repos: "github.com/babylonlabs-io/babylon-private"
 
   docker_pipeline:
     uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.1.0
