@@ -445,15 +445,21 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 	if targetTimestamp > latestBlock.Time {
 		return math.MaxUint64, fmt.Errorf("target timestamp %d is after the latest block timestamp %d", targetTimestamp, latestBlock.Time)
 	}
+
 	// Check if the target timestamp is before the first block
 	firstBlock, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(1))
 	if err != nil {
 		return math.MaxUint64, err
 	}
+
+	// let's say block 0 is at t0 and block 1 at t1
+	// if t0 < targetTimestamp < t1, the activated height should be block 1
 	if targetTimestamp < firstBlock.Time {
 		return uint64(1), nil
 	}
 
+	// binary search between block 1 and the latest block
+	// start from block 1, b/c calling the HeaderByNumber of block 0, its timestamp is 0
 	lowerBound := uint64(1)
 	upperBound := latestBlock.Number.Uint64()
 
