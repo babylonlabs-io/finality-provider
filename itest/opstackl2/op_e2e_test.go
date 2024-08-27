@@ -15,8 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// tests the finality signature submission to the op-finality-gadget contract
-func TestOpSubmitFinalitySignature(t *testing.T) {
+// TestOpFpNoVotingPower tests that the FP has no voting power if it has no BTC delegation
+func TestOpFpNoVotingPower(t *testing.T) {
 	ctm := StartOpL2ConsumerManager(t, 1)
 	defer ctm.Stop(t)
 
@@ -35,19 +35,20 @@ func TestOpSubmitFinalitySignature(t *testing.T) {
 	testBlocks := ctm.WaitForNBlocksAndReturn(t, committedStartHeight, 1)
 	testBlock := testBlocks[0]
 
-	// wait for the fp sign
-	ctm.WaitForFpVoteReachHeight(t, fpInstance, testBlock.Height)
 	queryBlock := &fgtypes.Block{
 		BlockHeight:    testBlock.Height,
 		BlockHash:      hex.EncodeToString(testBlock.Hash),
 		BlockTimestamp: 12345, // doesn't matter b/c the BTC client is mocked
 	}
 
-	// note: QueryFinalityProviderHasPower is hardcode to return true so FPs can still submit finality sigs even if they
-	// don't have voting power. But the finality sigs will not be counted at tally time.
+	// no BTC delegation, so the FP has no voting power
+	hasPower, err := opcc.QueryFinalityProviderHasPower(fpInstance.GetBtcPk(), queryBlock.BlockHeight)
+	require.NoError(t, err)
+	require.Equal(t, false, hasPower)
+
 	_, err = ctm.FinalityGadget.QueryIsBlockBabylonFinalized(queryBlock)
 	require.ErrorIs(t, err, fgtypes.ErrBtcStakingNotActivated)
-	t.Logf(log.Prefix("Expected no voting power"))
+	t.Logf(log.Prefix("Expected BTC staking not activated"))
 }
 
 // This test has two test cases:
@@ -136,8 +137,9 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 	})
 	fpInstance := fpList[0]
 
-	// wait until the BTC staking is activated
-	l2BlockAfterActivation := ctm.waitForBTCStakingActivation(t)
+	// BTC delegations are activated after SetupFinalityProviders
+	l2BlockAfterActivation, err := ctm.getOpCCAtIndex(0).QueryLatestBlockHeight()
+	require.NoError(t, err)
 
 	// wait for the first block to be finalized since BTC staking is activated
 	e2eutils.WaitForFpPubRandCommittedReachTargetHeight(t, fpInstance, l2BlockAfterActivation)
@@ -210,8 +212,9 @@ func TestFinalityGadgetServer(t *testing.T) {
 		e2eutils.WaitForFpPubRandCommitted(t, fpList[i])
 	}
 
-	// wait until the BTC staking is activated
-	l2BlockAfterActivation := ctm.waitForBTCStakingActivation(t)
+	// BTC delegations are activated after SetupFinalityProviders
+	l2BlockAfterActivation, err := ctm.getOpCCAtIndex(0).QueryLatestBlockHeight()
+	require.NoError(t, err)
 
 	// both FP will sign the first block
 	targetBlockHeight := ctm.WaitForTargetBlockPubRand(t, fpList, l2BlockAfterActivation)
