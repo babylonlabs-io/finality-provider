@@ -711,14 +711,14 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 // Note: this should not be used in the submission loop
 func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey(b *types.BlockInfo) (*types.TxResponse, *btcec.PrivateKey, error) {
 	// check last committed height
-	lastCommittedHeight, err := fp.GetLastCommittedHeight()
-	if err != nil {
-		return nil, nil, err
-	}
-	if lastCommittedHeight < b.Height {
-		return nil, nil, fmt.Errorf("the finality-provider's last committed height %v is lower than the current block height %v",
-			lastCommittedHeight, b.Height)
-	}
+	// lastCommittedHeight, err := fp.GetLastCommittedHeight()
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
+	// if lastCommittedHeight < b.Height {
+	// 	return nil, nil, fmt.Errorf("the finality-provider's last committed height %v is lower than the current block height %v",
+	// 		lastCommittedHeight, b.Height)
+	// }
 
 	// get public randomness
 	prList, err := fp.getPubRandList(b.Height, 1)

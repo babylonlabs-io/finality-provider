@@ -104,6 +104,16 @@ func StartManager(t *testing.T) *TestManager {
 	bc, err := fpcc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
 	require.NoError(t, err)
 
+	var currentEpoch uint64
+	require.Eventually(t, func() bool {
+		currentEpoch, err = bc.QueryCurrentEpoch()
+		if err != nil {
+			return false
+		}
+		return currentEpoch > 0
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+	t.Logf("current epoch is %d", currentEpoch)
+
 	// 3. prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
 	eotsCfg := eotsconfig.DefaultConfigWithHomePath(eotsHomeDir)
@@ -241,13 +251,18 @@ func (tm *TestManager) Stop(t *testing.T) {
 }
 
 func (tm *TestManager) WaitForFpPubRandTimestamped(t *testing.T, fpIns *service.FinalityProviderInstance) {
+	var lastCommittedHeight uint64
+	var err error
+
 	require.Eventually(t, func() bool {
-		lastCommittedHeight, err := fpIns.GetLastCommittedHeight()
+		lastCommittedHeight, err = fpIns.GetLastCommittedHeight()
 		if err != nil {
 			return false
 		}
 		return lastCommittedHeight > 0
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	t.Logf("public randomness is successfully committed, last committed height: %d", lastCommittedHeight)
 
 	// wait until the last registered epoch is finalised
 	currentEpoch, err := tm.BBNClient.QueryCurrentEpoch()
@@ -255,7 +270,11 @@ func (tm *TestManager) WaitForFpPubRandTimestamped(t *testing.T, fpIns *service.
 
 	tm.FinalizeUntilEpoch(t, currentEpoch)
 
-	t.Logf("public randomness is successfully committed")
+	res, err := tm.BBNClient.GetBBNClient().LatestEpochFromStatus(ckpttypes.Finalized)
+	require.NoError(t, err)
+	t.Logf("last finalized epoch: %d", res.RawCheckpoint.EpochNum)
+
+	t.Logf("public randomness is successfully timestamped, last finalized epoch: %d", currentEpoch)
 }
 
 func (tm *TestManager) WaitForNPendingDels(t *testing.T, n int) []*bstypes.BTCDelegationResponse {
@@ -563,7 +582,7 @@ func (tm *TestManager) FinalizeUntilEpoch(t *testing.T, epoch uint64) {
 
 	// get all checkpoints of these epochs
 	pagination := &sdkquerytypes.PageRequest{
-		Key:   ckpttypes.CkptsObjectKey(1),
+		Key:   ckpttypes.CkptsObjectKey(0),
 		Limit: epoch,
 	}
 	resp, err := bbnClient.RawCheckpoints(pagination)
@@ -616,7 +635,9 @@ func (tm *TestManager) FinalizeUntilEpoch(t *testing.T, epoch uint64) {
 		// wait until this checkpoint is submitted
 		require.Eventually(t, func() bool {
 			ckpt, err := bbnClient.RawCheckpoint(checkpoint.Ckpt.EpochNum)
-			require.NoError(t, err)
+			if err != nil {
+				return false
+			}
 			return ckpt.RawCheckpoint.Status == ckpttypes.Submitted
 		}, eventuallyWaitTimeOut, eventuallyPollTime)
 	}

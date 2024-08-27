@@ -25,8 +25,8 @@ const (
 	defaultFinalityProviderKeyName = "finality-provider"
 	DefaultRPCPort                 = 12581
 	defaultConfigFileName          = "fpd.conf"
-	defaultNumPubRand              = 100
-	defaultNumPubRandMax           = 200
+	defaultNumPubRand              = 1000
+	defaultNumPubRandMax           = 1000
 	defaultMinRandHeightGap        = 20
 	defaultStatusUpdateInterval    = 20 * time.Second
 	defaultRandomInterval          = 30 * time.Second
