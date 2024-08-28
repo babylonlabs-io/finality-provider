@@ -269,39 +269,24 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 // TODO: see this issue https://github.com/babylonlabs-io/finality-provider/issues/390 for more details
 func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
 	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
-	var nextKey []byte = nil
+	var nextKey []byte
 
-	hasActiveDelegation := false
 	for {
-		pagination := &sdkquerytypes.PageRequest{
-			Key:   nextKey,
-			Limit: 100,
-		}
-		// queries the BTCStaking module for all delegations of a finality provider
-		resp, err := cc.bbnClient.QueryClient.FinalityProviderDelegations(fpBtcPkHex, pagination)
+		resp, err := cc.bbnClient.QueryClient.FinalityProviderDelegations(fpBtcPkHex, &sdkquerytypes.PageRequest{Key: nextKey, Limit: 100})
 		if err != nil {
 			return false, err
 		}
+
 		for _, btcDels := range resp.BtcDelegatorDelegations {
-			// early return if the delegation is active
-			if hasActiveDelegation {
-				break
-			}
 			for _, btcDel := range btcDels.Dels {
-				activate, delErr := cc.isDelegationActive(btcDel)
-				if delErr != nil {
+				active, err := cc.isDelegationActive(btcDel)
+				if err != nil {
 					continue
 				}
-				if activate {
-					hasActiveDelegation = true
-					break
+				if active {
+					return true, nil
 				}
 			}
-		}
-
-		// early return if the delegation is active
-		if hasActiveDelegation {
-			break
 		}
 
 		if resp.Pagination == nil || resp.Pagination.NextKey == nil {
@@ -310,8 +295,7 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec
 		nextKey = resp.Pagination.NextKey
 	}
 
-	return hasActiveDelegation, nil
-
+	return false, nil
 }
 
 // QueryLatestFinalizedBlock returns the finalized L2 block from a RPC call
