@@ -459,7 +459,7 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 	}
 
 	// binary search between block 1 and the latest block
-	// start from block 1, b/c calling the HeaderByNumber of block 0, its timestamp is 0
+	// start from block 1, b/c some L2s such as OP mainnet, block 0 is genesis block with timestamp 0
 	lowerBound := uint64(1)
 	upperBound := latestBlock.Number.Uint64()
 
