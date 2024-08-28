@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/big"
 
 	sdkErr "cosmossdk.io/errors"
@@ -12,6 +13,7 @@ import (
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	bbnapp "github.com/babylonlabs-io/babylon/app"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	fgclient "github.com/babylonlabs-io/finality-gadget/client"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
 	cwconfig "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
@@ -353,25 +355,26 @@ func (cc *OPStackL2ConsumerController) QueryIsBlockFinalized(height uint64) (boo
 }
 
 // QueryActivatedHeight returns the L2 block number at which the finality gadget is activated.
-// It is fetched from the configuration of a CosmWasm contract OP finality gadget.
 func (cc *OPStackL2ConsumerController) QueryActivatedHeight() (uint64, error) {
-	queryMsg := &QueryMsg{Config: &Config{}}
-	jsonData, err := json.Marshal(queryMsg) // `{"config":{}}`
+	finalityGadgetClient, err := fgclient.NewFinalityGadgetGrpcClient(cc.Cfg.BabylonFinalityGadgetRpc)
 	if err != nil {
-		return 0, fmt.Errorf("failed marshaling to JSON: %w", err)
-	}
-	stateResp, err := cc.CwClient.QuerySmartContractState(cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
-	if err != nil {
-		return 0, fmt.Errorf("failed to query smart contract state: %w", err)
+		cc.logger.Error("failed to initialize Babylon Finality Gadget Grpc client", zap.Error(err))
+		return math.MaxUint64, err
 	}
 
-	var resp ConfigResponse
-	err = json.Unmarshal(stateResp.Data, &resp)
+	activatedTimestamp, err := finalityGadgetClient.QueryBtcStakingActivatedTimestamp()
 	if err != nil {
-		return 0, fmt.Errorf("failed to unmarshal response: %w", err)
+		cc.logger.Error("failed to query BTC staking activate timestamp", zap.Error(err))
+		return math.MaxUint64, err
 	}
 
-	return resp.ActivatedHeight, nil
+	l2BlockNumber, err := cc.GetBlockNumberByTimestamp(context.Background(), activatedTimestamp)
+	if err != nil {
+		cc.logger.Error("failed to convert L2 block number from the given BTC staking activation timestamp", zap.Error(err))
+		return math.MaxUint64, err
+	}
+
+	return l2BlockNumber, nil
 }
 
 // QueryLatestBlockHeight gets the latest L2 block number from a RPC call
@@ -429,6 +432,54 @@ func ConvertProof(cmtProof cmtcrypto.Proof) Proof {
 		LeafHash: cmtProof.LeafHash,
 		Aunts:    cmtProof.Aunts,
 	}
+}
+
+// GetBlockNumberByTimestamp returns the L2 block number for the given BTC staking activation timestamp.
+// It uses a binary search to find the block number.
+func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Context, targetTimestamp uint64) (uint64, error) {
+	// Check if the target timestamp is after the latest block
+	latestBlock, err := cc.opl2Client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return math.MaxUint64, err
+	}
+	if targetTimestamp > latestBlock.Time {
+		return math.MaxUint64, fmt.Errorf("target timestamp %d is after the latest block timestamp %d", targetTimestamp, latestBlock.Time)
+	}
+
+	// Check if the target timestamp is before the first block
+	firstBlock, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(1))
+	if err != nil {
+		return math.MaxUint64, err
+	}
+
+	// let's say block 0 is at t0 and block 1 at t1
+	// if t0 < targetTimestamp < t1, the activated height should be block 1
+	if targetTimestamp < firstBlock.Time {
+		return uint64(1), nil
+	}
+
+	// binary search between block 1 and the latest block
+	// start from block 1, b/c some L2s such as OP mainnet, block 0 is genesis block with timestamp 0
+	lowerBound := uint64(1)
+	upperBound := latestBlock.Number.Uint64()
+
+	for lowerBound <= upperBound {
+		midBlockNumber := (lowerBound + upperBound) / 2
+		block, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(int64(midBlockNumber)))
+		if err != nil {
+			return math.MaxUint64, err
+		}
+
+		if block.Time < targetTimestamp {
+			lowerBound = midBlockNumber + 1
+		} else if block.Time > targetTimestamp {
+			upperBound = midBlockNumber - 1
+		} else {
+			return midBlockNumber, nil
+		}
+	}
+
+	return lowerBound, nil
 }
 
 func (cc *OPStackL2ConsumerController) Close() error {
