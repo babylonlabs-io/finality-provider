@@ -5,10 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math"
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
+	"math"
 	"math/big"
 
 	sdkErr "cosmossdk.io/errors"
@@ -271,6 +271,10 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec
 	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
 	var nextKey []byte
 
+	btcStakingParams, err := cc.bbnClient.QueryClient.BTCStakingParams()
+	if err != nil {
+		return false, err
+	}
 	for {
 		resp, err := cc.bbnClient.QueryClient.FinalityProviderDelegations(fpBtcPkHex, &sdkquerytypes.PageRequest{Key: nextKey, Limit: 100})
 		if err != nil {
@@ -279,7 +283,7 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec
 
 		for _, btcDels := range resp.BtcDelegatorDelegations {
 			for _, btcDel := range btcDels.Dels {
-				active, err := cc.isDelegationActive(btcDel)
+				active, err := cc.isDelegationActive(btcStakingParams, btcDel)
 				if err != nil {
 					continue
 				}
@@ -544,15 +548,11 @@ func (cc *OPStackL2ConsumerController) Close() error {
 }
 
 func (cc *OPStackL2ConsumerController) isDelegationActive(
+	btcStakingParams *btcstakingtypes.QueryParamsResponse,
 	btcDel *btcstakingtypes.BTCDelegationResponse,
 ) (bool, error) {
 
-	btcstakingParams, err := cc.bbnClient.QueryClient.BTCStakingParams()
-	if err != nil {
-		return false, err
-	}
-
-	covQuorum := btcstakingParams.GetParams().CovenantQuorum
+	covQuorum := btcStakingParams.GetParams().CovenantQuorum
 	ud := btcDel.UndelegationResponse
 
 	if len(ud.GetDelegatorUnbondingSigHex()) > 0 {
