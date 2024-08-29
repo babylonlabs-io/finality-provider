@@ -102,7 +102,7 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 		testDir,
 		bh,
 		opL2ConsumerConfig,
-		numOfConsumerFPs+1,
+		numOfConsumerFPs,
 		logger,
 		&shutdownInterceptor,
 		t,
@@ -765,7 +765,7 @@ func (ctm *OpL2ConsumerTestManager) SetupFinalityProviders(
 	for i := 0; i < n; i++ {
 		ctm.InsertBTCDelegation(
 			t,
-			[]*btcec.PublicKey{bbnFpPk.MustToBTCPK(), consumerFpPkList[0].MustToBTCPK()},
+			[]*btcec.PublicKey{bbnFpPk.MustToBTCPK(), consumerFpPkList[i].MustToBTCPK()},
 			stakingParams[i].stakingTime,
 			stakingParams[i].stakingAmount,
 		)
@@ -829,6 +829,9 @@ func (ctm *OpL2ConsumerTestManager) WaitForBlockFinalized(
 		latestFinalizedBlock, err := ctm.getOpCCAtIndex(0).QueryLatestFinalizedBlock()
 		if err != nil {
 			t.Logf(log.Prefix("failed to query latest finalized block %s"), err.Error())
+			return false
+		}
+		if latestFinalizedBlock == nil {
 			return false
 		}
 		finalizedBlockHeight = latestFinalizedBlock.Height
@@ -932,29 +935,6 @@ func queryFirstOrLastPublicRandCommit(
 	}
 
 	return resp, nil
-}
-
-func (ctm *OpL2ConsumerTestManager) waitForBTCStakingActivation(t *testing.T) uint64 {
-	var l2BlockAfterActivation uint64
-	require.Eventually(t, func() bool {
-		latestBlockHeight, err := ctm.getOpCCAtIndex(0).QueryLatestBlockHeight()
-		require.NoError(t, err)
-		latestBlock, err := ctm.getOpCCAtIndex(0).QueryEthBlock(latestBlockHeight)
-		require.NoError(t, err)
-		l2BlockAfterActivation = latestBlock.Number.Uint64()
-
-		activatedTimestamp, err := ctm.FinalityGadget.QueryBtcStakingActivatedTimestamp()
-		if err != nil {
-			t.Logf(log.Prefix("Failed to query BTC staking activated timestamp: %v"), err)
-			return false
-		}
-		t.Logf(log.Prefix("Activated timestamp %d"), activatedTimestamp)
-
-		return latestBlock.Time >= activatedTimestamp
-	}, 30*ctm.getL2BlockTime(), ctm.getL2BlockTime())
-
-	t.Logf(log.Prefix("found a L2 block after BTC staking activation: %d"), l2BlockAfterActivation)
-	return l2BlockAfterActivation
 }
 
 func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {

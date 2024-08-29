@@ -7,6 +7,7 @@ import (
 	"time"
 
 	cwcfg "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
+
 	"github.com/cosmos/btcutil/bech32"
 )
 
@@ -76,5 +77,23 @@ func (cfg *OPStackL2Config) ToCosmwasmConfig() cwcfg.CosmwasmConfig {
 		OutputFormat:     cfg.OutputFormat,
 		SignModeStr:      cfg.SignModeStr,
 		SubmitterAddress: "",
+	}
+}
+
+func (cfg *OPStackL2Config) ToBBNConfig() BBNConfig {
+	return BBNConfig{
+		Key:            cfg.Key,
+		ChainID:        cfg.ChainID,
+		RPCAddr:        cfg.RPCAddr,
+		AccountPrefix:  cfg.AccountPrefix,
+		KeyringBackend: cfg.KeyringBackend,
+		GasAdjustment:  cfg.GasAdjustment,
+		GasPrices:      cfg.GasPrices,
+		KeyDirectory:   cfg.KeyDirectory,
+		Debug:          cfg.Debug,
+		Timeout:        cfg.Timeout,
+		BlockTimeout:   cfg.BlockTimeout,
+		OutputFormat:   cfg.OutputFormat,
+		SignModeStr:    cfg.SignModeStr,
 	}
 }

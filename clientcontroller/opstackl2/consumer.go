@@ -5,6 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	bbnclient "github.com/babylonlabs-io/babylon/client/client"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"math"
 	"math/big"
 
@@ -41,6 +44,7 @@ type OPStackL2ConsumerController struct {
 	Cfg        *fpcfg.OPStackL2Config
 	CwClient   *cwclient.Client
 	opl2Client *ethclient.Client
+	bbnClient  *bbnclient.Client
 	logger     *zap.Logger
 }
 
@@ -66,10 +70,26 @@ func NewOPStackL2ConsumerController(
 		return nil, fmt.Errorf("failed to create OPStack L2 client: %w", err)
 	}
 
+	bbnConfig := opl2Cfg.ToBBNConfig()
+	babylonConfig := fpcfg.BBNConfigToBabylonConfig(&bbnConfig)
+
+	if err := babylonConfig.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid config for Babylon client: %w", err)
+	}
+
+	bc, err := bbnclient.New(
+		&babylonConfig,
+		logger,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
+	}
+
 	return &OPStackL2ConsumerController{
 		opl2Cfg,
 		cwClient,
 		opl2Client,
+		bc,
 		logger,
 	}, nil
 }
@@ -248,7 +268,38 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 // Now we can simply hardcode the voting power to true
 // TODO: see this issue https://github.com/babylonlabs-io/finality-provider/issues/390 for more details
 func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
-	return true, nil
+	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
+	var nextKey []byte
+
+	btcStakingParams, err := cc.bbnClient.QueryClient.BTCStakingParams()
+	if err != nil {
+		return false, err
+	}
+	for {
+		resp, err := cc.bbnClient.QueryClient.FinalityProviderDelegations(fpBtcPkHex, &sdkquerytypes.PageRequest{Key: nextKey, Limit: 100})
+		if err != nil {
+			return false, err
+		}
+
+		for _, btcDels := range resp.BtcDelegatorDelegations {
+			for _, btcDel := range btcDels.Dels {
+				active, err := cc.isDelegationActive(btcStakingParams, btcDel)
+				if err != nil {
+					continue
+				}
+				if active {
+					return true, nil
+				}
+			}
+		}
+
+		if resp.Pagination == nil || resp.Pagination.NextKey == nil {
+			break
+		}
+		nextKey = resp.Pagination.NextKey
+	}
+
+	return false, nil
 }
 
 // QueryLatestFinalizedBlock returns the finalized L2 block from a RPC call
@@ -259,6 +310,11 @@ func (cc *OPStackL2ConsumerController) QueryLatestFinalizedBlock() (*types.Block
 	if err != nil {
 		return nil, err
 	}
+
+	if l2Block.Number.Uint64() == 0 {
+		return nil, nil
+	}
+
 	return &types.BlockInfo{
 		Height: l2Block.Number.Uint64(),
 		Hash:   l2Block.Hash().Bytes(),
@@ -347,6 +403,10 @@ func (cc *OPStackL2ConsumerController) QueryIsBlockFinalized(height uint64) (boo
 	l2Block, err := cc.QueryLatestFinalizedBlock()
 	if err != nil {
 		return false, err
+	}
+
+	if l2Block == nil {
+		return false, nil
 	}
 	if height > l2Block.Height {
 		return false, nil
@@ -485,4 +545,29 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 func (cc *OPStackL2ConsumerController) Close() error {
 	cc.opl2Client.Close()
 	return cc.CwClient.Stop()
+}
+
+func (cc *OPStackL2ConsumerController) isDelegationActive(
+	btcStakingParams *btcstakingtypes.QueryParamsResponse,
+	btcDel *btcstakingtypes.BTCDelegationResponse,
+) (bool, error) {
+
+	covQuorum := btcStakingParams.GetParams().CovenantQuorum
+	ud := btcDel.UndelegationResponse
+
+	if len(ud.GetDelegatorUnbondingSigHex()) > 0 {
+		return false, nil
+	}
+
+	if uint32(len(btcDel.CovenantSigs)) < covQuorum {
+		return false, nil
+	}
+	if len(ud.CovenantUnbondingSigList) < int(covQuorum) {
+		return false, nil
+	}
+	if len(ud.CovenantSlashingSigs) < int(covQuorum) {
+		return false, nil
+	}
+
+	return true, nil
 }
