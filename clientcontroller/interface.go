@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/types"
 )

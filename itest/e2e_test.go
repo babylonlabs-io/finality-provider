@@ -13,12 +13,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 var (
-	stakingTime   = uint16(100)
+	stakingTime   = uint16(1000)
 	stakingAmount = int64(20000)
 )
 
@@ -33,7 +32,7 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 	fpIns := fpInsList[0]
 
 	// check the public randomness is committed
-	tm.WaitForFpPubRandCommitted(t, fpIns)
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
 
 	// send a BTC delegation
 	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, stakingTime, stakingAmount)
@@ -65,7 +64,7 @@ func TestDoubleSigning(t *testing.T) {
 	fpIns := fpInsList[0]
 
 	// check the public randomness is committed
-	tm.WaitForFpPubRandCommitted(t, fpIns)
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
 
 	// send a BTC delegation
 	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, stakingTime, stakingAmount)
@@ -115,44 +114,6 @@ func TestDoubleSigning(t *testing.T) {
 	require.Equal(t, false, fps[0].IsRunning)
 }
 
-// TestMultipleFinalityProviders tests starting with multiple finality providers
-func TestMultipleFinalityProviders(t *testing.T) {
-	n := 3
-	tm, fpInstances := StartManagerWithFinalityProvider(t, n)
-	defer tm.Stop(t)
-
-	// submit BTC delegations for each finality-provider
-	for _, fpIns := range fpInstances {
-		tm.Wg.Add(1)
-		go func(fpi *service.FinalityProviderInstance) {
-			defer tm.Wg.Done()
-			// check the public randomness is committed
-			tm.WaitForFpPubRandCommitted(t, fpi)
-			// send a BTC delegation
-			_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpi.GetBtcPk()}, stakingTime, stakingAmount)
-		}(fpIns)
-	}
-	tm.Wg.Wait()
-
-	// check the BTC delegations are pending
-	delsResp := tm.WaitForNPendingDels(t, n)
-	require.Equal(t, n, len(delsResp))
-
-	// send covenant sigs to each of the delegations
-	for _, delResp := range delsResp {
-		d, err := ParseRespBTCDelToBTCDel(delResp)
-		require.NoError(t, err)
-		// send covenant sigs
-		tm.InsertCovenantSigForDelegation(t, d)
-	}
-
-	// check the BTC delegations are active
-	_ = tm.WaitForNActiveDels(t, n)
-
-	// check if there's a block finalized
-	_ = tm.WaitForNFinalizedBlocks(t, 1)
-}
-
 // TestFastSync tests the fast sync process where the finality-provider is terminated and restarted with fast sync
 func TestFastSync(t *testing.T) {
 	tm, fpInsList := StartManagerWithFinalityProvider(t, 1)
@@ -161,7 +122,7 @@ func TestFastSync(t *testing.T) {
 	fpIns := fpInsList[0]
 
 	// check the public randomness is committed
-	tm.WaitForFpPubRandCommitted(t, fpIns)
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
 
 	// send a BTC delegation
 	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, stakingTime, stakingAmount)

@@ -25,9 +25,9 @@ const (
 	defaultFinalityProviderKeyName = "finality-provider"
 	DefaultRPCPort                 = 12581
 	defaultConfigFileName          = "fpd.conf"
-	defaultNumPubRand              = 100
-	defaultNumPubRandMax           = 200
-	defaultMinRandHeightGap        = 20
+	defaultNumPubRand              = 70000 // support running of 1 week with block production time as 10s
+	defaultNumPubRandMax           = 100000
+	defaultMinRandHeightGap        = 35000
 	defaultStatusUpdateInterval    = 20 * time.Second
 	defaultRandomInterval          = 30 * time.Second
 	defaultSubmitRetryInterval     = 1 * time.Second
