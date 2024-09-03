@@ -133,6 +133,7 @@ func NewBabylonNodeHandler(t *testing.T, covenantQuorum int, covenantPks []*type
 		"--keyring-backend=test",
 		"--chain-id=chain-test",
 		"--additional-sender-account",
+		fmt.Sprintf("--epoch-interval=%d", 5),
 		fmt.Sprintf("--slashing-address=%s", slashingAddr),
 		fmt.Sprintf("--covenant-quorum=%d", covenantQuorum),
 		fmt.Sprintf("--covenant-pks=%s", strings.Join(covenantPksStr, ",")),
