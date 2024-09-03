@@ -493,6 +493,15 @@ func (bc *BabylonController) QueryBtcLightClientTip() (*btclctypes.BTCHeaderInfo
 	return res.Header, nil
 }
 
+func (bc *BabylonController) QueryCurrentEpoch() (uint64, error) {
+	res, err := bc.bbnClient.QueryClient.CurrentEpoch()
+	if err != nil {
+		return 0, fmt.Errorf("failed to query BTC tip: %v", err)
+	}
+
+	return res.CurrentEpoch, nil
+}
+
 func (bc *BabylonController) QueryVotesAtHeight(height uint64) ([]bbntypes.BIP340PubKey, error) {
 	res, err := bc.bbnClient.QueryClient.VotesAtHeight(height)
 	if err != nil {
@@ -588,4 +597,22 @@ func (bc *BabylonController) SubmitCovenantSigs(
 	}
 
 	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
+}
+
+func (bc *BabylonController) GetBBNClient() *bbnclient.Client {
+	return bc.bbnClient
+}
+
+func (bc *BabylonController) InsertSpvProofs(submitter string, proofs []*btcctypes.BTCSpvProof) (*provider.RelayerTxResponse, error) {
+	msg := &btcctypes.MsgInsertBTCSpvProof{
+		Submitter: submitter,
+		Proofs:    proofs,
+	}
+
+	res, err := bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
