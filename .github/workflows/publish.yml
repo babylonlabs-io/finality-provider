@@ -15,7 +15,7 @@ jobs:
     with:
       run-unit-tests: true
       run-integration-tests: true
-      run-lint: false
+      run-lint: true
       run-build: true
       go-private-repos-authentication: true
 
