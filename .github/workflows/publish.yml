@@ -10,7 +10,8 @@ on:
 
 jobs:
   lint_test:
-    uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@hiep/fix-private-go-repo
+    uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@v0.4.0
+    secrets: inherit
     with:
       run-unit-tests: true
       run-integration-tests: true
@@ -20,7 +21,7 @@ jobs:
 
   docker_pipeline:
     needs: ["lint_test"]
-    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@hiep/fix-private-go-repo
+    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.4.0
     secrets: inherit
     with:
       publish: true
