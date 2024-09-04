@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'hiep/support-private-repo'
     tags:
       - '*'
 
