@@ -18,7 +18,7 @@ import (
 
 var (
 	stakingTime   = uint16(1000)
-	stakingAmount = int64(20000)
+	stakingAmount = int64(500000)
 )
 
 // TestFinalityProviderLifeCycle tests the whole life cycle of a finality-provider
