@@ -2,16 +2,22 @@ package e2etest
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/babylonlabs-io/babylon/types"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/stretchr/testify/require"
 )
 
@@ -117,7 +123,11 @@ func NewBabylonNodeHandler(t *testing.T, covenantQuorum int, covenantPks []*type
 	walletName := "node0"
 	nodeDataDir := filepath.Join(testDir, walletName, "babylond")
 
-	slashingAddr := "SZtRT4BySL3o4efdGLh3k7Kny8GAnsBrSW"
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	slashingAddress, err := datagen.GenRandomBTCAddress(r, &chaincfg.SigNetParams)
+	require.NoError(t, err)
+	slashingPkScript, err := txscript.PayToAddrScript(slashingAddress)
+	require.NoError(t, err)
 
 	var covenantPksStr []string
 	for _, pk := range covenantPks {
@@ -134,7 +144,7 @@ func NewBabylonNodeHandler(t *testing.T, covenantQuorum int, covenantPks []*type
 		"--chain-id=chain-test",
 		"--additional-sender-account",
 		fmt.Sprintf("--epoch-interval=%d", 5),
-		fmt.Sprintf("--slashing-address=%s", slashingAddr),
+		fmt.Sprintf("--slashing-pk-script=%s", hex.EncodeToString(slashingPkScript)),
 		fmt.Sprintf("--covenant-quorum=%d", covenantQuorum),
 		fmt.Sprintf("--covenant-pks=%s", strings.Join(covenantPksStr, ",")),
 	)
