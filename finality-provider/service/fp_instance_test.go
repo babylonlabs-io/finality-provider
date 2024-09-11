@@ -124,7 +124,7 @@ func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc cli
 	require.NoError(t, err)
 
 	// create registered finality-provider
-	fp := testutil.GenStoredFinalityProvider(r, t, app, passphrase, hdPath)
+	fp := testutil.GenStoredFinalityProvider(r, t, app, passphrase, hdPath, nil)
 	pubRandProofStore := app.GetPubRandProofStore()
 	fpStore := app.GetFinalityProviderStore()
 	err = fpStore.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_REGISTERED)
