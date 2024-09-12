@@ -187,7 +187,7 @@ func StartManagerWithFinalityProvider(t *testing.T, n int) (*TestManager, []*ser
 		err = tm.BabylonHandler.BabylonNode.TxBankSend(fpBbnKeyInfo.AccAddress.String(), "1000000ubbn")
 		require.NoError(t, err)
 
-		res, err := app.CreateFinalityProvider(fpName, chainID, passphrase, hdPath, desc, &commission)
+		res, err := app.CreateFinalityProvider(fpName, chainID, passphrase, hdPath, nil, desc, &commission)
 		require.NoError(t, err)
 		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
 		require.NoError(t, err)

@@ -60,7 +60,7 @@ func (c *FinalityProviderServiceGRpcClient) RegisterFinalityProvider(
 
 func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 	ctx context.Context,
-	keyName, chainID, passphrase, hdPath string,
+	keyName, chainID, eotsPkHex, passphrase, hdPath string,
 	description types.Description,
 	commission *sdkmath.LegacyDec,
 ) (*proto.CreateFinalityProviderResponse, error) {
@@ -77,6 +77,7 @@ func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 		HdPath:      hdPath,
 		Description: descBytes,
 		Commission:  commission.String(),
+		EotsPkHex:   eotsPkHex,
 	}
 
 	res, err := c.client.CreateFinalityProvider(ctx, req)

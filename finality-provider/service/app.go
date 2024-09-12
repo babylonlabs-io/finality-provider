@@ -351,6 +351,7 @@ func (app *FinalityProviderApp) Stop() error {
 
 func (app *FinalityProviderApp) CreateFinalityProvider(
 	keyName, chainID, passPhrase, hdPath string,
+	eotsPk *bbntypes.BIP340PubKey,
 	description *stakingtypes.Description,
 	commission *sdkmath.LegacyDec,
 ) (*CreateFinalityProviderResult, error) {
@@ -360,6 +361,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 		chainID:         chainID,
 		passPhrase:      passPhrase,
 		hdPath:          hdPath,
+		eotsPk:          eotsPk,
 		description:     description,
 		commission:      commission,
 		errResponse:     make(chan error, 1),
@@ -398,14 +400,18 @@ func (app *FinalityProviderApp) handleCreateFinalityProviderRequest(req *createF
 	}
 
 	// 2. create EOTS key
-	fpPkBytes, err := app.eotsManager.CreateKey(req.keyName, req.passPhrase, req.hdPath)
-	if err != nil {
-		return nil, err
+	fpPk := req.eotsPk
+	if req.eotsPk == nil {
+		fpPkBytes, err := app.eotsManager.CreateKey(req.keyName, req.passPhrase, req.hdPath)
+		if err != nil {
+			return nil, err
+		}
+		fpPk, err = bbntypes.NewBIP340PubKey(fpPkBytes)
+		if err != nil {
+			return nil, err
+		}
 	}
-	fpPk, err := bbntypes.NewBIP340PubKey(fpPkBytes)
-	if err != nil {
-		return nil, err
-	}
+
 	fpRecord, err := app.eotsManager.KeyRecord(fpPk.MustMarshal(), req.passPhrase)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get finality-provider record: %w", err)

@@ -61,6 +61,10 @@ message CreateFinalityProviderRequest {
         (gogoproto.customtype) = "cosmossdk.io/math.LegacyDec",
         (gogoproto.nullable)   = false
     ];
+    // eots_pk_hex it is the optional EOTS public key and used to ask for
+    // the key record from the EOTS manager for the corresponding EOTS public key.
+    // If this property is not set, it will create a new EOTS key.
+    string eots_pk_hex = 7;
 }
 
 message CreateFinalityProviderResponse {
