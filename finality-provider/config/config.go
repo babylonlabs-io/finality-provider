@@ -69,6 +69,7 @@ type Config struct {
 	FastSyncGap              uint64        `long:"fastsyncgap" description:"The block gap that will trigger the fast sync"`
 	EOTSManagerAddress       string        `long:"eotsmanageraddress" description:"The address of the remote EOTS manager; Empty if the EOTS manager is running locally"`
 	MaxNumFinalityProviders  uint32        `long:"maxnumfinalityproviders" description:"The maximum number of finality-provider instances running concurrently within the daemon"`
+	MinutesToWaitForConsumer uint32        `long:"minuteswaitforconsumer" description:"The number of minutes it should wait for the consumer chain to be available, before stop the app"`
 
 	BitcoinNetwork string `long:"bitcoinnetwork" description:"Bitcoin network to run on" choise:"mainnet" choice:"regtest" choice:"testnet" choice:"simnet" choice:"signet"`
 
@@ -112,6 +113,7 @@ func DefaultConfigWithHome(homePath string) Config {
 		RpcListener:              DefaultRpcListener,
 		MaxNumFinalityProviders:  defaultMaxNumFinalityProviders,
 		Metrics:                  metrics.DefaultFpConfig(),
+		MinutesToWaitForConsumer: 60 * 24 * 7, // one week in minutes
 	}
 
 	if err := cfg.Validate(); err != nil {

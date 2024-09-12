@@ -7,6 +7,7 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -238,7 +239,29 @@ func (app *FinalityProviderApp) getFpPrivKey(fpPk []byte) (*btcec.PrivateKey, er
 
 // SyncFinalityProviderStatus syncs the status of the finality-providers
 func (app *FinalityProviderApp) SyncFinalityProviderStatus() error {
-	latestBlock, err := app.cc.QueryBestBlock()
+	var (
+		latestBlock *types.BlockInfo
+		err         error
+	)
+
+	attempts := uint(app.config.MinutesToWaitForConsumer)
+	err = retry.Do(func() error {
+		latestBlock, err = app.cc.QueryBestBlock()
+		if err != nil {
+			return err
+		}
+		return nil
+	}, retry.OnRetry(func(n uint, err error) {
+		app.logger.Debug(
+			"failed to query the consumer chain for the latest block",
+			zap.Uint("attempt", n+1),
+			zap.Uint("max_attempts", attempts),
+			zap.Error(err),
+		)
+		// waits for consumer chain to become online for one week
+		// usefull to turn fpd on before the consumer chain node is available
+		// and waiting for the consumer node to become available to start.
+	}), retry.Attempts(attempts), retry.Delay(time.Minute), RtyErr)
 	if err != nil {
 		return err
 	}
