@@ -47,16 +47,18 @@ func NewBabylonController(
 
 	bbnConfig := fpcfg.BBNConfigToBabylonConfig(cfg)
 
-	if err := bbnConfig.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid config for Babylon client: %w", err)
-	}
-
 	bc, err := bbnclient.New(
 		&bbnConfig,
 		logger,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
+	}
+
+	// makes sure that the key in config really exists and it is a valid bech 32 addr
+	// to allow using mustGetTxSigner
+	if _, err := bc.GetAddr(); err != nil {
+		return nil, err
 	}
 
 	return &BabylonController{
