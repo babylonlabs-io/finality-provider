@@ -7,7 +7,6 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -72,7 +71,6 @@ func NewFinalityProviderAppFromConfig(
 	}
 
 	logger.Info("successfully connected to a remote EOTS manager", zap.String("address", cfg.EOTSManagerAddress))
-
 	return NewFinalityProviderApp(cfg, cc, em, db, logger)
 }
 
@@ -146,6 +144,11 @@ func (app *FinalityProviderApp) GetKeyring() keyring.Keyring {
 
 func (app *FinalityProviderApp) GetInput() *strings.Reader {
 	return app.input
+}
+
+// Logger returns the current logger of FP app.
+func (app *FinalityProviderApp) Logger() *zap.Logger {
+	return app.logger
 }
 
 func (app *FinalityProviderApp) ListFinalityProviderInstances() []*FinalityProviderInstance {
@@ -239,29 +242,7 @@ func (app *FinalityProviderApp) getFpPrivKey(fpPk []byte) (*btcec.PrivateKey, er
 
 // SyncFinalityProviderStatus syncs the status of the finality-providers
 func (app *FinalityProviderApp) SyncFinalityProviderStatus() error {
-	var (
-		latestBlock *types.BlockInfo
-		err         error
-	)
-
-	attempts := uint(app.config.MinutesToWaitForConsumer)
-	err = retry.Do(func() error {
-		latestBlock, err = app.cc.QueryBestBlock()
-		if err != nil {
-			return err
-		}
-		return nil
-	}, retry.OnRetry(func(n uint, err error) {
-		app.logger.Debug(
-			"failed to query the consumer chain for the latest block",
-			zap.Uint("attempt", n+1),
-			zap.Uint("max_attempts", attempts),
-			zap.Error(err),
-		)
-		// waits for consumer chain to become online for one week
-		// usefull to turn fpd on before the consumer chain node is available
-		// and waiting for the consumer node to become available to start.
-	}), retry.Attempts(attempts), retry.Delay(time.Minute), RtyErr)
+	latestBlock, err := app.cc.QueryBestBlock()
 	if err != nil {
 		return err
 	}
@@ -278,28 +259,18 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() error {
 			continue
 		}
 
-		if vp > 0 {
-			// voting power > 0 then set the status to ACTIVE
-			err = app.fps.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_ACTIVE)
-			if err != nil {
-				return err
-			}
-		} else if vp == 0 {
-			// voting power == 0 then set status depending on previous status
-			switch fp.Status {
-			case proto.FinalityProviderStatus_CREATED:
-				// previous status is CREATED then set to REGISTERED
-				err = app.fps.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_REGISTERED)
-				if err != nil {
-					return err
-				}
-			case proto.FinalityProviderStatus_ACTIVE:
-				// previous status is ACTIVE then set to INACTIVE
-				err = app.fps.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_INACTIVE)
-				if err != nil {
-					return err
-				}
-			}
+		if !fp.ShouldSyncStatusFromVotingPower(vp) {
+			continue
+		}
+
+		bip340PubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fp.BtcPk)
+		if app.fpManager.IsFinalityProviderRunning(bip340PubKey) {
+			// if it is running, no need to update status
+			continue
+		}
+
+		if err := app.fps.UpdateFpStatusFromVotingPower(vp, fp); err != nil {
+			return err
 		}
 	}
 
@@ -312,7 +283,8 @@ func (app *FinalityProviderApp) Start() error {
 	app.startOnce.Do(func() {
 		app.logger.Info("Starting FinalityProviderApp")
 
-		app.wg.Add(3)
+		app.wg.Add(4)
+		go app.syncChainFpStatusLoop()
 		go app.eventLoop()
 		go app.registrationLoop()
 		go app.metricsUpdateLoop()
@@ -678,6 +650,33 @@ func (app *FinalityProviderApp) metricsUpdateLoop() {
 		case <-app.quit:
 			updateTicker.Stop()
 			app.logger.Info("exiting metrics update loop")
+			return
+		}
+	}
+}
+
+func (app *FinalityProviderApp) syncChainFpStatusLoop() {
+	defer app.wg.Done()
+
+	interval := app.config.SyncFpStatusInterval
+	app.logger.Info(
+		"starting sync FP status loop",
+		zap.Float64("interval seconds", interval.Seconds()),
+	)
+	syncFpStatusTicker := time.NewTicker(interval)
+
+	for {
+		select {
+		case <-syncFpStatusTicker.C:
+			// sync finality-provider status
+			if err := app.SyncFinalityProviderStatus(); err != nil {
+				app.Logger().Error("failed to sync finality-provider status", zap.Error(err))
+				continue
+			}
+
+		case <-app.quit:
+			syncFpStatusTicker.Stop()
+			app.logger.Info("exiting sync FP status loop")
 			return
 		}
 	}
