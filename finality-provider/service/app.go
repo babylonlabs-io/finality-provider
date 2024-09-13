@@ -255,11 +255,9 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() error {
 	for _, fp := range fps {
 		vp, err := app.cc.QueryFinalityProviderVotingPower(fp.BtcPk, latestBlock.Height)
 		if err != nil {
-			if !strings.Contains(err.Error(), bstypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", latestBlock.Height).Error()) {
-				// if error occured then the finality-provider is not registered in the Babylon chain yet
-				continue
-			}
-			// if nothing was updated in the voting power table, it should consider as zero VP to start to send pub random
+			// if error occured then the finality-provider is not registered in the Babylon chain yet or
+			// there is nothing in the voting power table, so it should not start the fp.
+			continue
 		}
 
 		if !fp.ShouldSyncStatusFromVotingPower(vp) {
