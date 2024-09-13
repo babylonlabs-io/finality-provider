@@ -117,22 +117,22 @@ func (s *FinalityProviderStore) SetFpStatus(btcPk *btcec.PublicKey, status proto
 func (s *FinalityProviderStore) UpdateFpStatusFromVotingPower(
 	vp uint64,
 	fp *StoredFinalityProvider,
-) error {
+) (proto.FinalityProviderStatus, error) {
 	if vp > 0 {
 		// voting power > 0 then set the status to ACTIVE
-		return s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_ACTIVE)
+		return proto.FinalityProviderStatus_ACTIVE, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_ACTIVE)
 	}
 
 	// voting power == 0 then set status depending on previous status
 	switch fp.Status {
 	case proto.FinalityProviderStatus_CREATED:
 		// previous status is CREATED then set to REGISTERED
-		return s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_REGISTERED)
+		return proto.FinalityProviderStatus_REGISTERED, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_REGISTERED)
 	case proto.FinalityProviderStatus_ACTIVE:
 		// previous status is ACTIVE then set to INACTIVE
-		return s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_INACTIVE)
+		return proto.FinalityProviderStatus_INACTIVE, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_INACTIVE)
 	}
-	return nil
+	return fp.Status, nil
 }
 
 // SetFpLastVotedHeight sets the last voted height to the stored last voted height and last processed height

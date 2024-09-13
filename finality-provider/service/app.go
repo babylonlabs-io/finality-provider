@@ -270,15 +270,18 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() error {
 		}
 
 		oldStatus := fp.Status
-		if err := app.fps.UpdateFpStatusFromVotingPower(vp, fp); err != nil {
+		newStatus, err := app.fps.UpdateFpStatusFromVotingPower(vp, fp)
+		if err != nil {
 			return err
 		}
+
 		app.logger.Info(
 			"Update FP status",
 			zap.String("fp_addr", fp.FPAddr),
 			zap.String("old_status", oldStatus.String()),
-			zap.String("new_status", fp.Status.String()),
+			zap.String("new_status", newStatus.String()),
 		)
+		fp.Status = newStatus
 
 		if !fp.ShouldStart() {
 			continue
