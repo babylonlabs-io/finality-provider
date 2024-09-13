@@ -668,10 +668,10 @@ func (app *FinalityProviderApp) syncChainFpStatusLoop() {
 	for {
 		select {
 		case <-syncFpStatusTicker.C:
+			app.Logger().Info("running SyncFinalityProviderStatus")
 			// sync finality-provider status
 			if err := app.SyncFinalityProviderStatus(); err != nil {
 				app.Logger().Error("failed to sync finality-provider status", zap.Error(err))
-				continue
 			}
 
 		case <-app.quit:
