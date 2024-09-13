@@ -2,8 +2,8 @@ package clientcontroller
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	sdkErr "cosmossdk.io/errors"
@@ -276,11 +276,13 @@ func (bc *BabylonController) QueryFinalityProviderVotingPower(fpPk *btcec.Public
 		bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex(),
 		blockHeight,
 	)
-	if errors.Is(err, btcstakingtypes.ErrVotingPowerTableNotUpdated) {
-		// if nothing was updated in the voting power table
-		return 0, nil
-	}
+
 	if err != nil {
+		allowedErr := fmt.Sprintf("rpc error: code = Unknown desc = %s: unknown request", btcstakingtypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", blockHeight).Error())
+		if strings.EqualFold(err.Error(), allowedErr) {
+			// if nothing was updated in the voting power table, it should consider as zero VP to start to send pub random
+			return 0, nil
+		}
 		return 0, fmt.Errorf("failed to query BTC delegations: %w", err)
 	}
 
