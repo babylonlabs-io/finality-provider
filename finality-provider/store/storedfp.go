@@ -78,8 +78,11 @@ func (sfp *StoredFinalityProvider) ToFinalityProviderInfo() *proto.FinalityProvi
 	}
 }
 
-// ShouldSyncStatusFromVotingPower returns true if it should modify the status based on the
-// blockchain data.
+// ShouldSyncStatusFromVotingPower returns true if the status should be updated
+// based on the provided voting power or the current status of the finality provider.
+//
+// It returns true if the voting power is greater than zero, or if the status
+// is either 'CREATED' or 'ACTIVE'.
 func (sfp *StoredFinalityProvider) ShouldSyncStatusFromVotingPower(vp uint64) bool {
 	if vp > 0 {
 		return true
