@@ -263,13 +263,28 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() error {
 			continue
 		}
 
-		bip340PubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fp.BtcPk)
+		bip340PubKey := fp.GetBIP340BTCPK()
 		if app.fpManager.IsFinalityProviderRunning(bip340PubKey) {
 			// if it is running, no need to update status
 			continue
 		}
 
+		oldStatus := fp.Status
 		if err := app.fps.UpdateFpStatusFromVotingPower(vp, fp); err != nil {
+			return err
+		}
+		app.logger.Info(
+			"Update FP status",
+			zap.String("fp_addr", fp.FPAddr),
+			zap.String("old_status", oldStatus.String()),
+			zap.String("new_status", fp.Status.String()),
+		)
+
+		if !fp.ShouldStart() {
+			continue
+		}
+
+		if err := app.fpManager.StartFinalityProvider(bip340PubKey, ""); err != nil {
 			return err
 		}
 	}
@@ -668,8 +683,6 @@ func (app *FinalityProviderApp) syncChainFpStatusLoop() {
 	for {
 		select {
 		case <-syncFpStatusTicker.C:
-			app.Logger().Info("running SyncFinalityProviderStatus")
-			// sync finality-provider status
 			if err := app.SyncFinalityProviderStatus(); err != nil {
 				app.Logger().Error("failed to sync finality-provider status", zap.Error(err))
 			}

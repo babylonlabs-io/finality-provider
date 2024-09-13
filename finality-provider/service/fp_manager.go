@@ -247,15 +247,16 @@ func (fpm *FinalityProviderManager) StartAll() error {
 	}
 
 	for _, fp := range storedFps {
-		if fp.Status == proto.FinalityProviderStatus_CREATED || fp.Status == proto.FinalityProviderStatus_SLASHED {
+		fpBtcPk := fp.GetBIP340BTCPK()
+		if !fp.ShouldStart() {
 			fpm.logger.Info(
 				"the finality provider cannot be started with status",
-				zap.String("eots-pk", fp.GetBIP340BTCPK().MarshalHex()),
+				zap.String("eots-pk", fpBtcPk.MarshalHex()),
 				zap.String("status", fp.Status.String()),
 			)
 			continue
 		}
-		if err := fpm.StartFinalityProvider(fp.GetBIP340BTCPK(), ""); err != nil {
+		if err := fpm.StartFinalityProvider(fpBtcPk, ""); err != nil {
 			return err
 		}
 	}
