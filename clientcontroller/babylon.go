@@ -2,6 +2,7 @@ package clientcontroller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -275,6 +276,10 @@ func (bc *BabylonController) QueryFinalityProviderVotingPower(fpPk *btcec.Public
 		bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex(),
 		blockHeight,
 	)
+	if errors.Is(err, btcstakingtypes.ErrVotingPowerTableNotUpdated) {
+		// if nothing was updated in the voting power table
+		return 0, nil
+	}
 	if err != nil {
 		return 0, fmt.Errorf("failed to query BTC delegations: %w", err)
 	}
