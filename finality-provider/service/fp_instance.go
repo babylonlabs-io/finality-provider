@@ -116,11 +116,6 @@ func (fp *FinalityProviderInstance) Start() error {
 		zap.String("pk", fp.GetBtcPkHex()), zap.Uint64("height", startHeight))
 
 	poller := NewChainPoller(fp.logger, fp.cfg.PollerConfig, fp.cc, fp.consumerCon, fp.metrics)
-
-	if err := poller.Start(startHeight); err != nil {
-		return fmt.Errorf("failed to start the poller: %w", err)
-	}
-
 	fp.poller = poller
 
 	fp.laggingTargetChan = make(chan uint64, 1)
@@ -274,6 +269,16 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 					zap.Uint64("synced_height", res.SyncedHeight),
 					zap.Uint64("last_processed_height", res.LastProcessedHeight),
 				)
+
+				// check if poller is running, and start it if not
+				if !fp.poller.IsRunning() {
+					err := fp.poller.Start(fp.GetLastProcessedHeight() + 1)
+					if err != nil {
+						fp.logger.Error("failed to start the poller", zap.Error(err))
+						fp.reportCriticalErr(err)
+					}
+					continue
+				}
 
 				// inform the poller to skip to the next block of the last
 				// processed one
