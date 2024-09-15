@@ -118,6 +118,21 @@ func (fp *FinalityProviderInstance) Start() error {
 	poller := NewChainPoller(fp.logger, fp.cfg.PollerConfig, fp.cc, fp.consumerCon, fp.metrics)
 	fp.poller = poller
 
+	// get the last finalized height
+	lastFinalizedBlock, err := fp.latestFinalizedBlockWithRetry()
+	if err != nil {
+		return err
+	}
+
+	// Start the poller if fast sync is disabled or there's no finalized block
+	if (fp.cfg.FastSyncInterval == 0 || lastFinalizedBlock == nil) && !fp.poller.IsRunning() {
+		if err := fp.poller.Start(startHeight); err != nil {
+			fp.logger.Error("failed to start the poller", zap.Error(err))
+			fp.reportCriticalErr(err)
+			return err
+		}
+	}
+
 	fp.laggingTargetChan = make(chan uint64, 1)
 
 	fp.quit = make(chan struct{})
@@ -404,6 +419,11 @@ func (fp *FinalityProviderInstance) checkLaggingLoop() {
 }
 
 func (fp *FinalityProviderInstance) tryFastSync(targetBlockHeight uint64) (*FastSyncResult, error) {
+	fp.logger.Debug(
+		"trying fast sync",
+		zap.String("pk", fp.GetBtcPkHex()),
+		zap.Uint64("target_block_height", targetBlockHeight))
+
 	if fp.inSync.Load() {
 		return nil, fmt.Errorf("the finality-provider %s is already in sync", fp.GetBtcPkHex())
 	}
