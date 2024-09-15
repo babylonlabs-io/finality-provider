@@ -272,7 +272,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 
 				// check if poller is running, and start it if not
 				if !fp.poller.IsRunning() {
-					err := fp.poller.Start(fp.GetLastProcessedHeight() + 1)
+					err := fp.poller.Start(res.LastProcessedHeight + 1)
 					if err != nil {
 						fp.logger.Error("failed to start the poller", zap.Error(err))
 						fp.reportCriticalErr(err)
