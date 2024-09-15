@@ -285,7 +285,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 					zap.Uint64("last_processed_height", res.LastProcessedHeight),
 				)
 
-				// check if poller is running, and start it if not
+				// start poller after fast sync is finished
 				if !fp.poller.IsRunning() {
 					err := fp.poller.Start(res.LastProcessedHeight + 1)
 					if err != nil {
