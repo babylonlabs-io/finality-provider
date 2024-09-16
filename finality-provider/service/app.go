@@ -257,7 +257,11 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() error {
 		if err != nil {
 			// if error occured then the finality-provider is not registered in the Babylon chain yet or
 			// there is nothing in the voting power table, so it should not start the fp.
-			continue
+			allowedErr := fmt.Sprintf("failed to query Finality Voting Power at Height: rpc error: code = Unknown desc = %s: unknown request", bstypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", latestBlock.Height).Error())
+			if !strings.EqualFold(err.Error(), allowedErr) {
+				// if nothing was updated in the voting power table, it should consider as zero VP to start to send pub random
+				continue
+			}
 		}
 
 		if !fp.ShouldSyncStatusFromVotingPower(vp) {
