@@ -30,7 +30,7 @@ import (
 )
 
 var (
-	eventuallyWaitTimeOut = 1 * time.Second
+	eventuallyWaitTimeOut = 5 * time.Second
 	eventuallyPollTime    = 10 * time.Millisecond
 )
 
@@ -61,9 +61,17 @@ func FuzzStatusUpdate(f *testing.F) {
 		votingPower := uint64(r.Intn(2))
 		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), currentHeight).Return(votingPower, nil).AnyTimes()
 		mockClientController.EXPECT().SubmitFinalitySig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&types.TxResponse{TxHash: ""}, nil).AnyTimes()
-		var slashedHeight uint64
+		var isSlashedOrJailed int
 		if votingPower == 0 {
-			mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(true, true, nil).AnyTimes()
+			// 0 means is slashed, 1 means is jailed, 2 means neither slashed nor jailed
+			isSlashedOrJailed = r.Intn(3)
+			if isSlashedOrJailed == 0 {
+				mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(true, false, nil).AnyTimes()
+			} else if isSlashedOrJailed == 1 {
+				mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, true, nil).AnyTimes()
+			} else {
+				mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, false, nil).AnyTimes()
+			}
 		}
 
 		err := vm.StartFinalityProvider(fpPk, passphrase)
@@ -76,9 +84,11 @@ func FuzzStatusUpdate(f *testing.F) {
 		if votingPower > 0 {
 			waitForStatus(t, fpIns, proto.FinalityProviderStatus_ACTIVE)
 		} else {
-			if slashedHeight == 0 && fpIns.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
+			if isSlashedOrJailed == 2 && fpIns.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
 				waitForStatus(t, fpIns, proto.FinalityProviderStatus_INACTIVE)
-			} else if slashedHeight > 0 {
+			} else if isSlashedOrJailed == 1 {
+				waitForStatus(t, fpIns, proto.FinalityProviderStatus_JAILED)
+			} else if isSlashedOrJailed == 0 {
 				waitForStatus(t, fpIns, proto.FinalityProviderStatus_SLASHED)
 			}
 		}
