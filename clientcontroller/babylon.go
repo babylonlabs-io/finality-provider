@@ -276,7 +276,7 @@ func (bc *BabylonController) QueryFinalityProviderVotingPower(fpPk *btcec.Public
 		blockHeight,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("failed to query Finality Voting Power at Height: %w", err)
+		return 0, fmt.Errorf("failed to query Finality Voting Power at Height %d: %w", blockHeight, err)
 	}
 
 	return res.VotingPower, nil
