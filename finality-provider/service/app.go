@@ -240,16 +240,16 @@ func (app *FinalityProviderApp) getFpPrivKey(fpPk []byte) (*btcec.PrivateKey, er
 	return record.PrivKey, nil
 }
 
-// SyncFinalityProviderStatus syncs the status of the finality-providers
-func (app *FinalityProviderApp) SyncFinalityProviderStatus() error {
+// SyncFinalityProviderStatus syncs the status of the finality-providers with the chain.
+func (app *FinalityProviderApp) SyncFinalityProviderStatus() (fpInstanceStarted bool, err error) {
 	latestBlock, err := app.cc.QueryBestBlock()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	fps, err := app.fps.GetAllStoredFinalityProviders()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	for _, fp := range fps {
@@ -277,7 +277,7 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() error {
 		oldStatus := fp.Status
 		newStatus, err := app.fps.UpdateFpStatusFromVotingPower(vp, fp)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		app.logger.Info(
@@ -293,11 +293,12 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() error {
 		}
 
 		if err := app.fpManager.StartFinalityProvider(bip340PubKey, ""); err != nil {
-			return err
+			return false, err
 		}
+		fpInstanceStarted = true
 	}
 
-	return nil
+	return fpInstanceStarted, nil
 }
 
 // Start starts only the finality-provider daemon without any finality-provider instances
@@ -691,8 +692,12 @@ func (app *FinalityProviderApp) syncChainFpStatusLoop() {
 	for {
 		select {
 		case <-syncFpStatusTicker.C:
-			if err := app.SyncFinalityProviderStatus(); err != nil {
+			fpInstanceStarted, err := app.SyncFinalityProviderStatus()
+			if err != nil {
 				app.Logger().Error("failed to sync finality-provider status", zap.Error(err))
+			}
+			if fpInstanceStarted {
+				return
 			}
 
 		case <-app.quit:
