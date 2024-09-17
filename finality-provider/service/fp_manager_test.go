@@ -63,7 +63,7 @@ func FuzzStatusUpdate(f *testing.F) {
 		mockClientController.EXPECT().SubmitFinalitySig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&types.TxResponse{TxHash: ""}, nil).AnyTimes()
 		var slashedHeight uint64
 		if votingPower == 0 {
-			mockClientController.EXPECT().QueryFinalityProviderSlashed(gomock.Any()).Return(true, nil).AnyTimes()
+			mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(true, true, nil).AnyTimes()
 		}
 
 		err := vm.StartFinalityProvider(fpPk, passphrase)

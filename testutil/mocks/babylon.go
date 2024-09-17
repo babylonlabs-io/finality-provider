@@ -127,19 +127,20 @@ func (mr *MockClientControllerMockRecorder) QueryBlocks(startHeight, endHeight, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryBlocks", reflect.TypeOf((*MockClientController)(nil).QueryBlocks), startHeight, endHeight, limit)
 }
 
-// QueryFinalityProviderSlashed mocks base method.
-func (m *MockClientController) QueryFinalityProviderSlashed(fpPk *btcec.PublicKey) (bool, error) {
+// QueryFinalityProviderSlashedOrJailed mocks base method.
+func (m *MockClientController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryFinalityProviderSlashed", fpPk)
+	ret := m.ctrl.Call(m, "QueryFinalityProviderSlashedOrJailed", fpPk)
 	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
-// QueryFinalityProviderSlashed indicates an expected call of QueryFinalityProviderSlashed.
-func (mr *MockClientControllerMockRecorder) QueryFinalityProviderSlashed(fpPk interface{}) *gomock.Call {
+// QueryFinalityProviderSlashedOrJailed indicates an expected call of QueryFinalityProviderSlashedOrJailed.
+func (mr *MockClientControllerMockRecorder) QueryFinalityProviderSlashedOrJailed(fpPk interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderSlashed", reflect.TypeOf((*MockClientController)(nil).QueryFinalityProviderSlashed), fpPk)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderSlashedOrJailed", reflect.TypeOf((*MockClientController)(nil).QueryFinalityProviderSlashedOrJailed), fpPk)
 }
 
 // QueryFinalityProviderVotingPower mocks base method.

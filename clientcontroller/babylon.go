@@ -255,16 +255,16 @@ func (bc *BabylonController) SubmitBatchFinalitySigs(
 	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }
 
-func (bc *BabylonController) QueryFinalityProviderSlashed(fpPk *btcec.PublicKey) (bool, error) {
+func (bc *BabylonController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
-		return false, fmt.Errorf("failed to query the finality provider %s: %v", fpPubKey.MarshalHex(), err)
+		return false, false, fmt.Errorf("failed to query the finality provider %s: %v", fpPubKey.MarshalHex(), err)
 	}
 
 	slashed := res.FinalityProvider.SlashedBtcHeight > 0
 
-	return slashed, nil
+	return slashed, res.FinalityProvider.Jailed, nil
 }
 
 // QueryFinalityProviderVotingPower queries the voting power of the finality provider at a given height

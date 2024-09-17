@@ -18,6 +18,7 @@ var unrecoverableErrors = []*sdkErr.Error{
 	finalitytypes.ErrPubRandNotFound,
 	finalitytypes.ErrTooFewPubRand,
 	btcstakingtypes.ErrFpAlreadySlashed,
+	btcstakingtypes.ErrFpAlreadyJailed,
 }
 
 // IsUnrecoverable returns true when the error is in the unrecoverableErrors list

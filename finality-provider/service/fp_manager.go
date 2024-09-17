@@ -105,6 +105,12 @@ func (fpm *FinalityProviderManager) monitorCriticalErr() {
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
 				continue
 			}
+			if strings.Contains(criticalErr.err.Error(), btcstakingtypes.ErrFpAlreadyJailed.Error()) {
+				fpm.setFinalityProviderJailed(fpi)
+				fpm.logger.Debug("the finality-provider has been jailed",
+					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
+				continue
+			}
 			fpm.logger.Fatal(instanceTerminatingMsg,
 				zap.String("pk", criticalErr.fpBtcPk.MarshalHex()), zap.Error(criticalErr.err))
 		case <-fpm.quit:
@@ -165,20 +171,30 @@ func (fpm *FinalityProviderManager) monitorStatusUpdate() {
 					}
 					continue
 				}
-				slashed, err := fpi.GetFinalityProviderSlashedWithRetry()
+				slashed, jailed, err := fpi.GetFinalityProviderSlashedOrJailedWithRetry()
 				if err != nil {
 					fpm.logger.Debug(
-						"failed to get the slashed height",
+						"failed to get the slashed or jailed status",
 						zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
 						zap.Error(err),
 					)
 					continue
 				}
-				// power == 0 and slashed == true, set status to SLASHED and stop and remove the finality-provider instance
+				// power == 0 and slashed == true, set status to SLASHED, stop, and remove the finality-provider instance
 				if slashed {
 					fpm.setFinalityProviderSlashed(fpi)
-					fpm.logger.Debug(
+					fpm.logger.Warn(
 						"the finality-provider is slashed",
+						zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
+						zap.String("old_status", oldStatus.String()),
+					)
+					continue
+				}
+				// power == 0 and jailed == true, set status to JAILED, stop, and remove the finality-provider instance
+				if jailed {
+					fpm.setFinalityProviderJailed(fpi)
+					fpm.logger.Warn(
+						"the finality-provider is jailed",
 						zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
 						zap.String("old_status", oldStatus.String()),
 					)
@@ -204,6 +220,13 @@ func (fpm *FinalityProviderManager) setFinalityProviderSlashed(fpi *FinalityProv
 	fpi.MustSetStatus(proto.FinalityProviderStatus_SLASHED)
 	if err := fpm.removeFinalityProviderInstance(fpi.GetBtcPkBIP340()); err != nil {
 		panic(fmt.Errorf("failed to terminate a slashed finality-provider %s: %w", fpi.GetBtcPkHex(), err))
+	}
+}
+
+func (fpm *FinalityProviderManager) setFinalityProviderJailed(fpi *FinalityProviderInstance) {
+	fpi.MustSetStatus(proto.FinalityProviderStatus_JAILED)
+	if err := fpm.removeFinalityProviderInstance(fpi.GetBtcPkBIP340()); err != nil {
+		panic(fmt.Errorf("failed to terminate a jailed finality-provider %s: %w", fpi.GetBtcPkHex(), err))
 	}
 }
 
