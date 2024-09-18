@@ -185,7 +185,9 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 					fp.Pop.BtcSig,
 				)
 				require.NoError(t, err)
-				fps.SetFpStatus(fp.BtcPk, fp.Status)
+
+				err = fps.SetFpStatus(fp.BtcPk, fp.Status)
+				require.NoError(t, err)
 			}
 
 			actStatus, err := fps.UpdateFpStatusFromVotingPower(tc.votingPowerOnChain, fp)
