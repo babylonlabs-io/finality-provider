@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -77,4 +78,127 @@ func FuzzFinalityProvidersStore(f *testing.F) {
 		_, err = vs.GetFinalityProvider(randomBtcPk)
 		require.ErrorIs(t, err, fpstore.ErrFinalityProviderNotFound)
 	})
+}
+
+func TestUpdateFpStatusFromVotingPower(t *testing.T) {
+	r := rand.New(rand.NewSource(10))
+
+	tcs := []struct {
+		name               string
+		fpStoredStatus     proto.FinalityProviderStatus
+		votingPowerOnChain uint64
+		expStatus          proto.FinalityProviderStatus
+		expErr             error
+	}{
+		{
+			"zero vp: Created to Registered",
+			proto.FinalityProviderStatus_CREATED,
+			0,
+			proto.FinalityProviderStatus_REGISTERED,
+			nil,
+		},
+		{
+			"zero vp: Active to Inactive",
+			proto.FinalityProviderStatus_ACTIVE,
+			0,
+			proto.FinalityProviderStatus_INACTIVE,
+			nil,
+		},
+		{
+			"zero vp: Slashed to Slashed",
+			proto.FinalityProviderStatus_SLASHED,
+			0,
+			proto.FinalityProviderStatus_SLASHED,
+			nil,
+		},
+		{
+			"vp > 0: Slashed to Active",
+			proto.FinalityProviderStatus_SLASHED,
+			15,
+			proto.FinalityProviderStatus_ACTIVE,
+			nil,
+		},
+		{
+			"vp > 0: Created to Active",
+			proto.FinalityProviderStatus_CREATED,
+			1,
+			proto.FinalityProviderStatus_ACTIVE,
+			nil,
+		},
+		{
+			"vp > 0: Inactive to Active",
+			proto.FinalityProviderStatus_INACTIVE,
+			1,
+			proto.FinalityProviderStatus_ACTIVE,
+			nil,
+		},
+		{
+			"err: fp not found and vp > 0",
+			proto.FinalityProviderStatus_INACTIVE,
+			1,
+			proto.FinalityProviderStatus_INACTIVE,
+			fpstore.ErrFinalityProviderNotFound,
+		},
+		{
+			"err: fp not found and vp == 0 && created",
+			proto.FinalityProviderStatus_CREATED,
+			0,
+			proto.FinalityProviderStatus_SLASHED,
+			fpstore.ErrFinalityProviderNotFound,
+		},
+		{
+			"err: fp not found and vp == 0 && active",
+			proto.FinalityProviderStatus_ACTIVE,
+			0,
+			proto.FinalityProviderStatus_SLASHED,
+			fpstore.ErrFinalityProviderNotFound,
+		},
+	}
+
+	homePath := t.TempDir()
+	cfg := config.DefaultDBConfigWithHomePath(homePath)
+
+	fpdb, err := cfg.GetDbBackend()
+	require.NoError(t, err)
+	fps, err := fpstore.NewFinalityProviderStore(fpdb)
+	require.NoError(t, err)
+
+	defer func() {
+		err := fpdb.Close()
+		require.NoError(t, err)
+		err = os.RemoveAll(homePath)
+		require.NoError(t, err)
+	}()
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			fp := testutil.GenRandomFinalityProvider(r, t)
+			fp.Status = tc.fpStoredStatus
+			if tc.expErr == nil {
+				err = fps.CreateFinalityProvider(
+					sdk.MustAccAddressFromBech32(fp.FPAddr),
+					fp.BtcPk,
+					fp.Description,
+					fp.Commission,
+					fp.KeyName,
+					fp.ChainID,
+					fp.Pop.BtcSig,
+				)
+				require.NoError(t, err)
+				fps.SetFpStatus(fp.BtcPk, fp.Status)
+			}
+
+			actStatus, err := fps.UpdateFpStatusFromVotingPower(tc.votingPowerOnChain, fp)
+			if tc.expErr != nil {
+				require.EqualError(t, err, tc.expErr.Error())
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.expStatus, actStatus)
+
+			storedFp, err := fps.GetFinalityProvider(fp.BtcPk)
+			require.NoError(t, err)
+			require.Equal(t, tc.expStatus, storedFp.Status)
+		})
+	}
 }
