@@ -241,7 +241,7 @@ func (app *FinalityProviderApp) getFpPrivKey(fpPk []byte) (*btcec.PrivateKey, er
 }
 
 // SyncFinalityProviderStatus syncs the status of the finality-providers with the chain.
-func (app *FinalityProviderApp) SyncFinalityProviderStatus() (fpInstanceStarted bool, err error) {
+func (app *FinalityProviderApp) SyncFinalityProviderStatus() (fpInstanceRunning bool, err error) {
 	latestBlock, err := app.cc.QueryBestBlock()
 	if err != nil {
 		return false, err
@@ -255,11 +255,12 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() (fpInstanceStarted 
 	for _, fp := range fps {
 		vp, err := app.cc.QueryFinalityProviderVotingPower(fp.BtcPk, latestBlock.Height)
 		if err != nil {
-			// if error occured then the finality-provider is not registered in the Babylon chain yet or
-			// there is nothing in the voting power table, so it should not start the fp.
+			// if ther error is that there is nothing in the voting power table
+			// it should continue and consider the voting power
+			// as zero to start the finality provider and send public randomness
 			allowedErr := fmt.Sprintf("failed to query Finality Voting Power at Height %d: rpc error: code = Unknown desc = %s: unknown request", latestBlock.Height, bstypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", latestBlock.Height).Error())
 			if !strings.EqualFold(err.Error(), allowedErr) {
-				// if nothing was updated in the voting power table, it should consider as zero VP to start to send pub random
+				// if some other error occured then the finality-provider is not registered in the Babylon chain yet
 				continue
 			}
 		}
@@ -270,7 +271,9 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() (fpInstanceStarted 
 
 		bip340PubKey := fp.GetBIP340BTCPK()
 		if app.fpManager.IsFinalityProviderRunning(bip340PubKey) {
-			// if it is running, no need to update status
+			// there is a instance running, no need to keep syncing
+			fpInstanceRunning = true
+			// if it is already running, no need to update status
 			continue
 		}
 
@@ -295,10 +298,10 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() (fpInstanceStarted 
 		if err := app.fpManager.StartFinalityProvider(bip340PubKey, ""); err != nil {
 			return false, err
 		}
-		fpInstanceStarted = true
+		fpInstanceRunning = true
 	}
 
-	return fpInstanceStarted, nil
+	return fpInstanceRunning, nil
 }
 
 // Start starts only the finality-provider daemon without any finality-provider instances
@@ -679,6 +682,12 @@ func (app *FinalityProviderApp) metricsUpdateLoop() {
 	}
 }
 
+// syncChainFpStatusLoop keeps querying the chain for the finality
+// provider voting power and update the FP status accordingly.
+// If there is some voting power it sets to active, for zero voting power
+// it goes from: CREATED -> REGISTERED or ACTIVE -> INACTIVE.
+// if there is any node running or a new finality provider instance
+// is started, the loop stops.
 func (app *FinalityProviderApp) syncChainFpStatusLoop() {
 	defer app.wg.Done()
 
