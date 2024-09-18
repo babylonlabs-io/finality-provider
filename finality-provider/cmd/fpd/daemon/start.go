@@ -111,11 +111,6 @@ func loadApp(
 		return nil, fmt.Errorf("failed to create finality-provider app: %v", err)
 	}
 
-	// sync finality-provider status
-	if err := fpApp.SyncFinalityProviderStatus(); err != nil {
-		return nil, fmt.Errorf("failed to sync finality-provider status: %w", err)
-	}
-
 	return fpApp, nil
 }
 

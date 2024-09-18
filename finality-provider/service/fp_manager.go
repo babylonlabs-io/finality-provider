@@ -35,6 +35,7 @@ func (ce *CriticalError) Error() string {
 type FinalityProviderManager struct {
 	isStarted *atomic.Bool
 
+	// mutex to acess map of fp instances (fpis)
 	mu sync.Mutex
 	wg sync.WaitGroup
 
@@ -246,13 +247,16 @@ func (fpm *FinalityProviderManager) StartAll() error {
 	}
 
 	for _, fp := range storedFps {
-		if fp.Status == proto.FinalityProviderStatus_CREATED || fp.Status == proto.FinalityProviderStatus_SLASHED {
-			fpm.logger.Info("the finality provider cannot be started with status",
-				zap.String("eots-pk", fp.GetBIP340BTCPK().MarshalHex()),
-				zap.String("status", fp.Status.String()))
+		fpBtcPk := fp.GetBIP340BTCPK()
+		if !fp.ShouldStart() {
+			fpm.logger.Info(
+				"the finality provider cannot be started with status",
+				zap.String("eots-pk", fpBtcPk.MarshalHex()),
+				zap.String("status", fp.Status.String()),
+			)
 			continue
 		}
-		if err := fpm.StartFinalityProvider(fp.GetBIP340BTCPK(), ""); err != nil {
+		if err := fpm.StartFinalityProvider(fpBtcPk, ""); err != nil {
 			return err
 		}
 	}
@@ -266,7 +270,6 @@ func (fpm *FinalityProviderManager) Stop() error {
 	}
 
 	var stopErr error
-
 	for _, fpi := range fpm.fpis {
 		if !fpi.IsRunning() {
 			continue
