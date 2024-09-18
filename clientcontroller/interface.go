@@ -46,7 +46,7 @@ type ClientController interface {
 	QueryFinalityProviderVotingPower(fpPk *btcec.PublicKey, blockHeight uint64) (uint64, error)
 
 	// QueryFinalityProviderSlashedOrJailed queries if the finality provider is slashed or jailed
-	QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error)
+	QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error)
 
 	// QueryLatestFinalizedBlocks returns the latest finalized blocks
 	QueryLatestFinalizedBlocks(count uint64) ([]*types.BlockInfo, error)
