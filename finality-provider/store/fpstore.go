@@ -119,6 +119,7 @@ func (s *FinalityProviderStore) UpdateFpStatusFromVotingPower(
 	fp *StoredFinalityProvider,
 ) (proto.FinalityProviderStatus, error) {
 	if fp.Status == proto.FinalityProviderStatus_SLASHED {
+		// Slashed FP should not update status
 		return proto.FinalityProviderStatus_SLASHED, ErrSlashedNotUpdateStatus
 	}
 

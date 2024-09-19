@@ -106,6 +106,13 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 			nil,
 		},
 		{
+			"zero vp: Registered should not update the status, but also not error out",
+			proto.FinalityProviderStatus_REGISTERED,
+			0,
+			proto.FinalityProviderStatus_REGISTERED,
+			nil,
+		},
+		{
 			"zero vp: Slashed to Slashed",
 			proto.FinalityProviderStatus_SLASHED,
 			0,
