@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -198,29 +197,15 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 	for {
 		select {
 		case b := <-fp.poller.GetBlockInfoChan():
-			channelSize := len(fp.poller.blockInfoChan)
-			fp.logger.Debug("the finality-provider received a new block",
-				zap.Int("poller_channel_size", channelSize),
-				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint64("height", b.Height),
-				zap.String("block_hash", hex.EncodeToString(b.Hash)),
-			)
-
 			// Fetch all available blocks
 			// Note: not all the blocks in the range will have votes cast
 			// due to lack of voting power or public randomness, so we may
 			// have gaps during processing
 			pollerBlocks := []*types.BlockInfo{b}
-			for {
+			fetchMoreBlocks := true
+			for fetchMoreBlocks {
 				select {
 				case b := <-fp.poller.GetBlockInfoChan():
-					fp.logger.Debug(
-						"the finality-provider received a new block",
-						zap.String("pk", fp.GetBtcPkHex()),
-						zap.Uint64("height", b.Height),
-						zap.String("block_hash", hex.EncodeToString(b.Hash)),
-					)
-
 					// check whether the block has been processed before
 					if fp.hasProcessed(b.Height) {
 						continue
@@ -256,18 +241,15 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 
 					pollerBlocks = append(pollerBlocks, b)
 				default:
-					goto processBlocks
+					fetchMoreBlocks = false
 				}
 			}
-		processBlocks:
-			if len(pollerBlocks) == 0 {
-				continue
-			}
-			fp.logger.Debug(
-				"the finality-provider received new block(s), start processing",
-				zap.Int("block_count", len(pollerBlocks)),
-			)
 			targetHeight = pollerBlocks[len(pollerBlocks)-1].Height
+			fp.logger.Debug("the finality-provider received new block(s), start processing",
+				zap.String("pk", fp.GetBtcPkHex()),
+				zap.Uint64("start_height", pollerBlocks[0].Height),
+				zap.Uint64("end_height", targetHeight),
+			)
 			res, err := fp.retrySubmitFinalitySignatureUntilBlocksFinalized(pollerBlocks)
 			if err != nil {
 				fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
@@ -639,7 +621,13 @@ func (fp *FinalityProviderInstance) retrySubmitFinalitySignatureUntilBlocksFinal
 	// error will be returned if maximum retries have been reached or the query to the consumer chain fails
 	for {
 		// error will be returned if max retries have been reached
-		res, err := fp.SubmitBatchFinalitySignatures(targetBlocks)
+		var res *types.TxResponse
+		var err error
+		if len(targetBlocks) == 1 {
+			res, err = fp.SubmitFinalitySignature(targetBlocks[0])
+		} else {
+			res, err = fp.SubmitBatchFinalitySignatures(targetBlocks)
+		}
 		if err != nil {
 			fp.logger.Debug(
 				"failed to submit finality signature to the consumer chain",
