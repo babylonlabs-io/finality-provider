@@ -47,16 +47,18 @@ func NewBabylonController(
 
 	bbnConfig := fpcfg.BBNConfigToBabylonConfig(cfg)
 
-	if err := bbnConfig.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid config for Babylon client: %w", err)
-	}
-
 	bc, err := bbnclient.New(
 		&bbnConfig,
 		logger,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
+	}
+
+	// makes sure that the key in config really exists and it is a valid bech 32 addr
+	// to allow using mustGetTxSigner
+	if _, err := bc.GetAddr(); err != nil {
+		return nil, err
 	}
 
 	return &BabylonController{
@@ -272,7 +274,7 @@ func (bc *BabylonController) QueryFinalityProviderVotingPower(fpPk *btcec.Public
 		blockHeight,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("failed to query BTC delegations: %w", err)
+		return 0, fmt.Errorf("failed to query Finality Voting Power at Height %d: %w", blockHeight, err)
 	}
 
 	return res.VotingPower, nil
