@@ -17,4 +17,7 @@ var (
 
 	// ErrPubRandProofNotFound The finality provider we try update is not found in db
 	ErrPubRandProofNotFound = errors.New("public randomness proof not found")
+
+	// ErrSlashedNotUpdateStatus The finality provider should not update the status slashed to another.
+	ErrSlashedNotUpdateStatus = errors.New("slash finality provider should not update the status")
 )

@@ -82,6 +82,7 @@ func FuzzFinalityProvidersStore(f *testing.F) {
 
 func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 	r := rand.New(rand.NewSource(10))
+	anyFpStatus := proto.FinalityProviderStatus(100)
 
 	tcs := []struct {
 		name               string
@@ -108,15 +109,15 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 			"zero vp: Slashed to Slashed",
 			proto.FinalityProviderStatus_SLASHED,
 			0,
-			proto.FinalityProviderStatus_SLASHED,
-			nil,
+			anyFpStatus,
+			fpstore.ErrSlashedNotUpdateStatus,
 		},
 		{
-			"vp > 0: Slashed to Active",
+			"err: Slashed should not update status",
 			proto.FinalityProviderStatus_SLASHED,
 			15,
-			proto.FinalityProviderStatus_ACTIVE,
-			nil,
+			anyFpStatus,
+			fpstore.ErrSlashedNotUpdateStatus,
 		},
 		{
 			"vp > 0: Created to Active",
@@ -136,21 +137,21 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 			"err: fp not found and vp > 0",
 			proto.FinalityProviderStatus_INACTIVE,
 			1,
-			proto.FinalityProviderStatus_INACTIVE,
+			anyFpStatus,
 			fpstore.ErrFinalityProviderNotFound,
 		},
 		{
 			"err: fp not found and vp == 0 && created",
 			proto.FinalityProviderStatus_CREATED,
 			0,
-			proto.FinalityProviderStatus_SLASHED,
+			anyFpStatus,
 			fpstore.ErrFinalityProviderNotFound,
 		},
 		{
 			"err: fp not found and vp == 0 && active",
 			proto.FinalityProviderStatus_ACTIVE,
 			0,
-			proto.FinalityProviderStatus_SLASHED,
+			anyFpStatus,
 			fpstore.ErrFinalityProviderNotFound,
 		},
 	}

@@ -92,10 +92,16 @@ func TestShouldSyncStatusFromVotingPower(t *testing.T) {
 			true,
 		},
 		{
-			"some vp: Should sync",
+			"some vp and not slashed: Should sync",
+			1,
+			proto.FinalityProviderStatus_REGISTERED,
+			true,
+		},
+		{
+			"some vp: Should not sync if it is slashed",
 			1,
 			proto.FinalityProviderStatus_SLASHED,
-			true,
+			false,
 		},
 		{
 			"some vp: Should sync from even inactive",
