@@ -10,11 +10,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
@@ -144,25 +146,35 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 }
 
 func FuzzSyncFinalityProviderStatus(f *testing.F) {
-	testutil.AddRandomSeedsToFuzzer(f, 10)
+	testutil.AddRandomSeedsToFuzzer(f, 14)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		fmt.Printf("\n\nseed: %d\n\n", seed)
 		r := rand.New(rand.NewSource(seed))
 
-		logger := zap.NewNop()
+		logger := zap.New(zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewDevelopmentEncoderConfig()), os.Stderr, zap.DebugLevel), zap.AddStacktrace(zap.DebugLevel))
 
+		pathSuffix := datagen.GenRandomHexStr(r, 10)
 		// create an EOTS manager
-		eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
+		eotsHomeDir := filepath.Join(t.TempDir(), "eots-home", pathSuffix)
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
 		dbBackend, err := eotsCfg.DatabaseConfig.GetDbBackend()
 		require.NoError(t, err)
 		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
+		defer func() {
+			err = dbBackend.Close()
+			require.NoError(t, err)
+			err = os.RemoveAll(eotsHomeDir)
+			require.NoError(t, err)
+		}()
 
 		// Create randomized config
-		fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
+		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
 		fpCfg.SyncFpStatusInterval = time.Millisecond * 100
-		fpCfg.StatusUpdateInterval = time.Minute * 10 // does not test this
+		// no need for other intervals to run
+		fpCfg.StatusUpdateInterval = time.Minute * 10
+		fpCfg.SubmissionRetryInterval = time.Minute * 10
 		fpdb, err := fpCfg.DatabaseConfig.GetDbBackend()
 		require.NoError(t, err)
 
@@ -171,9 +183,13 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight)
 
 		blkInfo := &types.BlockInfo{Height: currentHeight}
-		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
+		finalizedBlock := &types.BlockInfo{Height: currentHeight - 1}
+		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return([]*types.BlockInfo{finalizedBlock}, nil).AnyTimes()
 		mockClientController.EXPECT().QueryBestBlock().Return(blkInfo, nil).AnyTimes()
 		mockClientController.EXPECT().QueryBlock(gomock.Any()).Return(blkInfo, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		mockClientController.EXPECT().QueryActivatedHeight().Return(currentHeight, nil).AnyTimes()
+		// mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 		noVotingPowerTable := r.Int31n(10) > 5
 		if noVotingPowerTable {
@@ -190,6 +206,13 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		err = app.Start()
 		require.NoError(t, err)
 
+		defer func() {
+			err = app.Stop()
+			require.NoError(t, err)
+			err = os.RemoveAll(fpHomeDir)
+			require.NoError(t, err)
+		}()
+
 		fp := testutil.GenStoredFinalityProvider(r, t, app, "", hdPath, nil)
 
 		require.Eventually(t, func() bool {
@@ -199,19 +222,19 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 				return false
 			}
 
+			expectedStatus := proto.FinalityProviderStatus_ACTIVE
+			if noVotingPowerTable {
+				expectedStatus = proto.FinalityProviderStatus_REGISTERED
+			}
 			fpInstance, err := app.GetFinalityProviderInstance(fpPk)
 			if err != nil {
 				return false
 			}
 
-			expectedStatus := proto.FinalityProviderStatus_ACTIVE
-			if noVotingPowerTable {
-				expectedStatus = proto.FinalityProviderStatus_REGISTERED
-			}
-
+			// TODO: verify why mocks are failing
 			btcPkEqual := fpInstance.GetBtcPk().IsEqual(fp.BtcPk)
 			statusEqual := strings.EqualFold(fpInfo.Status, expectedStatus.String())
 			return statusEqual && btcPkEqual
-		}, time.Second*5, time.Millisecond*200, "should eventually become active")
+		}, time.Second*5, time.Millisecond*200, "should eventually be registered or active")
 	})
 }

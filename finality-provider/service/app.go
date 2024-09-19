@@ -697,6 +697,7 @@ func (app *FinalityProviderApp) syncChainFpStatusLoop() {
 		zap.Float64("interval seconds", interval.Seconds()),
 	)
 	syncFpStatusTicker := time.NewTicker(interval)
+	defer syncFpStatusTicker.Stop()
 
 	for {
 		select {
@@ -710,7 +711,6 @@ func (app *FinalityProviderApp) syncChainFpStatusLoop() {
 			}
 
 		case <-app.quit:
-			syncFpStatusTicker.Stop()
 			app.logger.Info("exiting sync FP status loop")
 			return
 		}
