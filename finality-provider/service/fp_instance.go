@@ -907,14 +907,15 @@ func (fp *FinalityProviderInstance) GetVotingPowerWithRetry(height uint64) (uint
 	return power, nil
 }
 
-func (fp *FinalityProviderInstance) GetFinalityProviderSlashedWithRetry() (bool, error) {
+func (fp *FinalityProviderInstance) GetFinalityProviderSlashedOrJailedWithRetry() (bool, bool, error) {
 	var (
 		slashed bool
+		jailed  bool
 		err     error
 	)
 
 	if err := retry.Do(func() error {
-		slashed, err = fp.cc.QueryFinalityProviderSlashed(fp.GetBtcPk())
+		slashed, jailed, err = fp.cc.QueryFinalityProviderSlashedOrJailed(fp.GetBtcPk())
 		if err != nil {
 			return err
 		}
@@ -927,8 +928,8 @@ func (fp *FinalityProviderInstance) GetFinalityProviderSlashedWithRetry() (bool,
 			zap.Error(err),
 		)
 	})); err != nil {
-		return false, err
+		return false, false, err
 	}
 
-	return slashed, nil
+	return slashed, jailed, nil
 }

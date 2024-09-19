@@ -219,6 +219,8 @@ enum FinalityProviderStatus {
     INACTIVE = 3 [(gogoproto.enumvalue_customname) = "INACTIVE"];
     // SLASHED defines a finality provider that has been slashed
     SLASHED = 4 [(gogoproto.enumvalue_customname) = "SLASHED"];
+    // JAILED defines a finality provider that has been jailed
+    JAILED = 5 [(gogoproto.enumvalue_customname) = "JAILED"];
 }
 
 message SignMessageFromChainKeyRequest {
