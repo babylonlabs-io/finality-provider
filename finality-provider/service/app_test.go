@@ -16,7 +16,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
@@ -148,10 +147,9 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 func FuzzSyncFinalityProviderStatus(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 14)
 	f.Fuzz(func(t *testing.T, seed int64) {
-		fmt.Printf("\n\nseed: %d\n\n", seed)
 		r := rand.New(rand.NewSource(seed))
 
-		logger := zap.New(zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewDevelopmentEncoderConfig()), os.Stderr, zap.DebugLevel), zap.AddStacktrace(zap.DebugLevel))
+		logger := zap.NewNop()
 
 		pathSuffix := datagen.GenRandomHexStr(r, 10)
 		// create an EOTS manager
@@ -161,12 +159,6 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		require.NoError(t, err)
 		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
-		defer func() {
-			err = dbBackend.Close()
-			require.NoError(t, err)
-			err = os.RemoveAll(eotsHomeDir)
-			require.NoError(t, err)
-		}()
 
 		// Create randomized config
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
@@ -183,13 +175,10 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight)
 
 		blkInfo := &types.BlockInfo{Height: currentHeight}
-		finalizedBlock := &types.BlockInfo{Height: currentHeight - 1}
-		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return([]*types.BlockInfo{finalizedBlock}, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBestBlock().Return(blkInfo, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBlock(gomock.Any()).Return(blkInfo, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-		mockClientController.EXPECT().QueryActivatedHeight().Return(currentHeight, nil).AnyTimes()
-		// mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
+		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBestBlock().Return(blkInfo, nil).Return(blkInfo, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBlock(gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
 
 		noVotingPowerTable := r.Int31n(10) > 5
 		if noVotingPowerTable {
@@ -197,6 +186,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 			mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), gomock.Any()).Return(uint64(0), errors.New(allowedErr)).AnyTimes()
 			mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(0), errors.New(allowedErr)).AnyTimes()
 		} else {
+			mockClientController.EXPECT().QueryActivatedHeight().Return(currentHeight, nil).AnyTimes()
 			mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), gomock.Any()).Return(uint64(2), nil).AnyTimes()
 		}
 
@@ -205,13 +195,6 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 
 		err = app.Start()
 		require.NoError(t, err)
-
-		defer func() {
-			err = app.Stop()
-			require.NoError(t, err)
-			err = os.RemoveAll(fpHomeDir)
-			require.NoError(t, err)
-		}()
 
 		fp := testutil.GenStoredFinalityProvider(r, t, app, "", hdPath, nil)
 
