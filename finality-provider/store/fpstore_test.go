@@ -134,6 +134,13 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 			nil,
 		},
 		{
+			"vp > 0: Registered to Active",
+			proto.FinalityProviderStatus_REGISTERED,
+			1,
+			proto.FinalityProviderStatus_ACTIVE,
+			nil,
+		},
+		{
 			"vp > 0: Inactive to Active",
 			proto.FinalityProviderStatus_INACTIVE,
 			1,
