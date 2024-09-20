@@ -197,6 +197,16 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 	for {
 		select {
 		case b := <-fp.poller.GetBlockInfoChan():
+			shouldProcess, err := fp.shouldProcessBlock(b)
+			if err != nil {
+				if !errors.Is(err, ErrFinalityProviderShutDown) {
+					fp.reportCriticalErr(err)
+				}
+				continue
+			}
+			if !shouldProcess {
+				continue
+			}
 			// Fetch all available blocks
 			// Note: not all the blocks in the range will have votes cast
 			// due to lack of voting power or public randomness, so we may
@@ -206,40 +216,17 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 			for fetchMoreBlocks {
 				select {
 				case b := <-fp.poller.GetBlockInfoChan():
-					// check whether the block has been processed before
-					if fp.hasProcessed(b.Height) {
-						continue
-					}
-					// check whether the finality provider has voting power
-					hasVp, err := fp.hasVotingPower(b.Height)
-					if err != nil {
-						fp.reportCriticalErr(err)
-						continue
-					}
-					if !hasVp {
-						// the finality provider does not have voting power
-						// and it will never will at this block
-						fp.MustSetLastProcessedHeight(b.Height)
-						fp.metrics.IncrementFpTotalBlocksWithoutVotingPower(fp.GetBtcPkHex())
-						continue
-					}
-					// check whether the randomness has been committed
-					// the retry will end if max retry times is reached
-					// or the target block is finalized
-					isFinalized, err := fp.retryCheckRandomnessUntilBlockFinalized(b)
+					shouldProcess, err := fp.shouldProcessBlock(b)
 					if err != nil {
 						if !errors.Is(err, ErrFinalityProviderShutDown) {
 							fp.reportCriticalErr(err)
 						}
+						fetchMoreBlocks = false
 						break
 					}
-					// the block is finalized, no need to submit finality signature
-					if isFinalized {
-						fp.MustSetLastProcessedHeight(b.Height)
-						continue
+					if shouldProcess {
+						pollerBlocks = append(pollerBlocks, b)
 					}
-
-					pollerBlocks = append(pollerBlocks, b)
 				default:
 					fetchMoreBlocks = false
 				}
@@ -321,6 +308,38 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 			return
 		}
 	}
+}
+
+func (fp *FinalityProviderInstance) shouldProcessBlock(b *types.BlockInfo) (bool, error) {
+	// check whether the block has been processed before
+	if fp.hasProcessed(b.Height) {
+		return false, nil
+	}
+	// check whether the finality provider has voting power
+	hasVp, err := fp.hasVotingPower(b.Height)
+	if err != nil {
+		return false, err
+	}
+	if !hasVp {
+		// the finality provider does not have voting power
+		// and it will never will at this block
+		fp.MustSetLastProcessedHeight(b.Height)
+		fp.metrics.IncrementFpTotalBlocksWithoutVotingPower(fp.GetBtcPkHex())
+		return false, nil
+	}
+	// check whether the randomness has been committed
+	// the retry will end if max retry times is reached
+	// or the target block is finalized
+	isFinalized, err := fp.retryCheckRandomnessUntilBlockFinalized(b)
+	if err != nil {
+		return false, err
+	}
+	// the block is finalized, no need to submit finality signature
+	if isFinalized {
+		fp.MustSetLastProcessedHeight(b.Height)
+		return false, nil
+	}
+	return true, nil
 }
 
 func (fp *FinalityProviderInstance) randomnessCommitmentLoop(startHeight uint64) {

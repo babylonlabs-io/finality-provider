@@ -192,7 +192,8 @@ func StartManagerWithFinalityProvider(t *testing.T, n int) (*TestManager, []*ser
 
 	// goes back to old key in app
 	cfg.BabylonConfig.Key = oldKey
-	cc, err := clientcontroller.NewClientController(cfg, zap.NewNop())
+	logger := createLogger(t, zapcore.DebugLevel)
+	cc, err := clientcontroller.NewClientController(cfg, logger)
 	require.NoError(t, err)
 	app.UpdateClientController(cc)
 
