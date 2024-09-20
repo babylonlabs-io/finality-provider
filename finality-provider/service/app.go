@@ -265,10 +265,6 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() (fpInstanceRunning 
 			}
 		}
 
-		if !fp.ShouldSyncStatusFromVotingPower(vp) {
-			continue
-		}
-
 		bip340PubKey := fp.GetBIP340BTCPK()
 		if app.fpManager.IsFinalityProviderRunning(bip340PubKey) {
 			// there is a instance running, no need to keep syncing
@@ -283,13 +279,15 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() (fpInstanceRunning 
 			return false, err
 		}
 
-		app.logger.Info(
-			"Update FP status",
-			zap.String("fp_addr", fp.FPAddr),
-			zap.String("old_status", oldStatus.String()),
-			zap.String("new_status", newStatus.String()),
-		)
-		fp.Status = newStatus
+		if oldStatus != newStatus {
+			app.logger.Info(
+				"Update FP status",
+				zap.String("fp_addr", fp.FPAddr),
+				zap.String("old_status", oldStatus.String()),
+				zap.String("new_status", newStatus.String()),
+			)
+			fp.Status = newStatus
+		}
 
 		if !fp.ShouldStart() {
 			continue
