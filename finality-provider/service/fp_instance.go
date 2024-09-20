@@ -193,72 +193,8 @@ func (fp *FinalityProviderInstance) IsRunning() bool {
 func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 	defer fp.wg.Done()
 
-	var targetHeight uint64
 	for {
 		select {
-		case b := <-fp.poller.GetBlockInfoChan():
-			shouldProcess, err := fp.shouldProcessBlock(b)
-			if err != nil {
-				if !errors.Is(err, ErrFinalityProviderShutDown) {
-					fp.reportCriticalErr(err)
-				}
-				continue
-			}
-			if !shouldProcess {
-				continue
-			}
-			// Fetch all available blocks
-			// Note: not all the blocks in the range will have votes cast
-			// due to lack of voting power or public randomness, so we may
-			// have gaps during processing
-			pollerBlocks := []*types.BlockInfo{b}
-			fetchMoreBlocks := true
-			for fetchMoreBlocks {
-				select {
-				case b := <-fp.poller.GetBlockInfoChan():
-					shouldProcess, err := fp.shouldProcessBlock(b)
-					if err != nil {
-						if !errors.Is(err, ErrFinalityProviderShutDown) {
-							fp.reportCriticalErr(err)
-						}
-						fetchMoreBlocks = false
-						break
-					}
-					if shouldProcess {
-						pollerBlocks = append(pollerBlocks, b)
-					}
-				default:
-					fetchMoreBlocks = false
-				}
-			}
-			targetHeight = pollerBlocks[len(pollerBlocks)-1].Height
-			fp.logger.Debug("the finality-provider received new block(s), start processing",
-				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint64("start_height", pollerBlocks[0].Height),
-				zap.Uint64("end_height", targetHeight),
-			)
-			res, err := fp.retrySubmitFinalitySignatureUntilBlocksFinalized(pollerBlocks)
-			if err != nil {
-				fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
-				if !errors.Is(err, ErrFinalityProviderShutDown) {
-					fp.reportCriticalErr(err)
-				}
-				continue
-			}
-			if res == nil {
-				// this can happen when a finality signature is not needed
-				// either if the block is already submitted or the signature
-				// is already submitted
-				continue
-			}
-			fp.logger.Info(
-				"successfully submitted the finality signature to the consumer chain",
-				zap.String("consumer_id", string(fp.GetChainID())),
-				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint64("start_height", pollerBlocks[0].Height),
-				zap.Uint64("end_height", targetHeight),
-				zap.String("tx_hash", res.TxHash),
-			)
 		case targetBlock := <-fp.laggingTargetChan:
 			res, err := fp.tryFastSync(targetBlock)
 			fp.isLagging.Store(false)
@@ -306,6 +242,60 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 		case <-fp.quit:
 			fp.logger.Info("the finality signature submission loop is closing")
 			return
+		default:
+			pollerBlocks := fp.getAllBlocksFromChan()
+			if len(pollerBlocks) == 0 {
+				continue
+			}
+			targetHeight := pollerBlocks[len(pollerBlocks)-1].Height
+			fp.logger.Debug("the finality-provider received new block(s), start processing",
+				zap.String("pk", fp.GetBtcPkHex()),
+				zap.Uint64("start_height", pollerBlocks[0].Height),
+				zap.Uint64("end_height", targetHeight),
+			)
+			res, err := fp.retrySubmitFinalitySignatureUntilBlocksFinalized(pollerBlocks)
+			if err != nil {
+				fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
+				if !errors.Is(err, ErrFinalityProviderShutDown) {
+					fp.reportCriticalErr(err)
+				}
+				continue
+			}
+			if res == nil {
+				// this can happen when a finality signature is not needed
+				// either if the block is already submitted or the signature
+				// is already submitted
+				continue
+			}
+			fp.logger.Info(
+				"successfully submitted the finality signature to the consumer chain",
+				zap.String("consumer_id", string(fp.GetChainID())),
+				zap.String("pk", fp.GetBtcPkHex()),
+				zap.Uint64("start_height", pollerBlocks[0].Height),
+				zap.Uint64("end_height", targetHeight),
+				zap.String("tx_hash", res.TxHash),
+			)
+		}
+	}
+}
+
+func (fp *FinalityProviderInstance) getAllBlocksFromChan() []*types.BlockInfo {
+	var pollerBlocks []*types.BlockInfo
+	for {
+		select {
+		case b := <-fp.poller.GetBlockInfoChan():
+			shouldProcess, err := fp.shouldProcessBlock(b)
+			if err != nil {
+				if !errors.Is(err, ErrFinalityProviderShutDown) {
+					fp.reportCriticalErr(err)
+				}
+				break
+			}
+			if shouldProcess {
+				pollerBlocks = append(pollerBlocks, b)
+			}
+		default:
+			return pollerBlocks
 		}
 	}
 }
