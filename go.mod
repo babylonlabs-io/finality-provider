@@ -59,6 +59,7 @@ require (
 	github.com/protolambda/ctxlock v0.1.0 // indirect
 	github.com/shamaton/msgpack/v2 v2.2.0 // indirect
 	github.com/wlynxg/anet v0.0.4 // indirect
+	nhooyr.io/websocket v1.8.17 // indirect
 )
 
 require (
@@ -433,7 +434,6 @@ require (
 	modernc.org/sqlite v1.20.3 // indirect
 	modernc.org/strutil v1.1.3 // indirect
 	modernc.org/token v1.0.1 // indirect
-	nhooyr.io/websocket v1.8.6 // indirect
 	pgregory.net/rapid v1.1.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
