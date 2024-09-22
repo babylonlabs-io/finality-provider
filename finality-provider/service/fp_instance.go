@@ -152,7 +152,7 @@ func (fp *FinalityProviderInstance) bootstrap() (uint64, error) {
 		return 0, err
 	}
 
-	if fp.checkLagging(latestBlockHeight) {
+	if fp.cfg.FastSyncInterval != 0 && fp.checkLagging(latestBlockHeight) {
 		_, err := fp.tryFastSync(latestBlockHeight)
 		if err != nil && !fpcc.IsExpected(err) {
 			return 0, err

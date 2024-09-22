@@ -74,7 +74,8 @@ func NewChainPoller(
 
 func (cp *ChainPoller) Start(startHeight uint64) error {
 	if cp.isStarted.Swap(true) {
-		return fmt.Errorf("the poller is already started")
+		cp.logger.Info("the poller is already started")
+		return nil
 	}
 
 	cp.logger.Info("starting the chain poller")
@@ -97,10 +98,6 @@ func (cp *ChainPoller) Start(startHeight uint64) error {
 }
 
 func (cp *ChainPoller) Stop() error {
-	if !cp.IsRunning() {
-		cp.logger.Info("the chain poller is not running")
-		return nil
-	}
 	if !cp.isStarted.Swap(false) {
 		return fmt.Errorf("the chain poller has already stopped")
 	}
