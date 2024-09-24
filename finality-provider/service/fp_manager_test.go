@@ -102,7 +102,8 @@ func waitForStatus(t *testing.T, fpIns *service.FinalityProviderInstance, s prot
 }
 
 func newFinalityProviderManagerWithRegisteredFp(t *testing.T, r *rand.Rand, cc ccapi.ClientController, consumerCon ccapi.ConsumerController) (*service.FinalityProviderManager, *bbntypes.BIP340PubKey, func()) {
-	logger := zap.NewNop()
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
@@ -115,6 +116,7 @@ func newFinalityProviderManagerWithRegisteredFp(t *testing.T, r *rand.Rand, cc c
 	fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
 	fpCfg := fpcfg.DefaultConfigWithHome(fpHomeDir)
 	fpCfg.StatusUpdateInterval = 10 * time.Millisecond
+	fpCfg.NumPubRand = testutil.TestPubRandNum
 	input := strings.NewReader("")
 	kr, err := keyring.CreateKeyring(
 		fpCfg.BabylonConfig.KeyDirectory,

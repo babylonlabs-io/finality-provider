@@ -100,7 +100,8 @@ func FuzzSubmitFinalitySig(f *testing.F) {
 }
 
 func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc ccapi.ClientController, consumerCon ccapi.ConsumerController, startingHeight uint64) (*service.FinalityProviderApp, *service.FinalityProviderInstance, func()) {
-	logger := zap.NewNop()
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)

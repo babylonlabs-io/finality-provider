@@ -17,11 +17,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
-var (
-	stakingTime   = uint16(1000)
-	stakingAmount = int64(500000)
-)
-
 // TestFinalityProviderLifeCycle tests the whole life cycle of a finality-provider
 // creation -> registration -> randomness commitment ->
 // activation with BTC delegation and Covenant sig ->

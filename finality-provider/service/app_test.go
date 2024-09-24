@@ -36,7 +36,8 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
 
-		logger := zap.NewNop()
+		logger, err := zap.NewDevelopment()
+		require.NoError(t, err)
 		// create an EOTS manager
 		eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
@@ -62,6 +63,7 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 		// Create randomized config
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
+		fpCfg.NumPubRand = testutil.TestPubRandNum
 		fpCfg.PollerConfig.AutoChainScanningMode = false
 		fpCfg.PollerConfig.StaticChainScanningStartHeight = randomStartingHeight
 		fpdb, err := fpCfg.DatabaseConfig.GetDbBackend()
@@ -151,7 +153,8 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
 
-		logger := zap.NewNop()
+		logger, err := zap.NewDevelopment()
+		require.NoError(t, err)
 
 		pathSuffix := datagen.GenRandomHexStr(r, 10)
 		// create an EOTS manager
@@ -173,6 +176,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
 		fpCfg.SyncFpStatusInterval = time.Millisecond * 100
+		fpCfg.NumPubRand = testutil.TestPubRandNum
 		// no need for other intervals to run
 		fpCfg.StatusUpdateInterval = time.Minute * 10
 		fpCfg.SubmissionRetryInterval = time.Minute * 10
