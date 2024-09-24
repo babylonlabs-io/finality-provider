@@ -79,7 +79,7 @@ func (m *Manager) RunBabylondResource(
 				"--additional-sender-account "+
 				"--epoch-interval=%d --slashing-pk-script=%s "+
 				"--covenant-quorum=%d --covenant-pks=%s && "+
-				"chmod -R 755 /home && "+
+				"chmod -R 777 /home && "+
 				"babylond start --home=/home/node0/babylond",
 			epochInterval,
 			hex.EncodeToString(slashingPkScript),
