@@ -211,22 +211,6 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 				fp.metrics.IncrementFpTotalBlocksWithoutVotingPower(fp.GetBtcPkHex())
 				continue
 			}
-			// check whether the randomness has been committed
-			// the retry will end if max retry times is reached
-			// or the target block is finalized
-			isFinalized, err := fp.retryCheckRandomnessUntilBlockFinalized(b)
-			if err != nil {
-				if !errors.Is(err, ErrFinalityProviderShutDown) {
-					fp.reportCriticalErr(err)
-				}
-				break
-			}
-			// the block is finalized, no need to submit finality signature
-			if isFinalized {
-				fp.MustSetLastProcessedHeight(b.Height)
-				continue
-			}
-
 			// use the copy of the block to avoid the impact to other receivers
 			nextBlock := *b
 			res, err := fp.retrySubmitFinalitySignatureUntilBlockFinalized(&nextBlock)
@@ -894,16 +878,6 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 // this API is the same as SubmitFinalitySignature except that we don't constraint the voting height and update status
 // Note: this should not be used in the submission loop
 func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey(b *types.BlockInfo) (*types.TxResponse, *btcec.PrivateKey, error) {
-	// check last committed height
-	lastCommittedHeight, err := fp.GetLastCommittedHeight()
-	if err != nil {
-		return nil, nil, err
-	}
-	if lastCommittedHeight < b.Height {
-		return nil, nil, fmt.Errorf("the finality-provider's last committed height %v is lower than the current block height %v",
-			lastCommittedHeight, b.Height)
-	}
-
 	// get public randomness
 	prList, err := fp.GetPubRandList(b.Height, 1)
 	if err != nil {
@@ -1110,14 +1084,15 @@ func (fp *FinalityProviderInstance) GetVotingPowerWithRetry(height uint64) (bool
 	return hasPower, nil
 }
 
-func (fp *FinalityProviderInstance) GetFinalityProviderSlashedWithRetry() (bool, error) {
+func (fp *FinalityProviderInstance) GetFinalityProviderSlashedOrJailedWithRetry() (bool, bool, error) {
 	var (
 		slashed bool
+		jailed  bool
 		err     error
 	)
 
 	if err := retry.Do(func() error {
-		slashed, err = fp.cc.QueryFinalityProviderSlashed(fp.GetBtcPk())
+		slashed, jailed, err = fp.cc.QueryFinalityProviderSlashedOrJailed(fp.GetBtcPk())
 		if err != nil {
 			return err
 		}
@@ -1130,8 +1105,8 @@ func (fp *FinalityProviderInstance) GetFinalityProviderSlashedWithRetry() (bool,
 			zap.Error(err),
 		)
 	})); err != nil {
-		return false, err
+		return false, false, err
 	}
 
-	return slashed, nil
+	return slashed, jailed, nil
 }

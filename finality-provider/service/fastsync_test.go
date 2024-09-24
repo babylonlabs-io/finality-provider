@@ -87,10 +87,17 @@ func FuzzFastSync_NoRandomness(f *testing.F) {
 		_, err := fpIns.CommitPubRand(randomStartingHeight)
 		require.NoError(t, err)
 
-		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(fpIns.GetBtcPk(), gomock.Any()).
-			Return(true, nil).AnyTimes()
 		// the last height with pub rand is a random value inside [finalizedHeight+1, currentHeight]
 		lastHeightWithPubRand := uint64(rand.Intn(int(currentHeight)-int(finalizedHeight))) + finalizedHeight + 1
+		for i := randomStartingHeight; i <= currentHeight; i++ {
+			if i <= lastHeightWithPubRand {
+				mockConsumerController.EXPECT().QueryFinalityProviderHasPower(fpIns.GetBtcPk(), i).
+					Return(true, nil).AnyTimes()
+			} else {
+				mockConsumerController.EXPECT().QueryFinalityProviderHasPower(fpIns.GetBtcPk(), i).
+					Return(false, nil).AnyTimes()
+			}
+		}
 		lastCommittedPubRand := &types.PubRandCommit{
 			StartHeight: lastHeightWithPubRand - 10,
 			NumPubRand:  10 + 1,

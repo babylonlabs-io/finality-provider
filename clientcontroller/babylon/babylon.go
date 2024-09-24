@@ -47,16 +47,18 @@ func NewBabylonController(
 
 	bbnConfig := fpcfg.BBNConfigToBabylonConfig(cfg)
 
-	if err := bbnConfig.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid config for Babylon client: %w", err)
-	}
-
 	bc, err := bbnclient.New(
 		&bbnConfig,
 		logger,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
+	}
+
+	// makes sure that the key in config really exists and it is a valid bech 32 addr
+	// to allow using mustGetTxSigner
+	if _, err := bc.GetAddr(); err != nil {
+		return nil, err
 	}
 
 	return &BabylonController{
@@ -142,16 +144,14 @@ func (bc *BabylonController) RegisterFinalityProvider(
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-func (bc *BabylonController) QueryFinalityProviderSlashed(fpPk *btcec.PublicKey) (bool, error) {
+func (bc *BabylonController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
-		return false, fmt.Errorf("failed to query the finality provider %s: %v", fpPubKey.MarshalHex(), err)
+		return false, false, fmt.Errorf("failed to query the finality provider %s: %v", fpPubKey.MarshalHex(), err)
 	}
 
-	slashed := res.FinalityProvider.SlashedBtcHeight > 0
-
-	return slashed, nil
+	return res.FinalityProvider.SlashedBtcHeight > 0, res.FinalityProvider.Jailed, nil
 }
 
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
@@ -161,7 +161,7 @@ func (bc *BabylonController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey
 		blockHeight,
 	)
 	if err != nil {
-		return false, fmt.Errorf("failed to query BTC delegations: %w", err)
+		return false, fmt.Errorf("failed to query Finality Voting Power at Height %d: %w", blockHeight, err)
 	}
 
 	return res.VotingPower > 0, nil
@@ -332,7 +332,15 @@ func (bc *BabylonController) QueryBtcLightClientTip() (*btclctypes.BTCHeaderInfo
 	return res.Header, nil
 }
 
-// TODO: this method only used in test. this should be refactored out to test files
+func (bc *BabylonController) QueryCurrentEpoch() (uint64, error) {
+	res, err := bc.bbnClient.QueryClient.CurrentEpoch()
+	if err != nil {
+		return 0, fmt.Errorf("failed to query BTC tip: %v", err)
+	}
+
+	return res.CurrentEpoch, nil
+}
+
 func (bc *BabylonController) QueryVotesAtHeight(height uint64) ([]bbntypes.BIP340PubKey, error) {
 	res, err := bc.bbnClient.QueryClient.VotesAtHeight(height)
 	if err != nil {
@@ -387,20 +395,16 @@ func (bc *BabylonController) QueryStakingParams() (*types.StakingParams, error) 
 		}
 		covenantPks = append(covenantPks, covPk)
 	}
-	slashingAddress, err := btcutil.DecodeAddress(stakingParamRes.Params.SlashingAddress, bc.btcParams)
-	if err != nil {
-		return nil, err
-	}
 
 	return &types.StakingParams{
 		ComfirmationTimeBlocks:    ckptParamRes.Params.BtcConfirmationDepth,
 		FinalizationTimeoutBlocks: ckptParamRes.Params.CheckpointFinalizationTimeout,
 		MinSlashingTxFeeSat:       btcutil.Amount(stakingParamRes.Params.MinSlashingTxFeeSat),
 		CovenantPks:               covenantPks,
-		SlashingAddress:           slashingAddress,
+		SlashingPkScript:          stakingParamRes.Params.SlashingPkScript,
 		CovenantQuorum:            stakingParamRes.Params.CovenantQuorum,
 		SlashingRate:              stakingParamRes.Params.SlashingRate,
-		MinUnbondingTime:          stakingParamRes.Params.MinUnbondingTime,
+		MinUnbondingTime:          stakingParamRes.Params.MinUnbondingTimeBlocks,
 	}, nil
 }
 
@@ -459,4 +463,8 @@ func (bc *BabylonController) RegisterConsumerChain(id, name, description string)
 	}
 
 	return &types.TxResponse{TxHash: res.TxHash}, nil
+}
+
+func (bc *BabylonController) GetBBNClient() *bbnclient.Client {
+	return bc.bbnClient
 }

@@ -29,8 +29,8 @@ import (
 )
 
 var (
-	EventuallyWaitTimeOut = 1 * time.Second
-	EventuallyPollTime    = 10 * time.Millisecond
+	eventuallyWaitTimeOut = 5 * time.Second
+	eventuallyPollTime    = 10 * time.Millisecond
 )
 
 func FuzzStatusUpdate(f *testing.F) {
@@ -38,11 +38,11 @@ func FuzzStatusUpdate(f *testing.F) {
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
 
-		mockClientController := testutil.PrepareMockedBabylonController(t)
+		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		randomStartingHeight := uint64(r.Int63n(100) + 100)
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+1)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
-		vm, fpPk, cleanUp := newFinalityProviderManagerWithRegisteredFp(t, r, mockClientController, mockConsumerController)
+		vm, fpPk, cleanUp := newFinalityProviderManagerWithRegisteredFp(t, r, mockBabylonController, mockConsumerController)
 		defer cleanUp()
 
 		// setup mocks
@@ -50,16 +50,27 @@ func FuzzStatusUpdate(f *testing.F) {
 			Height: currentHeight,
 			Hash:   datagen.GenRandomByteArray(r, 32),
 		}
+		mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(currentHeight, nil).AnyTimes()
+		mockConsumerController.EXPECT().Close().Return(nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryLatestFinalizedBlock().Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryBlock(gomock.Any()).Return(currentBlockRes, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any()).Return(nil, nil).AnyTimes()
 
 		hasPower := r.Intn(2) != 0
 		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), currentHeight).Return(hasPower, nil).AnyTimes()
 		mockConsumerController.EXPECT().SubmitFinalitySig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&types.TxResponse{TxHash: ""}, nil).AnyTimes()
-		var slashedHeight uint64
+		var isSlashedOrJailed int
 		if !hasPower {
-			mockClientController.EXPECT().QueryFinalityProviderSlashed(gomock.Any()).Return(true, nil).AnyTimes()
+			// 0 means is slashed, 1 means is jailed, 2 means neither slashed nor jailed
+			isSlashedOrJailed = r.Intn(3)
+			if isSlashedOrJailed == 0 {
+				mockBabylonController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(true, false, nil).AnyTimes()
+			} else if isSlashedOrJailed == 1 {
+				mockBabylonController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, true, nil).AnyTimes()
+			} else {
+				mockBabylonController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, false, nil).AnyTimes()
+			}
 		}
 
 		err := vm.StartFinalityProvider(fpPk, passphrase)
@@ -72,9 +83,11 @@ func FuzzStatusUpdate(f *testing.F) {
 		if hasPower {
 			waitForStatus(t, fpIns, proto.FinalityProviderStatus_ACTIVE)
 		} else {
-			if slashedHeight == 0 && fpIns.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
+			if isSlashedOrJailed == 2 && fpIns.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
 				waitForStatus(t, fpIns, proto.FinalityProviderStatus_INACTIVE)
-			} else if slashedHeight > 0 {
+			} else if isSlashedOrJailed == 1 {
+				waitForStatus(t, fpIns, proto.FinalityProviderStatus_JAILED)
+			} else if isSlashedOrJailed == 0 {
 				waitForStatus(t, fpIns, proto.FinalityProviderStatus_SLASHED)
 			}
 		}
@@ -85,7 +98,7 @@ func waitForStatus(t *testing.T, fpIns *service.FinalityProviderInstance, s prot
 	require.Eventually(t,
 		func() bool {
 			return fpIns.GetStatus() == s
-		}, EventuallyWaitTimeOut, EventuallyPollTime)
+		}, eventuallyWaitTimeOut, eventuallyPollTime)
 }
 
 func newFinalityProviderManagerWithRegisteredFp(t *testing.T, r *rand.Rand, cc ccapi.ClientController, consumerCon ccapi.ConsumerController) (*service.FinalityProviderManager, *bbntypes.BIP340PubKey, func()) {

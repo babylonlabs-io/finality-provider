@@ -193,7 +193,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 		commission := sdkmath.LegacyZeroDec()
 		desc := e2eutils.NewDescription(moniker)
 
-		res, err := app.CreateFinalityProvider(keyName, consumerId, e2eutils.Passphrase, e2eutils.HdPath, desc, &commission)
+		res, err := app.CreateFinalityProvider(keyName, consumerId, e2eutils.Passphrase, e2eutils.HdPath, nil, desc, &commission)
 		require.NoError(t, err)
 		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
 		require.NoError(t, err)

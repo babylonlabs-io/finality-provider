@@ -70,6 +70,7 @@ func FuzzChainPoller_Start(f *testing.F) {
 // FuzzChainPoller_SkipHeight tests the functionality of SkipHeight
 func FuzzChainPoller_SkipHeight(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
+
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
 
