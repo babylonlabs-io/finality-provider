@@ -1,18 +1,21 @@
 package e2etest
 
-import "os"
+import (
+	"os"
+	"testing"
+)
 
-func baseDir(pattern string) (string, error) {
-	tempPath := os.TempDir()
-
-	tempName, err := os.MkdirTemp(tempPath, pattern)
+func tempDir(t *testing.T, pattern string) (string, error) {
+	tempName, err := os.MkdirTemp(os.TempDir(), pattern)
 	if err != nil {
 		return "", err
 	}
 
-	err = os.Chmod(tempName, 0755)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(tempName)
+	})
 
-	if err != nil {
+	if err = os.Chmod(tempName, 0755); err != nil {
 		return "", err
 	}
 

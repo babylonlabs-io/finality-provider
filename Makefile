@@ -59,8 +59,7 @@ test:
 	go test ./...
 
 test-e2e:
-	cd $(TOOLS_DIR); go install -trimpath $(BABYLON_PKG)
-	go test -mod=readonly -timeout=25m -v $(PACKAGES_E2E) -count=1 --tags=e2e
+	go test -mod=readonly -failfast -timeout=25m -v $(PACKAGES_E2E) -count=1 --tags=e2e
 
 ###############################################################################
 ###                                Protobuf                                 ###

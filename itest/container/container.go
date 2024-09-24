@@ -3,6 +3,7 @@ package container
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbn "github.com/babylonlabs-io/babylon/types"
@@ -81,7 +82,7 @@ func (m *Manager) RunBabylondResource(
 				"chmod -R 755 /home && "+
 				"babylond start --home=/home/node0/babylond",
 			epochInterval,
-			slashingPkScript,
+			hex.EncodeToString(slashingPkScript),
 			covenantQuorum,
 			strings.Join(covenantPksStr, ",")),
 	}
