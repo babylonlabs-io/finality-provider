@@ -20,6 +20,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
@@ -44,11 +45,19 @@ type TestManager struct {
 	baseDir           string
 }
 
+func createLogger(t *testing.T, level zapcore.Level) *zap.Logger {
+	config := zap.NewDevelopmentConfig()
+	config.Level = zap.NewAtomicLevelAt(level)
+	logger, err := config.Build()
+	require.NoError(t, err)
+	return logger
+}
+
 func StartManager(t *testing.T) *TestManager {
 	testDir, err := e2eutils.BaseDir("fpe2etest")
 	require.NoError(t, err)
 
-	logger := zap.NewNop()
+	logger := createLogger(t, zapcore.DebugLevel)
 
 	// 1. generate covenant committee
 	covenantQuorum := 2
@@ -183,7 +192,8 @@ func StartManagerWithFinalityProvider(t *testing.T, n int) (*TestManager, []*ser
 
 	// goes back to old key in app
 	cfg.BabylonConfig.Key = oldKey
-	cc, err := clientcontroller.NewClientController(cfg, zap.NewNop())
+	logger := createLogger(t, zapcore.DebugLevel)
+	cc, err := clientcontroller.NewClientController(cfg, logger)
 	require.NoError(t, err)
 	app.UpdateClientController(cc)
 

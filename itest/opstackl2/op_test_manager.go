@@ -71,7 +71,7 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 	testDir, err := e2eutils.BaseDir("fpe2etest")
 	require.NoError(t, err)
 
-	logger := createLogger(t, zapcore.ErrorLevel)
+	logger := createLogger(t, zapcore.InfoLevel)
 
 	// generate covenant committee
 	covenantQuorum := 2
@@ -361,6 +361,8 @@ func createBaseFpConfig(fpHomeDir string, index int, logger *zap.Logger) *fpcfg.
 	cfg.RandomnessCommitInterval = 2 * time.Second
 	cfg.NumPubRand = 64
 	cfg.MinRandHeightGap = 1000
+	cfg.FastSyncGap = 60
+	cfg.FastSyncLimit = 100
 	return cfg
 }
 
@@ -718,7 +720,7 @@ func startExtSystemsAndCreateConsumerCfg(
 	require.NoError(t, err, "Error starting up op stack system")
 
 	// new op consumer controller
-	opL2ConsumerConfig.OPStackL2RPCAddress = opSys.EthInstances["sequencer"].HTTPEndpoint()
+	opL2ConsumerConfig.OPStackL2RPCAddress = opSys.NodeEndpoint("sequencer").RPC()
 	opL2ConsumerConfig.OPFinalityGadgetAddress = cwContractAddress
 
 	return opL2ConsumerConfig, opSys
