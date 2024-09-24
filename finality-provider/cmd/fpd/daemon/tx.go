@@ -9,6 +9,7 @@ import (
 
 	btcstakingcli "github.com/babylonlabs-io/babylon/x/btcstaking/client/cli"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	finalitycli "github.com/babylonlabs-io/babylon/x/finality/client/cli"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 	authcli "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
@@ -27,6 +28,7 @@ func CommandTxs() *cobra.Command {
 	cmd.AddCommand(
 		authcli.GetSignCommand(),
 		btcstakingcli.NewCreateFinalityProviderCmd(),
+		finalitycli.NewUnjailFinalityProviderCmd(),
 		NewValidateSignedFinalityProviderCmd(),
 	)
 

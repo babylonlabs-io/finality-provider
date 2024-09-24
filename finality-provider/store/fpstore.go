@@ -117,7 +117,12 @@ func (s *FinalityProviderStore) SetFpStatus(btcPk *btcec.PublicKey, status proto
 func (s *FinalityProviderStore) UpdateFpStatusFromVotingPower(
 	vp uint64,
 	fp *StoredFinalityProvider,
-) (proto.FinalityProviderStatus, error) {
+) (newStatus proto.FinalityProviderStatus, err error) {
+	if fp.Status == proto.FinalityProviderStatus_SLASHED {
+		// Slashed FP should not update status
+		return proto.FinalityProviderStatus_SLASHED, nil
+	}
+
 	if vp > 0 {
 		// voting power > 0 then set the status to ACTIVE
 		return proto.FinalityProviderStatus_ACTIVE, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_ACTIVE)
