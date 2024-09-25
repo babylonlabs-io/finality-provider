@@ -1,7 +1,6 @@
 package e2etest_babylon
 
 import (
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -11,9 +10,7 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
@@ -143,7 +140,7 @@ func StartManagerWithFinalityProvider(t *testing.T, n int) (*TestManager, []*ser
 		err = tm.BabylonHandler.BabylonNode.TxBankSend(fpBbnKeyInfo.AccAddress.String(), "1000000ubbn")
 		require.NoError(t, err)
 
-		res, err := app.CreateFinalityProvider(fpName, e2eutils.ChainID, e2eutils.Passphrase, e2eutils.HdPath, desc, &commission)
+		res, err := app.CreateFinalityProvider(fpName, e2eutils.ChainID, e2eutils.Passphrase, e2eutils.HdPath, nil, desc, &commission)
 		require.NoError(t, err)
 		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
 		require.NoError(t, err)
@@ -303,21 +300,4 @@ func (tm *TestManager) GetFpPrivKey(t *testing.T, fpPk []byte) *btcec.PrivateKey
 	record, err := tm.EOTSClient.KeyRecord(fpPk, e2eutils.Passphrase)
 	require.NoError(t, err)
 	return record.PrivKey
-}
-
-func (tm *TestManager) InsertWBTCHeaders(t *testing.T, r *rand.Rand) {
-	params, err := tm.BBNClient.QueryStakingParams()
-	require.NoError(t, err)
-	btcTipResp, err := tm.BBNClient.QueryBtcLightClientTip()
-	require.NoError(t, err)
-	tipHeader, err := bbntypes.NewBTCHeaderBytesFromHex(btcTipResp.HeaderHex)
-	require.NoError(t, err)
-	kHeaders := datagen.NewBTCHeaderChainFromParentInfo(r, &btclctypes.BTCHeaderInfo{
-		Header: &tipHeader,
-		Hash:   tipHeader.Hash(),
-		Height: btcTipResp.Height,
-		Work:   &btcTipResp.Work,
-	}, uint32(params.FinalizationTimeoutBlocks))
-	_, err = tm.BBNClient.InsertBtcBlockHeaders(kHeaders.ChainToBytes())
-	require.NoError(t, err)
 }

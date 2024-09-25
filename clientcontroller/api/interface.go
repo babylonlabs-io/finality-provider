@@ -22,10 +22,10 @@ type ClientController interface {
 
 	// Note: the following queries are only for PoC
 
-	// QueryFinalityProviderSlashed queries if the finality provider is slashed
+	// QueryFinalityProviderSlashedOrJailed queries if the finality provider is slashed or slashed
 	// Note: if the FP wants to get the information from the consumer chain directly, they should add this interface
 	// function in ConsumerController. (https://github.com/babylonchain/finality-provider/pull/335#discussion_r1606175344)
-	QueryFinalityProviderSlashed(fpPk *btcec.PublicKey) (bool, error)
+	QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error)
 
 	Close() error
 }

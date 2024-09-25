@@ -34,6 +34,7 @@ func (ce *CriticalError) Error() string {
 type FinalityProviderManager struct {
 	isStarted *atomic.Bool
 
+	// mutex to acess map of fp instances (fpis)
 	mu sync.Mutex
 	wg sync.WaitGroup
 
@@ -107,6 +108,12 @@ func (fpm *FinalityProviderManager) monitorCriticalErr() {
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
 				continue
 			}
+			if strings.Contains(criticalErr.err.Error(), btcstakingtypes.ErrFpAlreadyJailed.Error()) {
+				fpm.setFinalityProviderJailed(fpi)
+				fpm.logger.Debug("the finality-provider has been jailed",
+					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
+				continue
+			}
 			fpm.logger.Fatal(instanceTerminatingMsg,
 				zap.String("pk", criticalErr.fpBtcPk.MarshalHex()), zap.Error(criticalErr.err))
 		case <-fpm.quit:
@@ -166,26 +173,36 @@ func (fpm *FinalityProviderManager) monitorStatusUpdate() {
 					}
 					continue
 				}
-				slashed, err := fpi.GetFinalityProviderSlashedWithRetry()
+				slashed, jailed, err := fpi.GetFinalityProviderSlashedOrJailedWithRetry()
 				if err != nil {
 					fpm.logger.Debug(
-						"failed to get the slashed height",
+						"failed to get the slashed or jailed status",
 						zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
 						zap.Error(err),
 					)
 					continue
 				}
-				// hasPower == false and slashed == true, set status to SLASHED and stop and remove the finality-provider instance
+				// power == 0 and slashed == true, set status to SLASHED, stop, and remove the finality-provider instance
 				if slashed {
 					fpm.setFinalityProviderSlashed(fpi)
-					fpm.logger.Debug(
+					fpm.logger.Warn(
 						"the finality-provider is slashed",
 						zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
 						zap.String("old_status", oldStatus.String()),
 					)
 					continue
 				}
-				// hasPower == false and slashed_height == 0, change to INACTIVE if the current status is ACTIVE
+				// power == 0 and jailed == true, set status to JAILED, stop, and remove the finality-provider instance
+				if jailed {
+					fpm.setFinalityProviderJailed(fpi)
+					fpm.logger.Warn(
+						"the finality-provider is jailed",
+						zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
+						zap.String("old_status", oldStatus.String()),
+					)
+					continue
+				}
+				// power == 0 and slashed_height == 0, change to INACTIVE if the current status is ACTIVE
 				if oldStatus == proto.FinalityProviderStatus_ACTIVE {
 					fpi.MustSetStatus(proto.FinalityProviderStatus_INACTIVE)
 					fpm.logger.Debug(
@@ -205,6 +222,13 @@ func (fpm *FinalityProviderManager) setFinalityProviderSlashed(fpi *FinalityProv
 	fpi.MustSetStatus(proto.FinalityProviderStatus_SLASHED)
 	if err := fpm.removeFinalityProviderInstance(fpi.GetBtcPkBIP340()); err != nil {
 		panic(fmt.Errorf("failed to terminate a slashed finality-provider %s: %w", fpi.GetBtcPkHex(), err))
+	}
+}
+
+func (fpm *FinalityProviderManager) setFinalityProviderJailed(fpi *FinalityProviderInstance) {
+	fpi.MustSetStatus(proto.FinalityProviderStatus_JAILED)
+	if err := fpm.removeFinalityProviderInstance(fpi.GetBtcPkBIP340()); err != nil {
+		panic(fmt.Errorf("failed to terminate a jailed finality-provider %s: %w", fpi.GetBtcPkHex(), err))
 	}
 }
 
@@ -247,13 +271,16 @@ func (fpm *FinalityProviderManager) StartAll() error {
 	}
 
 	for _, fp := range storedFps {
-		if fp.Status == proto.FinalityProviderStatus_CREATED || fp.Status == proto.FinalityProviderStatus_SLASHED {
-			fpm.logger.Info("the finality provider cannot be started with status",
-				zap.String("eots-pk", fp.GetBIP340BTCPK().MarshalHex()),
-				zap.String("status", fp.Status.String()))
+		fpBtcPk := fp.GetBIP340BTCPK()
+		if !fp.ShouldStart() {
+			fpm.logger.Info(
+				"the finality provider cannot be started with status",
+				zap.String("eots-pk", fpBtcPk.MarshalHex()),
+				zap.String("status", fp.Status.String()),
+			)
 			continue
 		}
-		if err := fpm.StartFinalityProvider(fp.GetBIP340BTCPK(), ""); err != nil {
+		if err := fpm.StartFinalityProvider(fpBtcPk, ""); err != nil {
 			return err
 		}
 	}
@@ -267,7 +294,6 @@ func (fpm *FinalityProviderManager) Stop() error {
 	}
 
 	var stopErr error
-
 	for _, fpi := range fpm.fpis {
 		if !fpi.IsRunning() {
 			continue

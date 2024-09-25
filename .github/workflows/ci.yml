@@ -11,9 +11,52 @@ jobs:
     secrets: inherit
     with:
       run-unit-tests: true
-      run-integration-tests: true
       run-lint: true
 
+  e2e_babylon:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+      - name: Run e2e Babylon tests
+        run: make test-e2e-babylon
+
+  e2e_wasmd:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+      - name: Run e2e Wasmd tests
+        run: make test-e2e-wasmd
+
+  e2e_bcd:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+      - name: Run e2e BCD tests
+        run: make test-e2e-bcd
+
+  e2e_op:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+      - name: Run e2e OP tests
+        run: make test-e2e-op
+        
   docker_pipeline:
     uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.1.0
     secrets: inherit

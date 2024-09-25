@@ -44,12 +44,15 @@ func FuzzChainPoller_Start(f *testing.F) {
 			mockConsumerController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
 		}
 
+		logger, err := zap.NewDevelopment()
+		require.NoError(t, err)
+
 		// TODO: use mock metrics
 		m := metrics.NewFpMetrics()
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
 		pollerCfg.PollInterval = 10 * time.Millisecond
-		poller := service.NewChainPoller(zap.NewNop(), &pollerCfg, mockBabylonController, mockConsumerController, m)
-		err := poller.Start(startHeight)
+		poller := service.NewChainPoller(logger, &pollerCfg, mockBabylonController, mockConsumerController, m)
+		err = poller.Start(startHeight)
 		require.NoError(t, err)
 		defer func() {
 			err := poller.Stop()
@@ -70,6 +73,7 @@ func FuzzChainPoller_Start(f *testing.F) {
 // FuzzChainPoller_SkipHeight tests the functionality of SkipHeight
 func FuzzChainPoller_SkipHeight(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
+
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
 
@@ -92,13 +96,16 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 			mockConsumerController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
 		}
 
+		logger, err := zap.NewDevelopment()
+		require.NoError(t, err)
+
 		// TODO: use mock metrics
 		m := metrics.NewFpMetrics()
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
 		pollerCfg.PollInterval = 1 * time.Second
-		poller := service.NewChainPoller(zap.NewNop(), &pollerCfg, mockBabylonController, mockConsumerController, m)
+		poller := service.NewChainPoller(logger, &pollerCfg, mockBabylonController, mockConsumerController, m)
 		// should expect error if the poller is not started
-		err := poller.SkipToHeight(skipHeight)
+		err = poller.SkipToHeight(skipHeight)
 		require.Error(t, err)
 		err = poller.Start(startHeight)
 		require.NoError(t, err)

@@ -671,6 +671,7 @@ func (ctm *OpL2ConsumerTestManager) registerSingleFinalityProvider(app *service.
 		consumerID,
 		e2eutils.Passphrase,
 		e2eutils.HdPath,
+		nil,
 		desc,
 		&commission,
 	)

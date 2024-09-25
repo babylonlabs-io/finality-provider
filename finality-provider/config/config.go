@@ -25,13 +25,14 @@ const (
 	defaultFinalityProviderKeyName = "finality-provider"
 	DefaultRPCPort                 = 12581
 	defaultConfigFileName          = "fpd.conf"
-	defaultNumPubRand              = 100
-	defaultNumPubRandMax           = 200
-	defaultMinRandHeightGap        = 20
+	defaultNumPubRand              = 70000 // support running of 1 week with block production time as 10s
+	defaultNumPubRandMax           = 100000
+	defaultMinRandHeightGap        = 35000
 	defaultStatusUpdateInterval    = 20 * time.Second
 	defaultRandomInterval          = 30 * time.Second
 	defaultSubmitRetryInterval     = 1 * time.Second
 	defaultFastSyncInterval        = 10 * time.Second
+	defaultSyncFpStatusInterval    = 30 * time.Second
 	defaultFastSyncLimit           = 10
 	defaultFastSyncGap             = 3
 	defaultMaxSubmissionRetries    = 20
@@ -68,6 +69,7 @@ type Config struct {
 	FastSyncGap              uint64        `long:"fastsyncgap" description:"The block gap that will trigger the fast sync"`
 	EOTSManagerAddress       string        `long:"eotsmanageraddress" description:"The address of the remote EOTS manager; Empty if the EOTS manager is running locally"`
 	MaxNumFinalityProviders  uint32        `long:"maxnumfinalityproviders" description:"The maximum number of finality-provider instances running concurrently within the daemon"`
+	SyncFpStatusInterval     time.Duration `long:"syncfpstatusinterval" description:"The duration of time that it should sync FP status with the client blockchain"`
 
 	BitcoinNetwork string `long:"bitcoinnetwork" description:"Bitcoin network to run on" choise:"mainnet" choice:"regtest" choice:"testnet" choice:"simnet" choice:"signet"`
 
@@ -115,6 +117,7 @@ func DefaultConfigWithHome(homePath string) Config {
 		RpcListener:              DefaultRpcListener,
 		MaxNumFinalityProviders:  defaultMaxNumFinalityProviders,
 		Metrics:                  metrics.DefaultFpConfig(),
+		SyncFpStatusInterval:     defaultSyncFpStatusInterval,
 	}
 
 	if err := cfg.Validate(); err != nil {

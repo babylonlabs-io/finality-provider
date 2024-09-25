@@ -16,6 +16,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbn "github.com/babylonlabs-io/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -104,7 +105,7 @@ func GenBlocks(r *rand.Rand, startHeight, endHeight uint64) []*types.BlockInfo {
 }
 
 // GenStoredFinalityProvider generates a random finality-provider from the keyring and store it in DB
-func GenStoredFinalityProvider(r *rand.Rand, t *testing.T, app *service.FinalityProviderApp, passphrase, hdPath string) *store.StoredFinalityProvider {
+func GenStoredFinalityProvider(r *rand.Rand, t *testing.T, app *service.FinalityProviderApp, passphrase, hdPath string, eotsPk *bbntypes.BIP340PubKey) *store.StoredFinalityProvider {
 	// generate keyring
 	keyName := GenRandomHexStr(r, 4)
 	chainID := GenRandomHexStr(r, 4)
@@ -113,7 +114,7 @@ func GenStoredFinalityProvider(r *rand.Rand, t *testing.T, app *service.Finality
 	_, err := service.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, keyName, keyring.BackendTest, passphrase, hdPath, "")
 	require.NoError(t, err)
 
-	res, err := app.CreateFinalityProvider(keyName, chainID, passphrase, hdPath, RandomDescription(r), ZeroCommissionRate())
+	res, err := app.CreateFinalityProvider(keyName, chainID, passphrase, hdPath, eotsPk, RandomDescription(r), ZeroCommissionRate())
 	require.NoError(t, err)
 
 	btcPk, err := bbn.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)

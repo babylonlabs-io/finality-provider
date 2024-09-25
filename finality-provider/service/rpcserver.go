@@ -81,9 +81,10 @@ func (r *rpcServer) GetInfo(context.Context, *proto.GetInfoRequest) (*proto.GetI
 }
 
 // CreateFinalityProvider generates a finality-provider object and saves it in the database
-func (r *rpcServer) CreateFinalityProvider(ctx context.Context, req *proto.CreateFinalityProviderRequest) (
-	*proto.CreateFinalityProviderResponse, error) {
-
+func (r *rpcServer) CreateFinalityProvider(
+	ctx context.Context,
+	req *proto.CreateFinalityProviderRequest,
+) (*proto.CreateFinalityProviderResponse, error) {
 	commissionRate, err := math.LegacyNewDecFromStr(req.Commission)
 	if err != nil {
 		return nil, err
@@ -94,11 +95,17 @@ func (r *rpcServer) CreateFinalityProvider(ctx context.Context, req *proto.Creat
 		return nil, err
 	}
 
+	eotsPk, err := parseOptEotsPk(req.EotsPkHex)
+	if err != nil {
+		return nil, err
+	}
+
 	result, err := r.app.CreateFinalityProvider(
 		req.KeyName,
 		req.ChainId,
 		req.Passphrase,
 		req.HdPath,
+		eotsPk,
 		&description,
 		&commissionRate,
 	)
@@ -217,4 +224,11 @@ func (r *rpcServer) SignMessageFromChainKey(ctx context.Context, req *proto.Sign
 	}
 
 	return &proto.SignMessageFromChainKeyResponse{Signature: signature}, nil
+}
+
+func parseOptEotsPk(eotsPkHex string) (*bbntypes.BIP340PubKey, error) {
+	if len(eotsPkHex) > 0 {
+		return bbntypes.NewBIP340PubKeyFromHex(eotsPkHex)
+	}
+	return nil, nil
 }

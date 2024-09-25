@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"cosmossdk.io/math"
+	"github.com/babylonlabs-io/babylon/types"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
@@ -66,6 +67,12 @@ func CommandCreateFP() *cobra.Command {
 		Use:     "create-finality-provider",
 		Aliases: []string{"cfp"},
 		Short:   "Create a finality provider object and save it in database.",
+		Long: fmt.Sprintf(`
+		Create a new finality provider object and store it in the finality provider database.
+		It needs to have an operating EOTS manager available and running.
+
+		If the flag %s is set, it will ask for the key record from the EOTS manager for the
+		corresponding EOTS public key. If it is not set, it will create a new EOTS key`, fpEotsPkFlag),
 		Example: fmt.Sprintf(`fpd create-finality-provider --daemon-address %s ...`, defaultFpdDaemonAddress),
 		Args:    cobra.NoArgs,
 		RunE:    fpcmd.RunEWithClientCtx(runCommandCreateFP),
@@ -84,6 +91,7 @@ func CommandCreateFP() *cobra.Command {
 	f.String(websiteFlag, "", "An optional website link")
 	f.String(securityContactFlag, "", "An email for security contact")
 	f.String(detailsFlag, "", "Other optional details")
+	f.String(fpEotsPkFlag, "", "Optional hex EOTS public key, if not provided a new one will be created")
 
 	return cmd
 }
@@ -135,10 +143,24 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return fmt.Errorf("failed to read flag %s: %w", hdPathFlag, err)
 	}
 
+	eotsPkHex, err := flags.GetString(fpEotsPkFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", fpEotsPkFlag, err)
+	}
+
+	if len(eotsPkHex) > 0 {
+		// if is set, validate before the creation request
+		_, err := types.NewBIP340PubKeyFromHex(eotsPkHex)
+		if err != nil {
+			return fmt.Errorf("invalid eots public key %s: %w", eotsPkHex, err)
+		}
+	}
+
 	info, err := client.CreateFinalityProvider(
 		context.Background(),
 		keyName,
 		chainId,
+		eotsPkHex,
 		passphrase,
 		hdPath,
 		description,

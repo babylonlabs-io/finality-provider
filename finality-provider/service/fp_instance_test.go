@@ -100,7 +100,8 @@ func FuzzSubmitFinalitySig(f *testing.F) {
 }
 
 func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc ccapi.ClientController, consumerCon ccapi.ConsumerController, startingHeight uint64) (*service.FinalityProviderApp, *service.FinalityProviderInstance, func()) {
-	logger := zap.NewNop()
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
@@ -125,7 +126,7 @@ func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc cca
 	require.NoError(t, err)
 
 	// create registered finality-provider
-	fp := testutil.GenStoredFinalityProvider(r, t, app, passphrase, hdPath)
+	fp := testutil.GenStoredFinalityProvider(r, t, app, passphrase, hdPath, nil)
 	pubRandProofStore := app.GetPubRandProofStore()
 	fpStore := app.GetFinalityProviderStore()
 	err = fpStore.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_REGISTERED)

@@ -33,7 +33,7 @@ var (
 	WasmMoniker           = "node001" // Default moniker
 	BtcNetworkParams      = &chaincfg.SimNetParams
 	StakingTime           = uint16(100)
-	StakingAmount         = int64(20000)
+	StakingAmount         = int64(500000)
 )
 
 func NewDescription(moniker string) *stakingtypes.Description {
@@ -118,6 +118,8 @@ func DefaultFpConfig(keyringDir, homeDir string) *config.Config {
 	cfg.BabylonConfig.Key = "test-spending-key"
 	// Big adjustment to make sure we have enough gas in our transactions
 	cfg.BabylonConfig.GasAdjustment = 20
+	// adjust num pub rand to 1000
+	cfg.NumPubRand = 1000
 
 	return &cfg
 }

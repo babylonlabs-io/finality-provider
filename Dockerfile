@@ -1,4 +1,4 @@
-FROM golang:1.21.4-alpine as builder
+FROM golang:1.22.7-alpine as builder
 
 # Version to build. Default is the Git HEAD.
 ARG VERSION="HEAD"
@@ -12,15 +12,11 @@ RUN apk add --no-cache --update openssh git make build-base linux-headers libc-d
     libzmq-static libsodium-static gcc
 
 
-RUN mkdir -p /root/.ssh && ssh-keyscan github.com >> /root/.ssh/known_hosts
-RUN git config --global url."git@github.com:".insteadOf "https://github.com/"
-ENV GOPRIVATE=github.com/babylonlabs-io/*
-
 # Build
 WORKDIR /go/src/github.com/babylonlabs-io/finality-provider
 # Cache dependencies
 COPY go.mod go.sum /go/src/github.com/babylonlabs-io/finality-provider/
-RUN --mount=type=secret,id=sshKey,target=/root/.ssh/id_rsa go mod download
+RUN go mod download
 # Copy the rest of the files
 COPY ./ /go/src/github.com/babylonlabs-io/finality-provider/
 
