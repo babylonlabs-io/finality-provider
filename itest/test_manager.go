@@ -88,7 +88,7 @@ type TestDelegationData struct {
 }
 
 func StartManager(t *testing.T) *TestManager {
-	manager, err := container.NewManager()
+	manager, err := container.NewManager(t)
 	require.NoError(t, err)
 	testDir, err := tempDir(t, "fp-e2e-test-*")
 	require.NoError(t, err)
