@@ -30,28 +30,29 @@ func FuzzChainPoller_Start(f *testing.F) {
 		endHeight := startHeight + uint64(r.Int63n(10)+1)
 
 		ctl := gomock.NewController(t)
-		mockClientController := mocks.NewMockClientController(ctl)
-		mockClientController.EXPECT().Close().Return(nil).AnyTimes()
-		mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
+		mockBabylonController := mocks.NewMockClientController(ctl)
+		mockBabylonController.EXPECT().Close().Return(nil).AnyTimes()
+		mockConsumerController := mocks.NewMockConsumerController(ctl)
+		mockConsumerController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
 
-		currentBlockRes := &types.BlockInfo{
-			Height: currentHeight,
-		}
-		mockClientController.EXPECT().QueryBestBlock().Return(currentBlockRes, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(currentHeight, nil).AnyTimes()
 
 		for i := startHeight; i <= endHeight; i++ {
 			resBlock := &types.BlockInfo{
 				Height: i,
 			}
-			mockClientController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
+			mockConsumerController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
 		}
+
+		logger, err := zap.NewDevelopment()
+		require.NoError(t, err)
 
 		// TODO: use mock metrics
 		m := metrics.NewFpMetrics()
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
 		pollerCfg.PollInterval = 10 * time.Millisecond
-		poller := service.NewChainPoller(zap.NewNop(), &pollerCfg, mockClientController, m)
-		err := poller.Start(startHeight)
+		poller := service.NewChainPoller(logger, &pollerCfg, mockBabylonController, mockConsumerController, m)
+		err = poller.Start(startHeight)
 		require.NoError(t, err)
 		defer func() {
 			err := poller.Stop()
@@ -82,29 +83,29 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 		skipHeight := endHeight + uint64(r.Int63n(10)+1)
 
 		ctl := gomock.NewController(t)
-		mockClientController := mocks.NewMockClientController(ctl)
-		mockClientController.EXPECT().Close().Return(nil).AnyTimes()
-		mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
-
-		currentBlockRes := &types.BlockInfo{
-			Height: currentHeight,
-		}
-		mockClientController.EXPECT().QueryBestBlock().Return(currentBlockRes, nil).AnyTimes()
+		mockBabylonController := mocks.NewMockClientController(ctl)
+		mockConsumerController := mocks.NewMockConsumerController(ctl)
+		mockBabylonController.EXPECT().Close().Return(nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(currentHeight, nil).AnyTimes()
 
 		for i := startHeight; i <= skipHeight; i++ {
 			resBlock := &types.BlockInfo{
 				Height: i,
 			}
-			mockClientController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
+			mockConsumerController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
 		}
+
+		logger, err := zap.NewDevelopment()
+		require.NoError(t, err)
 
 		// TODO: use mock metrics
 		m := metrics.NewFpMetrics()
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
 		pollerCfg.PollInterval = 1 * time.Second
-		poller := service.NewChainPoller(zap.NewNop(), &pollerCfg, mockClientController, m)
+		poller := service.NewChainPoller(logger, &pollerCfg, mockBabylonController, mockConsumerController, m)
 		// should expect error if the poller is not started
-		err := poller.SkipToHeight(skipHeight)
+		err = poller.SkipToHeight(skipHeight)
 		require.Error(t, err)
 		err = poller.Start(startHeight)
 		require.NoError(t, err)

@@ -13,6 +13,9 @@
 # Test binary, built with `go test -c`
 *.test
 
+# E2E test data
+devnet-data/
+
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 

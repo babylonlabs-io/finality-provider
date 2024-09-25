@@ -1,8 +1,9 @@
-package e2etest
+package e2e_utils
 
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -10,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -21,27 +23,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type BabylonNode struct {
+type babylonNode struct {
 	cmd        *exec.Cmd
 	pidFile    string
-	DataDir    string
-	WalletName string
+	dataDir    string
+	walletName string
 }
 
-func newBabylonNode(dataDir, walletName string, cmd *exec.Cmd) *BabylonNode {
-	return &BabylonNode{
-		DataDir:    dataDir,
+func newBabylonNode(dataDir, walletName string, cmd *exec.Cmd) *babylonNode {
+	return &babylonNode{
+		dataDir:    dataDir,
 		cmd:        cmd,
-		WalletName: walletName,
+		walletName: walletName,
 	}
 }
 
-func (n *BabylonNode) start() error {
+func (n *babylonNode) start() error {
 	if err := n.cmd.Start(); err != nil {
 		return err
 	}
 
-	pid, err := os.Create(filepath.Join(n.DataDir,
+	pid, err := os.Create(filepath.Join(n.dataDir,
 		fmt.Sprintf("%s.pid", "config")))
 	if err != nil {
 		return err
@@ -59,7 +61,7 @@ func (n *BabylonNode) start() error {
 	return nil
 }
 
-func (n *BabylonNode) stop() (err error) {
+func (n *babylonNode) stop() (err error) {
 	if n.cmd == nil || n.cmd.Process == nil {
 		// return if not properly initialized
 		// or error starting the process
@@ -76,7 +78,7 @@ func (n *BabylonNode) stop() (err error) {
 	return n.cmd.Process.Signal(os.Interrupt)
 }
 
-func (n *BabylonNode) cleanup() error {
+func (n *babylonNode) cleanup() error {
 	if n.pidFile != "" {
 		if err := os.Remove(n.pidFile); err != nil {
 			log.Printf("unable to remove file %s: %v", n.pidFile,
@@ -85,7 +87,7 @@ func (n *BabylonNode) cleanup() error {
 	}
 
 	dirs := []string{
-		n.DataDir,
+		n.dataDir,
 	}
 	var err error
 	for _, dir := range dirs {
@@ -96,7 +98,7 @@ func (n *BabylonNode) cleanup() error {
 	return nil
 }
 
-func (n *BabylonNode) shutdown() error {
+func (n *babylonNode) shutdown() error {
 	if err := n.stop(); err != nil {
 		return err
 	}
@@ -107,11 +109,11 @@ func (n *BabylonNode) shutdown() error {
 }
 
 type BabylonNodeHandler struct {
-	BabylonNode *BabylonNode
+	BabylonNode *babylonNode
 }
 
 func NewBabylonNodeHandler(t *testing.T, covenantQuorum int, covenantPks []*types.BIP340PubKey) *BabylonNodeHandler {
-	testDir, err := baseDir("zBabylonTest")
+	testDir, err := BaseDir("zBabylonTest")
 	require.NoError(t, err)
 	defer func() {
 		if err != nil {
@@ -159,15 +161,18 @@ func NewBabylonNodeHandler(t *testing.T, covenantQuorum int, covenantPks []*type
 	require.NoError(t, err)
 
 	f, err := os.Create(filepath.Join(testDir, "babylon.log"))
-	require.NoError(t, err)
 	t.Logf("babylon log file: %s", f.Name())
+	require.NoError(t, err)
 
 	startCmd := exec.Command(
 		"babylond",
 		"start",
 		fmt.Sprintf("--home=%s", nodeDataDir),
-		"--log_level=debug",
+		"--log_level=trace",
+		"--trace",
 	)
+
+	fmt.Println("Starting babylond with command: ", startCmd.String())
 
 	startCmd.Stdout = f
 
@@ -194,25 +199,25 @@ func (w *BabylonNodeHandler) Stop() error {
 }
 
 func (w *BabylonNodeHandler) GetNodeDataDir() string {
-	return w.BabylonNode.GetNodeDataDir()
+	return w.BabylonNode.getNodeDataDir()
 }
 
-// GetNodeDataDir returns the home path of the babylon node.
-func (n *BabylonNode) GetNodeDataDir() string {
-	dir := filepath.Join(n.DataDir, n.WalletName, "babylond")
+// getNodeDataDir returns the home path of the babylon node.
+func (n *babylonNode) getNodeDataDir() string {
+	dir := filepath.Join(n.dataDir, n.walletName, "babylond")
 	return dir
 }
 
 // TxBankSend send transaction to a address from the node address.
-func (n *BabylonNode) TxBankSend(addr, coins string) error {
+func (n *babylonNode) TxBankSend(addr, coins string) error {
 	flags := []string{
 		"tx",
 		"bank",
 		"send",
-		n.WalletName,
+		n.walletName,
 		addr, coins,
 		"--keyring-backend=test",
-		fmt.Sprintf("--home=%s", n.GetNodeDataDir()),
+		fmt.Sprintf("--home=%s", n.getNodeDataDir()),
 		"--log_level=debug",
 		"--chain-id=chain-test",
 		"-b=sync", "--yes", "--gas-prices=10ubbn",
@@ -224,4 +229,49 @@ func (n *BabylonNode) TxBankSend(addr, coins string) error {
 		return err
 	}
 	return nil
+}
+
+type balanceResponse struct {
+	Balances []struct {
+		Denom  string `json:"denom"`
+		Amount string `json:"amount"`
+	} `json:"balances"`
+	Pagination struct {
+		Total string `json:"total"`
+	} `json:"pagination"`
+}
+
+// CheckAddrBalance retrieves the balance of the specified address.
+func (n *babylonNode) CheckAddrBalance(addr string) (int, error) {
+	flags := []string{
+		"query",
+		"bank",
+		"balances",
+		addr,
+		"--output=json",
+		fmt.Sprintf("--home=%s", n.getNodeDataDir()),
+		"--log_level=debug",
+		"--chain-id=chain-test",
+	}
+
+	cmd := exec.Command("babylond", flags...)
+	output, err := cmd.Output()
+	if err != nil {
+		return 0, err
+	}
+
+	var resp balanceResponse
+	if err := json.Unmarshal(output, &resp); err != nil {
+		return 0, err
+	}
+
+	if len(resp.Balances) == 0 {
+		return 0, fmt.Errorf("no balances found for address %s", addr)
+	}
+
+	balance, err := strconv.Atoi(resp.Balances[0].Amount)
+	if err != nil {
+		return 0, err
+	}
+	return balance, nil
 }

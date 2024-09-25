@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
-	"strconv"
 
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -21,6 +20,7 @@ const (
 	defaultLogFilename    = "eotsd.log"
 	defaultConfigFileName = "eotsd.conf"
 	DefaultRPCPort        = 12582
+	DefaultRPCHost        = "127.0.0.1"
 	defaultKeyringBackend = keyring.BackendTest
 )
 
@@ -31,7 +31,7 @@ var (
 	//   ~/Library/Application Support/Eotsd on MacOS
 	DefaultEOTSDir = btcutil.AppDataDir("eotsd", false)
 
-	defaultRpcListener = "127.0.0.1:" + strconv.Itoa(DefaultRPCPort)
+	defaultRpcListener = fmt.Sprintf("%s:%d", DefaultRPCHost, DefaultRPCPort)
 )
 
 type Config struct {
@@ -121,6 +121,10 @@ func DefaultConfig() *Config {
 }
 
 func DefaultConfigWithHomePath(homePath string) *Config {
+	return DefaultConfigWithHomePathAndPorts(homePath, DefaultRPCPort, metrics.DefaultEotsMetricsPort)
+}
+
+func DefaultConfigWithHomePathAndPorts(homePath string, rpcPort, metricsPort int) *Config {
 	cfg := &Config{
 		LogLevel:       defaultLogLevel,
 		KeyringBackend: defaultKeyringBackend,
@@ -128,6 +132,8 @@ func DefaultConfigWithHomePath(homePath string) *Config {
 		RpcListener:    defaultRpcListener,
 		Metrics:        metrics.DefaultEotsConfig(),
 	}
+	cfg.RpcListener = fmt.Sprintf("%s:%d", DefaultRPCHost, rpcPort)
+	cfg.Metrics.Port = metricsPort
 	if err := cfg.Validate(); err != nil {
 		panic(err)
 	}

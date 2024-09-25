@@ -36,7 +36,8 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
 
-		logger := zap.NewNop()
+		logger, err := zap.NewDevelopment()
+		require.NoError(t, err)
 		// create an EOTS manager
 		eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
@@ -53,19 +54,21 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 		// Create mocked babylon client
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
-		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight)
-		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
-		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(),
-			gomock.Any()).Return(uint64(0), nil).AnyTimes()
+		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
+		mockConsumerController.EXPECT().QueryLatestFinalizedBlock().Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(),
+			gomock.Any()).Return(false, nil).AnyTimes()
+		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 
 		// Create randomized config
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
+		fpCfg.NumPubRand = testutil.TestPubRandNum
 		fpCfg.PollerConfig.AutoChainScanningMode = false
 		fpCfg.PollerConfig.StaticChainScanningStartHeight = randomStartingHeight
 		fpdb, err := fpCfg.DatabaseConfig.GetDbBackend()
 		require.NoError(t, err)
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockClientController, em, fpdb, logger)
+		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, fpdb, logger)
 		require.NoError(t, err)
 		defer func() {
 			err = fpdb.Close()
@@ -117,8 +120,9 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 		require.Equal(t, fpInfo.BtcPkHex, fpListInfo[0].BtcPkHex)
 
 		txHash := testutil.GenRandomHexStr(r, 32)
-		mockClientController.EXPECT().
+		mockBabylonController.EXPECT().
 			RegisterFinalityProvider(
+				fp.ChainID,
 				fp.BtcPk,
 				popBytes,
 				testutil.ZeroCommissionRate(),
@@ -129,7 +133,7 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 		require.NoError(t, err)
 		require.Equal(t, txHash, res.TxHash)
 
-		mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any()).Return(nil, nil).AnyTimes()
 		err = app.StartHandlingFinalityProvider(fp.GetBIP340BTCPK(), passphrase)
 		require.NoError(t, err)
 
@@ -149,7 +153,8 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
 
-		logger := zap.NewNop()
+		logger, err := zap.NewDevelopment()
+		require.NoError(t, err)
 
 		pathSuffix := datagen.GenRandomHexStr(r, 10)
 		// create an EOTS manager
@@ -160,10 +165,18 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
 
+		// clean up after the test
+		defer func() {
+			dbBackend.Close()
+			err = os.RemoveAll(eotsHomeDir)
+			require.NoError(t, err)
+		}()
+
 		// Create randomized config
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
 		fpCfg.SyncFpStatusInterval = time.Millisecond * 100
+		fpCfg.NumPubRand = testutil.TestPubRandNum
 		// no need for other intervals to run
 		fpCfg.StatusUpdateInterval = time.Minute * 10
 		fpCfg.SubmissionRetryInterval = time.Minute * 10
@@ -172,25 +185,25 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
-		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight)
+		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
+		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 
-		blkInfo := &types.BlockInfo{Height: currentHeight}
-
-		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBestBlock().Return(blkInfo, nil).Return(blkInfo, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBlock(gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestFinalizedBlock().Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(currentHeight, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryBlock(gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
+		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any()).Return(nil, nil).AnyTimes()
 
 		noVotingPowerTable := r.Int31n(10) > 5
 		if noVotingPowerTable {
 			allowedErr := fmt.Sprintf("failed to query Finality Voting Power at Height %d: rpc error: code = Unknown desc = %s: unknown request", currentHeight, bstypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", currentHeight).Error())
-			mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), gomock.Any()).Return(uint64(0), errors.New(allowedErr)).AnyTimes()
-			mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(0), errors.New(allowedErr)).AnyTimes()
+			mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).Return(false, errors.New(allowedErr)).AnyTimes()
+			mockConsumerController.EXPECT().QueryActivatedHeight().Return(uint64(0), errors.New(allowedErr)).AnyTimes()
 		} else {
-			mockClientController.EXPECT().QueryActivatedHeight().Return(currentHeight, nil).AnyTimes()
-			mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), gomock.Any()).Return(uint64(2), nil).AnyTimes()
+			mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+			mockConsumerController.EXPECT().QueryActivatedHeight().Return(currentHeight, nil).AnyTimes()
 		}
 
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockClientController, em, fpdb, logger)
+		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, fpdb, logger)
 		require.NoError(t, err)
 
 		err = app.Start()

@@ -32,8 +32,10 @@ type createFinalityProviderRequest struct {
 }
 
 type registerFinalityProviderRequest struct {
-	fpAddr          sdk.AccAddress
-	btcPubKey       *bbntypes.BIP340PubKey
+	chainID   string
+	fpAddr    sdk.AccAddress
+	btcPubKey *bbntypes.BIP340PubKey
+	// TODO we should have our own representation of PoP
 	pop             *btcstakingtypes.ProofOfPossessionBTC
 	description     *stakingtypes.Description
 	commission      *sdkmath.LegacyDec
@@ -59,9 +61,9 @@ type CreateFinalityProviderResult struct {
 }
 
 type fpState struct {
-	mu sync.Mutex
-	fp *store.StoredFinalityProvider
-	s  *store.FinalityProviderStore
+	mu  sync.Mutex
+	sfp *store.StoredFinalityProvider
+	s   *store.FinalityProviderStore
 }
 
 func NewFpState(
@@ -69,49 +71,57 @@ func NewFpState(
 	s *store.FinalityProviderStore,
 ) *fpState {
 	return &fpState{
-		fp: fp,
-		s:  s,
+		sfp: fp,
+		s:   s,
 	}
 }
 
-func (fps *fpState) getStoreFinalityProvider() *store.StoredFinalityProvider {
+func (fps *fpState) withLock(action func()) {
 	fps.mu.Lock()
 	defer fps.mu.Unlock()
-	return fps.fp
+	action()
 }
 
 func (fps *fpState) setStatus(s proto.FinalityProviderStatus) error {
-	fps.mu.Lock()
-	fps.fp.Status = s
-	fps.mu.Unlock()
-	return fps.s.SetFpStatus(fps.fp.BtcPk, s)
+	fps.withLock(func() {
+		fps.sfp.Status = s
+	})
+	return fps.s.SetFpStatus(fps.sfp.BtcPk, s)
 }
 
 func (fps *fpState) setLastProcessedHeight(height uint64) error {
-	fps.mu.Lock()
-	fps.fp.LastProcessedHeight = height
-	fps.mu.Unlock()
-	return fps.s.SetFpLastProcessedHeight(fps.fp.BtcPk, height)
+	fps.withLock(func() {
+		fps.sfp.LastProcessedHeight = height
+	})
+	return fps.s.SetFpLastProcessedHeight(fps.sfp.BtcPk, height)
 }
 
 func (fps *fpState) setLastProcessedAndVotedHeight(height uint64) error {
-	fps.mu.Lock()
-	fps.fp.LastVotedHeight = height
-	fps.fp.LastProcessedHeight = height
-	fps.mu.Unlock()
-	return fps.s.SetFpLastVotedHeight(fps.fp.BtcPk, height)
+	fps.withLock(func() {
+		fps.sfp.LastVotedHeight = height
+		fps.sfp.LastProcessedHeight = height
+	})
+	return fps.s.SetFpLastVotedHeight(fps.sfp.BtcPk, height)
 }
 
 func (fp *FinalityProviderInstance) GetStoreFinalityProvider() *store.StoredFinalityProvider {
-	return fp.fpState.getStoreFinalityProvider()
+	return fp.fpState.sfp
 }
 
 func (fp *FinalityProviderInstance) GetBtcPkBIP340() *bbntypes.BIP340PubKey {
-	return fp.fpState.getStoreFinalityProvider().GetBIP340BTCPK()
+	var pk *bbntypes.BIP340PubKey
+	fp.fpState.withLock(func() {
+		pk = fp.fpState.sfp.GetBIP340BTCPK()
+	})
+	return pk
 }
 
 func (fp *FinalityProviderInstance) GetBtcPk() *btcec.PublicKey {
-	return fp.fpState.getStoreFinalityProvider().BtcPk
+	var pk *btcec.PublicKey
+	fp.fpState.withLock(func() {
+		pk = fp.fpState.sfp.BtcPk
+	})
+	return pk
 }
 
 func (fp *FinalityProviderInstance) GetBtcPkHex() string {
@@ -119,19 +129,35 @@ func (fp *FinalityProviderInstance) GetBtcPkHex() string {
 }
 
 func (fp *FinalityProviderInstance) GetStatus() proto.FinalityProviderStatus {
-	return fp.fpState.getStoreFinalityProvider().Status
+	var status proto.FinalityProviderStatus
+	fp.fpState.withLock(func() {
+		status = fp.fpState.sfp.Status
+	})
+	return status
 }
 
 func (fp *FinalityProviderInstance) GetLastVotedHeight() uint64 {
-	return fp.fpState.getStoreFinalityProvider().LastVotedHeight
+	var lastVotedHeight uint64
+	fp.fpState.withLock(func() {
+		lastVotedHeight = fp.fpState.sfp.LastVotedHeight
+	})
+	return lastVotedHeight
 }
 
 func (fp *FinalityProviderInstance) GetLastProcessedHeight() uint64 {
-	return fp.fpState.getStoreFinalityProvider().LastProcessedHeight
+	var lastProcessedHeight uint64
+	fp.fpState.withLock(func() {
+		lastProcessedHeight = fp.fpState.sfp.LastProcessedHeight
+	})
+	return lastProcessedHeight
 }
 
 func (fp *FinalityProviderInstance) GetChainID() []byte {
-	return []byte(fp.fpState.getStoreFinalityProvider().ChainID)
+	var chainID string
+	fp.fpState.withLock(func() {
+		chainID = fp.fpState.sfp.ChainID
+	})
+	return []byte(chainID)
 }
 
 func (fp *FinalityProviderInstance) SetStatus(s proto.FinalityProviderStatus) error {

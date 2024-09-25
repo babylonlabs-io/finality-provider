@@ -9,7 +9,7 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
-	"github.com/babylonlabs-io/finality-provider/clientcontroller"
+	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -42,7 +42,8 @@ type ChainPoller struct {
 	wg        sync.WaitGroup
 	quit      chan struct{}
 
-	cc             clientcontroller.ClientController
+	cc             ccapi.ClientController
+	consumerCon    ccapi.ConsumerController
 	cfg            *cfg.ChainPollerConfig
 	metrics        *metrics.FpMetrics
 	blockInfoChan  chan *types.BlockInfo
@@ -54,7 +55,8 @@ type ChainPoller struct {
 func NewChainPoller(
 	logger *zap.Logger,
 	cfg *cfg.ChainPollerConfig,
-	cc clientcontroller.ClientController,
+	cc ccapi.ClientController,
+	consumerCon ccapi.ConsumerController,
 	metrics *metrics.FpMetrics,
 ) *ChainPoller {
 	return &ChainPoller{
@@ -62,6 +64,7 @@ func NewChainPoller(
 		logger:         logger,
 		cfg:            cfg,
 		cc:             cc,
+		consumerCon:    consumerCon,
 		metrics:        metrics,
 		blockInfoChan:  make(chan *types.BlockInfo, cfg.BufferSize),
 		skipHeightChan: make(chan *skipHeightRequest),
@@ -122,14 +125,14 @@ func (cp *ChainPoller) GetBlockInfoChan() <-chan *types.BlockInfo {
 	return cp.blockInfoChan
 }
 
-func (cp *ChainPoller) latestBlockWithRetry() (*types.BlockInfo, error) {
+func (cp *ChainPoller) latestBlockHeightWithRetry() (uint64, error) {
 	var (
-		latestBlock *types.BlockInfo
-		err         error
+		latestBlockHeight uint64
+		err               error
 	)
 
 	if err := retry.Do(func() error {
-		latestBlock, err = cp.cc.QueryBestBlock()
+		latestBlockHeight, err = cp.consumerCon.QueryLatestBlockHeight()
 		if err != nil {
 			return err
 		}
@@ -142,9 +145,9 @@ func (cp *ChainPoller) latestBlockWithRetry() (*types.BlockInfo, error) {
 			zap.Error(err),
 		)
 	})); err != nil {
-		return nil, err
+		return 0, err
 	}
-	return latestBlock, nil
+	return latestBlockHeight, nil
 }
 
 func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
@@ -153,7 +156,7 @@ func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
 		err   error
 	)
 	if err := retry.Do(func() error {
-		block, err = cp.cc.QueryBlock(height)
+		block, err = cp.consumerCon.QueryBlock(height)
 		if err != nil {
 			return err
 		}
@@ -183,13 +186,13 @@ func (cp *ChainPoller) validateStartHeight(startHeight uint64) error {
 
 	var currentBestChainHeight uint64
 	for {
-		lastestBlock, err := cp.latestBlockWithRetry()
+		lastestBlockHeight, err := cp.latestBlockHeightWithRetry()
 		if err != nil {
 			cp.logger.Debug("failed to query babylon for the latest status", zap.Error(err))
 			continue
 		}
 
-		currentBestChainHeight = lastestBlock.Height
+		currentBestChainHeight = lastestBlockHeight
 		break
 	}
 
@@ -205,8 +208,9 @@ func (cp *ChainPoller) validateStartHeight(startHeight uint64) error {
 func (cp *ChainPoller) waitForActivation() {
 	// ensure that the startHeight is no lower than the activated height
 	for {
-		activatedHeight, err := cp.cc.QueryActivatedHeight()
+		activatedHeight, err := cp.consumerCon.QueryActivatedHeight()
 		if err != nil {
+			// TODO: distinguish between "BTC staking is not activated" and other errors
 			cp.logger.Debug("failed to query the consumer chain for the activated height", zap.Error(err))
 		} else {
 			if cp.nextHeight < activatedHeight {

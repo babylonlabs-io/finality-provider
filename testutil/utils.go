@@ -18,26 +18,38 @@ func ZeroCommissionRate() *sdkmath.LegacyDec {
 	return &zeroCom
 }
 
-func PrepareMockedClientController(t *testing.T, r *rand.Rand, startHeight, currentHeight uint64) *mocks.MockClientController {
-	ctl := gomock.NewController(t)
-	mockClientController := mocks.NewMockClientController(ctl)
+func PrepareMockedConsumerController(t *testing.T, r *rand.Rand, startHeight, currentHeight uint64) *mocks.MockConsumerController {
+	return PrepareMockedConsumerControllerWithTxHash(t, r, startHeight, currentHeight, GenRandomHexStr(r, 32))
+}
 
-	for i := startHeight + 1; i <= currentHeight; i++ {
+func PrepareMockedConsumerControllerWithTxHash(t *testing.T, r *rand.Rand, startHeight, currentHeight uint64, txHash string) *mocks.MockConsumerController {
+	ctl := gomock.NewController(t)
+	mockConsumerController := mocks.NewMockConsumerController(ctl)
+
+	for i := startHeight; i <= currentHeight; i++ {
 		resBlock := &types.BlockInfo{
-			Height: currentHeight,
+			Height: i,
 			Hash:   GenRandomByteArray(r, 32),
 		}
-		mockClientController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
 	}
 
-	currentBlockRes := &types.BlockInfo{
-		Height: currentHeight,
-		Hash:   GenRandomByteArray(r, 32),
-	}
+	mockConsumerController.EXPECT().Close().Return(nil).AnyTimes()
+	mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(currentHeight, nil).AnyTimes()
+	mockConsumerController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
 
-	mockClientController.EXPECT().Close().Return(nil).AnyTimes()
-	mockClientController.EXPECT().QueryBestBlock().Return(currentBlockRes, nil).AnyTimes()
-	mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
+	// can't return (nil, nil) or `randomnessCommitmentLoop` will fatal (logic added in #454)
+	mockConsumerController.EXPECT().
+		CommitPubRandList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&types.TxResponse{TxHash: txHash}, nil).
+		AnyTimes()
+	return mockConsumerController
+}
 
-	return mockClientController
+func PrepareMockedBabylonController(t *testing.T) *mocks.MockClientController {
+	ctl := gomock.NewController(t)
+	mockBabylonController := mocks.NewMockClientController(ctl)
+	mockBabylonController.EXPECT().Close().Return(nil).AnyTimes()
+
+	return mockBabylonController
 }

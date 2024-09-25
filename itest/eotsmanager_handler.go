@@ -1,4 +1,4 @@
-package e2etest
+package e2e_utils
 
 import (
 	"testing"
@@ -15,26 +15,38 @@ import (
 type EOTSServerHandler struct {
 	t           *testing.T
 	interceptor *signal.Interceptor
-	eotsServer  *service.Server
+	eotsServers []*service.Server
 }
 
-func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string) *EOTSServerHandler {
-	shutdownInterceptor, err := signal.Intercept()
-	require.NoError(t, err)
+func NewEOTSServerHandlerMultiFP(
+	t *testing.T, configs []*config.Config, eotsHomeDirs []string, logger *zap.Logger, shutdownInterceptor *signal.Interceptor,
+) *EOTSServerHandler {
+	eotsServers := make([]*service.Server, 0, len(configs))
+	for i, cfg := range configs {
+		dbBackend, err := cfg.DatabaseConfig.GetDbBackend()
+		require.NoError(t, err)
 
-	dbBackend, err := cfg.DatabaseConfig.GetDbBackend()
-	require.NoError(t, err)
-	logger := zap.NewNop()
-	eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, cfg.KeyringBackend, dbBackend, logger)
-	require.NoError(t, err)
+		eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomeDirs[i], cfg.KeyringBackend, dbBackend, logger)
+		require.NoError(t, err)
 
-	eotsServer := service.NewEOTSManagerServer(cfg, logger, eotsManager, dbBackend, shutdownInterceptor)
+		eotsServer := service.NewEOTSManagerServer(cfg, logger, eotsManager, dbBackend, *shutdownInterceptor)
+		eotsServers = append(eotsServers, eotsServer)
+	}
 
 	return &EOTSServerHandler{
 		t:           t,
-		eotsServer:  eotsServer,
-		interceptor: &shutdownInterceptor,
+		eotsServers: eotsServers,
+		interceptor: shutdownInterceptor,
 	}
+}
+
+func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string) *EOTSServerHandler {
+	// TODO: no-op logger makes it hard to debug. replace w real logger.
+	// create shutdown interceptor
+	shutdownInterceptor, err := signal.Intercept()
+	require.NoError(t, err)
+	// this need refactor of NewEOTSServerHandler
+	return NewEOTSServerHandlerMultiFP(t, []*config.Config{cfg}, []string{eotsHomeDir}, zap.NewNop(), &shutdownInterceptor)
 }
 
 func (eh *EOTSServerHandler) Start() {
@@ -42,8 +54,12 @@ func (eh *EOTSServerHandler) Start() {
 }
 
 func (eh *EOTSServerHandler) startServer() {
-	err := eh.eotsServer.RunUntilShutdown()
-	require.NoError(eh.t, err)
+	for _, eotsServer := range eh.eotsServers {
+		go func(eotsServer *service.Server) {
+			err := eotsServer.RunUntilShutdown()
+			require.NoError(eh.t, err)
+		}(eotsServer)
+	}
 }
 
 func (eh *EOTSServerHandler) Stop() {
