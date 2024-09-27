@@ -719,7 +719,7 @@ func startExtSystemsAndCreateConsumerCfg(
 	require.NoError(t, err, "Error starting up op stack system")
 
 	// new op consumer controller
-	opL2ConsumerConfig.OPStackL2RPCAddress = opSys.EthInstances["sequencer"].HTTPEndpoint()
+	opL2ConsumerConfig.OPStackL2RPCAddress = opSys.NodeEndpoint("sequencer").RPC()
 	opL2ConsumerConfig.OPFinalityGadgetAddress = cwContractAddress
 
 	return opL2ConsumerConfig, opSys
