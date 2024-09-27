@@ -6,8 +6,8 @@ chains.
 
 ## Status Transitions
 
-The lifecycle of a finality provider instance involves 5 status: `Registered`,
-`Inactive`, `Active`, `Jailed`, `Slashed`. The status transition is depicted
+A finality provider has the following 5 possible states: `Registered`,
+`Inactive`, `Active`, `Jailed`, `Slashed`. The state transition is depicted
 in the following diagram.
 
 ![Finality Provider Status Transition](./fp-status-transition.png).
@@ -16,21 +16,21 @@ in the following diagram.
 
 We define invariants that the finality provider should satisfy:
 
-- Finality signature should be submitted for a block if:
+- The finality provider should submit a finality signature for a block if:
   - the block is not finalized,
   - the finality provider has positive voting power for this block,
   - the finality provider has not cast a finality signature for this block, and
   - the finality provider has cast finality votes for all non-finalized blocks
     prior to this block for which it has voting power.
 
-- Public randomness should be committed for a block if:
+- The finality provider should commit public randomness for a block if:
   - the block is not finalized, and
   - the finality provider has not committed any randomness for this block
 
 - A finality provider instance should not be running if it’s status is `slashed`
   or `jailed` on Babylon.
 
-#### Internal variables
+### Internal variables
 
 The finality provider maintains the following internal variables.
 * `last_voted_height`: the last block height on which the fp has cast a vote,
@@ -40,16 +40,16 @@ The finality provider maintains the following internal variables.
 
 Internal variables need to satisfy the following rules:
 * `last_processed_height >= last_voted_height` should always hold, and
-* `next_height > max{latest_finalized_height, last_processed_height}` should
+* `next_height = max{latest_finalized_height, last_processed_height} + 1` should
   always hold.
 
 ## Heuristics
 
 ### Sending finality votes
 
-* The poller polls blocks from start_height one by one monotonically.
+* The poller polls blocks from `start_height` one by one monotonically.
 * `start_height` should be the least height that satisfy
-  `start_height > max{latest_finalized_height, last_processed_height}`.
+  `start_height = max{latest_finalized_height, last_processed_height} + 1`.
 * For the next block from the poller, the finality provider retries to send
   a finality signature until the invariant is not satisfied.
 
@@ -77,7 +77,9 @@ behind due to network latency.
 
 * The finality provider enters fast sync if:
   * the finality provider is bootstrapping, or
-  * the `current_block_height - the last processed height > gap` (configured value).
+  * the `current_block_height - last_processed_height > gap` (configured value).
+  This condition might not be needed if we can do batching in normal processing
+  loop.
 
 During fast sync:
 1. block the poller,
