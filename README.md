@@ -10,6 +10,8 @@ at a finality round on top of [CometBFT](https://github.com/cometbft/cometbft).
 Similar to any native PoS validator,
 a finality provider can receive voting power delegations from BTC stakers, and
 can earn commission from the staking rewards denominated in Babylon tokens.
+The core logic of a finality provider instance can be found in
+[Finality Provider Core](./docs/fp-core.md).
 
 The finality provider toolset does not have
 any special hardware requirements
