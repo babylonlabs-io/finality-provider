@@ -48,7 +48,6 @@ func TestOpFpNoVotingPower(t *testing.T) {
 
 	_, err = ctm.FinalityGadget.QueryIsBlockBabylonFinalized(queryBlock)
 	require.ErrorIs(t, err, fgtypes.ErrBtcStakingNotActivated)
-	t.Logf(log.Prefix("Expected BTC staking not activated"))
 }
 
 // TestFinalityProviderLifeCycle tests the whole life cycle of a finality-provider
@@ -118,7 +117,7 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return !fpInstance.IsRunning()
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
-	t.Logf(log.Prefix("Stopped the FP instance"))
+	t.Logf(log.Prefix("Stopped the FP instance %s"), fpInstance.GetBtcPkHex())
 
 	// get the last voted height
 	lastVotedHeight := fpInstance.GetLastVotedHeight()
@@ -150,7 +149,7 @@ func TestFinalityStuckAndRecover(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return fpInstance.IsRunning()
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
-	t.Logf(log.Prefix("Restarted the FP instance"))
+	t.Logf(log.Prefix("Restarted the FP instance %s"), fpInstance.GetBtcPkHex())
 
 	// wait for next finalized block > stuckHeight
 	nextFinalizedHeight := ctm.WaitForBlockFinalized(t, stuckHeight+1)
@@ -188,7 +187,6 @@ func TestFinalityGadgetServer(t *testing.T) {
 	// start finality gadget processing blocks
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		t.Logf(log.Prefix("Starting finality gadget"))
 		err := ctm.FinalityGadget.ProcessBlocks(ctx)
 		require.NoError(t, err)
 	}()

@@ -136,12 +136,10 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 	require.NoError(t, err)
 	err = db.CreateInitialSchema()
 	require.NoError(t, err)
-	t.Logf(log.Prefix("Init local DB for finality gadget server"))
 
 	// Start finality gadget
 	fg, err := finalitygadget.NewFinalityGadget(&cfg, db, logger)
 	require.NoError(t, err)
-	t.Logf(log.Prefix("Created finality gadget"))
 
 	// Start finality gadget server
 	srv := fgsrv.NewFinalityGadgetServer(&cfg, db, fg, shutdownInterceptor, logger)
@@ -149,12 +147,10 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 		err = srv.RunUntilShutdown()
 		require.NoError(t, err)
 	}()
-	t.Logf(log.Prefix("Started finality gadget grpc server"))
 
 	// Create grpc client
 	client, err := fgclient.NewFinalityGadgetGrpcClient(babylonFinalityGadgetRpc)
 	require.NoError(t, err)
-	t.Logf(log.Prefix("Started finality gadget grpc client"))
 
 	ctm := &OpL2ConsumerTestManager{
 		BaseTestManager: BaseTestManager{
@@ -270,7 +266,6 @@ func createAndStartFpApp(
 
 	err = fpApp.Start()
 	require.NoError(t, err)
-	t.Logf(log.Prefix("Started FP App"))
 
 	return fpApp
 }
@@ -531,7 +526,6 @@ func (ctm *OpL2ConsumerTestManager) WaitForServicesStart(t *testing.T) {
 		ctm.StakingParams = params
 		return true
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
-	t.Logf(log.Prefix("Babylon node has started"))
 }
 
 func (ctm *OpL2ConsumerTestManager) getOpCCAtIndex(i int) *opcc.OPStackL2ConsumerController {
@@ -585,76 +579,6 @@ func (ctm *OpL2ConsumerTestManager) WaitForFpVoteReachHeight(
 		return lastVotedHeight >= height
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 	t.Logf(log.Prefix("Fp %s voted at height %d"), fpIns.GetBtcPkHex(), height)
-}
-
-/* wait for the target block height that the two FPs both have PubRand commitments
- * the algorithm should be:
- * - query LastPubRandCommit for both FPs until both have a commitment that has blockHeight >= l2BlockAfterActivation
- * - record the two block heights to be A and B. assume A <= B
- * - wait for FP(A) to catch up to have commitment that covers block B
- * - return B
- */
-// TODO: there are always two FPs, so we can simplify the logic and data structure. supporting more FPs will require a
-// refactor and more complex algorithm
-func (ctm *OpL2ConsumerTestManager) WaitForTargetBlockPubRand(
-	t *testing.T,
-	fpList []*service.FinalityProviderInstance,
-	l2BlockAfterActivation uint64,
-) uint64 {
-	require.Equal(t, 2, len(fpList), "The below algorithm only supports two FPs")
-	var firstFpCommittedPubRand, secondFpCommittedPubRand, targetBlockHeight uint64
-
-	// wait until both FPs have a PubRand commitment that covers blocks >= l2BlockAfterActivation
-	require.Eventually(t, func() bool {
-		if firstFpCommittedPubRand < l2BlockAfterActivation {
-			firstFpPRCommit, err := queryLastPublicRandCommit(
-				ctm.getOpCCAtIndex(0),
-				fpList[0].GetBtcPk(),
-			)
-			require.NoError(t, err)
-			if firstFpPRCommit != nil {
-				firstFpCommittedPubRand = firstFpPRCommit.StartHeight + firstFpPRCommit.NumPubRand - 1
-			}
-		}
-		if secondFpCommittedPubRand < l2BlockAfterActivation {
-			secondFpPRCommit, err := queryLastPublicRandCommit(
-				ctm.getOpCCAtIndex(1),
-				fpList[1].GetBtcPk(),
-			)
-			require.NoError(t, err)
-			if secondFpPRCommit != nil {
-				secondFpCommittedPubRand = secondFpPRCommit.StartHeight + secondFpPRCommit.NumPubRand - 1
-			}
-		}
-		return firstFpCommittedPubRand >= l2BlockAfterActivation && secondFpCommittedPubRand >= l2BlockAfterActivation
-	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
-	t.Logf(log.Prefix("firstFpCommittedPubRand %d, secondFpCommittedPubRand %d"),
-		firstFpCommittedPubRand, secondFpCommittedPubRand)
-
-	// find the FP's index whose PubRand commitment is for the block with the smaller height
-	i := 0
-	targetBlockHeight = secondFpCommittedPubRand // the target block is the one with larger height
-	if firstFpCommittedPubRand > secondFpCommittedPubRand {
-		i = 1
-		targetBlockHeight = firstFpCommittedPubRand
-	}
-
-	// wait until the two FPs have overlap in their PubRand commitments
-	require.Eventually(t, func() bool {
-		committedPubRand, err := ctm.getOpCCAtIndex(i).QueryLastPublicRandCommit(
-			fpList[i].GetBtcPk(),
-		)
-		require.NoError(t, err)
-		if committedPubRand == nil {
-			return false
-		}
-
-		// we found overlap between the two FPs' PubRand commitments
-		return committedPubRand.StartHeight+committedPubRand.NumPubRand-1 >= targetBlockHeight
-	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
-
-	t.Logf(log.Prefix("The target block height is %d"), targetBlockHeight)
-	return targetBlockHeight
 }
 
 // this works for both Babylon and OP FPs
@@ -860,8 +784,10 @@ func (ctm *OpL2ConsumerTestManager) StartConsumerFinalityProvider(
 	for i := 0; i < len(fpPkList); i++ {
 		app := ctm.ConsumerFpApps[i]
 		fpIns, err := app.GetFinalityProviderInstance(fpPkList[i])
-		if err != nil && !fpIns.IsRunning() {
+		if err != nil && fpIns == nil {
 			err := app.StartHandlingFinalityProvider(fpPkList[i], e2eutils.Passphrase)
+			require.NoError(t, err)
+			fpIns, err = app.GetFinalityProviderInstance(fpPkList[i])
 			require.NoError(t, err)
 			require.True(t, fpIns.IsRunning())
 		}
@@ -877,14 +803,6 @@ func queryFirstPublicRandCommit(
 	fpPk *btcec.PublicKey,
 ) (*types.PubRandCommit, error) {
 	return queryFirstOrLastPublicRandCommit(opcc, fpPk, true)
-}
-
-// query the FP has its last PubRand commitment
-func queryLastPublicRandCommit(
-	opcc *opstackl2.OPStackL2ConsumerController,
-	fpPk *btcec.PublicKey,
-) (*types.PubRandCommit, error) {
-	return queryFirstOrLastPublicRandCommit(opcc, fpPk, false)
 }
 
 // query the FP has its first or last PubRand commitment
