@@ -71,7 +71,7 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 	testDir, err := e2eutils.BaseDir("fpe2etest")
 	require.NoError(t, err)
 
-	logger := createLogger(t, zapcore.ErrorLevel)
+	logger := createLogger(t, zapcore.InfoLevel)
 
 	// generate covenant committee
 	covenantQuorum := 2
@@ -709,6 +709,7 @@ func startExtSystemsAndCreateConsumerCfg(
 	opSysCfg.Loggers["verifier"] = optestlog.Logger(t, gethlog.LevelError).New("role", "verifier")
 	opSysCfg.Loggers["sequencer"] = optestlog.Logger(t, gethlog.LevelError).New("role", "sequencer")
 	opSysCfg.Loggers["batcher"] = optestlog.Logger(t, gethlog.LevelError).New("role", "watcher")
+	opSysCfg.Loggers["proposer"] = optestlog.Logger(t, gethlog.LevelError).New("role", "proposer")
 
 	// specify babylon finality gadget rpc address
 	opL2ConsumerConfig.BabylonFinalityGadgetRpc = babylonFinalityGadgetRpc
@@ -858,13 +859,13 @@ func (ctm *OpL2ConsumerTestManager) StartConsumerFinalityProvider(
 
 	for i := 0; i < len(fpPkList); i++ {
 		app := ctm.ConsumerFpApps[i]
-		err := app.StartHandlingFinalityProvider(fpPkList[i], e2eutils.Passphrase)
-		require.NoError(t, err)
 		fpIns, err := app.GetFinalityProviderInstance(fpPkList[i])
+		if err != nil && !fpIns.IsRunning() {
+			err := app.StartHandlingFinalityProvider(fpPkList[i], e2eutils.Passphrase)
+			require.NoError(t, err)
+			require.True(t, fpIns.IsRunning())
+		}
 		resFpList[i] = fpIns
-		require.NoError(t, err)
-		require.True(t, fpIns.IsRunning())
-		require.NoError(t, err)
 	}
 
 	return resFpList
