@@ -48,6 +48,21 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 	lastVotedHeight := tm.WaitForFpVoteCast(t, fpIns)
 	tm.CheckBlockFinalization(t, lastVotedHeight, 1)
 	t.Logf("the block at height %v is finalized", lastVotedHeight)
+
+	// stop the FP for several blocks and disable fast sync, and then restart FP
+	// finality signature submission should get into the default case
+	var n uint = 3
+	tm.FpConfig.FastSyncInterval = 0
+	// finality signature submission would take about 5 seconds
+	// set the poll interval to 2 seconds to make sure the poller channel has multiple blocks
+	tm.FpConfig.PollerConfig.PollInterval = 2 * time.Second
+	tm.StopAndRestartFpAfterNBlocks(t, n, fpIns)
+
+	// wait for finality signature submission to run two times
+	time.Sleep(12 * time.Second)
+	lastProcessedHeight := fpIns.GetLastProcessedHeight()
+	require.True(t, lastProcessedHeight >= lastVotedHeight+uint64(n))
+	t.Logf("the last processed height is %v", lastProcessedHeight)
 }
 
 // TestDoubleSigning tests the attack scenario where the finality-provider
