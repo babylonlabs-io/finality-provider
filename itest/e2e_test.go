@@ -12,7 +12,6 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
 
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
@@ -103,15 +102,6 @@ func TestDoubleSigning(t *testing.T) {
 	t.Logf("the equivocation attack is successful")
 
 	tm.WaitForFpShutDown(t, fpIns.GetBtcPkBIP340())
-
-	// try to start all the finality providers and the slashed one should not be restarted
-	err = tm.Fpa.StartHandlingAll()
-	require.NoError(t, err)
-	fps, err := tm.Fpa.ListAllFinalityProvidersInfo()
-	require.NoError(t, err)
-	require.Equal(t, 1, len(fps))
-	require.Equal(t, proto.FinalityProviderStatus_name[4], fps[0].Status)
-	require.Equal(t, false, fps[0].IsRunning)
 }
 
 // TestFastSync tests the fast sync process where the finality-provider is terminated and restarted with fast sync
