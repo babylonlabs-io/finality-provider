@@ -3,13 +3,11 @@ package service
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
@@ -101,13 +99,13 @@ func (fpm *FinalityProviderManager) monitorCriticalErr() {
 			}
 			// cannot use error.Is because the unwrapped error
 			// is not the expected error type
-			if strings.Contains(criticalErr.err.Error(), btcstakingtypes.ErrFpAlreadySlashed.Error()) {
+			if errors.Is(criticalErr.err, ErrFinalityProviderSlashed) {
 				fpm.setFinalityProviderSlashed(fpi)
 				fpm.logger.Debug("the finality-provider has been slashed",
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
 				continue
 			}
-			if strings.Contains(criticalErr.err.Error(), btcstakingtypes.ErrFpAlreadyJailed.Error()) {
+			if errors.Is(criticalErr.err, ErrFinalityProviderJailed) {
 				fpm.setFinalityProviderJailed(fpi)
 				fpm.logger.Debug("the finality-provider has been jailed",
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))

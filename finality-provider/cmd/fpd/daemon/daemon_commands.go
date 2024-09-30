@@ -180,7 +180,7 @@ func CommandUnjailFP() *cobra.Command {
 		Use:     "unjail-finality-provider",
 		Aliases: []string{"ufp"},
 		Short:   "Unjail the given finality provider.",
-		Example: fmt.Sprintf(`fpd unjail-finality-provider [eots_pk]--daemon-address %s ...`, defaultFpdDaemonAddress),
+		Example: fmt.Sprintf(`fpd unjail-finality-provider [eots-pk] --daemon-address %s ...`, defaultFpdDaemonAddress),
 		Args:    cobra.ExactArgs(1),
 		RunE:    fpcmd.RunEWithClientCtx(runCommandUnjailFP),
 	}
