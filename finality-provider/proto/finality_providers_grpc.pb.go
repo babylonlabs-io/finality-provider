@@ -23,6 +23,7 @@ const (
 	FinalityProviders_CreateFinalityProvider_FullMethodName    = "/proto.FinalityProviders/CreateFinalityProvider"
 	FinalityProviders_RegisterFinalityProvider_FullMethodName  = "/proto.FinalityProviders/RegisterFinalityProvider"
 	FinalityProviders_AddFinalitySignature_FullMethodName      = "/proto.FinalityProviders/AddFinalitySignature"
+	FinalityProviders_UnjailFinalityProvider_FullMethodName    = "/proto.FinalityProviders/UnjailFinalityProvider"
 	FinalityProviders_QueryFinalityProvider_FullMethodName     = "/proto.FinalityProviders/QueryFinalityProvider"
 	FinalityProviders_QueryFinalityProviderList_FullMethodName = "/proto.FinalityProviders/QueryFinalityProviderList"
 	FinalityProviders_SignMessageFromChainKey_FullMethodName   = "/proto.FinalityProviders/SignMessageFromChainKey"
@@ -42,6 +43,9 @@ type FinalityProvidersClient interface {
 	// AddFinalitySignature sends a transactions to the consumer chain to add a Finality
 	// signature for a block
 	AddFinalitySignature(ctx context.Context, in *AddFinalitySignatureRequest, opts ...grpc.CallOption) (*AddFinalitySignatureResponse, error)
+	// UnjailFinalityProvider sends a transactions to the consumer chain to unjail a given
+	// finality provider
+	UnjailFinalityProvider(ctx context.Context, in *UnjailFinalityProviderRequest, opts ...grpc.CallOption) (*UnjailFinalityProviderResponse, error)
 	// QueryFinalityProvider queries the finality provider
 	QueryFinalityProvider(ctx context.Context, in *QueryFinalityProviderRequest, opts ...grpc.CallOption) (*QueryFinalityProviderResponse, error)
 	// QueryFinalityProviderList queries a list of finality providers
@@ -94,6 +98,15 @@ func (c *finalityProvidersClient) AddFinalitySignature(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *finalityProvidersClient) UnjailFinalityProvider(ctx context.Context, in *UnjailFinalityProviderRequest, opts ...grpc.CallOption) (*UnjailFinalityProviderResponse, error) {
+	out := new(UnjailFinalityProviderResponse)
+	err := c.cc.Invoke(ctx, FinalityProviders_UnjailFinalityProvider_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *finalityProvidersClient) QueryFinalityProvider(ctx context.Context, in *QueryFinalityProviderRequest, opts ...grpc.CallOption) (*QueryFinalityProviderResponse, error) {
 	out := new(QueryFinalityProviderResponse)
 	err := c.cc.Invoke(ctx, FinalityProviders_QueryFinalityProvider_FullMethodName, in, out, opts...)
@@ -135,6 +148,9 @@ type FinalityProvidersServer interface {
 	// AddFinalitySignature sends a transactions to the consumer chain to add a Finality
 	// signature for a block
 	AddFinalitySignature(context.Context, *AddFinalitySignatureRequest) (*AddFinalitySignatureResponse, error)
+	// UnjailFinalityProvider sends a transactions to the consumer chain to unjail a given
+	// finality provider
+	UnjailFinalityProvider(context.Context, *UnjailFinalityProviderRequest) (*UnjailFinalityProviderResponse, error)
 	// QueryFinalityProvider queries the finality provider
 	QueryFinalityProvider(context.Context, *QueryFinalityProviderRequest) (*QueryFinalityProviderResponse, error)
 	// QueryFinalityProviderList queries a list of finality providers
@@ -159,6 +175,9 @@ func (UnimplementedFinalityProvidersServer) RegisterFinalityProvider(context.Con
 }
 func (UnimplementedFinalityProvidersServer) AddFinalitySignature(context.Context, *AddFinalitySignatureRequest) (*AddFinalitySignatureResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddFinalitySignature not implemented")
+}
+func (UnimplementedFinalityProvidersServer) UnjailFinalityProvider(context.Context, *UnjailFinalityProviderRequest) (*UnjailFinalityProviderResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnjailFinalityProvider not implemented")
 }
 func (UnimplementedFinalityProvidersServer) QueryFinalityProvider(context.Context, *QueryFinalityProviderRequest) (*QueryFinalityProviderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryFinalityProvider not implemented")
@@ -254,6 +273,24 @@ func _FinalityProviders_AddFinalitySignature_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FinalityProviders_UnjailFinalityProvider_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnjailFinalityProviderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinalityProvidersServer).UnjailFinalityProvider(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FinalityProviders_UnjailFinalityProvider_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinalityProvidersServer).UnjailFinalityProvider(ctx, req.(*UnjailFinalityProviderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FinalityProviders_QueryFinalityProvider_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryFinalityProviderRequest)
 	if err := dec(in); err != nil {
@@ -330,6 +367,10 @@ var FinalityProviders_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AddFinalitySignature",
 			Handler:    _FinalityProviders_AddFinalitySignature_Handler,
+		},
+		{
+			MethodName: "UnjailFinalityProvider",
+			Handler:    _FinalityProviders_UnjailFinalityProvider_Handler,
 		},
 		{
 			MethodName: "QueryFinalityProvider",

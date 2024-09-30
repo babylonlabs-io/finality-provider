@@ -9,7 +9,6 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/gogo/protobuf/jsonpb"
@@ -98,10 +97,17 @@ func (fp *FinalityProviderInstance) Start() error {
 		return fmt.Errorf("the finality-provider instance %s is already started", fp.GetBtcPkHex())
 	}
 
+	if fp.IsJailed() {
+		return fmt.Errorf("%w: %s", ErrFinalityProviderJailed, fp.GetBtcPkHex())
+	}
+
 	fp.logger.Info("Starting finality-provider instance", zap.String("pk", fp.GetBtcPkHex()))
 
 	startHeight, err := fp.bootstrap()
 	if err != nil {
+		if errors.Is(err, ErrFinalityProviderJailed) {
+			fp.MustSetStatus(proto.FinalityProviderStatus_JAILED)
+		}
 		return fmt.Errorf("failed to bootstrap the finality-provider %s: %w", fp.GetBtcPkHex(), err)
 	}
 
@@ -174,6 +180,10 @@ func (fp *FinalityProviderInstance) IsRunning() bool {
 	return fp.isStarted.Load()
 }
 
+func (fp *FinalityProviderInstance) IsJailed() bool {
+	return fp.GetStatus() == proto.FinalityProviderStatus_JAILED
+}
+
 func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 	defer fp.wg.Done()
 
@@ -230,7 +240,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 			res, err := fp.tryFastSync(targetBlock)
 			fp.isLagging.Store(false)
 			if err != nil {
-				if errors.Is(err, bstypes.ErrFpAlreadySlashed) {
+				if errors.Is(err, ErrFinalityProviderSlashed) {
 					fp.reportCriticalErr(err)
 					continue
 				}
@@ -696,7 +706,13 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 	// send finality signature to the consumer chain
 	res, err := fp.cc.SubmitBatchFinalitySigs(fp.GetBtcPk(), blocks, prList, proofBytesList, sigList)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send a batch of finality signatures to the consumer chain: %w", err)
+		if strings.Contains(err.Error(), "jailed") {
+			return nil, ErrFinalityProviderJailed
+		}
+		if strings.Contains(err.Error(), "slashed") {
+			return nil, ErrFinalityProviderSlashed
+		}
+		return nil, err
 	}
 
 	// update DB

@@ -187,6 +187,23 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 	return res, nil
 }
 
+// UnjailFinalityProvider unjails a finality-provider
+func (r *rpcServer) UnjailFinalityProvider(ctx context.Context, req *proto.UnjailFinalityProviderRequest) (
+	*proto.UnjailFinalityProviderResponse, error) {
+
+	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
+	if err != nil {
+		return nil, err
+	}
+
+	txHash, err := r.app.UnjailFinalityProvider(fpPk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unjail the finality-provider: %w", err)
+	}
+
+	return &proto.UnjailFinalityProviderResponse{TxHash: txHash}, nil
+}
+
 // QueryFinalityProvider queries the information of the finality-provider
 func (r *rpcServer) QueryFinalityProvider(ctx context.Context, req *proto.QueryFinalityProviderRequest) (
 	*proto.QueryFinalityProviderResponse, error) {
