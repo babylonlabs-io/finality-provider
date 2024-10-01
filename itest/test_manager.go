@@ -3,8 +3,6 @@ package e2etest
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/itest/container"
-	"github.com/babylonlabs-io/finality-provider/testutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -13,6 +11,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/itest/container"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/btcstaking"
