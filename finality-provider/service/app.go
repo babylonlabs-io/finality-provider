@@ -379,6 +379,37 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 	}
 }
 
+// UnjailFinalityProvider sends a transaction to unjail a finality-provider
+func (app *FinalityProviderApp) UnjailFinalityProvider(fpPk *bbntypes.BIP340PubKey) (string, error) {
+	_, err := app.fps.GetFinalityProvider(fpPk.MustToBTCPK())
+	if err != nil {
+		return "", fmt.Errorf("failed to get finality provider from db: %w", err)
+	}
+
+	// Send unjail transaction
+	res, err := app.cc.UnjailFinalityProvider(fpPk.MustToBTCPK())
+	if err != nil {
+		return "", fmt.Errorf("failed to send unjail transaction: %w", err)
+	}
+
+	// Update finality-provider status in the local store
+	// set it to INACTIVE for now and it will be updated to
+	// ACTIVE if the fp has voting power
+	err = app.fps.SetFpStatus(fpPk.MustToBTCPK(), proto.FinalityProviderStatus_INACTIVE)
+	if err != nil {
+		return "", fmt.Errorf("failed to update finality-provider status after unjailing: %w", err)
+	}
+
+	app.fpManager.metrics.RecordFpStatus(fpPk.MarshalHex(), proto.FinalityProviderStatus_INACTIVE)
+
+	app.logger.Info("successfully unjailed finality-provider",
+		zap.String("btc_pk", fpPk.MarshalHex()),
+		zap.String("txHash", res.TxHash),
+	)
+
+	return res.TxHash, nil
+}
+
 func (app *FinalityProviderApp) handleCreateFinalityProviderRequest(req *createFinalityProviderRequest) (*createFinalityProviderResponse, error) {
 	// 1. check if the chain key exists
 	kr, err := fpkr.NewChainKeyringControllerWithKeyring(app.kr, req.keyName, app.input)

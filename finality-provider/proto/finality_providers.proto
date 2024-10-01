@@ -26,6 +26,11 @@ service FinalityProviders {
     rpc AddFinalitySignature(AddFinalitySignatureRequest)
         returns (AddFinalitySignatureResponse);
 
+    // UnjailFinalityProvider sends a transactions to the consumer chain to unjail a given
+    // finality provider
+    rpc UnjailFinalityProvider(UnjailFinalityProviderRequest)
+        returns (UnjailFinalityProviderResponse);
+
     // QueryFinalityProvider queries the finality provider
     rpc QueryFinalityProvider (QueryFinalityProviderRequest) returns (QueryFinalityProviderResponse);
 
@@ -99,6 +104,16 @@ message AddFinalitySignatureResponse {
     string extracted_sk_hex = 2;
     // the hex string of the local Bitcoin secp256k1 private key
     string local_sk_hex = 3;
+}
+
+message UnjailFinalityProviderRequest {
+    // btc_pk is hex string of the BTC secp256k1 public key of the finality provider encoded in BIP-340 spec
+    string btc_pk = 1;
+}
+
+message UnjailFinalityProviderResponse {
+    // hash of the successful chain unjail finality provider transaction
+    string tx_hash = 1;
 }
 
 message QueryFinalityProviderRequest {

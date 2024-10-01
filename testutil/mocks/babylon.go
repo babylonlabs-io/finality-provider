@@ -232,3 +232,18 @@ func (mr *MockClientControllerMockRecorder) SubmitFinalitySig(fpPk, block, pubRa
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitFinalitySig", reflect.TypeOf((*MockClientController)(nil).SubmitFinalitySig), fpPk, block, pubRand, proof, sig)
 }
+
+// UnjailFinalityProvider mocks base method.
+func (m *MockClientController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types0.TxResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnjailFinalityProvider", fpPk)
+	ret0, _ := ret[0].(*types0.TxResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnjailFinalityProvider indicates an expected call of UnjailFinalityProvider.
+func (mr *MockClientControllerMockRecorder) UnjailFinalityProvider(fpPk interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnjailFinalityProvider", reflect.TypeOf((*MockClientController)(nil).UnjailFinalityProvider), fpPk)
+}

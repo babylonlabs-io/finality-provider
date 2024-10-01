@@ -33,6 +33,7 @@ require (
 	github.com/urfave/cli v1.22.14
 	go.uber.org/atomic v1.10.0
 	go.uber.org/zap v1.26.0
+	golang.org/x/mod v0.17.0
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.33.0
 )
@@ -266,7 +267,6 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0 // indirect
-	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect

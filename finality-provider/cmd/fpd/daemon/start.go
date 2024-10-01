@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"path/filepath"
@@ -133,9 +134,22 @@ func startApp(
 		}
 
 		if err := fpApp.StartHandlingFinalityProvider(fpPk, passphrase); err != nil {
+			if errors.Is(err, service.ErrFinalityProviderJailed) {
+				fpApp.Logger().Error("failed to start finality provider", zap.Error(err))
+				// do not return error as we still want the service to start
+				return nil
+			}
 			return fmt.Errorf("failed to start the finality-provider instance %s: %w", fpPkStr, err)
 		}
 	}
 
-	return fpApp.StartHandlingAll()
+	if err := fpApp.StartHandlingAll(); err != nil {
+		if errors.Is(err, service.ErrFinalityProviderJailed) {
+			fpApp.Logger().Error("failed to start finality provider", zap.Error(err))
+			// do not return error as we still want the service to start
+			return nil
+		}
+	}
+
+	return nil
 }
