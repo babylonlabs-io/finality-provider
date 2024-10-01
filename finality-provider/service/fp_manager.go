@@ -246,11 +246,6 @@ func (fpm *FinalityProviderManager) StartFinalityProvider(fpPk *bbntypes.BIP340P
 	}
 
 	if err := fpm.addFinalityProviderInstance(fpPk, passphrase); err != nil {
-		if errors.Is(err, ErrFinalityProviderJailed) {
-			fpm.logger.Error("failed to start finality provider", zap.Error(err))
-			// do not return error
-			return nil
-		}
 		return err
 	}
 

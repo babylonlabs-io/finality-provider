@@ -105,9 +105,6 @@ func (fp *FinalityProviderInstance) Start() error {
 
 	startHeight, err := fp.bootstrap()
 	if err != nil {
-		if errors.Is(err, ErrFinalityProviderJailed) {
-			fp.MustSetStatus(proto.FinalityProviderStatus_JAILED)
-		}
 		return fmt.Errorf("failed to bootstrap the finality-provider %s: %w", fp.GetBtcPkHex(), err)
 	}
 
@@ -144,8 +141,13 @@ func (fp *FinalityProviderInstance) bootstrap() (uint64, error) {
 
 	if fp.checkLagging(latestBlock) {
 		_, err := fp.tryFastSync(latestBlock)
-		if err != nil && !clientcontroller.IsExpected(err) {
-			return 0, err
+		if err != nil {
+			if errors.Is(err, ErrFinalityProviderJailed) {
+				fp.MustSetStatus(proto.FinalityProviderStatus_JAILED)
+			}
+			if !clientcontroller.IsExpected(err) {
+				return 0, err
+			}
 		}
 	}
 
