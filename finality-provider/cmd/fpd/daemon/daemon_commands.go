@@ -174,6 +174,44 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 	return nil
 }
 
+// CommandUnjailFP returns the unjail-finality-provider command by connecting to the fpd daemon.
+func CommandUnjailFP() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:     "unjail-finality-provider",
+		Aliases: []string{"ufp"},
+		Short:   "Unjail the given finality provider.",
+		Example: fmt.Sprintf(`fpd unjail-finality-provider [eots-pk] --daemon-address %s ...`, defaultFpdDaemonAddress),
+		Args:    cobra.ExactArgs(1),
+		RunE:    fpcmd.RunEWithClientCtx(runCommandUnjailFP),
+	}
+
+	f := cmd.Flags()
+	f.String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+
+	return cmd
+}
+
+func runCommandUnjailFP(_ client.Context, cmd *cobra.Command, args []string) error {
+	flags := cmd.Flags()
+	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+	}
+
+	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
+	if err != nil {
+		return err
+	}
+	defer cleanUp()
+
+	_, err = client.UnjailFinalityProvider(context.Background(), args[0])
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func getDescriptionFromFlags(f *pflag.FlagSet) (desc stakingtypes.Description, err error) {
 	// get information for description
 	monikerStr, err := f.GetString(monikerFlag)

@@ -40,7 +40,8 @@ type ClientController interface {
 	// SubmitBatchFinalitySigs submits a batch of finality signatures to the consumer chain
 	SubmitBatchFinalitySigs(fpPk *btcec.PublicKey, blocks []*types.BlockInfo, pubRandList []*btcec.FieldVal, proofList [][]byte, sigs []*btcec.ModNScalar) (*types.TxResponse, error)
 
-	// Note: the following queries are only for PoC
+	// UnjailFinalityProvider sends an unjail transaction to the consumer chain
+	UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error)
 
 	// QueryFinalityProviderVotingPower queries the voting power of the finality provider at a given height
 	QueryFinalityProviderVotingPower(fpPk *btcec.PublicKey, blockHeight uint64) (uint64, error)

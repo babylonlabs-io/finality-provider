@@ -103,6 +103,19 @@ func (c *FinalityProviderServiceGRpcClient) AddFinalitySignature(ctx context.Con
 	return res, nil
 }
 
+func (c *FinalityProviderServiceGRpcClient) UnjailFinalityProvider(ctx context.Context, fpPk string) (*proto.UnjailFinalityProviderResponse, error) {
+	req := &proto.UnjailFinalityProviderRequest{
+		BtcPk: fpPk,
+	}
+
+	res, err := c.client.UnjailFinalityProvider(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 func (c *FinalityProviderServiceGRpcClient) QueryFinalityProviderList(ctx context.Context) (*proto.QueryFinalityProviderListResponse, error) {
 	req := &proto.QueryFinalityProviderListRequest{}
 	res, err := c.client.QueryFinalityProviderList(ctx, req)

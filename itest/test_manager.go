@@ -32,7 +32,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller"
-
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
