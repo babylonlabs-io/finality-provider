@@ -2,6 +2,7 @@ package e2etest
 
 import (
 	"encoding/hex"
+	"fmt"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -10,6 +11,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/itest/container"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/btcstaking"
@@ -55,7 +59,6 @@ var (
 
 type TestManager struct {
 	Wg                sync.WaitGroup
-	BabylonHandler    *BabylonNodeHandler
 	EOTSServerHandler *EOTSServerHandler
 	FpConfig          *fpcfg.Config
 	EOTSConfig        *eotsconfig.Config
@@ -65,6 +68,7 @@ type TestManager struct {
 	StakingParams     *types.StakingParams
 	CovenantPrivKeys  []*btcec.PrivateKey
 	baseDir           string
+	manager           *container.Manager
 }
 
 type TestDelegationData struct {
@@ -84,7 +88,9 @@ type TestDelegationData struct {
 }
 
 func StartManager(t *testing.T) *TestManager {
-	testDir, err := tempDirWithName("fpe2etest")
+	manager, err := container.NewManager(t)
+	require.NoError(t, err)
+	testDir, err := tempDir(t, "fp-e2e-test-*")
 	require.NoError(t, err)
 
 	logger := zap.NewNop()
@@ -95,13 +101,23 @@ func StartManager(t *testing.T) *TestManager {
 	covenantPrivKeys, covenantPubKeys := generateCovenantCommittee(numCovenants, t)
 
 	// 2. prepare Babylon node
-	bh := NewBabylonNodeHandler(t, covenantQuorum, covenantPubKeys)
-	err = bh.Start()
+	babylonDir, err := tempDir(t, "babylon-test-*")
 	require.NoError(t, err)
+	babylond, err := manager.RunBabylondResource(t, babylonDir, covenantQuorum, covenantPubKeys)
+	require.NoError(t, err)
+
 	fpHomeDir := filepath.Join(testDir, "fp-home")
-	cfg := defaultFpConfig(bh.GetNodeDataDir(), fpHomeDir)
-	bc, err := fpcc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
-	require.NoError(t, err)
+	keyDir := filepath.Join(babylonDir, "node0", "babylond")
+	cfg := defaultFpConfig(keyDir, fpHomeDir)
+	// update ports with the dynamically allocated ones from docker
+	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
+	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", babylond.GetPort("9090/tcp"))
+
+	var bc *fpcc.BabylonController
+	require.Eventually(t, func() bool {
+		bc, err = fpcc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		return err == nil
+	}, 5*time.Second, eventuallyPollTime)
 
 	var currentEpoch uint64
 	require.Eventually(t, func() bool {
@@ -116,9 +132,11 @@ func StartManager(t *testing.T) *TestManager {
 	// 3. prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
 	eotsCfg := eotsconfig.DefaultConfigWithHomePath(eotsHomeDir)
+	eotsCfg.RpcListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start()
-	eotsCli, err := client.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress)
+	cfg.RpcListener = eotsCfg.RpcListener
+	eotsCli, err := client.NewEOTSManagerGRpcClient(cfg.RpcListener)
 	require.NoError(t, err)
 
 	// 4. prepare finality-provider
@@ -130,7 +148,6 @@ func StartManager(t *testing.T) *TestManager {
 	require.NoError(t, err)
 
 	tm := &TestManager{
-		BabylonHandler:    bh,
 		EOTSServerHandler: eh,
 		FpConfig:          cfg,
 		EOTSConfig:        eotsCfg,
@@ -139,6 +156,7 @@ func StartManager(t *testing.T) *TestManager {
 		BBNClient:         bc,
 		CovenantPrivKeys:  covenantPrivKeys,
 		baseDir:           testDir,
+		manager:           manager,
 	}
 
 	tm.WaitForServicesStart(t)
@@ -183,7 +201,7 @@ func StartManagerWithFinalityProvider(t *testing.T, n int) (*TestManager, []*ser
 		app.UpdateClientController(cc)
 
 		// add some funds for new fp pay for fees '-'
-		err = tm.BabylonHandler.BabylonNode.TxBankSend(fpBbnKeyInfo.AccAddress.String(), "1000000ubbn")
+		_, _, err = tm.manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), "1000000ubbn", "node0")
 		require.NoError(t, err)
 
 		res, err := app.CreateFinalityProvider(fpName, chainID, passphrase, hdPath, nil, desc, &commission)
@@ -242,7 +260,7 @@ func StartManagerWithFinalityProvider(t *testing.T, n int) (*TestManager, []*ser
 func (tm *TestManager) Stop(t *testing.T) {
 	err := tm.Fpa.Stop()
 	require.NoError(t, err)
-	err = tm.BabylonHandler.Stop()
+	err = tm.manager.ClearResources()
 	require.NoError(t, err)
 	err = os.RemoveAll(tm.baseDir)
 	require.NoError(t, err)
@@ -439,7 +457,7 @@ func (tm *TestManager) InsertCovenantSigForDelegation(t *testing.T, btcDel *bsty
 		[]*btcec.PublicKey{btcDel.FpBtcPkList[0].MustToBTCPK()},
 		params.CovenantPks,
 		params.CovenantQuorum,
-		btcDel.GetStakingTime(),
+		uint16(btcDel.EndHeight-btcDel.StartHeight),
 		btcutil.Amount(btcDel.TotalSat),
 		simnetParams,
 	)
@@ -816,23 +834,6 @@ func defaultFpConfig(keyringDir, homeDir string) *fpcfg.Config {
 	cfg.BabylonConfig.GasAdjustment = 20
 
 	return &cfg
-}
-
-func tempDirWithName(name string) (string, error) {
-	tempPath := os.TempDir()
-
-	tempName, err := os.MkdirTemp(tempPath, name)
-	if err != nil {
-		return "", err
-	}
-
-	err = os.Chmod(tempName, 0755)
-
-	if err != nil {
-		return "", err
-	}
-
-	return tempName, nil
 }
 
 func newDescription(moniker string) *stakingtypes.Description {
