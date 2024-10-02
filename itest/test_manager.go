@@ -458,7 +458,7 @@ func (tm *TestManager) InsertCovenantSigForDelegation(t *testing.T, btcDel *bsty
 		[]*btcec.PublicKey{btcDel.FpBtcPkList[0].MustToBTCPK()},
 		params.CovenantPks,
 		params.CovenantQuorum,
-		uint16(btcDel.GetStakingTime()),
+		uint16(btcDel.EndHeight-btcDel.StartHeight),
 		btcutil.Amount(btcDel.TotalSat),
 		simnetParams,
 	)
