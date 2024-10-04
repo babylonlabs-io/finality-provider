@@ -59,7 +59,7 @@ type ClientController interface {
 	QueryBlock(height uint64) (*types.BlockInfo, error)
 
 	// QueryBlocks returns a list of blocks from startHeight to endHeight
-	QueryBlocks(startHeight, endHeight, limit uint64) ([]*types.BlockInfo, error)
+	QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types.BlockInfo, error)
 
 	// QueryBestBlock queries the tip block of the consumer chain
 	QueryBestBlock() (*types.BlockInfo, error)

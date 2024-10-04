@@ -64,8 +64,11 @@ func (s *Server) RunUntilShutdown() error {
 
 	defer func() {
 		s.logger.Info("Closing database...")
-		s.db.Close()
-		s.logger.Info("Database closed")
+		if err := s.db.Close(); err != nil {
+			s.logger.Error(fmt.Sprintf("Failed to close database: %v", err)) // Log the error
+		} else {
+			s.logger.Info("Database closed")
+		}
 		metricsServer.Stop(context.Background())
 		s.logger.Info("Metrics server stopped")
 	}()
@@ -77,7 +80,11 @@ func (s *Server) RunUntilShutdown() error {
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", listenAddr, err)
 	}
-	defer lis.Close()
+	defer func() {
+		if err := lis.Close(); err != nil {
+			s.logger.Error(fmt.Sprintf("Failed to close network listener: %v", err))
+		}
+	}()
 
 	grpcServer := grpc.NewServer()
 	defer grpcServer.Stop()

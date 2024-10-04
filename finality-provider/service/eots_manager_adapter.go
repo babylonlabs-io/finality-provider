@@ -11,12 +11,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-func (fp *FinalityProviderInstance) getPubRandList(startHeight uint64, numPubRand uint64) ([]*btcec.FieldVal, error) {
+func (fp *FinalityProviderInstance) getPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
 	pubRandList, err := fp.em.CreateRandomnessPairList(
 		fp.btcPk.MustMarshal(),
 		fp.GetChainID(),
 		startHeight,
-		uint32(numPubRand),
+		numPubRand,
 		fp.passphrase,
 	)
 	if err != nil {
