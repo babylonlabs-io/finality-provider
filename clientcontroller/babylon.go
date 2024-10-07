@@ -6,7 +6,7 @@ import (
 	"time"
 
 	sdkErr "cosmossdk.io/errors"
-	"cosmossdk.io/math"
+	sdkmath "cosmossdk.io/math"
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	btcctypes "github.com/babylonlabs-io/babylon/x/btccheckpoint/types"
@@ -55,7 +55,7 @@ func NewBabylonController(
 		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
 	}
 
-	// makes sure that the key in config really exists and it is a valid bech 32 addr
+	// makes sure that the key in config really exists and is a valid bech32 addr
 	// to allow using mustGetTxSigner
 	if _, err := bc.GetAddr(); err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (bc *BabylonController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sd
 func (bc *BabylonController) RegisterFinalityProvider(
 	fpPk *btcec.PublicKey,
 	pop []byte,
-	commission *math.LegacyDec,
+	commission *sdkmath.LegacyDec,
 	description []byte,
 ) (*types.TxResponse, error) {
 	var bbnPop btcstakingtypes.ProofOfPossessionBTC
@@ -323,13 +323,13 @@ func (bc *BabylonController) QueryLastCommittedPublicRand(fpPk *btcec.PublicKey,
 	return res.PubRandCommitMap, nil
 }
 
-func (bc *BabylonController) QueryBlocks(startHeight, endHeight, limit uint64) ([]*types.BlockInfo, error) {
+func (bc *BabylonController) QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types.BlockInfo, error) {
 	if endHeight < startHeight {
 		return nil, fmt.Errorf("the startHeight %v should not be higher than the endHeight %v", startHeight, endHeight)
 	}
 	count := endHeight - startHeight + 1
-	if count > limit {
-		count = limit
+	if count > uint64(limit) {
+		count = uint64(limit)
 	}
 	return bc.queryLatestBlocks(sdk.Uint64ToBigEndian(startHeight), count, finalitytypes.QueriedBlockStatus_ANY, false)
 }
@@ -405,10 +405,14 @@ func (bc *BabylonController) queryCometBestBlock() (*types.BlockInfo, error) {
 		return nil, err
 	}
 
+	headerHeightInt64 := chainInfo.BlockMetas[0].Header.Height
+	if headerHeightInt64 < 0 {
+		return nil, fmt.Errorf("block height %v should be positive", headerHeightInt64)
+	}
 	// Returning response directly, if header with specified number did not exist
 	// at request will contain nil header
 	return &types.BlockInfo{
-		Height: uint64(chainInfo.BlockMetas[0].Header.Height),
+		Height: uint64(headerHeightInt64),
 		Hash:   chainInfo.BlockMetas[0].Header.AppHash,
 	}, nil
 }

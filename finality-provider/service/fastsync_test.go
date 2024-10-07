@@ -52,7 +52,7 @@ func FuzzFastSync_SufficientRandomness(f *testing.F) {
 		expectedTxHash := testutil.GenRandomHexStr(r, 32)
 		finalizedBlock := &types.BlockInfo{Height: finalizedHeight, Hash: testutil.GenRandomByteArray(r, 32)}
 		mockClientController.EXPECT().QueryLatestFinalizedBlocks(uint64(1)).Return([]*types.BlockInfo{finalizedBlock}, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBlocks(finalizedHeight+1, currentHeight, uint64(10)).
+		mockClientController.EXPECT().QueryBlocks(finalizedHeight+1, currentHeight, uint32(10)).
 			Return(catchUpBlocks, nil)
 		mockClientController.EXPECT().SubmitBatchFinalitySigs(fpIns.GetBtcPk(), catchUpBlocks, gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
@@ -110,7 +110,7 @@ func FuzzFastSync_NoRandomness(f *testing.F) {
 		expectedTxHash := testutil.GenRandomHexStr(r, 32)
 		finalizedBlock := &types.BlockInfo{Height: finalizedHeight, Hash: testutil.GenRandomByteArray(r, 32)}
 		mockClientController.EXPECT().QueryLatestFinalizedBlocks(uint64(1)).Return([]*types.BlockInfo{finalizedBlock}, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBlocks(finalizedHeight+1, currentHeight, uint64(10)).
+		mockClientController.EXPECT().QueryBlocks(finalizedHeight+1, currentHeight, uint32(10)).
 			Return(catchUpBlocks, nil)
 		mockClientController.EXPECT().SubmitBatchFinalitySigs(fpIns.GetBtcPk(), catchUpBlocks[:lastHeightWithPubRand-finalizedHeight], gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()

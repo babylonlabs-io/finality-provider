@@ -64,7 +64,11 @@ func runCommandExportFP(ctx client.Context, cmd *cobra.Command, args []string) e
 	if err != nil {
 		return fmt.Errorf("failled to connect to daemon addr %s: %w", daemonAddress, err)
 	}
-	defer cleanUp()
+	defer func() {
+		if err := cleanUp(); err != nil {
+			fmt.Printf("Failed to clean up grpc client: %v\n", err)
+		}
+	}()
 
 	fpBtcPkHex := args[0]
 	fpPk, err := bbn.NewBIP340PubKeyFromHex(fpBtcPkHex)
