@@ -24,7 +24,7 @@ func Start(addr string, logger *zap.Logger) *Server {
 		Addr:              addr,
 		Handler:           mux,
 		ReadHeaderTimeout: 2 * time.Second,
-		ReadTimeout:       1 * time.Second,
+		ReadTimeout:       5 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       30 * time.Second,
 	}
