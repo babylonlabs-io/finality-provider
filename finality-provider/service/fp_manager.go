@@ -8,7 +8,6 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller"
@@ -34,9 +33,9 @@ func (ce *CriticalError) Error() string {
 // FinalityProviderManager is responsible to initiate and start the given finality
 // provider instance, monitor its running status
 type FinalityProviderManager struct {
-	isStarted *atomic.Bool
+	startOnce sync.Once
+	stopOnce  sync.Once
 
-	// mutex to acess map of fp instances (fpIns)
 	wg sync.WaitGroup
 
 	fpIns *FinalityProviderInstance
@@ -67,7 +66,6 @@ func NewFinalityProviderManager(
 ) (*FinalityProviderManager, error) {
 	return &FinalityProviderManager{
 		criticalErrChan: make(chan *CriticalError),
-		isStarted:       atomic.NewBool(false),
 		fps:             fps,
 		pubRandStore:    pubRandStore,
 		config:          config,
@@ -88,8 +86,7 @@ func (fpm *FinalityProviderManager) monitorCriticalErr() {
 
 	var criticalErr *CriticalError
 
-	exitLoop := false
-	for !exitLoop {
+	for {
 		select {
 		case criticalErr = <-fpm.criticalErrChan:
 			fpi, err := fpm.GetFinalityProviderInstance()
@@ -97,7 +94,6 @@ func (fpm *FinalityProviderManager) monitorCriticalErr() {
 				fpm.logger.Debug("the finality-provider instance is already shutdown",
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
 
-				exitLoop = true
 				continue
 			}
 			if errors.Is(criticalErr.err, ErrFinalityProviderSlashed) {
@@ -105,7 +101,6 @@ func (fpm *FinalityProviderManager) monitorCriticalErr() {
 				fpm.logger.Debug("the finality-provider has been slashed",
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
 
-				exitLoop = true
 				continue
 			}
 			if errors.Is(criticalErr.err, ErrFinalityProviderJailed) {
@@ -113,7 +108,6 @@ func (fpm *FinalityProviderManager) monitorCriticalErr() {
 				fpm.logger.Debug("the finality-provider has been jailed",
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
 
-				exitLoop = true
 				continue
 			}
 			fpm.logger.Fatal(instanceTerminatingMsg,
@@ -121,10 +115,6 @@ func (fpm *FinalityProviderManager) monitorCriticalErr() {
 		case <-fpm.quit:
 			return
 		}
-	}
-
-	if err := fpm.Stop(); err != nil {
-		fpm.logger.Fatal("failed to stop the finality provider manager", zap.Error(err))
 	}
 }
 
@@ -242,42 +232,49 @@ func (fpm *FinalityProviderManager) setFinalityProviderJailed(fpi *FinalityProvi
 }
 
 func (fpm *FinalityProviderManager) StartFinalityProvider(fpPk *bbntypes.BIP340PubKey, passphrase string) error {
-	if !fpm.isStarted.Load() {
-		fpm.isStarted.Store(true)
-
-		if err := fpm.startFinalityProviderInstance(fpPk, passphrase); err != nil {
-			return err
-		}
-
-		fpm.wg.Add(1)
+	fpm.startOnce.Do(func() {
+		fpm.wg.Add(2)
 		go fpm.monitorCriticalErr()
-
-		fpm.wg.Add(1)
 		go fpm.monitorStatusUpdate()
+	})
+
+	fpm.logger.Info("starting finality provider", zap.String("pk", fpPk.MarshalHex()))
+
+	if err := fpm.startFinalityProviderInstance(fpPk, passphrase); err != nil {
+		return err
 	}
+
+	fpm.logger.Info("finality provider is started", zap.String("pk", fpPk.MarshalHex()))
 
 	return nil
 }
 
 func (fpm *FinalityProviderManager) Stop() error {
-	if !fpm.isStarted.Swap(false) {
-		return fmt.Errorf("the finality-provider manager has already stopped")
-	}
-
-	defer func() {
+	var stopErr error
+	fpm.stopOnce.Do(func() {
 		close(fpm.quit)
 		fpm.wg.Wait()
-	}()
 
-	if fpm.fpIns == nil {
-		return nil
-	}
+		if fpm.fpIns == nil {
+			return
+		}
 
-	if !fpm.fpIns.IsRunning() {
-		return nil
-	}
+		if !fpm.fpIns.IsRunning() {
+			return
+		}
 
-	return fpm.fpIns.Stop()
+		pkHex := fpm.fpIns.GetBtcPkHex()
+		fpm.logger.Info("stopping finality provider", zap.String("pk", pkHex))
+
+		if err := fpm.fpIns.Stop(); err != nil {
+			stopErr = err
+			return
+		}
+
+		fpm.logger.Info("finality provider is stopped", zap.String("pk", pkHex))
+	})
+
+	return stopErr
 }
 
 func (fpm *FinalityProviderManager) GetFinalityProviderInstance() (*FinalityProviderInstance, error) {

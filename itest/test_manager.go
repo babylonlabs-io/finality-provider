@@ -252,7 +252,9 @@ func StartManagerWithFinalityProvider(t *testing.T) (*TestManager, *service.Fina
 }
 
 func (tm *TestManager) Stop(t *testing.T) {
-	err := tm.manager.ClearResources()
+	err := tm.Fpa.Stop()
+	require.NoError(t, err)
+	err = tm.manager.ClearResources()
 	require.NoError(t, err)
 	err = os.RemoveAll(tm.baseDir)
 	require.NoError(t, err)

@@ -321,11 +321,9 @@ func (app *FinalityProviderApp) Stop() error {
 		app.wg.Wait()
 
 		app.logger.Debug("Stopping finality providers")
-		if app.fpManager.isStarted.Load() {
-			if err := app.fpManager.Stop(); err != nil {
-				stopErr = err
-				return
-			}
+		if err := app.fpManager.Stop(); err != nil {
+			stopErr = err
+			return
 		}
 
 		app.logger.Debug("Stopping EOTS manager")
