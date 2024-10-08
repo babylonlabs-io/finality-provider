@@ -12,7 +12,6 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
 
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
@@ -100,14 +99,9 @@ func TestDoubleSigning(t *testing.T) {
 
 	tm.WaitForFpShutDown(t)
 
-	// try to start all the finality providers and the slashed one should not be restarted
+	// try to start the finality providers and the slashed one should expect err
 	err = tm.Fpa.StartHandlingFinalityProvider(fpIns.GetBtcPkBIP340(), "")
-	require.NoError(t, err)
-	fps, err := tm.Fpa.ListAllFinalityProvidersInfo()
-	require.NoError(t, err)
-	require.Equal(t, 1, len(fps))
-	require.Equal(t, proto.FinalityProviderStatus_name[4], fps[0].Status)
-	require.Equal(t, false, fps[0].IsRunning)
+	require.Error(t, err)
 }
 
 // TestFastSync tests the fast sync process where the finality-provider is terminated and restarted with fast sync

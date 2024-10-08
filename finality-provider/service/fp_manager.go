@@ -37,7 +37,6 @@ type FinalityProviderManager struct {
 	isStarted *atomic.Bool
 
 	// mutex to acess map of fp instances (fpIns)
-	mu sync.Mutex
 	wg sync.WaitGroup
 
 	fpIns *FinalityProviderInstance
@@ -265,12 +264,15 @@ func (fpm *FinalityProviderManager) Stop() error {
 		return fmt.Errorf("the finality-provider manager has already stopped")
 	}
 
-	close(fpm.quit)
-	fpm.wg.Wait()
+	defer func() {
+		close(fpm.quit)
+		fpm.wg.Wait()
+	}()
 
 	if fpm.fpIns == nil {
 		return nil
 	}
+
 	if !fpm.fpIns.IsRunning() {
 		return nil
 	}
@@ -354,9 +356,6 @@ func (fpm *FinalityProviderManager) startFinalityProviderInstance(
 	pk *bbntypes.BIP340PubKey,
 	passphrase string,
 ) error {
-	fpm.mu.Lock()
-	defer fpm.mu.Unlock()
-
 	pkHex := pk.MarshalHex()
 	if fpm.fpIns == nil {
 		fpIns, err := NewFinalityProviderInstance(
