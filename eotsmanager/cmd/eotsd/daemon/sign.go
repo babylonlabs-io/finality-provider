@@ -186,6 +186,7 @@ func SignSchnorr(ctx *cli.Context) error {
 func hashFromFile(inputFilePath string) ([]byte, error) {
 	h := sha256.New()
 
+	// #nosec G304 - The log file path is provided by the user and not externally
 	f, err := os.Open(inputFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open the file %s: %w", inputFilePath, err)

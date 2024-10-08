@@ -50,7 +50,11 @@ func runCommandGetDaemonInfo(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	defer cleanUp()
+	defer func() {
+		if err := cleanUp(); err != nil {
+			fmt.Printf("Failed to clean up grpc client: %v\n", err)
+		}
+	}()
 
 	info, err := client.GetInfo(context.Background())
 	if err != nil {
@@ -126,7 +130,11 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 	if err != nil {
 		return err
 	}
-	defer cleanUp()
+	defer func() {
+		if err := cleanUp(); err != nil {
+			fmt.Printf("Failed to clean up grpc client: %v\n", err)
+		}
+	}()
 
 	chainId, err := flags.GetString(chainIdFlag)
 	if err != nil {
@@ -202,7 +210,11 @@ func runCommandUnjailFP(_ client.Context, cmd *cobra.Command, args []string) err
 	if err != nil {
 		return err
 	}
-	defer cleanUp()
+	defer func() {
+		if err := cleanUp(); err != nil {
+			fmt.Printf("Failed to clean up grpc client: %v\n", err)
+		}
+	}()
 
 	_, err = client.UnjailFinalityProvider(context.Background(), args[0])
 	if err != nil {
@@ -263,7 +275,11 @@ func runCommandLsFP(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	defer cleanUp()
+	defer func() {
+		if err := cleanUp(); err != nil {
+			fmt.Printf("Failed to clean up grpc client: %v\n", err)
+		}
+	}()
 
 	resp, err := client.QueryFinalityProviderList(context.Background())
 	if err != nil {
@@ -303,7 +319,11 @@ func runCommandInfoFP(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	defer cleanUp()
+	defer func() {
+		if err := cleanUp(); err != nil {
+			fmt.Printf("Failed to clean up grpc client: %v\n", err)
+		}
+	}()
 
 	resp, err := client.QueryFinalityProviderInfo(context.Background(), fpPk)
 	if err != nil {
@@ -346,7 +366,11 @@ func runCommandRegisterFP(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	defer cleanUp()
+	defer func() {
+		if err := cleanUp(); err != nil {
+			fmt.Printf("Failed to clean up grpc client: %v\n", err)
+		}
+	}()
 
 	passphrase, err := flags.GetString(passphraseFlag)
 	if err != nil {
@@ -402,7 +426,11 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	defer cleanUp()
+	defer func() {
+		if err := cleanUp(); err != nil {
+			fmt.Printf("Failed to clean up grpc client: %v\n", err)
+		}
+	}()
 
 	appHash, err := hex.DecodeString(appHashHex)
 	if err != nil {

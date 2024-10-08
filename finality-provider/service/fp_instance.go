@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -467,7 +468,7 @@ func (fp *FinalityProviderInstance) retrySubmitFinalitySignatureUntilBlockFinali
 			}
 
 			failedCycles += 1
-			if failedCycles > uint32(fp.cfg.MaxSubmissionRetries) {
+			if failedCycles > fp.cfg.MaxSubmissionRetries {
 				return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
 			}
 		} else {
@@ -537,7 +538,7 @@ func (fp *FinalityProviderInstance) retryCommitPubRandUntilBlockFinalized(target
 			)
 
 			failedCycles += 1
-			if failedCycles > uint32(fp.cfg.MaxSubmissionRetries) {
+			if failedCycles > fp.cfg.MaxSubmissionRetries {
 				return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
 			}
 		} else {
@@ -582,7 +583,7 @@ func (fp *FinalityProviderInstance) CommitPubRand(tipHeight uint64) (*types.TxRe
 	if lastCommittedHeight == uint64(0) {
 		// the finality-provider has never submitted public rand before
 		startHeight = tipHeight + 1
-	} else if lastCommittedHeight < fp.cfg.MinRandHeightGap+tipHeight {
+	} else if lastCommittedHeight < uint64(fp.cfg.MinRandHeightGap)+tipHeight {
 		// (should not use subtraction because they are in the type of uint64)
 		// we are running out of the randomness
 		startHeight = lastCommittedHeight + 1
@@ -682,8 +683,13 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 		return nil, fmt.Errorf("should not submit batch finality signature with zero block")
 	}
 
+	if len(blocks) > math.MaxUint32 {
+		return nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
+	}
+
 	// get public randomness list
-	prList, err := fp.getPubRandList(blocks[0].Height, uint64(len(blocks)))
+	// #nosec G115 -- performed the conversion check above
+	prList, err := fp.getPubRandList(blocks[0].Height, uint32(len(blocks)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get public randomness list: %v", err)
 	}

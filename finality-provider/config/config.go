@@ -57,15 +57,15 @@ type Config struct {
 	LogLevel string `long:"loglevel" description:"Logging level for all subsystems" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal"`
 	// ChainName and ChainID (if any) of the chain config identify a consumer chain
 	ChainName                string        `long:"chainname" description:"the name of the consumer chain" choice:"babylon"`
-	NumPubRand               uint64        `long:"numPubRand" description:"The number of Schnorr public randomness for each commitment"`
-	NumPubRandMax            uint64        `long:"numpubrandmax" description:"The upper bound of the number of Schnorr public randomness for each commitment"`
-	MinRandHeightGap         uint64        `long:"minrandheightgap" description:"The minimum gap between the last committed rand height and the current Babylon block height"`
+	NumPubRand               uint32        `long:"numPubRand" description:"The number of Schnorr public randomness for each commitment"`
+	NumPubRandMax            uint32        `long:"numpubrandmax" description:"The upper bound of the number of Schnorr public randomness for each commitment"`
+	MinRandHeightGap         uint32        `long:"minrandheightgap" description:"The minimum gap between the last committed rand height and the current Babylon block height"`
 	StatusUpdateInterval     time.Duration `long:"statusupdateinterval" description:"The interval between each update of finality-provider status"`
 	RandomnessCommitInterval time.Duration `long:"randomnesscommitinterval" description:"The interval between each attempt to commit public randomness"`
 	SubmissionRetryInterval  time.Duration `long:"submissionretryinterval" description:"The interval between each attempt to submit finality signature or public randomness after a failure"`
-	MaxSubmissionRetries     uint64        `long:"maxsubmissionretries" description:"The maximum number of retries to submit finality signature or public randomness"`
+	MaxSubmissionRetries     uint32        `long:"maxsubmissionretries" description:"The maximum number of retries to submit finality signature or public randomness"`
 	FastSyncInterval         time.Duration `long:"fastsyncinterval" description:"The interval between each try of fast sync, which is disabled if the value is 0"`
-	FastSyncLimit            uint64        `long:"fastsynclimit" description:"The maximum number of blocks to catch up for each fast sync"`
+	FastSyncLimit            uint32        `long:"fastsynclimit" description:"The maximum number of blocks to catch up for each fast sync"`
 	FastSyncGap              uint64        `long:"fastsyncgap" description:"The block gap that will trigger the fast sync"`
 	EOTSManagerAddress       string        `long:"eotsmanageraddress" description:"The address of the remote EOTS manager; Empty if the EOTS manager is running locally"`
 	SyncFpStatusInterval     time.Duration `long:"syncfpstatusinterval" description:"The duration of time that it should sync FP status with the client blockchain"`
