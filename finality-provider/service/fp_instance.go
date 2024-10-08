@@ -67,12 +67,11 @@ func NewFinalityProviderInstance(
 ) (*FinalityProviderInstance, error) {
 	sfp, err := s.GetFinalityProvider(fpPk.MustToBTCPK())
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrive the finality-provider %s from DB: %w", fpPk.MarshalHex(), err)
+		return nil, fmt.Errorf("failed to retrive the finality provider %s from DB: %w", fpPk.MarshalHex(), err)
 	}
 
-	// ensure the finality-provider has been registered
-	if sfp.Status < proto.FinalityProviderStatus_REGISTERED {
-		return nil, fmt.Errorf("the finality-provider %s has not been registered", sfp.KeyName)
+	if !sfp.ShouldStart() {
+		return nil, fmt.Errorf("the finality provider instance cannot be initiated with status %s", sfp.Status.String())
 	}
 
 	return &FinalityProviderInstance{

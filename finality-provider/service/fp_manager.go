@@ -31,15 +31,16 @@ func (ce *CriticalError) Error() string {
 	return fmt.Sprintf("critical err on finality-provider %s: %s", ce.fpBtcPk.MarshalHex(), ce.err.Error())
 }
 
+// FinalityProviderManager is responsible to initiate and start the given finality
+// provider instance, monitor its running status
 type FinalityProviderManager struct {
 	isStarted *atomic.Bool
 
-	// mutex to acess map of fp instances (fpis)
+	// mutex to acess map of fp instances (fpIns)
 	mu sync.Mutex
 	wg sync.WaitGroup
 
-	// running finality-provider instances map keyed by the hex string of the BTC public key
-	fpis map[string]*FinalityProviderInstance
+	fpIns *FinalityProviderInstance
 
 	// needed for initiating finality-provider instances
 	fps          *store.FinalityProviderStore
@@ -66,7 +67,6 @@ func NewFinalityProviderManager(
 	logger *zap.Logger,
 ) (*FinalityProviderManager, error) {
 	return &FinalityProviderManager{
-		fpis:            make(map[string]*FinalityProviderInstance),
 		criticalErrChan: make(chan *CriticalError),
 		isStarted:       atomic.NewBool(false),
 		fps:             fps,
@@ -88,27 +88,33 @@ func (fpm *FinalityProviderManager) monitorCriticalErr() {
 	defer fpm.wg.Done()
 
 	var criticalErr *CriticalError
-	for {
+
+	exitLoop := false
+	for !exitLoop {
 		select {
 		case criticalErr = <-fpm.criticalErrChan:
-			fpi, err := fpm.GetFinalityProviderInstance(criticalErr.fpBtcPk)
+			fpi, err := fpm.GetFinalityProviderInstance()
 			if err != nil {
 				fpm.logger.Debug("the finality-provider instance is already shutdown",
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
+
+				exitLoop = true
 				continue
 			}
-			// cannot use error.Is because the unwrapped error
-			// is not the expected error type
 			if errors.Is(criticalErr.err, ErrFinalityProviderSlashed) {
 				fpm.setFinalityProviderSlashed(fpi)
 				fpm.logger.Debug("the finality-provider has been slashed",
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
+
+				exitLoop = true
 				continue
 			}
 			if errors.Is(criticalErr.err, ErrFinalityProviderJailed) {
 				fpm.setFinalityProviderJailed(fpi)
 				fpm.logger.Debug("the finality-provider has been jailed",
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
+
+				exitLoop = true
 				continue
 			}
 			fpm.logger.Fatal(instanceTerminatingMsg,
@@ -116,6 +122,10 @@ func (fpm *FinalityProviderManager) monitorCriticalErr() {
 		case <-fpm.quit:
 			return
 		}
+	}
+
+	if err := fpm.Stop(); err != nil {
+		fpm.logger.Fatal("failed to stop the finality provider manager", zap.Error(err))
 	}
 }
 
@@ -140,75 +150,77 @@ func (fpm *FinalityProviderManager) monitorStatusUpdate() {
 	for {
 		select {
 		case <-statusUpdateTicker.C:
+			fpi := fpm.fpIns
+			if fpi == nil {
+				continue
+			}
+
 			latestBlock, err := fpm.getLatestBlockWithRetry()
 			if err != nil {
 				fpm.logger.Debug("failed to get the latest block", zap.Error(err))
 				continue
 			}
-			fpis := fpm.ListFinalityProviderInstances()
-			for _, fpi := range fpis {
-				oldStatus := fpi.GetStatus()
-				power, err := fpi.GetVotingPowerWithRetry(latestBlock.Height)
-				if err != nil {
+			oldStatus := fpi.GetStatus()
+			power, err := fpi.GetVotingPowerWithRetry(latestBlock.Height)
+			if err != nil {
+				fpm.logger.Debug(
+					"failed to get the voting power",
+					zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
+					zap.Uint64("height", latestBlock.Height),
+					zap.Error(err),
+				)
+				continue
+			}
+			// power > 0 (slashed_height must > 0), set status to ACTIVE
+			if power > 0 {
+				if oldStatus != proto.FinalityProviderStatus_ACTIVE {
+					fpi.MustSetStatus(proto.FinalityProviderStatus_ACTIVE)
 					fpm.logger.Debug(
-						"failed to get the voting power",
-						zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
-						zap.Uint64("height", latestBlock.Height),
-						zap.Error(err),
-					)
-					continue
-				}
-				// power > 0 (slashed_height must > 0), set status to ACTIVE
-				if power > 0 {
-					if oldStatus != proto.FinalityProviderStatus_ACTIVE {
-						fpi.MustSetStatus(proto.FinalityProviderStatus_ACTIVE)
-						fpm.logger.Debug(
-							"the finality-provider status is changed to ACTIVE",
-							zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
-							zap.String("old_status", oldStatus.String()),
-							zap.Uint64("power", power),
-						)
-					}
-					continue
-				}
-				slashed, jailed, err := fpi.GetFinalityProviderSlashedOrJailedWithRetry()
-				if err != nil {
-					fpm.logger.Debug(
-						"failed to get the slashed or jailed status",
-						zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
-						zap.Error(err),
-					)
-					continue
-				}
-				// power == 0 and slashed == true, set status to SLASHED, stop, and remove the finality-provider instance
-				if slashed {
-					fpm.setFinalityProviderSlashed(fpi)
-					fpm.logger.Warn(
-						"the finality-provider is slashed",
+						"the finality-provider status is changed to ACTIVE",
 						zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
 						zap.String("old_status", oldStatus.String()),
-					)
-					continue
-				}
-				// power == 0 and jailed == true, set status to JAILED, stop, and remove the finality-provider instance
-				if jailed {
-					fpm.setFinalityProviderJailed(fpi)
-					fpm.logger.Warn(
-						"the finality-provider is jailed",
-						zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
-						zap.String("old_status", oldStatus.String()),
-					)
-					continue
-				}
-				// power == 0 and slashed_height == 0, change to INACTIVE if the current status is ACTIVE
-				if oldStatus == proto.FinalityProviderStatus_ACTIVE {
-					fpi.MustSetStatus(proto.FinalityProviderStatus_INACTIVE)
-					fpm.logger.Debug(
-						"the finality-provider status is changed to INACTIVE",
-						zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
-						zap.String("old_status", oldStatus.String()),
+						zap.Uint64("power", power),
 					)
 				}
+				continue
+			}
+			slashed, jailed, err := fpi.GetFinalityProviderSlashedOrJailedWithRetry()
+			if err != nil {
+				fpm.logger.Debug(
+					"failed to get the slashed or jailed status",
+					zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
+					zap.Error(err),
+				)
+				continue
+			}
+			// power == 0 and slashed == true, set status to SLASHED, stop, and remove the finality-provider instance
+			if slashed {
+				fpm.setFinalityProviderSlashed(fpi)
+				fpm.logger.Warn(
+					"the finality-provider is slashed",
+					zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
+					zap.String("old_status", oldStatus.String()),
+				)
+				continue
+			}
+			// power == 0 and jailed == true, set status to JAILED, stop, and remove the finality-provider instance
+			if jailed {
+				fpm.setFinalityProviderJailed(fpi)
+				fpm.logger.Warn(
+					"the finality-provider is jailed",
+					zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
+					zap.String("old_status", oldStatus.String()),
+				)
+				continue
+			}
+			// power == 0 and slashed_height == 0, change to INACTIVE if the current status is ACTIVE
+			if oldStatus == proto.FinalityProviderStatus_ACTIVE {
+				fpi.MustSetStatus(proto.FinalityProviderStatus_INACTIVE)
+				fpm.logger.Debug(
+					"the finality-provider status is changed to INACTIVE",
+					zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
+					zap.String("old_status", oldStatus.String()),
+				)
 			}
 		case <-fpm.quit:
 			return
@@ -218,14 +230,14 @@ func (fpm *FinalityProviderManager) monitorStatusUpdate() {
 
 func (fpm *FinalityProviderManager) setFinalityProviderSlashed(fpi *FinalityProviderInstance) {
 	fpi.MustSetStatus(proto.FinalityProviderStatus_SLASHED)
-	if err := fpm.removeFinalityProviderInstance(fpi.GetBtcPkBIP340()); err != nil {
+	if err := fpm.removeFinalityProviderInstance(); err != nil {
 		panic(fmt.Errorf("failed to terminate a slashed finality-provider %s: %w", fpi.GetBtcPkHex(), err))
 	}
 }
 
 func (fpm *FinalityProviderManager) setFinalityProviderJailed(fpi *FinalityProviderInstance) {
 	fpi.MustSetStatus(proto.FinalityProviderStatus_JAILED)
-	if err := fpm.removeFinalityProviderInstance(fpi.GetBtcPkBIP340()); err != nil {
+	if err := fpm.removeFinalityProviderInstance(); err != nil {
 		panic(fmt.Errorf("failed to terminate a jailed finality-provider %s: %w", fpi.GetBtcPkHex(), err))
 	}
 }
@@ -234,53 +246,15 @@ func (fpm *FinalityProviderManager) StartFinalityProvider(fpPk *bbntypes.BIP340P
 	if !fpm.isStarted.Load() {
 		fpm.isStarted.Store(true)
 
-		fpm.wg.Add(1)
-		go fpm.monitorCriticalErr()
-
-		fpm.wg.Add(1)
-		go fpm.monitorStatusUpdate()
-	}
-
-	if fpm.numOfRunningFinalityProviders() >= int(fpm.config.MaxNumFinalityProviders) {
-		return fmt.Errorf("reaching maximum number of running finality providers %v", fpm.config.MaxNumFinalityProviders)
-	}
-
-	if err := fpm.addFinalityProviderInstance(fpPk, passphrase); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (fpm *FinalityProviderManager) StartAll() error {
-	if !fpm.isStarted.Load() {
-		fpm.isStarted.Store(true)
-
-		fpm.wg.Add(1)
-		go fpm.monitorCriticalErr()
-
-		fpm.wg.Add(1)
-		go fpm.monitorStatusUpdate()
-	}
-
-	storedFps, err := fpm.fps.GetAllStoredFinalityProviders()
-	if err != nil {
-		return err
-	}
-
-	for _, fp := range storedFps {
-		fpBtcPk := fp.GetBIP340BTCPK()
-		if !fp.ShouldStart() {
-			fpm.logger.Info(
-				"the finality provider cannot be started with status",
-				zap.String("eots-pk", fpBtcPk.MarshalHex()),
-				zap.String("status", fp.Status.String()),
-			)
-			continue
-		}
-		if err := fpm.StartFinalityProvider(fpBtcPk, ""); err != nil {
+		if err := fpm.startFinalityProviderInstance(fpPk, passphrase); err != nil {
 			return err
 		}
+
+		fpm.wg.Add(1)
+		go fpm.monitorCriticalErr()
+
+		fpm.wg.Add(1)
+		go fpm.monitorStatusUpdate()
 	}
 
 	return nil
@@ -291,34 +265,25 @@ func (fpm *FinalityProviderManager) Stop() error {
 		return fmt.Errorf("the finality-provider manager has already stopped")
 	}
 
-	var stopErr error
-	for _, fpi := range fpm.fpis {
-		if !fpi.IsRunning() {
-			continue
-		}
-		if err := fpi.Stop(); err != nil {
-			stopErr = err
-			break
-		}
-		fpm.metrics.DecrementRunningFpGauge()
-	}
-
 	close(fpm.quit)
 	fpm.wg.Wait()
 
-	return stopErr
-}
-
-func (fpm *FinalityProviderManager) ListFinalityProviderInstances() []*FinalityProviderInstance {
-	fpm.mu.Lock()
-	defer fpm.mu.Unlock()
-
-	fpisList := make([]*FinalityProviderInstance, 0, len(fpm.fpis))
-	for _, fpi := range fpm.fpis {
-		fpisList = append(fpisList, fpi)
+	if fpm.fpIns == nil {
+		return nil
+	}
+	if !fpm.fpIns.IsRunning() {
+		return nil
 	}
 
-	return fpisList
+	return fpm.fpIns.Stop()
+}
+
+func (fpm *FinalityProviderManager) GetFinalityProviderInstance() (*FinalityProviderInstance, error) {
+	if fpm.fpIns == nil {
+		return nil, fmt.Errorf("finality provider does not exist")
+	}
+
+	return fpm.fpIns, nil
 }
 
 func (fpm *FinalityProviderManager) AllFinalityProviders() ([]*proto.FinalityProviderInfo, error) {
@@ -357,55 +322,35 @@ func (fpm *FinalityProviderManager) FinalityProviderInfo(fpPk *bbntypes.BIP340Pu
 }
 
 func (fpm *FinalityProviderManager) IsFinalityProviderRunning(fpPk *bbntypes.BIP340PubKey) bool {
-	fpm.mu.Lock()
-	defer fpm.mu.Unlock()
-
-	_, exists := fpm.fpis[fpPk.MarshalHex()]
-	return exists
-}
-
-func (fpm *FinalityProviderManager) GetFinalityProviderInstance(fpPk *bbntypes.BIP340PubKey) (*FinalityProviderInstance, error) {
-	fpm.mu.Lock()
-	defer fpm.mu.Unlock()
-
-	keyHex := fpPk.MarshalHex()
-	v, exists := fpm.fpis[keyHex]
-	if !exists {
-		return nil, fmt.Errorf("cannot find the finality-provider instance with PK: %s", keyHex)
+	if fpm.fpIns == nil {
+		return false
 	}
 
-	return v, nil
+	if fpm.fpIns.GetBtcPkHex() != fpPk.MarshalHex() {
+		return false
+	}
+
+	return fpm.fpIns.IsRunning()
 }
 
-func (fpm *FinalityProviderManager) removeFinalityProviderInstance(fpPk *bbntypes.BIP340PubKey) error {
-	fpm.mu.Lock()
-	defer fpm.mu.Unlock()
-
-	keyHex := fpPk.MarshalHex()
-	fpi, exists := fpm.fpis[keyHex]
-	if !exists {
-		return fmt.Errorf("cannot find the finality-provider instance with PK: %s", keyHex)
+func (fpm *FinalityProviderManager) removeFinalityProviderInstance() error {
+	fpi := fpm.fpIns
+	if fpi == nil {
+		return fmt.Errorf("the finality provider instance does not exist")
 	}
 	if fpi.IsRunning() {
 		if err := fpi.Stop(); err != nil {
-			return fmt.Errorf("failed to stop the finality-provider instance %s", keyHex)
+			return fmt.Errorf("failed to stop the finality provider instance %s", fpi.GetBtcPkHex())
 		}
 	}
 
-	delete(fpm.fpis, keyHex)
-	fpm.metrics.DecrementRunningFpGauge()
+	fpm.fpIns = nil
+
 	return nil
 }
 
-func (fpm *FinalityProviderManager) numOfRunningFinalityProviders() int {
-	fpm.mu.Lock()
-	defer fpm.mu.Unlock()
-
-	return len(fpm.fpis)
-}
-
-// addFinalityProviderInstance creates a finality-provider instance, starts it and adds it into the finality-provider manager
-func (fpm *FinalityProviderManager) addFinalityProviderInstance(
+// startFinalityProviderInstance creates a finality-provider instance, starts it and adds it into the finality-provider manager
+func (fpm *FinalityProviderManager) startFinalityProviderInstance(
 	pk *bbntypes.BIP340PubKey,
 	passphrase string,
 ) error {
@@ -413,23 +358,19 @@ func (fpm *FinalityProviderManager) addFinalityProviderInstance(
 	defer fpm.mu.Unlock()
 
 	pkHex := pk.MarshalHex()
-	if _, exists := fpm.fpis[pkHex]; exists {
-		return fmt.Errorf("finality-provider instance already exists")
+	if fpm.fpIns == nil {
+		fpIns, err := NewFinalityProviderInstance(
+			pk, fpm.config, fpm.fps, fpm.pubRandStore, fpm.cc, fpm.em,
+			fpm.metrics, passphrase, fpm.criticalErrChan, fpm.logger,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create finality provider instance %s: %w", pkHex, err)
+		}
+
+		fpm.fpIns = fpIns
 	}
 
-	fpIns, err := NewFinalityProviderInstance(pk, fpm.config, fpm.fps, fpm.pubRandStore, fpm.cc, fpm.em, fpm.metrics, passphrase, fpm.criticalErrChan, fpm.logger)
-	if err != nil {
-		return fmt.Errorf("failed to create finality-provider %s instance: %w", pkHex, err)
-	}
-
-	if err := fpIns.Start(); err != nil {
-		return fmt.Errorf("failed to start finality-provider %s instance: %w", pkHex, err)
-	}
-
-	fpm.fpis[pkHex] = fpIns
-	fpm.metrics.IncrementRunningFpGauge()
-
-	return nil
+	return fpm.fpIns.Start()
 }
 
 func (fpm *FinalityProviderManager) getLatestBlockWithRetry() (*types.BlockInfo, error) {

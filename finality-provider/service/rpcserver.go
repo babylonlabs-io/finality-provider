@@ -146,9 +146,15 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 		return nil, err
 	}
 
-	fpi, err := r.app.GetFinalityProviderInstance(fpPk)
+	fpi, err := r.app.GetFinalityProviderInstance()
 	if err != nil {
 		return nil, err
+	}
+
+	if fpi.GetBtcPkHex() != req.BtcPk {
+		return nil, fmt.Errorf(
+			"the finality provider running does not match the request, got: %s, expected: %s",
+			req.BtcPk, fpi.GetBtcPkHex())
 	}
 
 	b := &types.BlockInfo{

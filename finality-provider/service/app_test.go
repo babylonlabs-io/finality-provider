@@ -133,7 +133,7 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 		err = app.StartHandlingFinalityProvider(fp.GetBIP340BTCPK(), passphrase)
 		require.NoError(t, err)
 
-		fpAfterReg, err := app.GetFinalityProviderInstance(fp.GetBIP340BTCPK())
+		fpAfterReg, err := app.GetFinalityProviderInstance()
 		require.NoError(t, err)
 		require.Equal(t, proto.FinalityProviderStatus_REGISTERED, fpAfterReg.GetStoreFinalityProvider().Status)
 
@@ -210,7 +210,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 			if noVotingPowerTable {
 				expectedStatus = proto.FinalityProviderStatus_REGISTERED
 			}
-			fpInstance, err := app.GetFinalityProviderInstance(fpPk)
+			fpInstance, err := app.GetFinalityProviderInstance()
 			if err != nil {
 				return false
 			}

@@ -76,7 +76,8 @@ func FuzzStatusUpdate(f *testing.F) {
 
 		err := vm.StartFinalityProvider(fpPk, passphrase)
 		require.NoError(t, err)
-		fpIns := vm.ListFinalityProviderInstances()[0]
+		fpIns, err := vm.GetFinalityProviderInstance()
+		require.NoError(t, err)
 		// stop the finality-provider as we are testing static functionalities
 		err = fpIns.Stop()
 		require.NoError(t, err)
