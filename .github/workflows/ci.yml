@@ -57,7 +57,7 @@ jobs:
       - name: Set up the devnet data
         run: make op-e2e-devnet
       - name: Run e2e OP tests
-        run: make test-e2e-op
+        run: make test-e2e-op GOFLAGS="-v"
         
   docker_pipeline:
     uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.1.0
