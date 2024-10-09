@@ -18,5 +18,5 @@ const (
 	websiteFlag         = "website"
 	securityContactFlag = "security-contact"
 	detailsFlag         = "details"
-	commissionRateFlag  = "commission"
+	commissionRateFlag  = "commission-rate"
 )

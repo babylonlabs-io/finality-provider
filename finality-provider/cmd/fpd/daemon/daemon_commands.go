@@ -500,46 +500,30 @@ func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error 
 		return fmt.Errorf("failed to get finality provider %v err %v", fpPk.MarshalHex(), err)
 	}
 
-	monFlag, _ := cmd.Flags().GetString(monikerFlag)
-	idFlag, _ := cmd.Flags().GetString(identityFlag)
-	webFlag, _ := cmd.Flags().GetString(websiteFlag)
-	secFlag, _ := cmd.Flags().GetString(securityContactFlag)
-	detFlag, _ := cmd.Flags().GetString(detailsFlag)
+	// define new flags to avoid error of passing flags from this context
+	newFlags := &pflag.FlagSet{}
 
-	moniker := getValueOrDefault(monFlag, fpRes.FinalityProvider.Description.Moniker)
-	identity := getValueOrDefault(idFlag, fpRes.FinalityProvider.Description.Identity)
-	website := getValueOrDefault(webFlag, fpRes.FinalityProvider.Description.Website)
-	security := getValueOrDefault(secFlag, fpRes.FinalityProvider.Description.SecurityContact)
-	details := getValueOrDefault(detFlag, fpRes.FinalityProvider.Description.Details)
+	// Add only the flags you want to use for the edit command
+	newFlags.String(monikerFlag, "", "Moniker of the finality provider")
+	newFlags.String(identityFlag, "", "Identity of the finality provider")
+	newFlags.String(websiteFlag, "", "Website of the finality provider")
+	newFlags.String(securityContactFlag, "", "Security contact of the finality provider")
+	newFlags.String(detailsFlag, "", "Details of the finality provider")
+	newFlags.String(commissionRateFlag, "", "Commission rate")
+
+	_ = newFlags.Set(monikerFlag, getValueOrDefault(flags.Lookup(monikerFlag).Value.String(), fpRes.FinalityProvider.Description.Moniker))
+	_ = newFlags.Set(identityFlag, getValueOrDefault(flags.Lookup(identityFlag).Value.String(), fpRes.FinalityProvider.Description.Identity))
+	_ = newFlags.Set(websiteFlag, getValueOrDefault(flags.Lookup(websiteFlag).Value.String(), fpRes.FinalityProvider.Description.Website))
+	_ = newFlags.Set(securityContactFlag, getValueOrDefault(flags.Lookup(securityContactFlag).Value.String(), fpRes.FinalityProvider.Description.SecurityContact))
+	_ = newFlags.Set(detailsFlag, getValueOrDefault(flags.Lookup(detailsFlag).Value.String(), fpRes.FinalityProvider.Description.Details))
+	_ = newFlags.Set(commissionRateFlag, fpRes.FinalityProvider.Commission)
 
 	editFinalityCmd := finalitycli.NewEditFinalityProviderCmd()
-
-	if err := editFinalityCmd.Flags().Set(monikerFlag, moniker); err != nil {
-		return err
-	}
-
-	if err := editFinalityCmd.Flags().Set(identityFlag, identity); err != nil {
-		return err
-	}
-
-	if err := editFinalityCmd.Flags().Set(websiteFlag, website); err != nil {
-		return err
-	}
-
-	if err := editFinalityCmd.Flags().Set(securityContactFlag, security); err != nil {
-		return err
-	}
-
-	if err := editFinalityCmd.Flags().Set(detailsFlag, details); err != nil {
-		return err
-	}
-
-	if err := editFinalityCmd.Flags().Set(commissionRateFlag, fpRes.FinalityProvider.Commission); err != nil {
-		return err
-	}
+	editFinalityCmd.Flags().AddFlagSet(newFlags)
+	editFinalityCmd.SetArgs(args)
 
 	if err := editFinalityCmd.Execute(); err != nil {
-		return err
+		return fmt.Errorf("failed to execute bbn edit command: %v", err)
 	}
 
 	// todo(lazar): if this is successful update local store also

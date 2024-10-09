@@ -18,10 +18,7 @@ type EOTSServerHandler struct {
 	eotsServer  *service.Server
 }
 
-func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string) *EOTSServerHandler {
-	shutdownInterceptor, err := signal.Intercept()
-	require.NoError(t, err)
-
+func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string, shutdownInterceptor signal.Interceptor) *EOTSServerHandler {
 	dbBackend, err := cfg.DatabaseConfig.GetDbBackend()
 	require.NoError(t, err)
 	logger := zap.NewNop()
