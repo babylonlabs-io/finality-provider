@@ -54,6 +54,8 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.22'
+      - name: Set up the devnet data
+        run: make op-e2e-devnet
       - name: Run e2e OP tests
         run: make test-e2e-op
         

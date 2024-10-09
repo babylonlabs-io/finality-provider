@@ -11,6 +11,9 @@ Then run the following command to start the e2e tests:
 ```bash
 $ make test-e2e-op
 
+# Run all tests
+$ make test-e2e-op
+
 # Filter specific test
-$ make test-e2e-op FILTER=TestFinalityGadget
+$ make test-e2e-op-filter FILTER=TestFinalityGadget
 ```
