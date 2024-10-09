@@ -115,6 +115,10 @@ test-e2e-wasmd: clean-e2e install-babylond install-wasmd
 test-e2e-op: clean-e2e install-babylond
 	@go test -mod=readonly -timeout=25m -v $(PACKAGES_E2E_OP) -count=1 --tags=e2e_op
 
+FILTER ?= .
+test-e2e-op-filter: clean-e2e install-babylond
+	@go test -mod=readonly -timeout=25m -v $(PACKAGES_E2E_OP) -count=1 --tags=e2e_op --run ^$(FILTER)$
+
 test-e2e-op-ci: clean-e2e install-babylond
 	go test -list . ./itest/opstackl2 --tags=e2e_op | grep Test \
 	| circleci tests run --command \
