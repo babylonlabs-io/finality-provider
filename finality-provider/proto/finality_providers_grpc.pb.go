@@ -19,14 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	FinalityProviders_GetInfo_FullMethodName                   = "/proto.FinalityProviders/GetInfo"
-	FinalityProviders_CreateFinalityProvider_FullMethodName    = "/proto.FinalityProviders/CreateFinalityProvider"
-	FinalityProviders_RegisterFinalityProvider_FullMethodName  = "/proto.FinalityProviders/RegisterFinalityProvider"
-	FinalityProviders_AddFinalitySignature_FullMethodName      = "/proto.FinalityProviders/AddFinalitySignature"
-	FinalityProviders_UnjailFinalityProvider_FullMethodName    = "/proto.FinalityProviders/UnjailFinalityProvider"
-	FinalityProviders_QueryFinalityProvider_FullMethodName     = "/proto.FinalityProviders/QueryFinalityProvider"
-	FinalityProviders_QueryFinalityProviderList_FullMethodName = "/proto.FinalityProviders/QueryFinalityProviderList"
-	FinalityProviders_SignMessageFromChainKey_FullMethodName   = "/proto.FinalityProviders/SignMessageFromChainKey"
+	FinalityProviders_GetInfo_FullMethodName                     = "/proto.FinalityProviders/GetInfo"
+	FinalityProviders_CreateFinalityProvider_FullMethodName      = "/proto.FinalityProviders/CreateFinalityProvider"
+	FinalityProviders_RegisterFinalityProvider_FullMethodName    = "/proto.FinalityProviders/RegisterFinalityProvider"
+	FinalityProviders_AddFinalitySignature_FullMethodName        = "/proto.FinalityProviders/AddFinalitySignature"
+	FinalityProviders_UnjailFinalityProvider_FullMethodName      = "/proto.FinalityProviders/UnjailFinalityProvider"
+	FinalityProviders_QueryFinalityProvider_FullMethodName       = "/proto.FinalityProviders/QueryFinalityProvider"
+	FinalityProviders_QueryFinalityProviderList_FullMethodName   = "/proto.FinalityProviders/QueryFinalityProviderList"
+	FinalityProviders_SignMessageFromChainKey_FullMethodName     = "/proto.FinalityProviders/SignMessageFromChainKey"
+	FinalityProviders_QueryFinalityProviderRemote_FullMethodName = "/proto.FinalityProviders/QueryFinalityProviderRemote"
 )
 
 // FinalityProvidersClient is the client API for FinalityProviders service.
@@ -52,6 +53,8 @@ type FinalityProvidersClient interface {
 	QueryFinalityProviderList(ctx context.Context, in *QueryFinalityProviderListRequest, opts ...grpc.CallOption) (*QueryFinalityProviderListResponse, error)
 	// SignMessageFromChainKey signs a message from the chain keyring.
 	SignMessageFromChainKey(ctx context.Context, in *SignMessageFromChainKeyRequest, opts ...grpc.CallOption) (*SignMessageFromChainKeyResponse, error)
+	// QueryFinalityProvider queries the finality provider in babylon node.
+	QueryFinalityProviderRemote(ctx context.Context, in *QueryFinalityProviderRequest, opts ...grpc.CallOption) (*QueryFinalityProviderResponse, error)
 }
 
 type finalityProvidersClient struct {
@@ -134,6 +137,15 @@ func (c *finalityProvidersClient) SignMessageFromChainKey(ctx context.Context, i
 	return out, nil
 }
 
+func (c *finalityProvidersClient) QueryFinalityProviderRemote(ctx context.Context, in *QueryFinalityProviderRequest, opts ...grpc.CallOption) (*QueryFinalityProviderResponse, error) {
+	out := new(QueryFinalityProviderResponse)
+	err := c.cc.Invoke(ctx, FinalityProviders_QueryFinalityProviderRemote_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FinalityProvidersServer is the server API for FinalityProviders service.
 // All implementations must embed UnimplementedFinalityProvidersServer
 // for forward compatibility
@@ -157,6 +169,8 @@ type FinalityProvidersServer interface {
 	QueryFinalityProviderList(context.Context, *QueryFinalityProviderListRequest) (*QueryFinalityProviderListResponse, error)
 	// SignMessageFromChainKey signs a message from the chain keyring.
 	SignMessageFromChainKey(context.Context, *SignMessageFromChainKeyRequest) (*SignMessageFromChainKeyResponse, error)
+	// QueryFinalityProvider queries the finality provider in babylon node.
+	QueryFinalityProviderRemote(context.Context, *QueryFinalityProviderRequest) (*QueryFinalityProviderResponse, error)
 	mustEmbedUnimplementedFinalityProvidersServer()
 }
 
@@ -187,6 +201,9 @@ func (UnimplementedFinalityProvidersServer) QueryFinalityProviderList(context.Co
 }
 func (UnimplementedFinalityProvidersServer) SignMessageFromChainKey(context.Context, *SignMessageFromChainKeyRequest) (*SignMessageFromChainKeyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SignMessageFromChainKey not implemented")
+}
+func (UnimplementedFinalityProvidersServer) QueryFinalityProviderRemote(context.Context, *QueryFinalityProviderRequest) (*QueryFinalityProviderResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryFinalityProviderRemote not implemented")
 }
 func (UnimplementedFinalityProvidersServer) mustEmbedUnimplementedFinalityProvidersServer() {}
 
@@ -345,6 +362,24 @@ func _FinalityProviders_SignMessageFromChainKey_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FinalityProviders_QueryFinalityProviderRemote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFinalityProviderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinalityProvidersServer).QueryFinalityProviderRemote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FinalityProviders_QueryFinalityProviderRemote_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinalityProvidersServer).QueryFinalityProviderRemote(ctx, req.(*QueryFinalityProviderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FinalityProviders_ServiceDesc is the grpc.ServiceDesc for FinalityProviders service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -383,6 +418,10 @@ var FinalityProviders_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SignMessageFromChainKey",
 			Handler:    _FinalityProviders_SignMessageFromChainKey_Handler,
+		},
+		{
+			MethodName: "QueryFinalityProviderRemote",
+			Handler:    _FinalityProviders_QueryFinalityProviderRemote_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

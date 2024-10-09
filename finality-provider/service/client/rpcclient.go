@@ -126,9 +126,21 @@ func (c *FinalityProviderServiceGRpcClient) QueryFinalityProviderList(ctx contex
 	return res, nil
 }
 
+// QueryFinalityProviderInfo - gets the finality provider data from local store
 func (c *FinalityProviderServiceGRpcClient) QueryFinalityProviderInfo(ctx context.Context, fpPk *bbntypes.BIP340PubKey) (*proto.QueryFinalityProviderResponse, error) {
 	req := &proto.QueryFinalityProviderRequest{BtcPk: fpPk.MarshalHex()}
 	res, err := c.client.QueryFinalityProvider(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// QueryFinalityProviderInfoRemote - gets the finality provider data from babylon node
+func (c *FinalityProviderServiceGRpcClient) QueryFinalityProviderInfoRemote(ctx context.Context, fpPk *bbntypes.BIP340PubKey) (*proto.QueryFinalityProviderResponse, error) {
+	req := &proto.QueryFinalityProviderRequest{BtcPk: fpPk.MarshalHex()}
+	res, err := c.client.QueryFinalityProviderRemote(ctx, req)
 	if err != nil {
 		return nil, err
 	}

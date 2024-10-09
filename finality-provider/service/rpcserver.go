@@ -224,6 +224,33 @@ func (r *rpcServer) QueryFinalityProvider(ctx context.Context, req *proto.QueryF
 
 	return &proto.QueryFinalityProviderResponse{FinalityProvider: fp}, nil
 }
+func (r *rpcServer) QueryFinalityProviderRemote(ctx context.Context, req *proto.QueryFinalityProviderRequest) (
+	*proto.QueryFinalityProviderResponse, error) {
+	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
+	if err != nil {
+		return nil, err
+	}
+
+	fp, err := r.app.cc.QueryFinalityProvider(fpPk.MustToBTCPK())
+	if err != nil {
+		return nil, err
+	}
+
+	return &proto.QueryFinalityProviderResponse{
+		FinalityProvider: &proto.FinalityProviderInfo{
+			FpAddr:   fp.FinalityProvider.Addr,
+			BtcPkHex: fp.FinalityProvider.BtcPk.MarshalHex(),
+			Description: &proto.Description{
+				Moniker:         fp.FinalityProvider.Description.Moniker,
+				Identity:        fp.FinalityProvider.Description.Identity,
+				Website:         fp.FinalityProvider.Description.Website,
+				SecurityContact: fp.FinalityProvider.Description.SecurityContact,
+				Details:         fp.FinalityProvider.Description.Details,
+			},
+			Commission: fp.FinalityProvider.Commission.String(),
+		},
+	}, nil
+}
 
 // QueryFinalityProviderList queries the information of a list of finality providers
 func (r *rpcServer) QueryFinalityProviderList(ctx context.Context, req *proto.QueryFinalityProviderListRequest) (

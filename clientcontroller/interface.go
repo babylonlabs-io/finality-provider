@@ -2,6 +2,7 @@ package clientcontroller
 
 import (
 	"fmt"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 
 	"cosmossdk.io/math"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -48,6 +49,9 @@ type ClientController interface {
 
 	// QueryFinalityProviderSlashedOrJailed queries if the finality provider is slashed or jailed
 	QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error)
+
+	// QueryFinalityProvider queries the finality provider by pk
+	QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error)
 
 	// QueryLatestFinalizedBlocks returns the latest finalized blocks
 	QueryLatestFinalizedBlocks(count uint64) ([]*types.BlockInfo, error)

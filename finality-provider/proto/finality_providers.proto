@@ -41,6 +41,9 @@ service FinalityProviders {
     // SignMessageFromChainKey signs a message from the chain keyring.
     rpc SignMessageFromChainKey (SignMessageFromChainKeyRequest)
         returns (SignMessageFromChainKeyResponse);
+
+    // QueryFinalityProvider queries the finality provider in babylon node.
+    rpc QueryFinalityProviderRemote (QueryFinalityProviderRequest) returns (QueryFinalityProviderResponse);
 }
 
 message GetInfoRequest {
