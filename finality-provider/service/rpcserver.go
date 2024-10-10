@@ -245,7 +245,17 @@ func (r *rpcServer) EditFinalityProvider(ctx context.Context, req *proto.EditFin
 		Details:         req.Description.Details,
 	}
 
-	return nil, r.app.cc.EditFinalityProviderDescription(fpPk.MustToBTCPK(), desc)
+	fpPub := fpPk.MustToBTCPK()
+	updatedDesc, err := r.app.cc.EditFinalityProviderDescription(fpPub, desc)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := r.app.fps.SetFpDescription(fpPub, updatedDesc); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 // QueryFinalityProviderList queries the information of a list of finality providers

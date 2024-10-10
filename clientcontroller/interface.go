@@ -51,7 +51,7 @@ type ClientController interface {
 	QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error)
 
 	// EditFinalityProviderDescription edits description of the finality provider
-	EditFinalityProviderDescription(fpPk *btcec.PublicKey, reqDesc sttypes.Description) error
+	EditFinalityProviderDescription(fpPk *btcec.PublicKey, reqDesc sttypes.Description) (*sttypes.Description, error)
 
 	// QueryLatestFinalizedBlocks returns the latest finalized blocks
 	QueryLatestFinalizedBlocks(count uint64) ([]*types.BlockInfo, error)

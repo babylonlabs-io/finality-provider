@@ -521,11 +521,11 @@ func (bc *BabylonController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcs
 }
 
 func (bc *BabylonController) EditFinalityProviderDescription(fpPk *btcec.PublicKey,
-	reqDesc sttypes.Description) error {
+	reqDesc sttypes.Description) (*sttypes.Description, error) {
 
 	fpRes, err := bc.QueryFinalityProvider(fpPk)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	getValueOrDefault := func(reqValue, defaultValue string) string {
 		if reqValue != "" {
@@ -536,7 +536,7 @@ func (bc *BabylonController) EditFinalityProviderDescription(fpPk *btcec.PublicK
 
 	resDesc := fpRes.FinalityProvider.Description
 
-	desc := sttypes.Description{
+	desc := &sttypes.Description{
 		Moniker:         getValueOrDefault(reqDesc.Moniker, resDesc.Moniker),
 		Identity:        getValueOrDefault(reqDesc.Identity, resDesc.Identity),
 		Website:         getValueOrDefault(reqDesc.Website, resDesc.Website),
@@ -544,17 +544,21 @@ func (bc *BabylonController) EditFinalityProviderDescription(fpPk *btcec.PublicK
 		Details:         getValueOrDefault(reqDesc.Details, resDesc.Details),
 	}
 
-	return bc.EditFinalityProvider(fpPk, fpRes.FinalityProvider.Commission, desc)
+	if err := bc.EditFinalityProvider(fpPk, fpRes.FinalityProvider.Commission, desc); err != nil {
+		return nil, err
+	}
+
+	return desc, nil
 }
 
 func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
-	rate *sdkmath.LegacyDec, description sttypes.Description) error {
+	rate *sdkmath.LegacyDec, description *sttypes.Description) error {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	msg := &btcstakingtypes.MsgEditFinalityProvider{
 		Addr:        bc.mustGetTxSigner(),
 		BtcPk:       fpPubKey.MustMarshal(),
-		Description: &description,
+		Description: description,
 		Commission:  rate,
 	}
 
