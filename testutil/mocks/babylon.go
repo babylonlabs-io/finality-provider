@@ -69,11 +69,12 @@ func (mr *MockClientControllerMockRecorder) CommitPubRandList(fpPk, startHeight,
 }
 
 // EditFinalityProviderDescription mocks base method.
-func (m *MockClientController) EditFinalityProviderDescription(fpPk *btcec.PublicKey, reqDesc types1.Description) error {
+func (m *MockClientController) EditFinalityProviderDescription(fpPk *btcec.PublicKey, reqDesc types1.Description) (*types1.Description, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EditFinalityProviderDescription", fpPk, reqDesc)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*types1.Description)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // EditFinalityProviderDescription indicates an expected call of EditFinalityProviderDescription.
