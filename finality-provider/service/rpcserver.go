@@ -231,6 +231,33 @@ func (r *rpcServer) QueryFinalityProvider(ctx context.Context, req *proto.QueryF
 	return &proto.QueryFinalityProviderResponse{FinalityProvider: fp}, nil
 }
 
+func (r *rpcServer) EditFinalityProvider(ctx context.Context, req *proto.EditFinalityProviderRequest) (*proto.EmptyResponse, error) {
+	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
+	if err != nil {
+		return nil, err
+	}
+
+	desc := stakingtypes.Description{
+		Moniker:         req.Description.Moniker,
+		Identity:        req.Description.Identity,
+		Website:         req.Description.Website,
+		SecurityContact: req.Description.SecurityContact,
+		Details:         req.Description.Details,
+	}
+
+	fpPub := fpPk.MustToBTCPK()
+	updatedDesc, err := r.app.cc.EditFinalityProviderDescription(fpPub, desc)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := r.app.fps.SetFpDescription(fpPub, updatedDesc); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 // QueryFinalityProviderList queries the information of a list of finality providers
 func (r *rpcServer) QueryFinalityProviderList(ctx context.Context, req *proto.QueryFinalityProviderListRequest) (
 	*proto.QueryFinalityProviderListResponse, error) {

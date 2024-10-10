@@ -270,3 +270,19 @@ func (s *FinalityProviderStore) GetAllStoredFinalityProviders() ([]*StoredFinali
 
 	return storedFps, nil
 }
+
+// SetFpDescription updates description of finality provider
+func (s *FinalityProviderStore) SetFpDescription(btcPk *btcec.PublicKey, description *stakingtypes.Description) error {
+	setDescription := func(fp *proto.FinalityProvider) error {
+		descBytes, err := description.Marshal()
+		if err != nil {
+			return err
+		}
+
+		fp.Description = descBytes
+
+		return nil
+	}
+
+	return s.setFinalityProviderState(btcPk, setDescription)
+}

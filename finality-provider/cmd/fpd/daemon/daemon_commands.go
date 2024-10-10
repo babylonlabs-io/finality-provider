@@ -5,20 +5,20 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"strconv"
 
 	"cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/types"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 )
 
 var (
@@ -442,6 +442,71 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	printRespJSON(res)
+
+	return nil
+}
+
+// CommandEditFinalityDescription edits description of finality provider
+func CommandEditFinalityDescription() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:     "edit-finality-provider [btc_pk]",
+		Aliases: []string{"efp"},
+		Short:   "Edit finality provider",
+		Example: fmt.Sprintf(`fpd edit-finality-provider --daemon-address %s`, defaultFpdDaemonAddress),
+		Args:    cobra.ExactArgs(1),
+		RunE:    runCommandEditFinalityDescription,
+	}
+	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+	cmd.Flags().String(monikerFlag, "", "The finality provider's (optional) moniker")
+	cmd.Flags().String(websiteFlag, "", "The finality provider's (optional) website")
+	cmd.Flags().String(securityContactFlag, "", "The finality provider's (optional) security contact email")
+	cmd.Flags().String(detailsFlag, "", "The finality provider's (optional) details")
+	cmd.Flags().String(identityFlag, "", "The (optional) identity signature (ex. UPort or Keybase)")
+
+	return cmd
+}
+
+func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error {
+	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
+	if err != nil {
+		return err
+	}
+
+	flags := cmd.Flags()
+	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+	}
+
+	grpcClient, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := cleanUp(); err != nil {
+			fmt.Printf("Failed to clean up grpc client: %v\n", err)
+		}
+	}()
+
+	moniker, _ := cmd.Flags().GetString(monikerFlag)
+	website, _ := cmd.Flags().GetString(websiteFlag)
+	securityContact, _ := cmd.Flags().GetString(securityContactFlag)
+	details, _ := cmd.Flags().GetString(detailsFlag)
+	identity, _ := cmd.Flags().GetString(identityFlag)
+
+	desc := &proto.Description{
+		Moniker:         moniker,
+		Identity:        identity,
+		Website:         website,
+		SecurityContact: securityContact,
+		Details:         details,
+	}
+
+	if err := grpcClient.EditFinalityProvider(cmd.Context(), fpPk, desc); err != nil {
+		return fmt.Errorf("failed to get finality provider %v err %v", fpPk.MarshalHex(), err)
+	}
+
+	// todo(lazar): if this is successful update local store also
 
 	return nil
 }

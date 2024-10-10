@@ -4,13 +4,15 @@
 package e2etest
 
 import (
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"math/rand"
 	"testing"
 	"time"
-
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/stretchr/testify/require"
 
 	"github.com/babylonlabs-io/finality-provider/types"
 )
@@ -151,4 +153,82 @@ func TestFastSync(t *testing.T) {
 	t.Logf("the current block is at %v", currentHeight)
 	require.NoError(t, err)
 	require.True(t, currentHeight < finalizedHeight+uint64(n))
+}
+
+func TestFinalityProviderEditCmd(t *testing.T) {
+	tm, fpIns := StartManagerWithFinalityProvider(t)
+	defer tm.Stop(t)
+
+	cfg := tm.Fpa.GetConfig()
+	cfg.BabylonConfig.Key = testFpName
+	cc, err := clientcontroller.NewClientController(cfg.ChainName, cfg.BabylonConfig, &cfg.BTCNetParams, zap.NewNop())
+	require.NoError(t, err)
+	tm.Fpa.UpdateClientController(cc)
+
+	cmd := daemon.CommandEditFinalityDescription()
+
+	const (
+		monikerFlag          = "moniker"
+		identityFlag         = "identity"
+		websiteFlag          = "website"
+		securityContactFlag  = "security-contact"
+		detailsFlag          = "details"
+		fpdDaemonAddressFlag = "daemon-address"
+	)
+
+	moniker := "test-moniker"
+	website := "https://test.com"
+	securityContact := "test@test.com"
+	details := "Test details"
+	identity := "test-identity"
+
+	args := []string{
+		fpIns.GetBtcPkHex(),
+		"--" + fpdDaemonAddressFlag, tm.FpConfig.RpcListener,
+		"--" + monikerFlag, moniker,
+		"--" + websiteFlag, website,
+		"--" + securityContactFlag, securityContact,
+		"--" + detailsFlag, details,
+		"--" + identityFlag, identity,
+	}
+
+	cmd.SetArgs(args)
+
+	// Run the command
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	gotFp, err := tm.BBNClient.QueryFinalityProvider(fpIns.GetBtcPk())
+	require.NoError(t, err)
+
+	require.Equal(t, gotFp.FinalityProvider.Description.Moniker, moniker)
+	require.Equal(t, gotFp.FinalityProvider.Description.Website, website)
+	require.Equal(t, gotFp.FinalityProvider.Description.Identity, identity)
+	require.Equal(t, gotFp.FinalityProvider.Description.Details, details)
+	require.Equal(t, gotFp.FinalityProvider.Description.SecurityContact, securityContact)
+
+	moniker = "test2-moniker"
+	args = []string{
+		fpIns.GetBtcPkHex(),
+		"--" + fpdDaemonAddressFlag, tm.FpConfig.RpcListener,
+		"--" + monikerFlag, moniker,
+	}
+
+	cmd.SetArgs(args)
+
+	// Run the command
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	updatedFp, err := tm.BBNClient.QueryFinalityProvider(fpIns.GetBtcPk())
+	require.NoError(t, err)
+
+	updateFpDesc := updatedFp.FinalityProvider.Description
+	oldDesc := gotFp.FinalityProvider.Description
+
+	require.Equal(t, updateFpDesc.Moniker, moniker)
+	require.Equal(t, updateFpDesc.Website, oldDesc.Website)
+	require.Equal(t, updateFpDesc.Identity, oldDesc.Identity)
+	require.Equal(t, updateFpDesc.Details, oldDesc.Details)
+	require.Equal(t, updateFpDesc.SecurityContact, oldDesc.SecurityContact)
 }
