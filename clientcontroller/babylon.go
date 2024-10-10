@@ -550,7 +550,7 @@ func (bc *BabylonController) EditFinalityProviderDescription(fpPk *btcec.PublicK
 func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
 	rate *sdkmath.LegacyDec, description sttypes.Description) error {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-	fmt.Printf("%s/n --------- ", fpPubKey.MustMarshal())
+
 	msg := &btcstakingtypes.MsgEditFinalityProvider{
 		Addr:        bc.mustGetTxSigner(),
 		BtcPk:       fpPubKey.MustMarshal(),
