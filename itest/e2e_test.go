@@ -12,7 +12,6 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
 
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
@@ -26,10 +25,8 @@ var (
 // activation with BTC delegation and Covenant sig ->
 // vote submission -> block finalization
 func TestFinalityProviderLifeCycle(t *testing.T) {
-	tm, fpInsList := StartManagerWithFinalityProvider(t, 1)
+	tm, fpIns := StartManagerWithFinalityProvider(t)
 	defer tm.Stop(t)
-
-	fpIns := fpInsList[0]
 
 	// check the public randomness is committed
 	tm.WaitForFpPubRandTimestamped(t, fpIns)
@@ -58,10 +55,8 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 // sends a finality vote over a conflicting block
 // in this case, the BTC private key should be extracted by Babylon
 func TestDoubleSigning(t *testing.T) {
-	tm, fpInsList := StartManagerWithFinalityProvider(t, 1)
+	tm, fpIns := StartManagerWithFinalityProvider(t)
 	defer tm.Stop(t)
-
-	fpIns := fpInsList[0]
 
 	// check the public randomness is committed
 	tm.WaitForFpPubRandTimestamped(t, fpIns)
@@ -102,24 +97,17 @@ func TestDoubleSigning(t *testing.T) {
 
 	t.Logf("the equivocation attack is successful")
 
-	tm.WaitForFpShutDown(t, fpIns.GetBtcPkBIP340())
+	tm.WaitForFpShutDown(t)
 
-	// try to start all the finality providers and the slashed one should not be restarted
-	err = tm.Fpa.StartHandlingAll()
-	require.NoError(t, err)
-	fps, err := tm.Fpa.ListAllFinalityProvidersInfo()
-	require.NoError(t, err)
-	require.Equal(t, 1, len(fps))
-	require.Equal(t, proto.FinalityProviderStatus_name[4], fps[0].Status)
-	require.Equal(t, false, fps[0].IsRunning)
+	// try to start the finality providers and the slashed one should expect err
+	err = tm.Fpa.StartHandlingFinalityProvider(fpIns.GetBtcPkBIP340(), "")
+	require.Error(t, err)
 }
 
 // TestFastSync tests the fast sync process where the finality-provider is terminated and restarted with fast sync
 func TestFastSync(t *testing.T) {
-	tm, fpInsList := StartManagerWithFinalityProvider(t, 1)
+	tm, fpIns := StartManagerWithFinalityProvider(t)
 	defer tm.Stop(t)
-
-	fpIns := fpInsList[0]
 
 	// check the public randomness is committed
 	tm.WaitForFpPubRandTimestamped(t, fpIns)

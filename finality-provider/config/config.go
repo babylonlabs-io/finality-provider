@@ -38,7 +38,6 @@ const (
 	defaultMaxSubmissionRetries    = 20
 	defaultBitcoinNetwork          = "signet"
 	defaultDataDirname             = "data"
-	defaultMaxNumFinalityProviders = 3
 )
 
 var (
@@ -69,7 +68,6 @@ type Config struct {
 	FastSyncLimit            uint32        `long:"fastsynclimit" description:"The maximum number of blocks to catch up for each fast sync"`
 	FastSyncGap              uint64        `long:"fastsyncgap" description:"The block gap that will trigger the fast sync"`
 	EOTSManagerAddress       string        `long:"eotsmanageraddress" description:"The address of the remote EOTS manager; Empty if the EOTS manager is running locally"`
-	MaxNumFinalityProviders  uint32        `long:"maxnumfinalityproviders" description:"The maximum number of finality-provider instances running concurrently within the daemon"`
 	SyncFpStatusInterval     time.Duration `long:"syncfpstatusinterval" description:"The duration of time that it should sync FP status with the client blockchain"`
 
 	BitcoinNetwork string `long:"bitcoinnetwork" description:"Bitcoin network to run on" choise:"mainnet" choice:"regtest" choice:"testnet" choice:"simnet" choice:"signet"`
@@ -112,7 +110,6 @@ func DefaultConfigWithHome(homePath string) Config {
 		BTCNetParams:             defaultBTCNetParams,
 		EOTSManagerAddress:       defaultEOTSManagerAddress,
 		RpcListener:              DefaultRpcListener,
-		MaxNumFinalityProviders:  defaultMaxNumFinalityProviders,
 		Metrics:                  metrics.DefaultFpConfig(),
 		SyncFpStatusInterval:     defaultSyncFpStatusInterval,
 	}

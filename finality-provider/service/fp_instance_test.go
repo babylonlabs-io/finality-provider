@@ -12,6 +12,7 @@ import (
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
+
 	"github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
@@ -119,8 +120,6 @@ func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc cli
 	app, err := service.NewFinalityProviderApp(&fpCfg, cc, em, db, logger)
 	require.NoError(t, err)
 	err = app.Start()
-	require.NoError(t, err)
-	err = app.StartHandlingAll()
 	require.NoError(t, err)
 
 	// create registered finality-provider

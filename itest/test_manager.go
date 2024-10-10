@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -50,12 +49,12 @@ var (
 	eventuallyPollTime    = 500 * time.Millisecond
 	btcNetworkParams      = &chaincfg.SimNetParams
 
-	fpNamePrefix  = "test-fp-"
-	monikerPrefix = "moniker-"
-	chainID       = "chain-test"
-	passphrase    = "testpass"
-	hdPath        = ""
-	simnetParams  = &chaincfg.SimNetParams
+	testFpName   = "test-fp"
+	testMoniker  = "test-moniker"
+	testChainID  = "chain-test"
+	passphrase   = "testpass"
+	hdPath       = ""
+	simnetParams = &chaincfg.SimNetParams
 )
 
 type TestManager struct {
@@ -179,83 +178,77 @@ func (tm *TestManager) WaitForServicesStart(t *testing.T) {
 	t.Logf("Babylon node is started")
 }
 
-func StartManagerWithFinalityProvider(t *testing.T, n int) (*TestManager, []*service.FinalityProviderInstance) {
+func StartManagerWithFinalityProvider(t *testing.T) (*TestManager, *service.FinalityProviderInstance) {
 	tm := StartManager(t)
 	app := tm.Fpa
 	cfg := app.GetConfig()
 	oldKey := cfg.BabylonConfig.Key
 
-	for i := 0; i < n; i++ {
-		fpName := fpNamePrefix + strconv.Itoa(i)
-		moniker := monikerPrefix + strconv.Itoa(i)
-		commission := sdkmath.LegacyZeroDec()
-		desc := newDescription(moniker)
+	commission := sdkmath.LegacyZeroDec()
+	desc := newDescription(testMoniker)
 
-		// needs to update key in config to be able to register and sign the creation of the finality provider with the
-		// same address.
-		cfg.BabylonConfig.Key = fpName
-		fpBbnKeyInfo, err := service.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, cfg.BabylonConfig.Key, cfg.BabylonConfig.KeyringBackend, passphrase, hdPath, "")
-		require.NoError(t, err)
+	// needs to update key in config to be able to register and sign the creation of the finality provider with the
+	// same address.
+	cfg.BabylonConfig.Key = testFpName
+	fpBbnKeyInfo, err := service.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, cfg.BabylonConfig.Key, cfg.BabylonConfig.KeyringBackend, passphrase, hdPath, "")
+	require.NoError(t, err)
 
-		cc, err := clientcontroller.NewClientController(cfg.ChainName, cfg.BabylonConfig, &cfg.BTCNetParams, zap.NewNop())
-		require.NoError(t, err)
-		app.UpdateClientController(cc)
-
-		// add some funds for new fp pay for fees '-'
-		_, _, err = tm.manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), "1000000ubbn", "node0")
-		require.NoError(t, err)
-
-		res, err := app.CreateFinalityProvider(fpName, chainID, passphrase, hdPath, nil, desc, &commission)
-		require.NoError(t, err)
-		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
-		require.NoError(t, err)
-
-		_, err = app.RegisterFinalityProvider(fpPk.MarshalHex())
-		require.NoError(t, err)
-		err = app.StartHandlingFinalityProvider(fpPk, passphrase)
-		require.NoError(t, err)
-		fpIns, err := app.GetFinalityProviderInstance(fpPk)
-		require.NoError(t, err)
-		require.True(t, fpIns.IsRunning())
-		require.NoError(t, err)
-
-		// check finality providers on Babylon side
-		require.Eventually(t, func() bool {
-			fps, err := tm.BBNClient.QueryFinalityProviders()
-			if err != nil {
-				t.Logf("failed to query finality providers from Babylon %s", err.Error())
-				return false
-			}
-
-			if len(fps) != i+1 {
-				return false
-			}
-
-			for _, fp := range fps {
-				if !strings.Contains(fp.Description.Moniker, monikerPrefix) {
-					return false
-				}
-				if !fp.Commission.Equal(sdkmath.LegacyZeroDec()) {
-					return false
-				}
-			}
-
-			return true
-		}, eventuallyWaitTimeOut, eventuallyPollTime)
-	}
-
-	// goes back to old key in app
-	cfg.BabylonConfig.Key = oldKey
 	cc, err := clientcontroller.NewClientController(cfg.ChainName, cfg.BabylonConfig, &cfg.BTCNetParams, zap.NewNop())
 	require.NoError(t, err)
 	app.UpdateClientController(cc)
 
-	fpInsList := app.ListFinalityProviderInstances()
-	require.Equal(t, n, len(fpInsList))
+	// add some funds for new fp pay for fees '-'
+	_, _, err = tm.manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), "1000000ubbn", "node0")
+	require.NoError(t, err)
 
-	t.Logf("the test manager is running with %v finality-provider(s)", len(fpInsList))
+	res, err := app.CreateFinalityProvider(testFpName, testChainID, passphrase, hdPath, nil, desc, &commission)
+	require.NoError(t, err)
+	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
+	require.NoError(t, err)
 
-	return tm, fpInsList
+	_, err = app.RegisterFinalityProvider(fpPk.MarshalHex())
+	require.NoError(t, err)
+	err = app.StartHandlingFinalityProvider(fpPk, passphrase)
+	require.NoError(t, err)
+	fpIns, err := app.GetFinalityProviderInstance()
+	require.NoError(t, err)
+	require.True(t, fpIns.IsRunning())
+	require.NoError(t, err)
+
+	// check finality providers on Babylon side
+	var fpRes *bstypes.FinalityProviderResponse
+	require.Eventually(t, func() bool {
+		fps, err := tm.BBNClient.QueryFinalityProviders()
+		if err != nil {
+			t.Logf("failed to query finality providers from Babylon %s", err.Error())
+			return false
+		}
+
+		if len(fps) != 1 {
+			return false
+		}
+
+		fpRes = fps[0]
+
+		if !strings.Contains(fpRes.Description.Moniker, testMoniker) {
+			return false
+		}
+		if !fpRes.Commission.Equal(sdkmath.LegacyZeroDec()) {
+			return false
+		}
+
+		return true
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	// goes back to old key in app
+	cfg.BabylonConfig.Key = oldKey
+	cc, err = clientcontroller.NewClientController(cfg.ChainName, cfg.BabylonConfig, &cfg.BTCNetParams, zap.NewNop())
+	require.NoError(t, err)
+	app.UpdateClientController(cc)
+
+	t.Logf("the test manager is running with a finality provider")
+
+	return tm, fpIns
 }
 
 func (tm *TestManager) Stop(t *testing.T) {
@@ -407,13 +400,13 @@ func (tm *TestManager) WaitForNFinalizedBlocks(t *testing.T, n int) []*types.Blo
 	return blocks
 }
 
-func (tm *TestManager) WaitForFpShutDown(t *testing.T, pk *bbntypes.BIP340PubKey) {
+func (tm *TestManager) WaitForFpShutDown(t *testing.T) {
 	require.Eventually(t, func() bool {
-		_, err := tm.Fpa.GetFinalityProviderInstance(pk)
+		_, err := tm.Fpa.GetFinalityProviderInstance()
 		return err != nil
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
-	t.Logf("the finality-provider instance %s is shutdown", pk.MarshalHex())
+	t.Logf("the finality-provider instance is shutdown")
 }
 
 func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
