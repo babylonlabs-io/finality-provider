@@ -520,14 +520,50 @@ func (bc *BabylonController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcs
 	return res, nil
 }
 
-func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error) {
-	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+func (bc *BabylonController) EditFinalityProviderDescription(fpPk *btcec.PublicKey,
+	reqDesc sttypes.Description) error {
+
+	fpRes, err := bc.QueryFinalityProvider(fpPk)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query the finality provider %s: %v", fpPubKey.MarshalHex(), err)
+		return err
+	}
+	getValueOrDefault := func(reqValue, defaultValue string) string {
+		if reqValue != "" {
+			return reqValue
+		}
+		return defaultValue
 	}
 
-	return res, nil
+	resDesc := fpRes.FinalityProvider.Description
+
+	desc := sttypes.Description{
+		Moniker:         getValueOrDefault(reqDesc.Moniker, resDesc.Moniker),
+		Identity:        getValueOrDefault(reqDesc.Identity, resDesc.Identity),
+		Website:         getValueOrDefault(reqDesc.Website, resDesc.Website),
+		SecurityContact: getValueOrDefault(reqDesc.SecurityContact, resDesc.SecurityContact),
+		Details:         getValueOrDefault(reqDesc.Details, resDesc.Details),
+	}
+
+	return bc.EditFinalityProvider(fpPk, fpRes.FinalityProvider.Commission, desc)
+}
+
+func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
+	rate *sdkmath.LegacyDec, description sttypes.Description) error {
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+	fmt.Printf("%s/n --------- ", fpPubKey.MustMarshal())
+	msg := &btcstakingtypes.MsgEditFinalityProvider{
+		Addr:        bc.mustGetTxSigner(),
+		BtcPk:       fpPubKey.MustMarshal(),
+		Description: &description,
+		Commission:  rate,
+	}
+
+	_, err := bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
+	if err != nil {
+		return fmt.Errorf("failed to query the finality provider %s: %v", fpPk.SerializeCompressed(), err)
+	}
+
+	return nil
 }
 
 func (bc *BabylonController) QueryBtcLightClientTip() (*btclctypes.BTCHeaderInfoResponse, error) {

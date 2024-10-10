@@ -224,32 +224,22 @@ func (r *rpcServer) QueryFinalityProvider(ctx context.Context, req *proto.QueryF
 
 	return &proto.QueryFinalityProviderResponse{FinalityProvider: fp}, nil
 }
-func (r *rpcServer) QueryFinalityProviderRemote(ctx context.Context, req *proto.QueryFinalityProviderRequest) (
-	*proto.QueryFinalityProviderResponse, error) {
+
+func (r *rpcServer) EditFinalityProvider(ctx context.Context, req *proto.EditFinalityProviderRequest) (*proto.EmptyResponse, error) {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 	if err != nil {
 		return nil, err
 	}
 
-	fp, err := r.app.cc.QueryFinalityProvider(fpPk.MustToBTCPK())
-	if err != nil {
-		return nil, err
+	desc := stakingtypes.Description{
+		Moniker:         req.Description.Moniker,
+		Identity:        req.Description.Identity,
+		Website:         req.Description.Website,
+		SecurityContact: req.Description.SecurityContact,
+		Details:         req.Description.Details,
 	}
 
-	return &proto.QueryFinalityProviderResponse{
-		FinalityProvider: &proto.FinalityProviderInfo{
-			FpAddr:   fp.FinalityProvider.Addr,
-			BtcPkHex: fp.FinalityProvider.BtcPk.MarshalHex(),
-			Description: &proto.Description{
-				Moniker:         fp.FinalityProvider.Description.Moniker,
-				Identity:        fp.FinalityProvider.Description.Identity,
-				Website:         fp.FinalityProvider.Description.Website,
-				SecurityContact: fp.FinalityProvider.Description.SecurityContact,
-				Details:         fp.FinalityProvider.Description.Details,
-			},
-			Commission: fp.FinalityProvider.Commission.String(),
-		},
-	}, nil
+	return nil, r.app.cc.EditFinalityProviderDescription(fpPk.MustToBTCPK(), desc)
 }
 
 // QueryFinalityProviderList queries the information of a list of finality providers

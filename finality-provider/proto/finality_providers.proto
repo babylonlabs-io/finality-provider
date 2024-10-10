@@ -42,8 +42,8 @@ service FinalityProviders {
     rpc SignMessageFromChainKey (SignMessageFromChainKeyRequest)
         returns (SignMessageFromChainKeyResponse);
 
-    // QueryFinalityProvider queries the finality provider in babylon node.
-    rpc QueryFinalityProviderRemote (QueryFinalityProviderRequest) returns (QueryFinalityProviderResponse);
+    // EditFinalityProvider edits finality provider
+    rpc EditFinalityProvider (EditFinalityProviderRequest) returns (EmptyResponse);
 }
 
 message GetInfoRequest {
@@ -256,3 +256,14 @@ message SignMessageFromChainKeyRequest {
 message SignMessageFromChainKeyResponse {
     bytes signature = 1;
 }
+
+// FinalityProviderInfo is the basic information of a finality provider mainly for external usage
+message EditFinalityProviderRequest {
+    // btc_pk is the hex string of the BTC secp256k1 PK of the finality provider encoded in BIP-340 spec
+    string btc_pk = 1;
+    // description defines the description terms for the finality provider
+    Description description = 2;
+}
+
+// Define an empty response message
+message EmptyResponse {}

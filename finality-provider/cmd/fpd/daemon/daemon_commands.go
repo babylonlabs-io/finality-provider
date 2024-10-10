@@ -5,12 +5,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"strconv"
 
 	"cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/types"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	finalitycli "github.com/babylonlabs-io/babylon/x/btcstaking/client/cli"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
@@ -488,42 +488,22 @@ func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error 
 		}
 	}()
 
-	getValueOrDefault := func(flagValue, defaultValue string) string {
-		if flagValue != "" {
-			return flagValue
-		}
-		return defaultValue
+	moniker, _ := cmd.Flags().GetString(monikerFlag)
+	website, _ := cmd.Flags().GetString(websiteFlag)
+	securityContact, _ := cmd.Flags().GetString(securityContactFlag)
+	details, _ := cmd.Flags().GetString(detailsFlag)
+	identity, _ := cmd.Flags().GetString(identityFlag)
+
+	desc := &proto.Description{
+		Moniker:         moniker,
+		Identity:        identity,
+		Website:         website,
+		SecurityContact: securityContact,
+		Details:         details,
 	}
 
-	fpRes, err := grpcClient.QueryFinalityProviderInfoRemote(cmd.Context(), fpPk)
-	if err != nil {
+	if err := grpcClient.EditFinalityProvider(cmd.Context(), fpPk, desc); err != nil {
 		return fmt.Errorf("failed to get finality provider %v err %v", fpPk.MarshalHex(), err)
-	}
-
-	// define new flags to avoid error of passing flags from this context
-	newFlags := &pflag.FlagSet{}
-
-	// Add only the flags you want to use for the edit command
-	newFlags.String(monikerFlag, "", "Moniker of the finality provider")
-	newFlags.String(identityFlag, "", "Identity of the finality provider")
-	newFlags.String(websiteFlag, "", "Website of the finality provider")
-	newFlags.String(securityContactFlag, "", "Security contact of the finality provider")
-	newFlags.String(detailsFlag, "", "Details of the finality provider")
-	newFlags.String(commissionRateFlag, "", "Commission rate")
-
-	_ = newFlags.Set(monikerFlag, getValueOrDefault(flags.Lookup(monikerFlag).Value.String(), fpRes.FinalityProvider.Description.Moniker))
-	_ = newFlags.Set(identityFlag, getValueOrDefault(flags.Lookup(identityFlag).Value.String(), fpRes.FinalityProvider.Description.Identity))
-	_ = newFlags.Set(websiteFlag, getValueOrDefault(flags.Lookup(websiteFlag).Value.String(), fpRes.FinalityProvider.Description.Website))
-	_ = newFlags.Set(securityContactFlag, getValueOrDefault(flags.Lookup(securityContactFlag).Value.String(), fpRes.FinalityProvider.Description.SecurityContact))
-	_ = newFlags.Set(detailsFlag, getValueOrDefault(flags.Lookup(detailsFlag).Value.String(), fpRes.FinalityProvider.Description.Details))
-	_ = newFlags.Set(commissionRateFlag, fpRes.FinalityProvider.Commission)
-
-	editFinalityCmd := finalitycli.NewEditFinalityProviderCmd()
-	editFinalityCmd.Flags().AddFlagSet(newFlags)
-	editFinalityCmd.SetArgs(args)
-
-	if err := editFinalityCmd.Execute(); err != nil {
-		return fmt.Errorf("failed to execute bbn edit command: %v", err)
 	}
 
 	// todo(lazar): if this is successful update local store also

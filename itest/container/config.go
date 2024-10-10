@@ -21,6 +21,7 @@ const (
 // NewImageConfig returns ImageConfig needed for running e2e test.
 func NewImageConfig(t *testing.T) ImageConfig {
 	babylondVersion, err := testutil.GetBabylonVersion()
+	babylondVersion = "v0.11.0"
 	require.NoError(t, err)
 	return ImageConfig{
 		BabylonRepository: dockerBabylondRepository,

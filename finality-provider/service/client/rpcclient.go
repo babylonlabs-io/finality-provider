@@ -137,15 +137,16 @@ func (c *FinalityProviderServiceGRpcClient) QueryFinalityProviderInfo(ctx contex
 	return res, nil
 }
 
-// QueryFinalityProviderInfoRemote - gets the finality provider data from babylon node
-func (c *FinalityProviderServiceGRpcClient) QueryFinalityProviderInfoRemote(ctx context.Context, fpPk *bbntypes.BIP340PubKey) (*proto.QueryFinalityProviderResponse, error) {
-	req := &proto.QueryFinalityProviderRequest{BtcPk: fpPk.MarshalHex()}
-	res, err := c.client.QueryFinalityProviderRemote(ctx, req)
+// EditFinalityProvider - edit the finality provider data.
+func (c *FinalityProviderServiceGRpcClient) EditFinalityProvider(
+	ctx context.Context, fpPk *bbntypes.BIP340PubKey, desc *proto.Description) error {
+	req := &proto.EditFinalityProviderRequest{BtcPk: fpPk.MarshalHex(), Description: desc}
+	_, err := c.client.EditFinalityProvider(ctx, req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return res, nil
+	return nil
 }
 
 func (c *FinalityProviderServiceGRpcClient) SignMessageFromChainKey(
