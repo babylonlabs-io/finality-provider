@@ -52,14 +52,16 @@ builds:
 archives:
   - id: zipped
     builds:
-      - finality-provider-linux-amd64
+      - fpd-linux-amd64
+      - eotsd-linux-amd64
     name_template: "{{.ProjectName}}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
     format: tar.gz
     files:
       - none*
   - id: binaries
     builds:
-      - finality-provider-linux-amd64
+      - fpd-linux-amd64
+      - eotsd-linux-amd64
     name_template: "{{.ProjectName}}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
     format: binary
     files:
