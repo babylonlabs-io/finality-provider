@@ -27,6 +27,7 @@ func CommandTxs() *cobra.Command {
 	cmd.AddCommand(
 		authcli.GetSignCommand(),
 		btcstakingcli.NewCreateFinalityProviderCmd(),
+		btcstakingcli.NewEditFinalityProviderCmd(),
 		NewValidateSignedFinalityProviderCmd(),
 	)
 
