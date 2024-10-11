@@ -26,5 +26,6 @@
 main
 tmp/
 build/
+dist/
 
 *.swp
