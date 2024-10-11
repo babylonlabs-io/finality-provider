@@ -16,11 +16,6 @@ builds:
     flags:
       - -mod=readonly
       - -trimpath
-    ldflags:
-      - -X github.com/babylonlabs-io/finality-provider/version.Name=finality-provider
-      - -X github.com/babylonlabs-io/finality-provider/version.Version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
-      - -w -s
     tags:
       - netgo
       - osusergo
@@ -40,11 +35,6 @@ builds:
     flags:
       - -mod=readonly
       - -trimpath
-    ldflags:
-      - -X github.com/babylonlabs-io/finality-provider/version.Name=finality-provider
-      - -X github.com/babylonlabs-io/finality-provider/version.Version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
-      - -w -s
     tags:
       - netgo
       - osusergo
