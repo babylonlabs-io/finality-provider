@@ -193,56 +193,8 @@ func StartManagerWithFinalityProvider(t *testing.T) (*TestManager, *service.Fina
 	fpBbnKeyInfo, err := service.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, cfg.BabylonConfig.Key, cfg.BabylonConfig.KeyringBackend, passphrase, hdPath, "")
 	require.NoError(t, err)
 
-		cc, err := clientcontroller.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, zap.NewNop())
-		require.NoError(t, err)
-		app.UpdateClientController(cc)
-
-		// add some funds for new fp pay for fees '-'
-		_, _, err = tm.manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), "1000000ubbn", "node0")
-		require.NoError(t, err)
-
-		res, err := app.CreateFinalityProvider(fpName, chainID, passphrase, hdPath, nil, desc, &commission)
-		require.NoError(t, err)
-		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
-		require.NoError(t, err)
-
-		_, err = app.RegisterFinalityProvider(fpPk.MarshalHex())
-		require.NoError(t, err)
-		err = app.StartHandlingFinalityProvider(fpPk, passphrase)
-		require.NoError(t, err)
-		fpIns, err := app.GetFinalityProviderInstance(fpPk)
-		require.NoError(t, err)
-		require.True(t, fpIns.IsRunning())
-		require.NoError(t, err)
-
-		// check finality providers on Babylon side
-		require.Eventually(t, func() bool {
-			fps, err := tm.BBNClient.QueryFinalityProviders()
-			if err != nil {
-				t.Logf("failed to query finality providers from Babylon %s", err.Error())
-				return false
-			}
-
-			if len(fps) != i+1 {
-				return false
-			}
-
-			for _, fp := range fps {
-				if !strings.Contains(fp.Description.Moniker, monikerPrefix) {
-					return false
-				}
-				if !fp.Commission.Equal(sdkmath.LegacyZeroDec()) {
-					return false
-				}
-			}
-
-			return true
-		}, eventuallyWaitTimeOut, eventuallyPollTime)
-	}
-
-	// goes back to old key in app
-	cfg.BabylonConfig.Key = oldKey
 	cc, err := clientcontroller.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, zap.NewNop())
+
 	require.NoError(t, err)
 	app.UpdateClientController(cc)
 
