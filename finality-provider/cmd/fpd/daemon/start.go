@@ -120,35 +120,31 @@ func startApp(
 	fpApp *service.FinalityProviderApp,
 	fpPkStr, passphrase string,
 ) error {
-	// only start the app without starting any finality-provider instance
-	// as there might be no finality-provider registered yet
+	// only start the app without starting any finality provider instance
+	// this is needed for new finality provider registration or unjailing
+	// finality providers
 	if err := fpApp.Start(); err != nil {
-		return fmt.Errorf("failed to start the finality-provider app: %w", err)
+		return fmt.Errorf("failed to start the finality provider app: %w", err)
 	}
 
-	if fpPkStr != "" {
-		// start the finality-provider instance with the given public key
-		fpPk, err := types.NewBIP340PubKeyFromHex(fpPkStr)
-		if err != nil {
-			return fmt.Errorf("invalid finality-provider public key %s: %w", fpPkStr, err)
-		}
-
-		if err := fpApp.StartHandlingFinalityProvider(fpPk, passphrase); err != nil {
-			if errors.Is(err, service.ErrFinalityProviderJailed) {
-				fpApp.Logger().Error("failed to start finality provider", zap.Error(err))
-				// do not return error as we still want the service to start
-				return nil
-			}
-			return fmt.Errorf("failed to start the finality-provider instance %s: %w", fpPkStr, err)
-		}
+	// no fp instance will be started if public key is not specified
+	if fpPkStr == "" {
+		return nil
 	}
 
-	if err := fpApp.StartHandlingAll(); err != nil {
+	// start the finality-provider instance with the given public key
+	fpPk, err := types.NewBIP340PubKeyFromHex(fpPkStr)
+	if err != nil {
+		return fmt.Errorf("invalid finality provider public key %s: %w", fpPkStr, err)
+	}
+
+	if err := fpApp.StartHandlingFinalityProvider(fpPk, passphrase); err != nil {
 		if errors.Is(err, service.ErrFinalityProviderJailed) {
 			fpApp.Logger().Error("failed to start finality provider", zap.Error(err))
 			// do not return error as we still want the service to start
 			return nil
 		}
+		return fmt.Errorf("failed to start the finality-provider instance %s: %w", fpPkStr, err)
 	}
 
 	return nil

@@ -81,10 +81,12 @@ func (sfp *StoredFinalityProvider) ToFinalityProviderInfo() *proto.FinalityProvi
 // ShouldStart returns true if the finality provider should start his instance
 // based on the current status of the finality provider.
 //
-// It returns false if the status is either 'CREATED' or 'SLASHED'.
+// It returns false if the status is either 'CREATED', 'JAILED' or 'SLASHED'.
 // It returs true for all the other status.
 func (sfp *StoredFinalityProvider) ShouldStart() bool {
-	if sfp.Status == proto.FinalityProviderStatus_CREATED || sfp.Status == proto.FinalityProviderStatus_SLASHED {
+	if sfp.Status == proto.FinalityProviderStatus_CREATED ||
+		sfp.Status == proto.FinalityProviderStatus_SLASHED ||
+		sfp.Status == proto.FinalityProviderStatus_JAILED {
 		return false
 	}
 

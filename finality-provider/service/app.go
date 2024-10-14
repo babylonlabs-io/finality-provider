@@ -151,10 +151,6 @@ func (app *FinalityProviderApp) Logger() *zap.Logger {
 	return app.logger
 }
 
-func (app *FinalityProviderApp) ListFinalityProviderInstances() []*FinalityProviderInstance {
-	return app.fpManager.ListFinalityProviderInstances()
-}
-
 func (app *FinalityProviderApp) ListAllFinalityProvidersInfo() ([]*proto.FinalityProviderInfo, error) {
 	return app.fpManager.AllFinalityProviders()
 }
@@ -164,8 +160,8 @@ func (app *FinalityProviderApp) GetFinalityProviderInfo(fpPk *bbntypes.BIP340Pub
 }
 
 // GetFinalityProviderInstance returns the finality-provider instance with the given Babylon public key
-func (app *FinalityProviderApp) GetFinalityProviderInstance(fpPk *bbntypes.BIP340PubKey) (*FinalityProviderInstance, error) {
-	return app.fpManager.GetFinalityProviderInstance(fpPk)
+func (app *FinalityProviderApp) GetFinalityProviderInstance() (*FinalityProviderInstance, error) {
+	return app.fpManager.GetFinalityProviderInstance()
 }
 
 func (app *FinalityProviderApp) RegisterFinalityProvider(fpPkStr string) (*RegisterFinalityProviderResponse, error) {
@@ -220,14 +216,10 @@ func (app *FinalityProviderApp) RegisterFinalityProvider(fpPkStr string) (*Regis
 	}
 }
 
-// StartHandlingFinalityProvider starts a finality-provider instance with the given Babylon public key
+// StartHandlingFinalityProvider starts a finality provider instance with the given EOTS public key
 // Note: this should be called right after the finality-provider is registered
 func (app *FinalityProviderApp) StartHandlingFinalityProvider(fpPk *bbntypes.BIP340PubKey, passphrase string) error {
 	return app.fpManager.StartFinalityProvider(fpPk, passphrase)
-}
-
-func (app *FinalityProviderApp) StartHandlingAll() error {
-	return app.fpManager.StartAll()
 }
 
 // NOTE: this is not safe in production, so only used for testing purpose
