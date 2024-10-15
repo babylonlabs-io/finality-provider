@@ -3,6 +3,7 @@ package clientcontroller
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	sdkErr "cosmossdk.io/errors"
@@ -522,11 +523,16 @@ func (bc *BabylonController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcs
 
 func (bc *BabylonController) EditFinalityProviderDescription(fpPk *btcec.PublicKey,
 	reqDesc sttypes.Description) (*sttypes.Description, error) {
-
 	fpRes, err := bc.QueryFinalityProvider(fpPk)
 	if err != nil {
 		return nil, err
 	}
+
+	if !strings.EqualFold(fpRes.FinalityProvider.Addr, bc.mustGetTxSigner()) {
+		return nil, fmt.Errorf("the signer does not correspond to the finality provider's "+
+			"Babylon address, expected %s got %s", bc.mustGetTxSigner(), fpRes.FinalityProvider.Addr)
+	}
+
 	getValueOrDefault := func(reqValue, defaultValue string) string {
 		if reqValue != "" {
 			return reqValue
