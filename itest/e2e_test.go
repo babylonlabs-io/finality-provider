@@ -238,4 +238,5 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	require.Equal(t, updateFpDesc.Identity, oldDesc.Identity)
 	require.Equal(t, updateFpDesc.Details, oldDesc.Details)
 	require.Equal(t, updateFpDesc.SecurityContact, oldDesc.SecurityContact)
+	require.Equal(t, updatedFp.FinalityProvider.Commission, &rate)
 }

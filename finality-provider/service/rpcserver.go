@@ -8,6 +8,7 @@ import (
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc"
+	protobuf "google.golang.org/protobuf/proto"
 	"sync"
 	"sync/atomic"
 
@@ -242,8 +243,13 @@ func (r *rpcServer) EditFinalityProvider(ctx context.Context, req *proto.EditFin
 		return nil, err
 	}
 
+	descBytes, err := protobuf.Marshal(req.Description)
+	if err != nil {
+		return nil, err
+	}
+
 	fpPub := fpPk.MustToBTCPK()
-	updatedMsg, err := r.app.cc.EditFinalityProvider(fpPub, &rate, req.Description)
+	updatedMsg, err := r.app.cc.EditFinalityProvider(fpPub, &rate, descBytes)
 	if err != nil {
 		return nil, err
 	}

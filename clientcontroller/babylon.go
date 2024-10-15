@@ -15,6 +15,8 @@ import (
 	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil"
@@ -25,9 +27,7 @@ import (
 	sttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
-
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	"github.com/babylonlabs-io/finality-provider/types"
+	protobuf "google.golang.org/protobuf/proto"
 )
 
 var _ ClientController = &BabylonController{}
@@ -523,7 +523,11 @@ func (bc *BabylonController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcs
 }
 
 func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
-	rate *sdkmath.LegacyDec, reqDesc *proto.Description) (*btcstakingtypes.MsgEditFinalityProvider, error) {
+	rate *sdkmath.LegacyDec, description []byte) (*btcstakingtypes.MsgEditFinalityProvider, error) {
+	var reqDesc proto.Description
+	if err := protobuf.Unmarshal(description, &reqDesc); err != nil {
+		return nil, err
+	}
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	fpRes, err := bc.QueryFinalityProvider(fpPk)

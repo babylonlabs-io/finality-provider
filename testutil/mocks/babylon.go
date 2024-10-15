@@ -10,7 +10,6 @@ import (
 	math "cosmossdk.io/math"
 	types "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	types0 "github.com/babylonlabs-io/babylon/x/finality/types"
-	proto "github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	types1 "github.com/babylonlabs-io/finality-provider/types"
 	btcec "github.com/btcsuite/btcd/btcec/v2"
 	schnorr "github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -70,18 +69,18 @@ func (mr *MockClientControllerMockRecorder) CommitPubRandList(fpPk, startHeight,
 }
 
 // EditFinalityProvider mocks base method.
-func (m *MockClientController) EditFinalityProvider(fpPk *btcec.PublicKey, rate *math.LegacyDec, reqDesc *proto.Description) (*types.MsgEditFinalityProvider, error) {
+func (m *MockClientController) EditFinalityProvider(fpPk *btcec.PublicKey, commission *math.LegacyDec, description []byte) (*types.MsgEditFinalityProvider, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EditFinalityProvider", fpPk, rate, reqDesc)
+	ret := m.ctrl.Call(m, "EditFinalityProvider", fpPk, commission, description)
 	ret0, _ := ret[0].(*types.MsgEditFinalityProvider)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // EditFinalityProvider indicates an expected call of EditFinalityProvider.
-func (mr *MockClientControllerMockRecorder) EditFinalityProvider(fpPk, rate, reqDesc interface{}) *gomock.Call {
+func (mr *MockClientControllerMockRecorder) EditFinalityProvider(fpPk, commission, description interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditFinalityProvider", reflect.TypeOf((*MockClientController)(nil).EditFinalityProvider), fpPk, rate, reqDesc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditFinalityProvider", reflect.TypeOf((*MockClientController)(nil).EditFinalityProvider), fpPk, commission, description)
 }
 
 // QueryActivatedHeight mocks base method.
