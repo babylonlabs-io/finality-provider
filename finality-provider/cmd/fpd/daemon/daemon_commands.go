@@ -508,7 +508,7 @@ func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error 
 	}
 
 	if err := grpcClient.EditFinalityProvider(cmd.Context(), fpPk, desc, rate); err != nil {
-		return fmt.Errorf("failed to get finality provider %v err %v", fpPk.MarshalHex(), err)
+		return fmt.Errorf("failed to edit finality provider %v err %v", fpPk.MarshalHex(), err)
 	}
 
 	return nil
