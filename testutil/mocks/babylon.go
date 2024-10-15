@@ -10,10 +10,10 @@ import (
 	math "cosmossdk.io/math"
 	types "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	types0 "github.com/babylonlabs-io/babylon/x/finality/types"
+	proto "github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	types1 "github.com/babylonlabs-io/finality-provider/types"
 	btcec "github.com/btcsuite/btcd/btcec/v2"
 	schnorr "github.com/btcsuite/btcd/btcec/v2/schnorr"
-	types2 "github.com/cosmos/cosmos-sdk/x/staking/types"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -70,7 +70,7 @@ func (mr *MockClientControllerMockRecorder) CommitPubRandList(fpPk, startHeight,
 }
 
 // EditFinalityProvider mocks base method.
-func (m *MockClientController) EditFinalityProvider(fpPk *btcec.PublicKey, rate *math.LegacyDec, reqDesc *types2.Description) (*types.MsgEditFinalityProvider, error) {
+func (m *MockClientController) EditFinalityProvider(fpPk *btcec.PublicKey, rate *math.LegacyDec, reqDesc *proto.Description) (*types.MsgEditFinalityProvider, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EditFinalityProvider", fpPk, rate, reqDesc)
 	ret0, _ := ret[0].(*types.MsgEditFinalityProvider)

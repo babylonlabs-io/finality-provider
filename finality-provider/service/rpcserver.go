@@ -237,21 +237,13 @@ func (r *rpcServer) EditFinalityProvider(ctx context.Context, req *proto.EditFin
 		return nil, err
 	}
 
-	desc := stakingtypes.Description{
-		Moniker:         req.Description.Moniker,
-		Identity:        req.Description.Identity,
-		Website:         req.Description.Website,
-		SecurityContact: req.Description.SecurityContact,
-		Details:         req.Description.Details,
-	}
-
 	rate, err := sdkmath.LegacyNewDecFromStr(req.Commission)
 	if err != nil {
 		return nil, err
 	}
 
 	fpPub := fpPk.MustToBTCPK()
-	updatedMsg, err := r.app.cc.EditFinalityProvider(fpPub, &rate, &desc)
+	updatedMsg, err := r.app.cc.EditFinalityProvider(fpPub, &rate, req.Description)
 	if err != nil {
 		return nil, err
 	}

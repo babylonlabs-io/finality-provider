@@ -3,6 +3,7 @@ package clientcontroller
 import (
 	"context"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"strings"
 	"time"
 
@@ -522,7 +523,7 @@ func (bc *BabylonController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcs
 }
 
 func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
-	rate *sdkmath.LegacyDec, reqDesc *sttypes.Description) (*btcstakingtypes.MsgEditFinalityProvider, error) {
+	rate *sdkmath.LegacyDec, reqDesc *proto.Description) (*btcstakingtypes.MsgEditFinalityProvider, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	fpRes, err := bc.QueryFinalityProvider(fpPk)
