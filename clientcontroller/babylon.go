@@ -521,8 +521,10 @@ func (bc *BabylonController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcs
 	return res, nil
 }
 
-func (bc *BabylonController) EditFinalityProviderDescription(fpPk *btcec.PublicKey,
-	reqDesc sttypes.Description) (*sttypes.Description, error) {
+func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
+	rate *sdkmath.LegacyDec, reqDesc *sttypes.Description) (*btcstakingtypes.MsgEditFinalityProvider, error) {
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+
 	fpRes, err := bc.QueryFinalityProvider(fpPk)
 	if err != nil {
 		return nil, err
@@ -550,30 +552,23 @@ func (bc *BabylonController) EditFinalityProviderDescription(fpPk *btcec.PublicK
 		Details:         getValueOrDefault(reqDesc.Details, resDesc.Details),
 	}
 
-	if err := bc.EditFinalityProvider(fpPk, fpRes.FinalityProvider.Commission, desc); err != nil {
-		return nil, err
-	}
-
-	return desc, nil
-}
-
-func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
-	rate *sdkmath.LegacyDec, description *sttypes.Description) error {
-	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-
 	msg := &btcstakingtypes.MsgEditFinalityProvider{
 		Addr:        bc.mustGetTxSigner(),
 		BtcPk:       fpPubKey.MustMarshal(),
-		Description: description,
-		Commission:  rate,
+		Description: desc,
+		Commission:  fpRes.FinalityProvider.Commission,
 	}
 
-	_, err := bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
+	if rate != nil {
+		msg.Commission = rate
+	}
+
+	_, err = bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
 	if err != nil {
-		return fmt.Errorf("failed to query the finality provider %s: %v", fpPk.SerializeCompressed(), err)
+		return nil, fmt.Errorf("failed to query the finality provider %s: %v", fpPk.SerializeCompressed(), err)
 	}
 
-	return nil
+	return msg, nil
 }
 
 func (bc *BabylonController) QueryBtcLightClientTip() (*btclctypes.BTCHeaderInfoResponse, error) {

@@ -263,6 +263,11 @@ message EditFinalityProviderRequest {
     string btc_pk = 1;
     // description defines the description terms for the finality provider
     Description description = 2;
+    // commission defines the updated commission rate of the finality provider
+    string commission = 4 [
+        (cosmos_proto.scalar)  = "cosmos.Dec",
+        (gogoproto.customtype) = "cosmossdk.io/math.LegacyDec"
+    ];
 }
 
 // Define an empty response message

@@ -1,13 +1,14 @@
 package clientcontroller
 
 import (
-	"fmt"
-	sttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-
 	"cosmossdk.io/math"
+	sdkmath "cosmossdk.io/math"
+	"fmt"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/chaincfg"
+	sttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"go.uber.org/zap"
 
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
@@ -50,8 +51,8 @@ type ClientController interface {
 	// QueryFinalityProviderSlashedOrJailed queries if the finality provider is slashed or jailed
 	QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error)
 
-	// EditFinalityProviderDescription edits description of the finality provider
-	EditFinalityProviderDescription(fpPk *btcec.PublicKey, reqDesc sttypes.Description) (*sttypes.Description, error)
+	// EditFinalityProvider edits description and commission of a finality provider
+	EditFinalityProvider(fpPk *btcec.PublicKey, rate *sdkmath.LegacyDec, reqDesc *sttypes.Description) (*btcstakingtypes.MsgEditFinalityProvider, error)
 
 	// QueryLatestFinalizedBlocks returns the latest finalized blocks
 	QueryLatestFinalizedBlocks(count uint64) ([]*types.BlockInfo, error)

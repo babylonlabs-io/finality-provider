@@ -2,14 +2,14 @@ package service
 
 import (
 	"context"
-	"fmt"
-	"sync"
-	"sync/atomic"
-
 	"cosmossdk.io/math"
+	sdkmath "cosmossdk.io/math"
+	"fmt"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc"
+	"sync"
+	"sync/atomic"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -245,13 +245,18 @@ func (r *rpcServer) EditFinalityProvider(ctx context.Context, req *proto.EditFin
 		Details:         req.Description.Details,
 	}
 
-	fpPub := fpPk.MustToBTCPK()
-	updatedDesc, err := r.app.cc.EditFinalityProviderDescription(fpPub, desc)
+	rate, err := sdkmath.LegacyNewDecFromStr(req.Commission)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := r.app.fps.SetFpDescription(fpPub, updatedDesc); err != nil {
+	fpPub := fpPk.MustToBTCPK()
+	updatedMsg, err := r.app.cc.EditFinalityProvider(fpPub, &rate, &desc)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := r.app.fps.SetFpDescription(fpPub, updatedMsg.Description, updatedMsg.Commission); err != nil {
 		return nil, err
 	}
 

@@ -462,6 +462,7 @@ func CommandEditFinalityDescription() *cobra.Command {
 	cmd.Flags().String(securityContactFlag, "", "The finality provider's (optional) security contact email")
 	cmd.Flags().String(detailsFlag, "", "The finality provider's (optional) details")
 	cmd.Flags().String(identityFlag, "", "The (optional) identity signature (ex. UPort or Keybase)")
+	cmd.Flags().String(commissionRateFlag, "", "The (optional) identity signature (ex. UPort or Keybase)")
 
 	return cmd
 }
@@ -493,6 +494,7 @@ func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error 
 	securityContact, _ := cmd.Flags().GetString(securityContactFlag)
 	details, _ := cmd.Flags().GetString(detailsFlag)
 	identity, _ := cmd.Flags().GetString(identityFlag)
+	rate, _ := cmd.Flags().GetString(commissionRateFlag)
 
 	desc := &proto.Description{
 		Moniker:         moniker,
@@ -502,11 +504,9 @@ func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error 
 		Details:         details,
 	}
 
-	if err := grpcClient.EditFinalityProvider(cmd.Context(), fpPk, desc); err != nil {
+	if err := grpcClient.EditFinalityProvider(cmd.Context(), fpPk, desc, rate); err != nil {
 		return fmt.Errorf("failed to get finality provider %v err %v", fpPk.MarshalHex(), err)
 	}
-
-	// todo(lazar): if this is successful update local store also
 
 	return nil
 }

@@ -4,17 +4,17 @@
 package e2etest
 
 import (
+	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
+	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"math/rand"
 	"testing"
 	"time"
-
-	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 var (
@@ -174,6 +174,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 		securityContactFlag  = "security-contact"
 		detailsFlag          = "details"
 		fpdDaemonAddressFlag = "daemon-address"
+		commissionRateFlag   = "commission-rate"
 	)
 
 	moniker := "test-moniker"
@@ -181,6 +182,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	securityContact := "test@test.com"
 	details := "Test details"
 	identity := "test-identity"
+	commissionRateStr := "0.3"
 
 	args := []string{
 		fpIns.GetBtcPkHex(),
@@ -190,6 +192,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 		"--" + securityContactFlag, securityContact,
 		"--" + detailsFlag, details,
 		"--" + identityFlag, identity,
+		"--" + commissionRateFlag, commissionRateStr,
 	}
 
 	cmd.SetArgs(args)
@@ -201,11 +204,15 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	gotFp, err := tm.BBNClient.QueryFinalityProvider(fpIns.GetBtcPk())
 	require.NoError(t, err)
 
+	rate, err := sdkmath.LegacyNewDecFromStr(commissionRateStr)
+	require.NoError(t, err)
+
 	require.Equal(t, gotFp.FinalityProvider.Description.Moniker, moniker)
 	require.Equal(t, gotFp.FinalityProvider.Description.Website, website)
 	require.Equal(t, gotFp.FinalityProvider.Description.Identity, identity)
 	require.Equal(t, gotFp.FinalityProvider.Description.Details, details)
 	require.Equal(t, gotFp.FinalityProvider.Description.SecurityContact, securityContact)
+	require.Equal(t, gotFp.FinalityProvider.Commission, &rate)
 
 	moniker = "test2-moniker"
 	args = []string{
