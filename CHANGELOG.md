@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
-### Improvements
+### Misc Improvements
 
 * [#90](https://github.com/babylonlabs-io/finality-provider/pull/90) CLI edit finality provider
+* [#91](https://github.com/babylonlabs-io/finality-provider/pull/91) Go releaser setup
+  and move changelog reminder out
