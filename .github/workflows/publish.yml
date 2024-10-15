@@ -5,6 +5,7 @@ on:
     branches:
       - 'main'
       - 'base/consumer-chain-support'
+      - 'chore/base-publish-docker'
     tags:
       - '*'
 
