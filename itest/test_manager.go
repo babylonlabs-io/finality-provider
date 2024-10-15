@@ -3,6 +3,7 @@ package e2etest
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/lightningnetwork/lnd/signal"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -129,14 +130,17 @@ func StartManager(t *testing.T) *TestManager {
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 	t.Logf("current epoch is %d", currentEpoch)
 
+	shutdownInterceptor, err := signal.Intercept()
+	require.NoError(t, err)
+
 	// 3. prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
 	eotsCfg := eotsconfig.DefaultConfigWithHomePath(eotsHomeDir)
 	eotsCfg.RpcListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir, shutdownInterceptor)
 	eh.Start()
-	cfg.RpcListener = eotsCfg.RpcListener
-	eotsCli, err := client.NewEOTSManagerGRpcClient(cfg.RpcListener)
+	cfg.RpcListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RpcListener)
 	require.NoError(t, err)
 
 	// 4. prepare finality-provider
@@ -146,6 +150,12 @@ func StartManager(t *testing.T) *TestManager {
 	require.NoError(t, err)
 	err = fpApp.Start()
 	require.NoError(t, err)
+
+	fpServer := service.NewFinalityProviderServer(cfg, logger, fpApp, fpdb, shutdownInterceptor)
+	go func() {
+		err = fpServer.RunUntilShutdown()
+		require.NoError(t, err)
+	}()
 
 	tm := &TestManager{
 		EOTSServerHandler: eh,

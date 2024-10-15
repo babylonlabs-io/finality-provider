@@ -2,14 +2,15 @@ package service
 
 import (
 	"context"
-	"fmt"
-	"sync"
-	"sync/atomic"
-
 	"cosmossdk.io/math"
+	sdkmath "cosmossdk.io/math"
+	"fmt"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc"
+	protobuf "google.golang.org/protobuf/proto"
+	"sync"
+	"sync/atomic"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -229,6 +230,35 @@ func (r *rpcServer) QueryFinalityProvider(ctx context.Context, req *proto.QueryF
 	}
 
 	return &proto.QueryFinalityProviderResponse{FinalityProvider: fp}, nil
+}
+
+func (r *rpcServer) EditFinalityProvider(ctx context.Context, req *proto.EditFinalityProviderRequest) (*proto.EmptyResponse, error) {
+	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
+	if err != nil {
+		return nil, err
+	}
+
+	rate, err := sdkmath.LegacyNewDecFromStr(req.Commission)
+	if err != nil {
+		return nil, err
+	}
+
+	descBytes, err := protobuf.Marshal(req.Description)
+	if err != nil {
+		return nil, err
+	}
+
+	fpPub := fpPk.MustToBTCPK()
+	updatedMsg, err := r.app.cc.EditFinalityProvider(fpPub, &rate, descBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := r.app.fps.SetFpDescription(fpPub, updatedMsg.Description, updatedMsg.Commission); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 // QueryFinalityProviderList queries the information of a list of finality providers
