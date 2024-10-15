@@ -451,8 +451,11 @@ func CommandEditFinalityDescription() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "edit-finality-provider [btc_pk]",
 		Aliases: []string{"efp"},
-		Short:   "Edit finality provider",
-		Example: fmt.Sprintf(`fpd edit-finality-provider --daemon-address %s`, defaultFpdDaemonAddress),
+		Short:   "Edit finality provider data without resetting unchanged fields",
+		Long: "Edit the details of a finality provider using the specified BTC public key. " +
+			"\nIf one or more optional flags are passed (such as --moniker, --website, etc.), " +
+			"the corresponding values are updated, while unchanged fields retain their current values from the Babylon Node.",
+		Example: fmt.Sprintf(`fpd edit-finality-provider [btc_pk] --daemon-address %s --moniker "new-moniker"`, defaultFpdDaemonAddress),
 		Args:    cobra.ExactArgs(1),
 		RunE:    runCommandEditFinalityDescription,
 	}
@@ -462,7 +465,7 @@ func CommandEditFinalityDescription() *cobra.Command {
 	cmd.Flags().String(securityContactFlag, "", "The finality provider's (optional) security contact email")
 	cmd.Flags().String(detailsFlag, "", "The finality provider's (optional) details")
 	cmd.Flags().String(identityFlag, "", "The (optional) identity signature (ex. UPort or Keybase)")
-	cmd.Flags().String(commissionRateFlag, "", "The (optional) identity signature (ex. UPort or Keybase)")
+	cmd.Flags().String(commissionRateFlag, "", "The (optional) commission rate percentage (ex. 0.2)")
 
 	return cmd
 }
