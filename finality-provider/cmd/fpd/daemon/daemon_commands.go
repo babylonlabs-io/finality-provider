@@ -453,6 +453,7 @@ func CommandEditFinalityDescription() *cobra.Command {
 		Aliases: []string{"efp"},
 		Short:   "Edit finality provider data without resetting unchanged fields",
 		Long: "Edit the details of a finality provider using the specified BTC public key. " +
+			"\nThe provided [btc_pk] must correspond to the Babylon address controlled by the key specified in fpd.conf. " +
 			"\nIf one or more optional flags are passed (such as --moniker, --website, etc.), " +
 			"the corresponding values are updated, while unchanged fields retain their current values from the Babylon Node.",
 		Example: fmt.Sprintf(`fpd edit-finality-provider [btc_pk] --daemon-address %s --moniker "new-moniker"`, defaultFpdDaemonAddress),
