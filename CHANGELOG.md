@@ -37,8 +37,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v0.8.0
+
 ### Misc Improvements
 
+* [#97](https://github.com/babylonlabs-io/finality-provider/pull/97) Bump Babylon version to v0.13.0
 * [#90](https://github.com/babylonlabs-io/finality-provider/pull/90) CLI edit finality provider
 * [#91](https://github.com/babylonlabs-io/finality-provider/pull/91) Go releaser setup
   and move changelog reminder out
+* [#86](https://github.com/babylonlabs-io/finality-provider/pull/86) Remove running multiple fp instances support
