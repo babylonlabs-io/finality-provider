@@ -37,6 +37,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Misc Improvements
+
+* [#87](https://github.com/babylonlabs-io/finality-provider/pull/87) Rename ChainName to ChainType
 ## v0.8.0
 
 ### Misc Improvements
