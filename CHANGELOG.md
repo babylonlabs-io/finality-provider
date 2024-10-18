@@ -41,3 +41,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 * [#91](https://github.com/babylonlabs-io/finality-provider/pull/91) Go releaser setup
   and move changelog reminder out
+
+* [#87](https://github.com/babylonlabs-io/finality-provider/pull/87) Rename config ChainName to ChainType
