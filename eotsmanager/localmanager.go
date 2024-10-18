@@ -119,17 +119,17 @@ func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, passphrase, hdPath, mnem
 	// as when creating an account, passphrase will be asked twice
 	// by the keyring
 	lm.input.Reset(passphrase + "\n" + passphrase)
-	record, err := lm.kr.NewAccount(name, mnemonic, passphrase, hdPath, algo)
+	_, err = lm.kr.NewAccount(name, mnemonic, passphrase, hdPath, algo)
 	if err != nil {
 		return nil, err
 	}
 
-	eotsPk, err := loadBIP340PubKeyFromKeyringRecord(record)
+	eotsPk, err := lm.LoadBIP340PubKeyFromKeyName(name)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := lm.es.AddEOTSKeyName(eotsPk.MustToBTCPK(), name); err != nil {
+	if err := lm.SaveEOTSKeyName(eotsPk.MustToBTCPK(), name); err != nil {
 		return nil, err
 	}
 
@@ -143,8 +143,16 @@ func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, passphrase, hdPath, mnem
 	return eotsPk, nil
 }
 
-func loadBIP340PubKeyFromKeyringRecord(record *keyring.Record) (*bbntypes.BIP340PubKey, error) {
-	pubKey, err := record.GetPubKey()
+func (lm *LocalEOTSManager) SaveEOTSKeyName(pk *btcec.PublicKey, keyName string) error {
+	return lm.es.AddEOTSKeyName(pk, keyName)
+}
+
+func (lm *LocalEOTSManager) LoadBIP340PubKeyFromKeyName(keyName string) (*bbntypes.BIP340PubKey, error) {
+	info, err := lm.kr.Key(keyName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load keyring record for key %s: %w", keyName, err)
+	}
+	pubKey, err := info.GetPubKey()
 	if err != nil {
 		return nil, err
 	}
@@ -221,17 +229,13 @@ func (lm *LocalEOTSManager) signSchnorrSigFromPrivKey(privKey *btcec.PrivateKey,
 
 func (lm *LocalEOTSManager) SignSchnorrSigFromKeyname(keyName, passphrase string, msg []byte) (*schnorr.Signature, *bbntypes.BIP340PubKey, error) {
 	lm.input.Reset(passphrase)
-	k, err := lm.kr.Key(keyName)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load keyring record for key %s: %w", keyName, err)
-	}
 
-	eotsPk, err := loadBIP340PubKeyFromKeyringRecord(k)
+	eotsPk, err := lm.LoadBIP340PubKeyFromKeyName(keyName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	privKey, err := eotsPrivKeyFromRecord(k)
+	privKey, err := lm.eotsPrivKeyFromKeyName(keyName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -283,15 +287,15 @@ func (lm *LocalEOTSManager) getEOTSPrivKey(fpPk []byte, passphrase string) (*btc
 	}
 
 	lm.input.Reset(passphrase)
+
+	return lm.eotsPrivKeyFromKeyName(keyName)
+}
+
+func (lm *LocalEOTSManager) eotsPrivKeyFromKeyName(keyName string) (*btcec.PrivateKey, error) {
 	k, err := lm.kr.Key(keyName)
 	if err != nil {
 		return nil, err
 	}
-
-	return eotsPrivKeyFromRecord(k)
-}
-
-func eotsPrivKeyFromRecord(k *keyring.Record) (*btcec.PrivateKey, error) {
 	privKeyCached := k.GetLocal().PrivKey.GetCachedValue()
 
 	var privKey *btcec.PrivateKey

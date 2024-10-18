@@ -1,20 +1,20 @@
-package daemon
+package main
 
 import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	"github.com/btcsuite/btcd/btcec/v2/schnorr"
+	"github.com/spf13/cobra"
+
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/log"
-	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-	"github.com/urfave/cli"
 )
 
 type DataSigned struct {
@@ -24,120 +24,53 @@ type DataSigned struct {
 	SchnorrSignatureHex string `json:"schnorr_signature_hex"`
 }
 
-var SignSchnorrSig = cli.Command{
-	Name:      "sign-schnorr",
-	Usage:     "Signs a Schnorr signature over arbitrary data with the EOTS private key.",
-	UsageText: "sign-schnorr [file-path]",
-	Description: fmt.Sprintf(`Read the file received as argument, hash it with
+func NewSignSchnorrCmd() *cobra.Command {
+	signSchnorrCmd := &cobra.Command{
+		Use:   "sign-schnorr [file-path]",
+		Short: "Signs a Schnorr signature over arbitrary data with the EOTS private key.",
+		Long: fmt.Sprintf(`Read the file received as argument, hash it with
 	sha256 and sign based on the Schnorr key associated with the %s or %s flag.
-	If the both flags are supplied, %s takes priority`, keyNameFlag, eotsPkFlag, eotsPkFlag),
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  homeFlag,
-			Usage: "Path to the keyring directory",
-			Value: config.DefaultEOTSDir,
-		},
-		cli.StringFlag{
-			Name:  keyNameFlag,
-			Usage: "The name of the key to load private key for signing",
-		},
-		cli.StringFlag{
-			Name:  eotsPkFlag,
-			Usage: "The public key of the finality-provider to load private key for signing",
-		},
-		cli.StringFlag{
-			Name:  passphraseFlag,
-			Usage: "The passphrase used to decrypt the keyring",
-			Value: defaultPassphrase,
-		},
-		cli.StringFlag{
-			Name:  keyringBackendFlag,
-			Usage: "The backend of the keyring",
-			Value: defaultKeyringBackend,
-		},
-	},
-	Action: SignSchnorr,
+	If both flags are supplied, %s takes priority`, keyNameFlag, eotsPkFlag, eotsPkFlag),
+		Args: cobra.ExactArgs(1),
+		RunE: signSchnorr,
+	}
+
+	signSchnorrCmd.Flags().String(keyNameFlag, "", "The name of the key to load private key for signing")
+	signSchnorrCmd.Flags().String(eotsPkFlag, "", "The public key of the finality-provider to load private key for signing")
+	signSchnorrCmd.Flags().String(passphraseFlag, defaultPassphrase, "The passphrase used to decrypt the keyring")
+	signSchnorrCmd.Flags().String(keyringBackendFlag, defaultKeyringBackend, "The backend of the keyring")
+
+	return signSchnorrCmd
 }
 
-var VerifySchnorrSig = cli.Command{
-	Name:      "verify-schnorr-sig",
-	Usage:     "Verify a Schnorr signature over arbitrary data with the given public key.",
-	UsageText: "verify-schnorr-sig [file-path]",
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:     eotsPkFlag,
-			Usage:    "The EOTS public key that will be used to verify the signature",
-			Required: true,
-		},
-		cli.StringFlag{
-			Name:     signatureFlag,
-			Usage:    "The hex signature to verify",
-			Required: true,
-		},
-	},
-	Action: SignSchnorrVerify,
-}
-
-func SignSchnorrVerify(ctx *cli.Context) error {
-	fpPkStr := ctx.String(eotsPkFlag)
-	signatureHex := ctx.String(signatureFlag)
-
-	args := ctx.Args()
-	inputFilePath := args.First()
-	if len(inputFilePath) == 0 {
-		return errors.New("invalid argument, please provide a valid file path as input argument")
-	}
-
-	hashOfMsgToSign, err := hashFromFile(inputFilePath)
+func signSchnorr(cmd *cobra.Command, args []string) error {
+	keyName, err := cmd.Flags().GetString(keyNameFlag)
 	if err != nil {
-		return fmt.Errorf("failed to generate hash from file %s: %w", inputFilePath, err)
+		return fmt.Errorf("failed to get key name flag: %w", err)
 	}
 
-	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(fpPkStr)
+	fpPkStr, err := cmd.Flags().GetString(eotsPkFlag)
 	if err != nil {
-		return fmt.Errorf("invalid finality-provider public key %s: %w", fpPkStr, err)
+		return fmt.Errorf("failed to get eots public key flag: %w", err)
 	}
 
-	pubKey, err := schnorr.ParsePubKey(*fpPk)
+	passphrase, err := cmd.Flags().GetString(passphraseFlag)
 	if err != nil {
-		return fmt.Errorf("unable to parse public key %s: %w", fpPkStr, err)
+		return fmt.Errorf("failed to get passphrase flag: %w", err)
 	}
 
-	signatureBz, err := hex.DecodeString(signatureHex)
+	keyringBackend, err := cmd.Flags().GetString(keyringBackendFlag)
 	if err != nil {
-		return fmt.Errorf("unable to decode signature %s: %w", signatureHex, err)
+		return fmt.Errorf("failed to get keyring backend flag: %w", err)
 	}
 
-	signature, err := schnorr.ParseSignature(signatureBz)
-	if err != nil {
-		return fmt.Errorf("unable to parse schnorr signature %s: %w", signatureBz, err)
-	}
-
-	if !signature.Verify(hashOfMsgToSign, pubKey) {
-		return errors.New("invalid signature")
-	}
-
-	fmt.Print("Verification is successful!")
-	return nil
-}
-
-func SignSchnorr(ctx *cli.Context) error {
-	keyName := ctx.String(keyNameFlag)
-	fpPkStr := ctx.String(eotsPkFlag)
-	passphrase := ctx.String(passphraseFlag)
-	keyringBackend := ctx.String(keyringBackendFlag)
-
-	args := ctx.Args()
-	inputFilePath := args.First()
-	if len(inputFilePath) == 0 {
-		return errors.New("invalid argument, please provide a valid file path as input argument")
-	}
+	inputFilePath := args[0]
 
 	if len(fpPkStr) == 0 && len(keyName) == 0 {
 		return fmt.Errorf("at least one of the flags: %s, %s needs to be informed", keyNameFlag, eotsPkFlag)
 	}
 
-	homePath, err := getHomeFlag(ctx)
+	homePath, err := getHomePath(cmd)
 	if err != nil {
 		return fmt.Errorf("failed to load home flag: %w", err)
 	}

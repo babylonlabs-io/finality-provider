@@ -1,4 +1,4 @@
-package daemon
+package main
 
 import "github.com/cosmos/cosmos-sdk/crypto/keyring"
 
