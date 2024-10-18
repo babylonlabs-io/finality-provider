@@ -3,6 +3,8 @@ package clientcontroller
 import (
 	"context"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	"strings"
 	"time"
 
 	sdkErr "cosmossdk.io/errors"
@@ -13,6 +15,8 @@ import (
 	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil"
@@ -23,9 +27,7 @@ import (
 	sttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
-
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	"github.com/babylonlabs-io/finality-provider/types"
+	protobuf "google.golang.org/protobuf/proto"
 )
 
 var _ ClientController = &BabylonController{}
@@ -508,6 +510,70 @@ func (bc *BabylonController) QueryFinalityProviders() ([]*btcstakingtypes.Finali
 	}
 
 	return fps, nil
+}
+
+func (bc *BabylonController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error) {
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+	if err != nil {
+		return nil, fmt.Errorf("failed to query the finality provider %s: %v", fpPubKey.MarshalHex(), err)
+	}
+
+	return res, nil
+}
+
+func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
+	rate *sdkmath.LegacyDec, description []byte) (*btcstakingtypes.MsgEditFinalityProvider, error) {
+	var reqDesc proto.Description
+	if err := protobuf.Unmarshal(description, &reqDesc); err != nil {
+		return nil, err
+	}
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+
+	fpRes, err := bc.QueryFinalityProvider(fpPk)
+	if err != nil {
+		return nil, err
+	}
+
+	if !strings.EqualFold(fpRes.FinalityProvider.Addr, bc.mustGetTxSigner()) {
+		return nil, fmt.Errorf("the signer does not correspond to the finality provider's "+
+			"Babylon address, expected %s got %s", bc.mustGetTxSigner(), fpRes.FinalityProvider.Addr)
+	}
+
+	getValueOrDefault := func(reqValue, defaultValue string) string {
+		if reqValue != "" {
+			return reqValue
+		}
+		return defaultValue
+	}
+
+	resDesc := fpRes.FinalityProvider.Description
+
+	desc := &sttypes.Description{
+		Moniker:         getValueOrDefault(reqDesc.Moniker, resDesc.Moniker),
+		Identity:        getValueOrDefault(reqDesc.Identity, resDesc.Identity),
+		Website:         getValueOrDefault(reqDesc.Website, resDesc.Website),
+		SecurityContact: getValueOrDefault(reqDesc.SecurityContact, resDesc.SecurityContact),
+		Details:         getValueOrDefault(reqDesc.Details, resDesc.Details),
+	}
+
+	msg := &btcstakingtypes.MsgEditFinalityProvider{
+		Addr:        bc.mustGetTxSigner(),
+		BtcPk:       fpPubKey.MustMarshal(),
+		Description: desc,
+		Commission:  fpRes.FinalityProvider.Commission,
+	}
+
+	if rate != nil {
+		msg.Commission = rate
+	}
+
+	_, err = bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query the finality provider %s: %v", fpPk.SerializeCompressed(), err)
+	}
+
+	return msg, nil
 }
 
 func (bc *BabylonController) QueryBtcLightClientTip() (*btclctypes.BTCHeaderInfoResponse, error) {

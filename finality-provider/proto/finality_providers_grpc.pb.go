@@ -27,6 +27,7 @@ const (
 	FinalityProviders_QueryFinalityProvider_FullMethodName     = "/proto.FinalityProviders/QueryFinalityProvider"
 	FinalityProviders_QueryFinalityProviderList_FullMethodName = "/proto.FinalityProviders/QueryFinalityProviderList"
 	FinalityProviders_SignMessageFromChainKey_FullMethodName   = "/proto.FinalityProviders/SignMessageFromChainKey"
+	FinalityProviders_EditFinalityProvider_FullMethodName      = "/proto.FinalityProviders/EditFinalityProvider"
 )
 
 // FinalityProvidersClient is the client API for FinalityProviders service.
@@ -52,6 +53,8 @@ type FinalityProvidersClient interface {
 	QueryFinalityProviderList(ctx context.Context, in *QueryFinalityProviderListRequest, opts ...grpc.CallOption) (*QueryFinalityProviderListResponse, error)
 	// SignMessageFromChainKey signs a message from the chain keyring.
 	SignMessageFromChainKey(ctx context.Context, in *SignMessageFromChainKeyRequest, opts ...grpc.CallOption) (*SignMessageFromChainKeyResponse, error)
+	// EditFinalityProvider edits finality provider
+	EditFinalityProvider(ctx context.Context, in *EditFinalityProviderRequest, opts ...grpc.CallOption) (*EmptyResponse, error)
 }
 
 type finalityProvidersClient struct {
@@ -134,6 +137,15 @@ func (c *finalityProvidersClient) SignMessageFromChainKey(ctx context.Context, i
 	return out, nil
 }
 
+func (c *finalityProvidersClient) EditFinalityProvider(ctx context.Context, in *EditFinalityProviderRequest, opts ...grpc.CallOption) (*EmptyResponse, error) {
+	out := new(EmptyResponse)
+	err := c.cc.Invoke(ctx, FinalityProviders_EditFinalityProvider_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FinalityProvidersServer is the server API for FinalityProviders service.
 // All implementations must embed UnimplementedFinalityProvidersServer
 // for forward compatibility
@@ -157,6 +169,8 @@ type FinalityProvidersServer interface {
 	QueryFinalityProviderList(context.Context, *QueryFinalityProviderListRequest) (*QueryFinalityProviderListResponse, error)
 	// SignMessageFromChainKey signs a message from the chain keyring.
 	SignMessageFromChainKey(context.Context, *SignMessageFromChainKeyRequest) (*SignMessageFromChainKeyResponse, error)
+	// EditFinalityProvider edits finality provider
+	EditFinalityProvider(context.Context, *EditFinalityProviderRequest) (*EmptyResponse, error)
 	mustEmbedUnimplementedFinalityProvidersServer()
 }
 
@@ -187,6 +201,9 @@ func (UnimplementedFinalityProvidersServer) QueryFinalityProviderList(context.Co
 }
 func (UnimplementedFinalityProvidersServer) SignMessageFromChainKey(context.Context, *SignMessageFromChainKeyRequest) (*SignMessageFromChainKeyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SignMessageFromChainKey not implemented")
+}
+func (UnimplementedFinalityProvidersServer) EditFinalityProvider(context.Context, *EditFinalityProviderRequest) (*EmptyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EditFinalityProvider not implemented")
 }
 func (UnimplementedFinalityProvidersServer) mustEmbedUnimplementedFinalityProvidersServer() {}
 
@@ -345,6 +362,24 @@ func _FinalityProviders_SignMessageFromChainKey_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FinalityProviders_EditFinalityProvider_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EditFinalityProviderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinalityProvidersServer).EditFinalityProvider(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FinalityProviders_EditFinalityProvider_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinalityProvidersServer).EditFinalityProvider(ctx, req.(*EditFinalityProviderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FinalityProviders_ServiceDesc is the grpc.ServiceDesc for FinalityProviders service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -383,6 +418,10 @@ var FinalityProviders_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SignMessageFromChainKey",
 			Handler:    _FinalityProviders_SignMessageFromChainKey_Handler,
+		},
+		{
+			MethodName: "EditFinalityProvider",
+			Handler:    _FinalityProviders_EditFinalityProvider_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
