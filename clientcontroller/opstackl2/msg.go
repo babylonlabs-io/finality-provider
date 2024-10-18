@@ -47,11 +47,6 @@ type PubRandCommit struct {
 	BtcPkHex string `json:"btc_pk_hex"`
 }
 
-type ConfigResponse struct {
-	ConsumerId      string `json:"consumer_id"`
-	ActivatedHeight uint64 `json:"activated_height"`
-}
-
 // FIXME: Remove this ancillary struct.
 // Only required because the e2e tests are using a zero index, which is removed by the `json:"omitempty"` annotation in
 // the original cmtcrypto Proof
