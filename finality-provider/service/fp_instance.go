@@ -23,6 +23,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 type FinalityProviderInstance struct {
@@ -374,16 +375,9 @@ func (fp *FinalityProviderInstance) tryFastSync(targetBlock *types.BlockInfo) (*
 		return nil, nil
 	}
 
-	lastFinalizedHeight := lastFinalizedBlocks[0].Height
-	lastProcessedHeight := fp.GetLastProcessedHeight()
-
-	// get the startHeight from the maximum of the lastVotedHeight and
-	// the lastFinalizedHeight plus 1
-	var startHeight uint64
-	if lastFinalizedHeight < lastProcessedHeight {
-		startHeight = lastProcessedHeight + 1
-	} else {
-		startHeight = lastFinalizedHeight + 1
+	startHeight, err := fp.fastSyncStartHeight(lastFinalizedBlocks[0].Height)
+	if err != nil {
+		return nil, err
 	}
 
 	if startHeight > targetBlock.Height {
@@ -393,6 +387,21 @@ func (fp *FinalityProviderInstance) tryFastSync(targetBlock *types.BlockInfo) (*
 	fp.logger.Debug("the finality-provider is entering fast sync")
 
 	return fp.FastSync(startHeight, targetBlock.Height)
+}
+
+func (fp *FinalityProviderInstance) fastSyncStartHeight(lastFinalizedHeight uint64) (uint64, error) {
+	lastProcessedHeight := fp.GetLastProcessedHeight()
+
+	// finalityActivationBlockHeight := fp.cc.QueryFinalityActivationBlockHeight()
+	// get the startHeight from the maximum of the lastVotedHeight and
+	// the lastFinalizedHeight plus 1
+	finalityActivationBlkHeight, err := fp.cc.QueryFinalityActivationBlockHeight()
+	if err != nil {
+		return 0, err
+	}
+
+	// return the max start height by checking the finality activation block height
+	return util.MaxUint64(lastProcessedHeight+1, lastFinalizedHeight+1, finalityActivationBlkHeight), nil
 }
 
 func (fp *FinalityProviderInstance) hasProcessed(b *types.BlockInfo) bool {
