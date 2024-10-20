@@ -28,6 +28,11 @@ func (fp *FinalityProviderInstance) FastSync(startHeight, endHeight uint64) (*Fa
 			startHeight, endHeight)
 	}
 
+	activationBlkHeight, err := fp.cc.QueryFinalityActivationBlockHeight()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get activation height during fast sync %w", err)
+	}
+
 	var syncedHeight uint64
 	responses := make([]*types.TxResponse, 0)
 	// we may need several rounds to catch-up as we need to limit
@@ -51,6 +56,10 @@ func (fp *FinalityProviderInstance) FastSync(startHeight, endHeight uint64) (*Fa
 		for _, b := range blocks {
 			// check whether the block has been processed before
 			if fp.hasProcessed(b) {
+				continue
+			}
+			// check if it is allowed to send finality
+			if b.Height < activationBlkHeight {
 				continue
 			}
 			// check whether the finality provider has voting power
