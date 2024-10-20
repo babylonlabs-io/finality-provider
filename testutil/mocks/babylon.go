@@ -98,6 +98,21 @@ func (mr *MockClientControllerMockRecorder) QueryActivatedHeight() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryActivatedHeight", reflect.TypeOf((*MockClientController)(nil).QueryActivatedHeight))
 }
 
+// QueryFinalityActivationBlockHeight mocks base method.
+func (m *MockClientController) QueryFinalityActivationBlockHeight() (uint64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QueryFinalityActivationBlockHeight")
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// QueryFinalityActivationBlockHeight indicates an expected call of QueryFinalityActivationBlockHeight.
+func (mr *MockClientControllerMockRecorder) QueryFinalityActivationBlockHeight() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityActivationBlockHeight", reflect.TypeOf((*MockClientController)(nil).QueryFinalityActivationBlockHeight))
+}
+
 // QueryBestBlock mocks base method.
 func (m *MockClientController) QueryBestBlock() (*types1.BlockInfo, error) {
 	m.ctrl.T.Helper()

@@ -388,13 +388,13 @@ func (bc *BabylonController) QueryActivatedHeight() (uint64, error) {
 	return res.Height, nil
 }
 
-func (bc *BabylonController) QueryFinalityParams() (uint64, error) {
-	res, err := bc.bbnClient.QueryClient.ActivatedHeight()
+func (bc *BabylonController) QueryFinalityActivationBlockHeight() (uint64, error) {
+	res, err := bc.bbnClient.QueryClient.FinalityParams()
 	if err != nil {
-		return 0, fmt.Errorf("failed to query activated height: %w", err)
+		return 0, fmt.Errorf("failed to query finality params to get finality activation block height: %w", err)
 	}
 
-	return res.Height, nil
+	return res.ActivationBlockHeight, nil
 }
 
 func (bc *BabylonController) QueryBestBlock() (*types.BlockInfo, error) {
