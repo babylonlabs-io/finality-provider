@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+
+	"sigs.k8s.io/yaml"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
@@ -11,6 +14,11 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/log"
 )
+
+type KeyOutput struct {
+	Name      string `json:"name" yaml:"name"`
+	PubKeyHex string `json:"pub_key_hex" yaml:"pub_key_hex"`
+}
 
 func NewKeysCmd() *cobra.Command {
 	keysCmd := keys.Commands()
@@ -24,12 +32,16 @@ func NewKeysCmd() *cobra.Command {
 	// Wrap the original RunE function
 	originalRunE := addCmd.RunE
 	addCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		// Create a buffer to intercept the key items
+		var buf bytes.Buffer
+		cmd.SetOut(&buf)
+
 		// Run the original command
-		if err := originalRunE(cmd, args); err != nil {
+		err := originalRunE(cmd, args)
+		if err != nil {
 			return err
 		}
 
-		// Add save the key name and public key mapping
 		return saveKeyNameMapping(cmd, args)
 	}
 
@@ -46,7 +58,10 @@ func findSubCommand(cmd *cobra.Command, name string) *cobra.Command {
 }
 
 func saveKeyNameMapping(cmd *cobra.Command, args []string) error {
-	clientCtx := client.GetClientContextFromCmd(cmd)
+	clientCtx, err := client.GetClientQueryContext(cmd)
+	if err != nil {
+		return err
+	}
 	keyName := args[0]
 
 	// Load configuration
@@ -77,7 +92,7 @@ func saveKeyNameMapping(cmd *cobra.Command, args []string) error {
 	// Get the public key for the newly added key
 	eotsPk, err := eotsManager.LoadBIP340PubKeyFromKeyName(keyName)
 	if err != nil {
-		return fmt.Errorf("failed to get public key for key: %s", keyName)
+		return fmt.Errorf("failed to get public key for key %s: %w", keyName, err)
 	}
 
 	// Save the public key to key name mapping
@@ -85,6 +100,21 @@ func saveKeyNameMapping(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save key name mapping: %w", err)
 	}
 
-	fmt.Printf("Successfully saved mapping for key: %s\n", keyName)
+	return printKey(
+		&KeyOutput{
+			Name:      keyName,
+			PubKeyHex: eotsPk.MarshalHex(),
+		},
+	)
+}
+
+func printKey(keyRecord *KeyOutput) error {
+	out, err := yaml.Marshal(keyRecord)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("\n%s\n", out)
+
 	return nil
 }

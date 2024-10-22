@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"net"
 
+	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/lightningnetwork/lnd/signal"
+	"github.com/spf13/cobra"
+
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	eotsservice "github.com/babylonlabs-io/finality-provider/eotsmanager/service"
 	"github.com/babylonlabs-io/finality-provider/log"
-	"github.com/lightningnetwork/lnd/signal"
-	"github.com/spf13/cobra"
 )
 
 func NewStartCmd() *cobra.Command {
@@ -20,7 +22,7 @@ func NewStartCmd() *cobra.Command {
 		RunE:  startFn,
 	}
 
-	cmd.Flags().String(homeFlag, config.DefaultEOTSDir, "The path to the eotsd home directory")
+	cmd.Flags().String(sdkflags.FlagHome, config.DefaultEOTSDir, "The path to the eotsd home directory")
 	cmd.Flags().String(rpcListenerFlag, "", "The address that the RPC server listens to")
 
 	return cmd
