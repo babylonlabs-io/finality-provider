@@ -1,6 +1,7 @@
 package cmd_test
 
 import (
+	"context"
 	"math/rand"
 	"path/filepath"
 	"testing"
@@ -19,7 +20,8 @@ import (
 
 func TestPersistClientCtx(t *testing.T) {
 	ctx := client.Context{}
-	cmd := cobra.Command{}
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
 
 	tempDir := t.TempDir()
 	defaultHome := filepath.Join(tempDir, "defaultHome")
@@ -27,11 +29,11 @@ func TestPersistClientCtx(t *testing.T) {
 	cmd.Flags().String(flags.FlagHome, defaultHome, "The application home directory")
 	cmd.Flags().String(flags.FlagChainID, "", "chain id")
 
-	err := fpcmd.PersistClientCtx(ctx)(&cmd, []string{})
+	err := fpcmd.PersistClientCtx(ctx)(cmd, []string{})
 	require.NoError(t, err)
 
 	// verify that has the defaults to ctx
-	ctx = client.GetClientContextFromCmd(&cmd)
+	ctx = client.GetClientContextFromCmd(cmd)
 	require.Equal(t, defaultHome, ctx.HomeDir)
 	require.Equal(t, "", ctx.ChainID)
 
@@ -39,10 +41,10 @@ func TestPersistClientCtx(t *testing.T) {
 	err = cmd.Flags().Set(flags.FlagHome, flagHomeValue)
 	require.NoError(t, err)
 
-	err = fpcmd.PersistClientCtx(ctx)(&cmd, []string{})
+	err = fpcmd.PersistClientCtx(ctx)(cmd, []string{})
 	require.NoError(t, err)
 
-	ctx = client.GetClientContextFromCmd(&cmd)
+	ctx = client.GetClientContextFromCmd(cmd)
 	require.Equal(t, flagHomeValue, ctx.HomeDir)
 
 	r := rand.New(rand.NewSource(10))
@@ -60,10 +62,10 @@ func TestPersistClientCtx(t *testing.T) {
 	require.NoError(t, err)
 
 	// parses the ctx from cmd with config, should modify the chain ID
-	err = fpcmd.PersistClientCtx(ctx)(&cmd, []string{})
+	err = fpcmd.PersistClientCtx(ctx)(cmd, []string{})
 	require.NoError(t, err)
 
-	ctx = client.GetClientContextFromCmd(&cmd)
+	ctx = client.GetClientContextFromCmd(cmd)
 	require.Equal(t, flagHomeValue, ctx.HomeDir)
 	require.Equal(t, randChainID, ctx.ChainID)
 
@@ -73,10 +75,10 @@ func TestPersistClientCtx(t *testing.T) {
 
 	// parses the ctx from cmd with config, but it has set in flags which should give
 	// preference over the config set, so it should use from the flag value set.
-	err = fpcmd.PersistClientCtx(ctx)(&cmd, []string{})
+	err = fpcmd.PersistClientCtx(ctx)(cmd, []string{})
 	require.NoError(t, err)
 
-	ctx = client.GetClientContextFromCmd(&cmd)
+	ctx = client.GetClientContextFromCmd(cmd)
 	require.Equal(t, flagHomeValue, ctx.HomeDir)
 	require.Equal(t, flagChainID, ctx.ChainID)
 }

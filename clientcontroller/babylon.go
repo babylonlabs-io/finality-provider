@@ -394,7 +394,7 @@ func (bc *BabylonController) QueryFinalityActivationBlockHeight() (uint64, error
 		return 0, fmt.Errorf("failed to query finality params to get finality activation block height: %w", err)
 	}
 
-	return res.ActivationBlockHeight, nil
+	return res.FinalityActivationHeight, nil
 }
 
 func (bc *BabylonController) QueryBestBlock() (*types.BlockInfo, error) {
