@@ -8,8 +8,7 @@ require (
 	cosmossdk.io/errors v1.0.1
 	cosmossdk.io/math v1.3.0
 	github.com/avast/retry-go/v4 v4.5.1
-	// TODO: needs new bbn release with https://github.com/babylonlabs-io/babylon/pull/204
-	github.com/babylonlabs-io/babylon v0.9.3-0.20241023121952-9efe79b5183c
+	github.com/babylonlabs-io/babylon v0.14.0
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/btcsuite/btcd/btcutil v1.1.5
