@@ -11,6 +11,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	fppath "github.com/babylonlabs-io/finality-provider/lib/math"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/gogo/protobuf/jsonpb"
 	"go.uber.org/atomic"
@@ -23,7 +24,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/types"
-	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 type FinalityProviderInstance struct {
@@ -410,7 +410,7 @@ func (fp *FinalityProviderInstance) fastSyncStartHeight(lastFinalizedHeight uint
 	}
 
 	// return the max start height by checking the finality activation block height
-	return util.MaxUint64(lastProcessedHeight+1, lastFinalizedHeight+1, finalityActivationBlkHeight), nil
+	return fppath.MaxUint64(lastProcessedHeight+1, lastFinalizedHeight+1, finalityActivationBlkHeight), nil
 }
 
 func (fp *FinalityProviderInstance) hasProcessed(b *types.BlockInfo) bool {
@@ -624,7 +624,7 @@ func (fp *FinalityProviderInstance) CommitPubRand(tipHeight uint64) (*types.TxRe
 	// NOTE: currently, calling this will create and save a list of randomness
 	// in case of failure, randomness that has been created will be overwritten
 	// for safety reason as the same randomness must not be used twice
-	pubRandList, err := fp.getPubRandList(util.MaxUint64(startHeight, activationBlkHeight), fp.cfg.NumPubRand)
+	pubRandList, err := fp.getPubRandList(fppath.MaxUint64(startHeight, activationBlkHeight), fp.cfg.NumPubRand)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate randomness: %w", err)
 	}
