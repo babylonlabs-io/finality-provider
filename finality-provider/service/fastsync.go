@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 type FastSyncResult struct {
@@ -33,8 +34,11 @@ func (fp *FinalityProviderInstance) FastSync(startHeight, endHeight uint64) (*Fa
 		return nil, fmt.Errorf("failed to get activation height during fast sync %w", err)
 	}
 
-	var syncedHeight uint64
 	responses := make([]*types.TxResponse, 0)
+	// make sure it starts at least at the finality activation height
+	startHeight = util.MaxUint64(startHeight, activationBlkHeight)
+	// the syncedHeight is at least the starting point
+	syncedHeight := startHeight
 	// we may need several rounds to catch-up as we need to limit
 	// the catch-up distance for each round to avoid memory overflow
 	for startHeight <= endHeight {
@@ -56,10 +60,6 @@ func (fp *FinalityProviderInstance) FastSync(startHeight, endHeight uint64) (*Fa
 		for _, b := range blocks {
 			// check whether the block has been processed before
 			if fp.hasProcessed(b) {
-				continue
-			}
-			// check if it is allowed to send finality
-			if b.Height < activationBlkHeight {
 				continue
 			}
 			// check whether the finality provider has voting power
