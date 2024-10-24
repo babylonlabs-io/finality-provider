@@ -13,7 +13,9 @@ MOCKGEN_REPO=github.com/golang/mock/mockgen
 MOCKGEN_VERSION=v1.6.0
 MOCKGEN_CMD=go run ${MOCKGEN_REPO}@${MOCKGEN_VERSION}
 
-ldflags := $(LDFLAGS)
+VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
+
+ldflags := $(LDFLAGS) -X github.com/babylonlabs-io/finality-provider/version.version=$(VERSION)
 build_tags := $(BUILD_TAGS)
 build_args := $(BUILD_ARGS)
 

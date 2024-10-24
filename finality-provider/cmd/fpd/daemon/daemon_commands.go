@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	fpversion "github.com/babylonlabs-io/finality-provider/version"
 	"strconv"
+	"strings"
 
 	"cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/types"
@@ -547,4 +549,34 @@ func loadKeyName(homeDir string, cmd *cobra.Command) (string, error) {
 		return "", fmt.Errorf("the key in config is empty")
 	}
 	return keyName, nil
+}
+
+// CommandVersion prints cmd version
+func CommandVersion() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:     "version",
+		Short:   "Prints version of this binary.",
+		Aliases: []string{"v"},
+		Example: `fpd version`,
+		Args:    cobra.NoArgs,
+		Run: func(cmd *cobra.Command, _ []string) {
+			version := fpversion.Version()
+			commit, ts := fpversion.CommitInfo()
+
+			if version == "" {
+				version = "main"
+			}
+
+			var sb strings.Builder
+			_, _ = sb.WriteString("Version:       " + version)
+			_, _ = sb.WriteString("\n")
+			_, _ = sb.WriteString("Git Commit:    " + commit)
+			_, _ = sb.WriteString("\n")
+			_, _ = sb.WriteString("Git Timestamp: " + ts)
+			_, _ = sb.WriteString("\n")
+
+			cmd.Printf(sb.String()) //nolint:govet // it's not an issue
+		},
+	}
+	return cmd
 }
