@@ -203,6 +203,18 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 			if fp.hasProcessed(b) {
 				continue
 			}
+
+			activationBlkHeight, err := fp.cc.QueryFinalityActivationBlockHeight()
+			if err != nil {
+				fp.reportCriticalErr(fmt.Errorf("failed to get activation height during fast sync %w", err))
+				continue
+			}
+
+			// check if it is allowed to send finality
+			if b.Height < activationBlkHeight {
+				continue
+			}
+
 			// check whether the finality provider has voting power
 			hasVp, err := fp.hasVotingPower(b)
 			if err != nil {
