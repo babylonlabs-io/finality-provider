@@ -392,9 +392,6 @@ func (fp *FinalityProviderInstance) tryFastSync(targetBlock *types.BlockInfo) (*
 func (fp *FinalityProviderInstance) fastSyncStartHeight(lastFinalizedHeight uint64) (uint64, error) {
 	lastProcessedHeight := fp.GetLastProcessedHeight()
 
-	// finalityActivationBlockHeight := fp.cc.QueryFinalityActivationBlockHeight()
-	// get the startHeight from the maximum of the lastVotedHeight and
-	// the lastFinalizedHeight plus 1
 	finalityActivationBlkHeight, err := fp.cc.QueryFinalityActivationBlockHeight()
 	if err != nil {
 		return 0, err

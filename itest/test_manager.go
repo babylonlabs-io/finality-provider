@@ -905,14 +905,6 @@ func ParseRespBTCDelToBTCDel(resp *bstypes.BTCDelegationResponse) (btcDel *bstyp
 			SlashingTx:               slashTx,
 			DelegatorSlashingSig:     delSlashingSig,
 		}
-
-		// if len(ud.DelegatorSlashingSigHex.) > 0 {
-		// 	delUnbondingSig, err := bbntypes.NewBIP340SignatureFromHex(ud.DelegatorUnbondingSigHex)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-		// 	btcDel.BtcUndelegation.DelegatorUnbondingSig = delUnbondingSig
-		// }
 	}
 
 	return btcDel, nil
