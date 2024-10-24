@@ -5,6 +5,7 @@
 package version
 
 import (
+	"fmt"
 	"runtime/debug"
 )
 
@@ -37,4 +38,9 @@ func CommitInfo() (hash string, timestamp string) {
 // Version returns the version
 func Version() string {
 	return version
+}
+
+func VersionRpc() string {
+	commit, ts := CommitInfo()
+	return fmt.Sprintf("version: %s, commit: %s, timestamp: %s ", version, commit, ts)
 }

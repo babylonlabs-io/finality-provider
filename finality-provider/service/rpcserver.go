@@ -77,7 +77,7 @@ func (r *rpcServer) RegisterWithGrpcServer(grpcServer *grpc.Server) error {
 func (r *rpcServer) GetInfo(context.Context, *proto.GetInfoRequest) (*proto.GetInfoResponse, error) {
 
 	return &proto.GetInfoResponse{
-		Version: version.Version(),
+		Version: version.VersionRpc(),
 	}, nil
 }
 
