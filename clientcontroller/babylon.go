@@ -3,9 +3,10 @@ package clientcontroller
 import (
 	"context"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"strings"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 
 	sdkErr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
@@ -385,6 +386,15 @@ func (bc *BabylonController) QueryActivatedHeight() (uint64, error) {
 	}
 
 	return res.Height, nil
+}
+
+func (bc *BabylonController) QueryFinalityActivationBlockHeight() (uint64, error) {
+	res, err := bc.bbnClient.QueryClient.FinalityParams()
+	if err != nil {
+		return 0, fmt.Errorf("failed to query finality params to get finality activation block height: %w", err)
+	}
+
+	return res.FinalityActivationHeight, nil
 }
 
 func (bc *BabylonController) QueryBestBlock() (*types.BlockInfo, error) {

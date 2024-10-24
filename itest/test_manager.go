@@ -3,7 +3,6 @@ package e2etest
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/lightningnetwork/lnd/signal"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -11,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/lightningnetwork/lnd/signal"
 
 	"github.com/babylonlabs-io/finality-provider/itest/container"
 	"github.com/babylonlabs-io/finality-provider/testutil"
@@ -903,14 +904,6 @@ func ParseRespBTCDelToBTCDel(resp *bstypes.BTCDelegationResponse) (btcDel *bstyp
 			CovenantSlashingSigs:     ud.CovenantSlashingSigs,
 			SlashingTx:               slashTx,
 			DelegatorSlashingSig:     delSlashingSig,
-		}
-
-		if len(ud.DelegatorUnbondingSigHex) > 0 {
-			delUnbondingSig, err := bbntypes.NewBIP340SignatureFromHex(ud.DelegatorUnbondingSigHex)
-			if err != nil {
-				return nil, err
-			}
-			btcDel.BtcUndelegation.DelegatorUnbondingSig = delUnbondingSig
 		}
 	}
 
