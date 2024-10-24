@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Misc Improvements
+
+* [#104](https://github.com/babylonlabs-io/finality-provider/pull/104) Print fpd binary version
+
 ## v0.8.0
 
 ### Misc Improvements
