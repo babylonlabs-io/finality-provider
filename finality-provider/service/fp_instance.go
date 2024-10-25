@@ -620,8 +620,8 @@ func (fp *FinalityProviderInstance) CommitPubRand(tipHeight uint64) (*types.TxRe
 		return nil, err
 	}
 
-	// make sure that the start height is updated to generate the list
-	// and also store the commit height.
+	// make sure that the start height is at least the finality activation height
+	// and updated to generate the list with the same as the commited height.
 	startHeight = fppath.MaxUint64(startHeight, activationBlkHeight)
 	// generate a list of Schnorr randomness pairs
 	// NOTE: currently, calling this will create and save a list of randomness
