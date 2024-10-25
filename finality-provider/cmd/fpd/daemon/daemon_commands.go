@@ -430,7 +430,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	defer func() {
-		fmt.Printf("start to clean up")
+		fmt.Printf("\nstart to clean up")
 		if err := cleanUp(); err != nil {
 			fmt.Printf("Failed to clean up grpc client: %v\n", err)
 		}
