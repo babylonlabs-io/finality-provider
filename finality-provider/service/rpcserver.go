@@ -143,7 +143,7 @@ func (r *rpcServer) RegisterFinalityProvider(ctx context.Context, req *proto.Reg
 // NOTE: this is only used for presentation/testing purposes
 func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFinalitySignatureRequest) (
 	*proto.AddFinalitySignatureResponse, error) {
-
+	r.app.logger.Info("start AddFinalitySignature")
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 	if err != nil {
 		return nil, err
@@ -178,7 +178,7 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 	// if privKey is not empty, then this BTC finality-provider
 	// has voted for a fork and will be slashed
 	if privKey != nil {
-		r.app.logger.Debug("start to decode priv key")
+		r.app.logger.Info("start to decode priv key")
 		localPrivKey, err := r.app.getFpPrivKey(fpPk.MustMarshal())
 		if err != nil {
 			r.app.logger.Error(fmt.Sprintf("err get priv key %s", err.Error()))
@@ -187,7 +187,7 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 		res.ExtractedSkHex = privKey.Key.String()
 		localSkHex := localPrivKey.Key.String()
 		localSkNegateHex := localPrivKey.Key.Negate().String()
-		r.app.logger.Debug("start to check priv key")
+		r.app.logger.Info("start to check priv key")
 		if res.ExtractedSkHex == localSkHex {
 			res.LocalSkHex = localSkHex
 		} else if res.ExtractedSkHex == localSkNegateHex {
@@ -197,9 +197,9 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 				"extrated: %s, local: %s, local-negated: %s",
 				res.ExtractedSkHex, localSkHex, localSkNegateHex)
 		}
-		r.app.logger.Debug("finish to decode priv key")
+		r.app.logger.Info("finish to decode priv key")
 	}
-
+	r.app.logger.Info("finish AddFinalitySignature")
 	return res, nil
 }
 
