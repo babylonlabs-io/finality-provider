@@ -620,11 +620,14 @@ func (fp *FinalityProviderInstance) CommitPubRand(tipHeight uint64) (*types.TxRe
 		return nil, err
 	}
 
+	// make sure that the start height is updated to generate the list
+	// and also store the commit height.
+	startHeight = fppath.MaxUint64(startHeight, activationBlkHeight)
 	// generate a list of Schnorr randomness pairs
 	// NOTE: currently, calling this will create and save a list of randomness
 	// in case of failure, randomness that has been created will be overwritten
 	// for safety reason as the same randomness must not be used twice
-	pubRandList, err := fp.getPubRandList(fppath.MaxUint64(startHeight, activationBlkHeight), fp.cfg.NumPubRand)
+	pubRandList, err := fp.getPubRandList(startHeight, fp.cfg.NumPubRand)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate randomness: %w", err)
 	}
