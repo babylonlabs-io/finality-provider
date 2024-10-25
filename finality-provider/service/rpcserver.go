@@ -2,15 +2,17 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"sync"
+	"sync/atomic"
+
 	"cosmossdk.io/math"
 	sdkmath "cosmossdk.io/math"
-	"fmt"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc"
 	protobuf "google.golang.org/protobuf/proto"
-	"sync"
-	"sync/atomic"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -140,64 +142,77 @@ func (r *rpcServer) RegisterFinalityProvider(ctx context.Context, req *proto.Reg
 // AddFinalitySignature adds a manually constructed finality signature to Babylon
 // NOTE: this is only used for presentation/testing purposes
 func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFinalitySignatureRequest) (
-	*proto.AddFinalitySignatureResponse, error) {
+	res *proto.AddFinalitySignatureResponse,
+	err error,
+) {
+	r.app.wg.Add(1)
+	defer r.app.wg.Done()
 
-	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
-	if err != nil {
-		return nil, err
-	}
-
-	fpi, err := r.app.GetFinalityProviderInstance()
-	if err != nil {
-		return nil, err
-	}
-
-	if fpi.GetBtcPkHex() != req.BtcPk {
-		return nil, fmt.Errorf(
-			"the finality provider running does not match the request, got: %s, expected: %s",
-			req.BtcPk, fpi.GetBtcPkHex())
-	}
-
-	b := &types.BlockInfo{
-		Height: req.Height,
-		Hash:   req.AppHash,
-	}
-
-	txRes, privKey, err := fpi.TestSubmitFinalitySignatureAndExtractPrivKey(b)
-	if err != nil {
-		return nil, err
-	}
-
-	res := &proto.AddFinalitySignatureResponse{TxHash: txRes.TxHash}
-
-	// if privKey is not empty, then this BTC finality-provider
-	// has voted for a fork and will be slashed
-	if privKey != nil {
-		localPrivKey, err := r.app.getFpPrivKey(fpPk.MustMarshal())
-		res.ExtractedSkHex = privKey.Key.String()
+	select {
+	case <-r.app.quit:
+		r.app.logger.Info("exiting metrics update loop")
+		return res, nil
+	default:
+		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 		if err != nil {
 			return nil, err
 		}
-		localSkHex := localPrivKey.Key.String()
-		localSkNegateHex := localPrivKey.Key.Negate().String()
-		if res.ExtractedSkHex == localSkHex {
-			res.LocalSkHex = localSkHex
-		} else if res.ExtractedSkHex == localSkNegateHex {
-			res.LocalSkHex = localSkNegateHex
-		} else {
-			return nil, fmt.Errorf("the finality-provider's BTC private key is extracted but does not match the local key,"+
-				"extrated: %s, local: %s, local-negated: %s",
-				res.ExtractedSkHex, localSkHex, localSkNegateHex)
-		}
-	}
 
-	return res, nil
+		fpi, err := r.app.GetFinalityProviderInstance()
+		if err != nil {
+			return nil, err
+		}
+
+		if fpi.GetBtcPkHex() != req.BtcPk {
+			errMsg := fmt.Sprintf("the finality provider running does not match the request, got: %s, expected: %s",
+				req.BtcPk, fpi.GetBtcPkHex())
+			return nil, errors.New(errMsg)
+		}
+
+		b := &types.BlockInfo{
+			Height: req.Height,
+			Hash:   req.AppHash,
+		}
+
+		txRes, privKey, err := fpi.TestSubmitFinalitySignatureAndExtractPrivKey(b)
+		if err != nil {
+			return nil, err
+		}
+
+		res = &proto.AddFinalitySignatureResponse{TxHash: txRes.TxHash}
+
+		// if privKey is not empty, then this BTC finality-provider
+		// has voted for a fork and will be slashed
+		if privKey != nil {
+			localPrivKey, err := r.app.getFpPrivKey(fpPk.MustMarshal())
+			if err != nil {
+				r.app.logger.Error(fmt.Sprintf("err get priv key %s", err.Error()))
+				return nil, err
+			}
+
+			res.ExtractedSkHex = privKey.Key.String()
+			localSkHex := localPrivKey.Key.String()
+			localSkNegateHex := localPrivKey.Key.Negate().String()
+			if res.ExtractedSkHex == localSkHex {
+				res.LocalSkHex = localSkHex
+			} else if res.ExtractedSkHex == localSkNegateHex {
+				res.LocalSkHex = localSkNegateHex
+			} else {
+				msg := fmt.Sprintf(
+					"the finality-provider's BTC private key is extracted but does not match the local key,"+
+						"extrated: %s, local: %s, local-negated: %s",
+					res.ExtractedSkHex, localSkHex, localSkNegateHex,
+				)
+				return nil, errors.New(msg)
+			}
+		}
+		return res, nil
+	}
 }
 
 // UnjailFinalityProvider unjails a finality-provider
 func (r *rpcServer) UnjailFinalityProvider(ctx context.Context, req *proto.UnjailFinalityProviderRequest) (
 	*proto.UnjailFinalityProviderResponse, error) {
-
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 	if err != nil {
 		return nil, err
