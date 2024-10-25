@@ -146,11 +146,13 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 	r.app.logger.Info("start AddFinalitySignature")
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 	if err != nil {
+		r.app.logger.Error(fmt.Sprintf("err parse pub key hex %s", err.Error()))
 		return nil, err
 	}
 
 	fpi, err := r.app.GetFinalityProviderInstance()
 	if err != nil {
+		r.app.logger.Error(fmt.Sprintf("err GetFinalityProviderInstance %s", err.Error()))
 		return nil, err
 	}
 
@@ -168,7 +170,7 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 
 	txRes, privKey, err := fpi.TestSubmitFinalitySignatureAndExtractPrivKey(b)
 	if err != nil {
-		fmt.Printf("\n err on TestSubmitFinalitySignatureAndExtractPrivKey %w", err)
+		r.app.logger.Info(fmt.Sprintf("\n err on TestSubmitFinalitySignatureAndExtractPrivKey %w", err))
 		return nil, err
 	}
 
@@ -193,9 +195,13 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 		} else if res.ExtractedSkHex == localSkNegateHex {
 			res.LocalSkHex = localSkNegateHex
 		} else {
-			return nil, fmt.Errorf("the finality-provider's BTC private key is extracted but does not match the local key,"+
-				"extrated: %s, local: %s, local-negated: %s",
-				res.ExtractedSkHex, localSkHex, localSkNegateHex)
+			msg := fmt.Sprintf(
+				"the finality-provider's BTC private key is extracted but does not match the local key,"+
+					"extrated: %s, local: %s, local-negated: %s",
+				res.ExtractedSkHex, localSkHex, localSkNegateHex,
+			)
+			r.app.logger.Error(msg)
+			return nil, errors.New(msg)
 		}
 		r.app.logger.Info("finish to decode priv key")
 	}
