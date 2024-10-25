@@ -153,23 +153,19 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 		r.app.logger.Info("exiting metrics update loop")
 		return res, nil
 	default:
-		r.app.logger.Info("start AddFinalitySignature")
 		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 		if err != nil {
-			r.app.logger.Error(fmt.Sprintf("err parse pub key hex %s", err.Error()))
 			return nil, err
 		}
 
 		fpi, err := r.app.GetFinalityProviderInstance()
 		if err != nil {
-			r.app.logger.Error(fmt.Sprintf("err GetFinalityProviderInstance %s", err.Error()))
 			return nil, err
 		}
 
 		if fpi.GetBtcPkHex() != req.BtcPk {
 			errMsg := fmt.Sprintf("the finality provider running does not match the request, got: %s, expected: %s",
 				req.BtcPk, fpi.GetBtcPkHex())
-			r.app.logger.Error(errMsg)
 			return nil, errors.New(errMsg)
 		}
 
@@ -180,28 +176,23 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 
 		txRes, privKey, err := fpi.TestSubmitFinalitySignatureAndExtractPrivKey(b)
 		if err != nil {
-			r.app.logger.Info(fmt.Sprintf("\n err on TestSubmitFinalitySignatureAndExtractPrivKey %w", err))
 			return nil, err
 		}
 
-		r.app.logger.Info(fmt.Sprintf("finish TestSubmitFinalitySignatureAndExtractPrivKey %+v", txRes))
 		res = &proto.AddFinalitySignatureResponse{TxHash: txRes.TxHash}
 
 		// if privKey is not empty, then this BTC finality-provider
 		// has voted for a fork and will be slashed
 		if privKey != nil {
-			r.app.logger.Info("start to decode priv key")
 			localPrivKey, err := r.app.getFpPrivKey(fpPk.MustMarshal())
 			if err != nil {
 				r.app.logger.Error(fmt.Sprintf("err get priv key %s", err.Error()))
 				return nil, err
 			}
-			r.app.logger.Info("no err get priv key")
 
 			res.ExtractedSkHex = privKey.Key.String()
 			localSkHex := localPrivKey.Key.String()
 			localSkNegateHex := localPrivKey.Key.Negate().String()
-			r.app.logger.Info("start to check priv key")
 			if res.ExtractedSkHex == localSkHex {
 				res.LocalSkHex = localSkHex
 			} else if res.ExtractedSkHex == localSkNegateHex {
@@ -212,12 +203,9 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 						"extrated: %s, local: %s, local-negated: %s",
 					res.ExtractedSkHex, localSkHex, localSkNegateHex,
 				)
-				r.app.logger.Error(msg)
 				return nil, errors.New(msg)
 			}
-			r.app.logger.Info("finish to decode priv key")
 		}
-		r.app.logger.Info("finish AddFinalitySignature")
 		return res, nil
 	}
 }

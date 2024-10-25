@@ -14,14 +14,15 @@ import (
 	"cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/types"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 )
 
 var (
@@ -430,11 +431,9 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	defer func() {
-		fmt.Printf("\nstart to clean up")
 		if err := cleanUp(); err != nil {
 			fmt.Printf("Failed to clean up grpc client: %v\n", err)
 		}
-		fmt.Printf("\nfinish to clean up")
 	}()
 
 	appHash, err := hex.DecodeString(appHashHex)
@@ -444,7 +443,6 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 
 	res, err := client.AddFinalitySignature(context.Background(), fpPk.MarshalHex(), blkHeight, appHash)
 	if err != nil {
-		fmt.Printf("\n err at AddFinalitySignature %s", err.Error())
 		return err
 	}
 	printRespJSON(res)
