@@ -25,6 +25,9 @@ func NewFinalityProviderServiceGRpcClient(remoteAddr string) (client *FinalityPr
 	}
 
 	cleanUp = func() error {
+		if conn == nil {
+			return nil
+		}
 		return conn.Close()
 	}
 

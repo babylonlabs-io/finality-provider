@@ -37,6 +37,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#104](https://github.com/babylonlabs-io/finality-provider/pull/104) Print fpd binary version
+
+### Bug Fixes
+
+* [#107](https://github.com/babylonlabs-io/finality-provider/pull/107) Fix commit
+start height when the finality activation height is higher than the current
+block tip
+
 ## v0.9.0
 
 ### Improvements

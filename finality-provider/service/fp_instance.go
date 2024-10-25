@@ -465,36 +465,37 @@ func (fp *FinalityProviderInstance) retrySubmitFinalitySignatureUntilBlockFinali
 	// we break the for loop if the block is finalized or the signature is successfully submitted
 	// error will be returned if maximum retries have been reached or the query to the consumer chain fails
 	for {
-		// error will be returned if max retries have been reached
-		res, err := fp.SubmitFinalitySignature(targetBlock)
-		if err != nil {
-
-			fp.logger.Debug(
-				"failed to submit finality signature to the consumer chain",
-				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint32("current_failures", failedCycles),
-				zap.Uint64("target_block_height", targetBlock.Height),
-				zap.Error(err),
-			)
-
-			if clientcontroller.IsUnrecoverable(err) {
-				return nil, err
-			}
-
-			if clientcontroller.IsExpected(err) {
-				return nil, nil
-			}
-
-			failedCycles += 1
-			if failedCycles > fp.cfg.MaxSubmissionRetries {
-				return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
-			}
-		} else {
-			// the signature has been successfully submitted
-			return res, nil
-		}
 		select {
 		case <-time.After(fp.cfg.SubmissionRetryInterval):
+			// error will be returned if max retries have been reached
+			res, err := fp.SubmitFinalitySignature(targetBlock)
+			if err != nil {
+
+				fp.logger.Debug(
+					"failed to submit finality signature to the consumer chain",
+					zap.String("pk", fp.GetBtcPkHex()),
+					zap.Uint32("current_failures", failedCycles),
+					zap.Uint64("target_block_height", targetBlock.Height),
+					zap.Error(err),
+				)
+
+				if clientcontroller.IsUnrecoverable(err) {
+					return nil, err
+				}
+
+				if clientcontroller.IsExpected(err) {
+					return nil, nil
+				}
+
+				failedCycles += 1
+				if failedCycles > fp.cfg.MaxSubmissionRetries {
+					return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
+				}
+			} else {
+				// the signature has been successfully submitted
+				return res, nil
+			}
+
 			// periodically query the index block to be later checked whether it is Finalized
 			finalized, err := fp.checkBlockFinalization(targetBlock.Height)
 			if err != nil {
@@ -620,11 +621,14 @@ func (fp *FinalityProviderInstance) CommitPubRand(tipHeight uint64) (*types.TxRe
 		return nil, err
 	}
 
+	// make sure that the start height is at least the finality activation height
+	// and updated to generate the list with the same as the commited height.
+	startHeight = fppath.MaxUint64(startHeight, activationBlkHeight)
 	// generate a list of Schnorr randomness pairs
 	// NOTE: currently, calling this will create and save a list of randomness
 	// in case of failure, randomness that has been created will be overwritten
 	// for safety reason as the same randomness must not be used twice
-	pubRandList, err := fp.getPubRandList(fppath.MaxUint64(startHeight, activationBlkHeight), fp.cfg.NumPubRand)
+	pubRandList, err := fp.getPubRandList(startHeight, fp.cfg.NumPubRand)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate randomness: %w", err)
 	}

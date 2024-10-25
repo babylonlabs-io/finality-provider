@@ -5,20 +5,21 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"strconv"
 
 	"cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/types"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 )
 
 var (
