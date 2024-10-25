@@ -180,12 +180,14 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 	if privKey != nil {
 		r.app.logger.Debug("start to decode priv key")
 		localPrivKey, err := r.app.getFpPrivKey(fpPk.MustMarshal())
-		res.ExtractedSkHex = privKey.Key.String()
 		if err != nil {
+			r.app.logger.Error(fmt.Sprintf("err get priv key %s", err.Error()))
 			return nil, err
 		}
+		res.ExtractedSkHex = privKey.Key.String()
 		localSkHex := localPrivKey.Key.String()
 		localSkNegateHex := localPrivKey.Key.Negate().String()
+		r.app.logger.Debug("start to check priv key")
 		if res.ExtractedSkHex == localSkHex {
 			res.LocalSkHex = localSkHex
 		} else if res.ExtractedSkHex == localSkNegateHex {
@@ -195,6 +197,7 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 				"extrated: %s, local: %s, local-negated: %s",
 				res.ExtractedSkHex, localSkHex, localSkNegateHex)
 		}
+		r.app.logger.Debug("finish to decode priv key")
 	}
 
 	return res, nil
