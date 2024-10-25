@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
-	fpversion "github.com/babylonlabs-io/finality-provider/version"
 	"strconv"
 	"strings"
+
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	fpversion "github.com/babylonlabs-io/finality-provider/version"
 
 	"cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/types"
@@ -429,6 +430,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	defer func() {
+		fmt.Printf("start to clean up")
 		if err := cleanUp(); err != nil {
 			fmt.Printf("Failed to clean up grpc client: %v\n", err)
 		}
