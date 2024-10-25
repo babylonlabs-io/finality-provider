@@ -444,7 +444,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 
 	res, err := client.AddFinalitySignature(context.Background(), fpPk.MarshalHex(), blkHeight, appHash)
 	if err != nil {
-		fmt.Printf("\n err at AddFinalitySignature %w", err)
+		fmt.Printf("\n err at AddFinalitySignature %s", err.Error())
 		return err
 	}
 	printRespJSON(res)

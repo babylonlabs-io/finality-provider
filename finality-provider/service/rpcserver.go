@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -154,9 +155,10 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 	}
 
 	if fpi.GetBtcPkHex() != req.BtcPk {
-		return nil, fmt.Errorf(
-			"the finality provider running does not match the request, got: %s, expected: %s",
+		errMsg := fmt.Sprintf("the finality provider running does not match the request, got: %s, expected: %s",
 			req.BtcPk, fpi.GetBtcPkHex())
+		r.app.logger.Error(errMsg)
+		return nil, errors.New(errMsg)
 	}
 
 	b := &types.BlockInfo{
@@ -170,12 +172,13 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 		return nil, err
 	}
 
-	fmt.Printf("\n finish TestSubmitFinalitySignatureAndExtractPrivKey %+v", txRes)
+	r.app.logger.Info(fmt.Sprintf("finish TestSubmitFinalitySignatureAndExtractPrivKey %+v", txRes))
 	res := &proto.AddFinalitySignatureResponse{TxHash: txRes.TxHash}
 
 	// if privKey is not empty, then this BTC finality-provider
 	// has voted for a fork and will be slashed
 	if privKey != nil {
+		r.app.logger.Debug("start to decode priv key")
 		localPrivKey, err := r.app.getFpPrivKey(fpPk.MustMarshal())
 		res.ExtractedSkHex = privKey.Key.String()
 		if err != nil {
