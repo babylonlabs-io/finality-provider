@@ -145,6 +145,9 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 	res *proto.AddFinalitySignatureResponse,
 	err error,
 ) {
+	r.app.wg.Add(1)
+	defer r.app.wg.Done()
+
 	select {
 	case <-r.app.quit:
 		r.app.logger.Info("exiting metrics update loop")
@@ -193,6 +196,8 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 				r.app.logger.Error(fmt.Sprintf("err get priv key %s", err.Error()))
 				return nil, err
 			}
+			r.app.logger.Info("no err get priv key")
+
 			res.ExtractedSkHex = privKey.Key.String()
 			localSkHex := localPrivKey.Key.String()
 			localSkNegateHex := localPrivKey.Key.Negate().String()

@@ -56,7 +56,9 @@ func NewRootLogger(format string, level string, w io.Writer) (*zap.Logger, error
 		enc,
 		zapcore.AddSync(w),
 		lvl,
-	)), nil
+	),
+		zap.WithFatalHook(zapcore.WriteThenGoexit),
+	), nil
 }
 
 func NewRootLoggerWithFile(logFile string, level string) (*zap.Logger, error) {
