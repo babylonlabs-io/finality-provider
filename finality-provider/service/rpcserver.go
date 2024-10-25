@@ -2,15 +2,16 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"sync"
+	"sync/atomic"
+
 	"cosmossdk.io/math"
 	sdkmath "cosmossdk.io/math"
-	"fmt"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc"
 	protobuf "google.golang.org/protobuf/proto"
-	"sync"
-	"sync/atomic"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -165,9 +166,11 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 
 	txRes, privKey, err := fpi.TestSubmitFinalitySignatureAndExtractPrivKey(b)
 	if err != nil {
+		fmt.Printf("\n err on TestSubmitFinalitySignatureAndExtractPrivKey %w", err)
 		return nil, err
 	}
 
+	fmt.Printf("\n finish TestSubmitFinalitySignatureAndExtractPrivKey %+v", txRes)
 	res := &proto.AddFinalitySignatureResponse{TxHash: txRes.TxHash}
 
 	// if privKey is not empty, then this BTC finality-provider
