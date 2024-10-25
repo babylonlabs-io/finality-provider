@@ -434,6 +434,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 		if err := cleanUp(); err != nil {
 			fmt.Printf("Failed to clean up grpc client: %v\n", err)
 		}
+		fmt.Printf("\nfinish to clean up")
 	}()
 
 	appHash, err := hex.DecodeString(appHashHex)
@@ -443,6 +444,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 
 	res, err := client.AddFinalitySignature(context.Background(), fpPk.MarshalHex(), blkHeight, appHash)
 	if err != nil {
+		fmt.Printf("\n err at AddFinalitySignature %w", err)
 		return err
 	}
 	printRespJSON(res)
