@@ -34,7 +34,6 @@ func PersistClientCtx(ctx client.Context) func(cmd *cobra.Command, _ []string) e
 		cmd.SetOut(cmd.OutOrStdout())
 		cmd.SetErr(cmd.ErrOrStderr())
 
-		ctx = ctx.WithCmdContext(cmd.Context())
 		if err := client.SetCmdClientContextHandler(ctx, cmd); err != nil {
 			return err
 		}

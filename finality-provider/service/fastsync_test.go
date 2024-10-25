@@ -3,6 +3,7 @@ package service_test
 import (
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
@@ -25,7 +26,7 @@ func FuzzFastSync_SufficientRandomness(f *testing.F) {
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
 		finalizedHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
 		currentHeight := finalizedHeight + uint64(r.Int63n(10)+1)
-		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight)
+		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight, 0)
 		mockClientController.EXPECT().QueryLatestFinalizedBlocks(uint64(1)).Return(nil, nil).AnyTimes()
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockClientController, randomStartingHeight)
 		defer cleanUp()
@@ -77,7 +78,7 @@ func FuzzFastSync_NoRandomness(f *testing.F) {
 		randomStartingHeight := uint64(r.Int63n(100) + 100)
 		finalizedHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
 		currentHeight := finalizedHeight + uint64(r.Int63n(10)+1)
-		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight)
+		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight, 0)
 		mockClientController.EXPECT().QueryLatestFinalizedBlocks(uint64(1)).Return(nil, nil).AnyTimes()
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockClientController, randomStartingHeight)
 		defer cleanUp()
@@ -121,4 +122,25 @@ func FuzzFastSync_NoRandomness(f *testing.F) {
 		require.Equal(t, lastHeightWithPubRand, fpIns.GetLastVotedHeight())
 		require.Equal(t, lastHeightWithPubRand, fpIns.GetLastProcessedHeight())
 	})
+}
+
+func TestFinalityActivationBlockHeight(t *testing.T) {
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+
+	randomStartingHeight := uint64(r.Int63n(100) + 100)
+	finalizedHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
+	currentHeight := finalizedHeight + uint64(r.Int63n(10)+1)
+	finalityActvationBlockHeight := randomStartingHeight + 10
+
+	mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight, finalityActvationBlockHeight)
+	mockClientController.EXPECT().QueryLatestFinalizedBlocks(uint64(1)).Return(nil, nil).AnyTimes()
+
+	mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(make(map[uint64]*ftypes.PubRandCommitResponse), nil).AnyTimes()
+	mockClientController.EXPECT().CommitPubRandList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+
+	_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockClientController, randomStartingHeight)
+	defer cleanUp()
+
+	_, err := fpIns.CommitPubRand(randomStartingHeight)
+	require.NoError(t, err)
 }

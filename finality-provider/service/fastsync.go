@@ -5,6 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/babylonlabs-io/finality-provider/lib/math"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
@@ -28,8 +29,16 @@ func (fp *FinalityProviderInstance) FastSync(startHeight, endHeight uint64) (*Fa
 			startHeight, endHeight)
 	}
 
-	var syncedHeight uint64
+	activationBlkHeight, err := fp.cc.QueryFinalityActivationBlockHeight()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get activation height during fast sync %w", err)
+	}
+
 	responses := make([]*types.TxResponse, 0)
+	// make sure it starts at least at the finality activation height
+	startHeight = math.MaxUint64(startHeight, activationBlkHeight)
+	// the syncedHeight is at least the starting point
+	syncedHeight := startHeight
 	// we may need several rounds to catch-up as we need to limit
 	// the catch-up distance for each round to avoid memory overflow
 	for startHeight <= endHeight {
