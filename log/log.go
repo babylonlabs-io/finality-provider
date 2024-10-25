@@ -52,12 +52,12 @@ func NewRootLogger(format string, level string, w io.Writer) (*zap.Logger, error
 		return nil, fmt.Errorf("unsupported log level: %s", level)
 	}
 
-	return zap.New(zapcore.NewCore(
-		enc,
-		zapcore.AddSync(w),
-		lvl,
-	),
-	// zap.WithFatalHook(zapcore.WriteThenGoexit),
+	return zap.New(
+		zapcore.NewCore(
+			enc,
+			zapcore.AddSync(w),
+			lvl,
+		),
 	), nil
 }
 
