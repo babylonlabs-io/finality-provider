@@ -57,7 +57,6 @@ block tip
 * [#101](https://github.com/babylonlabs-io/finality-provider/pull/101) Add finality activation
 height check in finality voting and commit pub rand start height and bump Babylon version to
 v0.14.0
->>>>>>> main
 
 ## v0.8.0
 
