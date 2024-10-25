@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
+* [#102](https://github.com/babylonlabs-io/finality-provider/pull/102) Improve `eotsd keys add` command
 * [#104](https://github.com/babylonlabs-io/finality-provider/pull/104) Print fpd binary version
 
 ### Bug Fixes
@@ -54,6 +55,7 @@ block tip
 * [#101](https://github.com/babylonlabs-io/finality-provider/pull/101) Add finality activation
 height check in finality voting and commit pub rand start height and bump Babylon version to
 v0.14.0
+>>>>>>> main
 
 ## v0.8.0
 
