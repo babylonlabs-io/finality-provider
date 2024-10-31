@@ -13,6 +13,7 @@ import (
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -183,7 +184,8 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 
 		noVotingPowerTable := r.Int31n(10) > 5
 		if noVotingPowerTable {
-			allowedErr := fmt.Sprintf("failed to query Finality Voting Power at Height %d: rpc error: code = Unknown desc = %s: unknown request", currentHeight, bstypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", currentHeight).Error())
+			allowedErr := fmt.Sprintf("failed to query Finality Voting Power at Height %d: rpc error: code = Unknown desc = %s: unknown request",
+				currentHeight, finalitytypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", currentHeight).Error())
 			mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), gomock.Any()).Return(uint64(0), errors.New(allowedErr)).AnyTimes()
 			mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(0), errors.New(allowedErr)).AnyTimes()
 		} else {

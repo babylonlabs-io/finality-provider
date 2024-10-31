@@ -9,6 +9,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
@@ -250,7 +251,8 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() (fpInstanceRunning 
 			// if ther error is that there is nothing in the voting power table
 			// it should continue and consider the voting power
 			// as zero to start the finality provider and send public randomness
-			allowedErr := fmt.Sprintf("failed to query Finality Voting Power at Height %d: rpc error: code = Unknown desc = %s: unknown request", latestBlock.Height, bstypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", latestBlock.Height).Error())
+			allowedErr := fmt.Sprintf("failed to query Finality Voting Power at Height %d: rpc error: code = Unknown desc = %s: unknown request",
+				latestBlock.Height, finalitytypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", latestBlock.Height).Error())
 			if !strings.EqualFold(err.Error(), allowedErr) {
 				// if some other error occured then the finality-provider is not registered in the Babylon chain yet
 				continue
