@@ -37,8 +37,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v0.10.0
+
 ### Improvements
 
+* [#114](https://github.com/babylonlabs-io/finality-provider/pull/114) Bump Babylon version to v0.15.0
 * [#102](https://github.com/babylonlabs-io/finality-provider/pull/102) Improve `eotsd keys add` command
 * [#104](https://github.com/babylonlabs-io/finality-provider/pull/104) Print fpd binary version
 
