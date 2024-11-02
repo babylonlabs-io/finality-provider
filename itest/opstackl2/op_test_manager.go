@@ -172,6 +172,11 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 	}
 
 	ctm.WaitForServicesStart(t)
+
+	// enable CW contract
+	// TODO: debug why this is not working
+	enableCwContract(t, logger, opL2ConsumerConfig, opConsumerId)
+
 	return ctm
 }
 
@@ -471,8 +476,8 @@ func deployCwContract(
 	opFinalityGadgetInitMsg := map[string]interface{}{
 		"admin":            cwClient.MustGetAddr(),
 		"consumer_id":      opConsumerId,
-		"activated_height": 0, // TODO: remove once we get rid of this field
-		"is_enabled":       true,
+		"activated_height": 0,     // TODO: remove once we get rid of this field
+		"is_enabled":       false, // start the op chain with FG disabled
 	}
 	opFinalityGadgetInitMsgBytes, err := json.Marshal(opFinalityGadgetInitMsg)
 	require.NoError(t, err)
@@ -487,6 +492,29 @@ func deployCwContract(
 	cwContractAddress := listContractsResponse.Contracts[0]
 	t.Logf(log.Prefix("op-finality-gadget contract address: %s"), cwContractAddress)
 	return cwContractAddress
+}
+
+func enableCwContract(
+	t *testing.T,
+	logger *zap.Logger,
+	opL2ConsumerConfig *fpcfg.OPStackL2Config,
+	cwContractAddress string,
+) {
+	cwConfig := opL2ConsumerConfig.ToCosmwasmConfig()
+	cwClient, err := opcc.NewCwClient(&cwConfig, logger)
+	require.NoError(t, err)
+
+	// Prepare message
+	enableMsg := map[string]interface{}{
+		"enabled": true,
+	}
+	enableMsgBytes, err := json.Marshal(enableMsg)
+	require.NoError(t, err)
+
+	err = cwClient.ExecuteContract(cwContractAddress, enableMsgBytes, nil)
+	require.NoError(t, err)
+
+	t.Log("Enabled CW contract")
 }
 
 func createLogger(t *testing.T, level zapcore.Level) *zap.Logger {

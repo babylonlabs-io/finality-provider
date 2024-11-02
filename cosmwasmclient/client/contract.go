@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 )
 
@@ -54,6 +55,22 @@ func (cwClient *Client) InstantiateContract(codeID uint64, initMsg []byte) error
 	}
 
 	_, err := cwClient.ReliablySendMsg(context.Background(), instantiateMsg, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (cwClient *Client) ExecuteContract(contractAddr string, execMsg []byte, funds []sdk.Coin) error {
+	executeMsg := &wasmdtypes.MsgExecuteContract{
+		Sender:   cwClient.MustGetAddr(),
+		Contract: contractAddr,
+		Msg:      execMsg,
+		Funds:    funds,
+	}
+
+	_, err := cwClient.ReliablySendMsg(context.Background(), executeMsg, nil, nil)
 	if err != nil {
 		return err
 	}
