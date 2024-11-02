@@ -83,8 +83,9 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 	err = bh.Start()
 	require.NoError(t, err)
 
-	// specify Babylon finality gadget rpc
-	babylonFinalityGadgetRpc := "localhost:8080"
+	// specify Babylon finality gadget rpc and http listener
+	babylonFinalityGadgetRpc := "localhost:50051"
+	babylonFinalityGadgetHttp := "localhost:8080"
 
 	// deploy op-finality-gadget contract and start op stack system
 	opL2ConsumerConfig, opSys := startExtSystemsAndCreateConsumerCfg(t, logger, bh, babylonFinalityGadgetRpc)
@@ -128,6 +129,7 @@ func StartOpL2ConsumerManager(t *testing.T, numOfConsumerFPs uint8) *OpL2Consume
 		BBNRPCAddress:     opL2ConsumerConfig.RPCAddr,
 		DBFilePath:        "data.db",
 		GRPCListener:      babylonFinalityGadgetRpc,
+		HTTPListener:      babylonFinalityGadgetHttp,
 		PollInterval:      time.Second * time.Duration(10),
 	}
 
