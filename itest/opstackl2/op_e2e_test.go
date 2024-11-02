@@ -186,6 +186,8 @@ func TestFinalityGadgetServer(t *testing.T) {
 
 	// start finality gadget processing blocks
 	ctx, cancel := context.WithCancel(context.Background())
+	err = ctm.FinalityGadget.Startup(ctx)
+	require.NoError(t, err)
 	go func() {
 		err := ctm.FinalityGadget.ProcessBlocks(ctx)
 		require.NoError(t, err)
