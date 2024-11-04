@@ -11,6 +11,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	fppath "github.com/babylonlabs-io/finality-provider/lib/math"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/gogo/protobuf/jsonpb"
 	"go.uber.org/atomic"
@@ -202,6 +203,18 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 			if fp.hasProcessed(b) {
 				continue
 			}
+
+			activationBlkHeight, err := fp.cc.QueryFinalityActivationBlockHeight()
+			if err != nil {
+				fp.reportCriticalErr(fmt.Errorf("failed to get activation height during fast sync %w", err))
+				continue
+			}
+
+			// check if it is allowed to send finality
+			if b.Height < activationBlkHeight {
+				continue
+			}
+
 			// check whether the finality provider has voting power
 			hasVp, err := fp.hasVotingPower(b)
 			if err != nil {
@@ -374,16 +387,9 @@ func (fp *FinalityProviderInstance) tryFastSync(targetBlock *types.BlockInfo) (*
 		return nil, nil
 	}
 
-	lastFinalizedHeight := lastFinalizedBlocks[0].Height
-	lastProcessedHeight := fp.GetLastProcessedHeight()
-
-	// get the startHeight from the maximum of the lastVotedHeight and
-	// the lastFinalizedHeight plus 1
-	var startHeight uint64
-	if lastFinalizedHeight < lastProcessedHeight {
-		startHeight = lastProcessedHeight + 1
-	} else {
-		startHeight = lastFinalizedHeight + 1
+	startHeight, err := fp.fastSyncStartHeight(lastFinalizedBlocks[0].Height)
+	if err != nil {
+		return nil, err
 	}
 
 	if startHeight > targetBlock.Height {
@@ -393,6 +399,18 @@ func (fp *FinalityProviderInstance) tryFastSync(targetBlock *types.BlockInfo) (*
 	fp.logger.Debug("the finality-provider is entering fast sync")
 
 	return fp.FastSync(startHeight, targetBlock.Height)
+}
+
+func (fp *FinalityProviderInstance) fastSyncStartHeight(lastFinalizedHeight uint64) (uint64, error) {
+	lastProcessedHeight := fp.GetLastProcessedHeight()
+
+	finalityActivationBlkHeight, err := fp.cc.QueryFinalityActivationBlockHeight()
+	if err != nil {
+		return 0, err
+	}
+
+	// return the max start height by checking the finality activation block height
+	return fppath.MaxUint64(lastProcessedHeight+1, lastFinalizedHeight+1, finalityActivationBlkHeight), nil
 }
 
 func (fp *FinalityProviderInstance) hasProcessed(b *types.BlockInfo) bool {
@@ -447,36 +465,37 @@ func (fp *FinalityProviderInstance) retrySubmitFinalitySignatureUntilBlockFinali
 	// we break the for loop if the block is finalized or the signature is successfully submitted
 	// error will be returned if maximum retries have been reached or the query to the consumer chain fails
 	for {
-		// error will be returned if max retries have been reached
-		res, err := fp.SubmitFinalitySignature(targetBlock)
-		if err != nil {
-
-			fp.logger.Debug(
-				"failed to submit finality signature to the consumer chain",
-				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint32("current_failures", failedCycles),
-				zap.Uint64("target_block_height", targetBlock.Height),
-				zap.Error(err),
-			)
-
-			if clientcontroller.IsUnrecoverable(err) {
-				return nil, err
-			}
-
-			if clientcontroller.IsExpected(err) {
-				return nil, nil
-			}
-
-			failedCycles += 1
-			if failedCycles > fp.cfg.MaxSubmissionRetries {
-				return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
-			}
-		} else {
-			// the signature has been successfully submitted
-			return res, nil
-		}
 		select {
 		case <-time.After(fp.cfg.SubmissionRetryInterval):
+			// error will be returned if max retries have been reached
+			res, err := fp.SubmitFinalitySignature(targetBlock)
+			if err != nil {
+
+				fp.logger.Debug(
+					"failed to submit finality signature to the consumer chain",
+					zap.String("pk", fp.GetBtcPkHex()),
+					zap.Uint32("current_failures", failedCycles),
+					zap.Uint64("target_block_height", targetBlock.Height),
+					zap.Error(err),
+				)
+
+				if clientcontroller.IsUnrecoverable(err) {
+					return nil, err
+				}
+
+				if clientcontroller.IsExpected(err) {
+					return nil, nil
+				}
+
+				failedCycles += 1
+				if failedCycles > fp.cfg.MaxSubmissionRetries {
+					return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
+				}
+			} else {
+				// the signature has been successfully submitted
+				return res, nil
+			}
+
 			// periodically query the index block to be later checked whether it is Finalized
 			finalized, err := fp.checkBlockFinalization(targetBlock.Height)
 			if err != nil {
@@ -597,6 +616,14 @@ func (fp *FinalityProviderInstance) CommitPubRand(tipHeight uint64) (*types.TxRe
 		return nil, nil
 	}
 
+	activationBlkHeight, err := fp.cc.QueryFinalityActivationBlockHeight()
+	if err != nil {
+		return nil, err
+	}
+
+	// make sure that the start height is at least the finality activation height
+	// and updated to generate the list with the same as the commited height.
+	startHeight = fppath.MaxUint64(startHeight, activationBlkHeight)
 	// generate a list of Schnorr randomness pairs
 	// NOTE: currently, calling this will create and save a list of randomness
 	// in case of failure, randomness that has been created will be overwritten

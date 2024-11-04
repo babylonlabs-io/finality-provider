@@ -1,8 +1,9 @@
 package clientcontroller
 
 import (
-	"cosmossdk.io/math"
 	"fmt"
+
+	"cosmossdk.io/math"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -70,6 +71,13 @@ type ClientController interface {
 	// QueryActivatedHeight returns the activated height of the consumer chain
 	// error will be returned if the consumer chain has not been activated
 	QueryActivatedHeight() (uint64, error)
+
+	// QueryFinalityActivationBlockHeight returns the block height of the consumer chain
+	// starts to accept finality voting and pub rand commit as start height
+	// error will be returned if the consumer chain failed to get this value
+	// if the consumer chain wants to accept finality voting at any block height
+	// the value zero should be returned.
+	QueryFinalityActivationBlockHeight() (uint64, error)
 
 	Close() error
 }

@@ -37,12 +37,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
-### Misc Improvements
+## v0.10.0
 
+### Improvements
+
+* [#114](https://github.com/babylonlabs-io/finality-provider/pull/114) Bump Babylon version to v0.15.0
+* [#102](https://github.com/babylonlabs-io/finality-provider/pull/102) Improve `eotsd keys add` command
+* [#104](https://github.com/babylonlabs-io/finality-provider/pull/104) Print fpd binary version
 * [#87](https://github.com/babylonlabs-io/finality-provider/pull/87) Rename ChainName to ChainType
+
+## v0.9.1
+
+### Bug Fixes
+
+* [#107](https://github.com/babylonlabs-io/finality-provider/pull/107) Fix commit
+start height when the finality activation height is higher than the current
+block tip
+
+## v0.9.0
+
+### Improvements
+
+* [#101](https://github.com/babylonlabs-io/finality-provider/pull/101) Add finality activation
+height check in finality voting and commit pub rand start height and bump Babylon version to
+v0.14.0
+
 ## v0.8.0
 
-### Misc Improvements
+### Improvements
 
 * [#97](https://github.com/babylonlabs-io/finality-provider/pull/97) Bump Babylon version to v0.13.0
 * [#90](https://github.com/babylonlabs-io/finality-provider/pull/90) CLI edit finality provider

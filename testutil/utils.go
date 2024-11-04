@@ -18,7 +18,7 @@ func ZeroCommissionRate() *sdkmath.LegacyDec {
 	return &zeroCom
 }
 
-func PrepareMockedClientController(t *testing.T, r *rand.Rand, startHeight, currentHeight uint64) *mocks.MockClientController {
+func PrepareMockedClientController(t *testing.T, r *rand.Rand, startHeight, currentHeight, finalityActivationBlkHeight uint64) *mocks.MockClientController {
 	ctl := gomock.NewController(t)
 	mockClientController := mocks.NewMockClientController(ctl)
 
@@ -38,6 +38,7 @@ func PrepareMockedClientController(t *testing.T, r *rand.Rand, startHeight, curr
 	mockClientController.EXPECT().Close().Return(nil).AnyTimes()
 	mockClientController.EXPECT().QueryBestBlock().Return(currentBlockRes, nil).AnyTimes()
 	mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
+	mockClientController.EXPECT().QueryFinalityActivationBlockHeight().Return(finalityActivationBlkHeight, nil).AnyTimes()
 
 	return mockClientController
 }
