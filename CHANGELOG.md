@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#114](https://github.com/babylonlabs-io/finality-provider/pull/114) Bump Babylon version to v0.15.0
 * [#102](https://github.com/babylonlabs-io/finality-provider/pull/102) Improve `eotsd keys add` command
 * [#104](https://github.com/babylonlabs-io/finality-provider/pull/104) Print fpd binary version
+* [#87](https://github.com/babylonlabs-io/finality-provider/pull/87) Rename ChainName to ChainType
 
 ## v0.9.1
 
