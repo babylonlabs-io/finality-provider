@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Documentation
+
+* [#117](https://github.com/babylonlabs-io/finality-provider/pull/117) Spec of commit public randomness
+
 ## v0.10.0
 
 ### Improvements
