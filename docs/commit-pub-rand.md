@@ -6,7 +6,9 @@ The finality provider periodically commits public randomness to the consumer
 chain to be used for future block finalization. This document specifies the
 process of committing public randomness.
 
-## Public Randomness Commit
+## Commit Process
+
+### Generating a Commit
 
 A public randomness commit is essentially a list of public
 randomness, each committed to a specific height. In particular, it consists of:
@@ -15,7 +17,18 @@ randomness, each committed to a specific height. In particular, it consists of:
 - a start height, indicating from which height the randomness starts, and
 - the number of randomness contained in the merkle tree.
 
-## Commit Process
+To generate a new commit, following steps are needed:
+
+- Generate a list of randomness. This requires a RPC call to the EOTS manager
+  (eotsd) to generate a list of public randomness, each corresponding to a
+  specific height according to the start height and the number of randomness in
+  the request.
+- Construct the merkle tree based on the list of randomness and save the merkle
+  proof of each randomness to the database indexed by height.
+- Construct the commit message based on the root of the merkle tree.
+- Sign the commit message and sent a transaction to Babylon.
+
+### Timing to Commit
 
 Public randomness is an essential component of finality. It should be
 committed before finality votes can be sent. Otherwise, the finality provider
