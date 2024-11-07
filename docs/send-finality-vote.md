@@ -3,76 +3,80 @@
 ## Overview
 
 Finality providers submit votes to finalize blocks on the consumer chain.
-This document specifies the process of submitting finality votes, including
-bootstrapping, submission loops, and fast sync mechanisms.
+This document specifies the process of submitting finality votes.
 
-## Finality Votes
+## Internal State
 
-A finality vote consists of:
+The finality provider maintains two critical persistent states:
 
-- A signature over the block to be finalized
-- The public randomness associated with that block height
-- A merkle inclusion proof for the public randomness
+- Last voted height
+- Last processed height
 
-The signature is generated using a one-time signing key derived from the finality provider's master key. The public randomness must have been previously committed to the consumer chain.
+### Last voted height
+
+Tracks the most recent height for which a finality vote was successfully
+submitted. This prevents duplicate voting on previously voted heights.
+
+### Last processed height
+
+Tracks the most recent height for which a voting decision was made
+(whether the decision was to vote or not).
+By definition, `LastProcessedHeight >= LastVotedHeight` always holds.
 
 ## Submission Process
 
-### Bootstrapping
+### Bootstraping
 
-When a finality provider starts, it performs the following bootstrap sequence:
+To determine the initial processing height:
 
-1. Query the latest block from the consumer chain
-2. Check if fast sync is needed by comparing the last processed height:
-   ```go
-   if currentHeight >= lastProcessedHeight + FastSyncGap
-   ```
-3. If fast sync is needed, perform fast sync to catch up
-4. Determine the starting height for the poller:
-   - If in auto mode:
-     - `startHeight = max(lastProcessedHeight + 1, lastFinalizedHeight + 1, finalityActivationHeight)`
-   - If in static mode:
-     - Use configured static starting height
+1. Query consumer chain for `lastFinalizedHeight`
+2. If no finalized blocks exist:
+   - Start from `finalityActivationHeight`
+3. Query `lastVotedHeightRemote` from consumer chain
+4. If no previous votes from this provider:
+   - Start from `lastFinalizedHeight + 1`
+5. Synchronize local state:
+   - Ensure local `lastVotedHeight` and `lastProcessedHeight` ≥ `lastVotedHeightRemote`
+6. Begin processing at:
+   - `max(lastProcessedHeight + 1, lastFinalizedHeight + 1)`
 
-### Submission Loop
+### Normal Submission Loop
 
-The finality provider runs a continuous loop that:
+After the finality provider is bootstraped, it continuously monitors for
+new blocks. For each new block, it performs these validation checks:
 
-1. Waits for new blocks from the chain poller
-2. For each new block:
-   - Checks if block has already been processed
-   - Verifies block is after finality activation height
-   - Confirms finality provider has voting power
-   - Generates and submits finality signature
-   - Retries submission until either:
-     - Signature is successfully submitted
-     - Block becomes finalized
-     - Maximum retries reached
-     - Provider is shut down
+1. Block hasn't been previously processed
+2. Block height exceeds finality activation height
+3. Finality provider has sufficient voting power
 
-**Important Notes:**
-- Votes cannot be submitted for already finalized blocks
-- Each block requires its own unique public randomness
-- Submission failures are retried with configurable intervals
-- Critical errors (e.g., slashing) terminate the loop
+Upon passing all checks, the finality provider:
 
-## Fast Sync
+1. Requests a finality signature from the EOTS manager
+2. Submits the vote transaction to the consumer chain
+3. Implements retry logic until either:
+   - Maximum retry attempts are reached
+   - Block becomes finalized
 
-Fast sync is triggered when the provider falls behind by more than `FastSyncGap` blocks. The process:
+#### Batch submission
 
-1. Determines sync start height:
-   ```go
-   startHeight = max(lastProcessedHeight + 1, lastFinalizedHeight + 1, finalityActivationHeight)
-   ```
+A batch submission mechanism is needed to deal with cases where:
 
-2. Batches multiple signatures into single transactions to catch up efficiently
+- recovery from downtime, and
+- the consumer chain has rapid block production.
 
-3. Continues until either:
-   - Current height is reached
-   - Provider is slashed/jailed
-   - Critical error occurs
+Batch sumission puts multiple new blocks into a batch and
+process them in the same loop, after which all the finality votes will be sent
+in the same transaction to the consumer chain.
 
-Fast sync can be:
-- Disabled by setting `FastSyncInterval = 0`
-- Configured via `FastSyncGap` to determine lag threshold
-- Automatically triggered by periodic checks
+### Generating Finality Votes
+
+Each finality vote contains:
+
+1. EOTS signature for the target block (signed by EOTS manager)
+2. Public randomness for the block height
+3. Merkle inclusion proof for the public randomness
+
+The consumer chain verifies:
+
+- EOTS signature validity
+- Randomness was pre-committed and BTC-timestamped
