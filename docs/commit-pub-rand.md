@@ -10,8 +10,10 @@ process of committing public randomness.
 
 ### Generating a Commit
 
-A public randomness commit is essentially a list of public
-randomness, each committed to a specific height. In particular, it consists of:
+A randomness pair is essentially a pair of `32-byte` points over `secp256k1`.
+A public randomness commit is a list of public
+randomness, each committed to a specific height. In particular, a commit
+consists of:
 
 - a merkle root containing a list of public randomness values,
 - a start height, indicating from which height the randomness starts, and
@@ -19,14 +21,20 @@ randomness, each committed to a specific height. In particular, it consists of:
 
 To generate a new commit, following steps are needed:
 
-- Generate a list of randomness. This requires a RPC call to the EOTS manager
+- Generate a list of randomness. This requires an RPC call to the EOTS manager
   (eotsd) to generate a list of public randomness, each corresponding to a
   specific height according to the start height and the number of randomness in
-  the request.
-- Construct the merkle tree based on the list of randomness and save the merkle
-  proof of each randomness to the database indexed by height.
-- Construct the commit message based on the root of the merkle tree.
-- Sign the commit message and sent a transaction to Babylon.
+  the request. The details of the generator can be found in [eotsmanager/randgenerator](../eotsmanager/randgenerator/randgenerator.go).
+- Construct the merkle tree based on the list of randomness using the CometBFT's [merkle](https://github.com/cometbft/cometbft/tree/main/crypto/merkle)
+  library.
+- Save each randomness along with the merkle
+  [proof](https://github.com/cometbft/cometbft/blob/978b84614992cb009b2e37500b6b3a598665a535/crypto/merkle/proof.go#L53)
+  to the database indexed by height.
+- Send a [Schnorr](https://github.com/btcsuite/btcd/blob/684d64ad74fed203fb846c032f2b55b3e3c36734/btcec/schnorr/signature.go#L391)
+  signature request to the EOTS manager over the hash of the commit
+  (concatenated by the start height, number of randomness, and the merkle root).
+- Build the commit message ([MsgCommitPubRandList](https://github.com/babylonlabs-io/babylon/blob/aa99e2eb093e06cb9a28a58f373e8fa5f2494383/proto/babylon/finality/v1/tx.proto#L29))
+  and send a transaction to Babylon.
 
 ### Timing to Commit
 
