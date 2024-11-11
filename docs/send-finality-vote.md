@@ -25,20 +25,17 @@ By definition, `LastProcessedHeight >= LastVotedHeight` always holds.
 
 ## Submission Process
 
-### Bootstraping
+### Bootstrapping
 
 To determine the initial processing height:
 
-1. Query consumer chain for `lastFinalizedHeight`
-2. If no finalized blocks exist:
-   - Start from `finalityActivationHeight`
-3. Query `lastVotedHeightRemote` from consumer chain
-4. If no previous votes from this provider:
-   - Start from `lastFinalizedHeight + 1`
-5. Synchronize local state:
+1. Query consumer chain for `lastFinalizedHeight` (`0` if no finalized blocks)
+2. Query consumer chain for `finalityActivationHeight`:
+3. Query `lastVotedHeightRemote` from consumer chain (`0` if no votes are sent)
+4. Synchronize local state:
    - Ensure local `lastVotedHeight` and `lastProcessedHeight` ≥ `lastVotedHeightRemote`
-6. Begin processing at:
-   - `max(lastProcessedHeight + 1, lastFinalizedHeight + 1)`
+5. Begin processing at:
+   - `max(lastProcessedHeight + 1, lastFinalizedHeight + 1, finalityActivationHeight)`
 
 ### Normal Submission Loop
 
