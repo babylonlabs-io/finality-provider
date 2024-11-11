@@ -42,13 +42,14 @@ type FinalityProviderManager struct {
 	fpis map[string]*FinalityProviderInstance
 
 	// needed for initiating finality-provider instances
-	fps          *store.FinalityProviderStore
-	pubRandStore *store.PubRandProofStore
-	config       *fpcfg.Config
-	cc           ccapi.ClientController
-	consumerCon  ccapi.ConsumerController
-	em           eotsmanager.EOTSManager
-	logger       *zap.Logger
+	fps           *store.FinalityProviderStore
+	pubRandStore  *store.PubRandProofStore
+	config        *fpcfg.Config
+	cc            ccapi.ClientController
+	consumerCon   ccapi.ConsumerController
+	pollerFactory ccapi.ConsumerChainPollerFactory
+	em            eotsmanager.EOTSManager
+	logger        *zap.Logger
 
 	metrics *metrics.FpMetrics
 
@@ -63,6 +64,7 @@ func NewFinalityProviderManager(
 	config *fpcfg.Config,
 	cc ccapi.ClientController,
 	consumerCon ccapi.ConsumerController,
+	pollerFactory ccapi.ConsumerChainPollerFactory,
 	em eotsmanager.EOTSManager,
 	metrics *metrics.FpMetrics,
 	logger *zap.Logger,
@@ -76,6 +78,7 @@ func NewFinalityProviderManager(
 		config:          config,
 		cc:              cc,
 		consumerCon:     consumerCon,
+		pollerFactory:   pollerFactory,
 		em:              em,
 		metrics:         metrics,
 		logger:          logger,
@@ -433,7 +436,25 @@ func (fpm *FinalityProviderManager) addFinalityProviderInstance(
 		return fmt.Errorf("finality-provider instance already exists")
 	}
 
-	fpIns, err := NewFinalityProviderInstance(pk, fpm.config, fpm.fps, fpm.pubRandStore, fpm.cc, fpm.consumerCon, fpm.em, fpm.metrics, passphrase, fpm.criticalErrChan, fpm.logger)
+	poller, err := fpm.pollerFactory.CreateChainPoller()
+	if err != nil {
+		return fmt.Errorf("failed to create chain poller %s instance: %v", pkHex, err)
+	}
+
+	fpIns, err := NewFinalityProviderInstance(
+		pk,
+		fpm.config,
+		fpm.fps,
+		fpm.pubRandStore,
+		fpm.cc,
+		fpm.consumerCon,
+		poller,
+		fpm.em,
+		fpm.metrics,
+		passphrase,
+		fpm.criticalErrChan,
+		fpm.logger,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create finality-provider %s instance: %w", pkHex, err)
 	}

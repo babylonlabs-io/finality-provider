@@ -37,6 +37,36 @@ type skipHeightResponse struct {
 	err error
 }
 
+type ChainPollerFactory struct {
+	logger      *zap.Logger
+	cfg         *cfg.ChainPollerConfig
+	cc          ccapi.ClientController
+	consumerCon ccapi.ConsumerController
+	metrics     *metrics.FpMetrics
+}
+
+var _ ccapi.ConsumerChainPollerFactory = &ChainPollerFactory{}
+
+func NewChainPollerFactory(
+	logger *zap.Logger,
+	cfg *cfg.ChainPollerConfig,
+	cc ccapi.ClientController,
+	consumerCon ccapi.ConsumerController,
+	metrics *metrics.FpMetrics,
+) *ChainPollerFactory {
+	return &ChainPollerFactory{
+		logger:      logger,
+		cfg:         cfg,
+		cc:          cc,
+		consumerCon: consumerCon,
+		metrics:     metrics,
+	}
+}
+
+func (f *ChainPollerFactory) CreateChainPoller() (ccapi.ConsumerChainPoller, error) {
+	return NewChainPoller(f.logger, f.cfg, f.cc, f.consumerCon, f.metrics), nil
+}
+
 type ChainPoller struct {
 	isStarted *atomic.Bool
 	wg        sync.WaitGroup
@@ -51,6 +81,8 @@ type ChainPoller struct {
 	nextHeight     uint64
 	logger         *zap.Logger
 }
+
+var _ ccapi.ConsumerChainPoller = &ChainPoller{}
 
 func NewChainPoller(
 	logger *zap.Logger,

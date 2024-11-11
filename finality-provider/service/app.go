@@ -77,15 +77,21 @@ func NewFinalityProviderAppFromConfig(
 
 	logger.Info("successfully connected to a remote EOTS manager", zap.String("address", cfg.EOTSManagerAddress))
 
-	return NewFinalityProviderApp(cfg, cc, consumerCon, em, db, logger)
+	fpMetrics := metrics.NewFpMetrics()
+
+	pollerFactory := NewChainPollerFactory(logger, cfg.PollerConfig, cc, consumerCon, fpMetrics)
+
+	return NewFinalityProviderApp(cfg, cc, consumerCon, pollerFactory, em, db, fpMetrics, logger)
 }
 
 func NewFinalityProviderApp(
 	config *fpcfg.Config,
 	cc ccapi.ClientController, // TODO: this should be renamed as client controller is always going to be babylon
 	consumerCon ccapi.ConsumerController,
+	pollerFactory ccapi.ConsumerChainPollerFactory,
 	em eotsmanager.EOTSManager,
 	db kvdb.Backend,
+	fpMetrics *metrics.FpMetrics,
 	logger *zap.Logger,
 ) (*FinalityProviderApp, error) {
 	fpStore, err := store.NewFinalityProviderStore(db)
@@ -108,9 +114,7 @@ func NewFinalityProviderApp(
 		return nil, fmt.Errorf("failed to create keyring: %w", err)
 	}
 
-	fpMetrics := metrics.NewFpMetrics()
-
-	fpm, err := NewFinalityProviderManager(fpStore, pubRandStore, config, cc, consumerCon, em, fpMetrics, logger)
+	fpm, err := NewFinalityProviderManager(fpStore, pubRandStore, config, cc, consumerCon, pollerFactory, em, fpMetrics, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create finality-provider manager: %w", err)
 	}

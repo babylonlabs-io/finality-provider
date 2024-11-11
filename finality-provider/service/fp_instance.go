@@ -39,7 +39,7 @@ type FinalityProviderInstance struct {
 	em          eotsmanager.EOTSManager
 	cc          ccapi.ClientController
 	consumerCon ccapi.ConsumerController
-	poller      *ChainPoller
+	poller      ccapi.ConsumerChainPoller
 	metrics     *metrics.FpMetrics
 
 	// passphrase is used to unlock private keys
@@ -65,6 +65,7 @@ func NewFinalityProviderInstance(
 	prStore *store.PubRandProofStore,
 	cc ccapi.ClientController,
 	consumerCon ccapi.ConsumerController,
+	poller ccapi.ConsumerChainPoller,
 	em eotsmanager.EOTSManager,
 	metrics *metrics.FpMetrics,
 	passphrase string,
@@ -95,6 +96,7 @@ func NewFinalityProviderInstance(
 		em:              em,
 		cc:              cc,
 		consumerCon:     consumerCon,
+		poller:          poller,
 		metrics:         metrics,
 	}, nil
 }
@@ -114,13 +116,9 @@ func (fp *FinalityProviderInstance) Start() error {
 	fp.logger.Info("the finality-provider has been bootstrapped",
 		zap.String("pk", fp.GetBtcPkHex()), zap.Uint64("height", startHeight))
 
-	poller := NewChainPoller(fp.logger, fp.cfg.PollerConfig, fp.cc, fp.consumerCon, fp.metrics)
-
-	if err := poller.Start(startHeight); err != nil {
+	if err := fp.poller.Start(startHeight); err != nil {
 		return fmt.Errorf("failed to start the poller: %w", err)
 	}
-
-	fp.poller = poller
 
 	fp.laggingTargetChan = make(chan uint64, 1)
 
