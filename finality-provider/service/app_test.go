@@ -22,6 +22,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
@@ -68,7 +69,10 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 		fpCfg.PollerConfig.StaticChainScanningStartHeight = randomStartingHeight
 		fpdb, err := fpCfg.DatabaseConfig.GetDbBackend()
 		require.NoError(t, err)
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, fpdb, logger)
+
+		fpMetrics := metrics.NewFpMetrics()
+		pollerFactory := service.NewChainPollerFactory(logger, fpCfg.PollerConfig, mockBabylonController, mockConsumerController, fpMetrics)
+		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, pollerFactory, em, fpdb, fpMetrics, logger)
 		require.NoError(t, err)
 		defer func() {
 			err = fpdb.Close()
@@ -203,7 +207,10 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 			mockConsumerController.EXPECT().QueryActivatedHeight().Return(currentHeight, nil).AnyTimes()
 		}
 
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, fpdb, logger)
+		fpMetrics := metrics.NewFpMetrics()
+		pollerFactory := service.NewChainPollerFactory(logger, fpCfg.PollerConfig, mockBabylonController, mockConsumerController, fpMetrics)
+
+		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, pollerFactory, em, fpdb, fpMetrics, logger)
 		require.NoError(t, err)
 
 		err = app.Start()

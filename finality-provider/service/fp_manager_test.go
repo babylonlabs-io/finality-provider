@@ -135,7 +135,9 @@ func newFinalityProviderManagerWithRegisteredFp(t *testing.T, r *rand.Rand, cc c
 	require.NoError(t, err)
 
 	metricsCollectors := metrics.NewFpMetrics()
-	vm, err := service.NewFinalityProviderManager(fpStore, pubRandStore, &fpCfg, cc, consumerCon, em, metricsCollectors, logger)
+	pollerFactory := service.NewChainPollerFactory(logger, fpCfg.PollerConfig, cc, consumerCon, metricsCollectors)
+
+	vm, err := service.NewFinalityProviderManager(fpStore, pubRandStore, &fpCfg, cc, consumerCon, pollerFactory, em, metricsCollectors, logger)
 	require.NoError(t, err)
 
 	// create registered finality-provider

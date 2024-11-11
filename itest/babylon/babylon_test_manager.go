@@ -14,6 +14,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/clientcontroller"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -79,8 +80,12 @@ func StartManager(t *testing.T) *TestManager {
 	// 4. prepare finality-provider
 	fpdb, err := cfg.DatabaseConfig.GetDbBackend()
 	require.NoError(t, err)
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, eotsCli, fpdb, logger)
+
+	fpMetrics := metrics.NewFpMetrics()
+	pollerFactory := service.NewChainPollerFactory(logger, cfg.PollerConfig, bc, bcc, fpMetrics)
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, pollerFactory, eotsCli, fpdb, fpMetrics, logger)
 	require.NoError(t, err)
+
 	err = fpApp.Start()
 	require.NoError(t, err)
 
