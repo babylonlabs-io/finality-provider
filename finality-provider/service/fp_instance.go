@@ -11,11 +11,12 @@ import (
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
-	fppath "github.com/babylonlabs-io/finality-provider/lib/math"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/gogo/protobuf/jsonpb"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+
+	fppath "github.com/babylonlabs-io/finality-provider/lib/math"
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
@@ -693,12 +694,15 @@ func (fp *FinalityProviderInstance) SubmitFinalitySignature(b *types.BlockInfo) 
 		return nil, fmt.Errorf("failed to send finality signature to the consumer chain: %w", err)
 	}
 
-	// update DB
-	fp.MustUpdateStateAfterFinalitySigSubmission(b.Height)
+	// it is possible that the vote is duplicate so the metrics do need to update
+	if res.TxHash != "" {
+		// update DB
+		fp.MustUpdateStateAfterFinalitySigSubmission(b.Height)
 
-	// update metrics
-	fp.metrics.RecordFpVoteTime(fp.GetBtcPkHex())
-	fp.metrics.IncrementFpTotalVotedBlocks(fp.GetBtcPkHex())
+		// update metrics
+		fp.metrics.RecordFpVoteTime(fp.GetBtcPkHex())
+		fp.metrics.IncrementFpTotalVotedBlocks(fp.GetBtcPkHex())
+	}
 
 	return res, nil
 }

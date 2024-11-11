@@ -4,17 +4,19 @@
 package e2etest
 
 import (
-	sdkmath "cosmossdk.io/math"
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	"github.com/babylonlabs-io/finality-provider/clientcontroller"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
-	"github.com/babylonlabs-io/finality-provider/types"
-	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"math/rand"
 	"testing"
 	"time"
+
+	sdkmath "cosmossdk.io/math"
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+
+	"github.com/babylonlabs-io/finality-provider/clientcontroller"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 var (
@@ -84,6 +86,12 @@ func TestDoubleSigning(t *testing.T) {
 
 	finalizedBlocks := tm.WaitForNFinalizedBlocks(t, 1)
 
+	// test duplicate vote which should be ignored
+	_, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(finalizedBlocks[0])
+	require.NoError(t, err)
+	require.Nil(t, extractedKey)
+	t.Logf("duplicate vote for %d is sent", finalizedBlocks[0].Height)
+
 	// attack: manually submit a finality vote over a conflicting block
 	// to trigger the extraction of finality-provider's private key
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -91,7 +99,7 @@ func TestDoubleSigning(t *testing.T) {
 		Height: finalizedBlocks[0].Height,
 		Hash:   datagen.GenRandomByteArray(r, 32),
 	}
-	_, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b)
+	_, extractedKey, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b)
 	require.NoError(t, err)
 	require.NotNil(t, extractedKey)
 	localKey := tm.GetFpPrivKey(t, fpIns.GetBtcPkBIP340().MustMarshal())
@@ -101,7 +109,7 @@ func TestDoubleSigning(t *testing.T) {
 
 	tm.WaitForFpShutDown(t)
 
-	// try to start the finality providers and the slashed one should expect err
+	// try to start the finality provider and should expect err
 	err = tm.Fpa.StartHandlingFinalityProvider(fpIns.GetBtcPkBIP340(), "")
 	require.Error(t, err)
 }
