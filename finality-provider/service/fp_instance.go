@@ -789,6 +789,10 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 		return nil, nil, fmt.Errorf("failed to send finality signature to the consumer chain: %w", err)
 	}
 
+	if res.TxHash == "" {
+		return res, nil, nil
+	}
+
 	// try to extract the private key
 	var privKey *btcec.PrivateKey
 	for _, ev := range res.Events {

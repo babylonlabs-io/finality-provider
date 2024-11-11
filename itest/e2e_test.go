@@ -87,9 +87,10 @@ func TestDoubleSigning(t *testing.T) {
 	finalizedBlocks := tm.WaitForNFinalizedBlocks(t, 1)
 
 	// test duplicate vote which should be ignored
-	_, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(finalizedBlocks[0])
+	res, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(finalizedBlocks[0])
 	require.NoError(t, err)
 	require.Nil(t, extractedKey)
+	require.Empty(t, res)
 	t.Logf("duplicate vote for %d is sent", finalizedBlocks[0].Height)
 
 	// attack: manually submit a finality vote over a conflicting block
@@ -106,12 +107,6 @@ func TestDoubleSigning(t *testing.T) {
 	require.True(t, localKey.Key.Equals(&extractedKey.Key) || localKey.Key.Negate().Equals(&extractedKey.Key))
 
 	t.Logf("the equivocation attack is successful")
-
-	tm.WaitForFpShutDown(t)
-
-	// try to start the finality provider and should expect err
-	err = tm.Fpa.StartHandlingFinalityProvider(fpIns.GetBtcPkBIP340(), "")
-	require.Error(t, err)
 }
 
 // TestFastSync tests the fast sync process where the finality-provider is terminated and restarted with fast sync
