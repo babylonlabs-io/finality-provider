@@ -37,6 +37,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+* [#124](https://github.com/babylonlabs-io/finality-provider/pull/124) Ignore
+duplicated finality vote error
+
 ## v0.10.0
 
 ### Improvements
