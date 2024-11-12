@@ -1,0 +1,79 @@
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - decorder
+    - dogsled
+    - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - forcetypeassert
+    - goconst
+    - gocritic
+    - gocyclo
+    - goheader
+    - gomodguard
+    - goprintffuncname
+    - gosimple
+    - govet
+    - grouper
+    - importas
+    - ineffassign
+    - loggercheck
+    - maintidx
+    - makezero
+    - misspell
+    - nakedret
+    - nilerr
+    #    - nlreturn # Style wise I personally like this one, todo(lazar): unlax at somepoint, good practice
+    - noctx
+    - nonamedreturns
+    - nosprintfhostport
+    - paralleltest
+    - reassign
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - stylecheck
+    - tenv
+    - testableexamples
+    - tparallel
+    - typecheck
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - unused
+    - wastedassign
+    - whitespace
+#    - wrapcheck # we really should be using this, lax for now todo(lazar): unlax at somepoint, good practice
+
+issues:
+  max-same-issues: 0
+  # Default: https://golangci-lint.run/usage/false-positives/#default-exclusions
+  exclude-dirs:
+    - e2etest
+    - itest
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+    - path-except: _test\.go
+      linters:
+        - forbidigo
