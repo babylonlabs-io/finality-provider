@@ -10,6 +10,7 @@ import (
 )
 
 func TestShouldStart(t *testing.T) {
+	t.Parallel()
 	tcs := []struct {
 		name           string
 		currFpStatus   proto.FinalityProviderStatus
@@ -44,7 +45,9 @@ func TestShouldStart(t *testing.T) {
 
 	r := rand.New(rand.NewSource(10))
 	for _, tc := range tcs {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			fp := testutil.GenRandomFinalityProvider(r, t)
 			fp.Status = tc.currFpStatus
 

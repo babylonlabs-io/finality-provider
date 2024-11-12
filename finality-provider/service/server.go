@@ -73,7 +73,7 @@ func (s *Server) RunUntilShutdown() error {
 		s.logger.Info("Metrics server stopped")
 	}()
 
-	listenAddr := s.cfg.RpcListener
+	listenAddr := s.cfg.RPCListener
 	// we create listeners from the RPCListeners defined
 	// in the config.
 	lis, err := net.Listen("tcp", listenAddr)
@@ -93,11 +93,9 @@ func (s *Server) RunUntilShutdown() error {
 		return fmt.Errorf("failed to register gRPC server: %w", err)
 	}
 
-	// All the necessary components have been registered, so we can
+	// All the necessary parts have been registered, so we can
 	// actually start listening for requests.
-	if err := s.startGrpcListen(grpcServer, []net.Listener{lis}); err != nil {
-		return fmt.Errorf("failed to start gRPC listener: %v", err)
-	}
+	s.startGrpcListen(grpcServer, []net.Listener{lis})
 
 	s.logger.Info("Finality Provider Daemon is fully active!")
 
@@ -109,9 +107,8 @@ func (s *Server) RunUntilShutdown() error {
 }
 
 // startGrpcListen starts the GRPC server on the passed listeners.
-func (s *Server) startGrpcListen(grpcServer *grpc.Server, listeners []net.Listener) error {
-
-	// Use a WaitGroup so we can be sure the instructions on how to input the
+func (s *Server) startGrpcListen(grpcServer *grpc.Server, listeners []net.Listener) {
+	// Use a WaitGroup, so we can be sure the instructions on how to input the
 	// password is the last thing to be printed to the console.
 	var wg sync.WaitGroup
 
@@ -130,6 +127,4 @@ func (s *Server) startGrpcListen(grpcServer *grpc.Server, listeners []net.Listen
 
 	// Wait for gRPC servers to be up running.
 	wg.Wait()
-
-	return nil
 }

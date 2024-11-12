@@ -61,7 +61,7 @@ func NewFinalityProviderAppFromConfig(
 ) (*FinalityProviderApp, error) {
 	cc, err := clientcontroller.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create rpc client for the consumer chain %s: %v", cfg.ChainType, err)
+		return nil, fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
 	}
 
 	// if the EOTSManagerAddress is empty, run a local EOTS manager;
@@ -234,7 +234,8 @@ func (app *FinalityProviderApp) getFpPrivKey(fpPk []byte) (*btcec.PrivateKey, er
 }
 
 // SyncFinalityProviderStatus syncs the status of the finality-providers with the chain.
-func (app *FinalityProviderApp) SyncFinalityProviderStatus() (fpInstanceRunning bool, err error) {
+func (app *FinalityProviderApp) SyncFinalityProviderStatus() (bool, error) {
+	var fpInstanceRunning bool
 	latestBlock, err := app.cc.QueryBestBlock()
 	if err != nil {
 		return false, err
@@ -248,13 +249,13 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() (fpInstanceRunning 
 	for _, fp := range fps {
 		vp, err := app.cc.QueryFinalityProviderVotingPower(fp.BtcPk, latestBlock.Height)
 		if err != nil {
-			// if ther error is that there is nothing in the voting power table
+			// if the error is that there is nothing in the voting power table
 			// it should continue and consider the voting power
 			// as zero to start the finality provider and send public randomness
 			allowedErr := fmt.Sprintf("failed to query Finality Voting Power at Height %d: rpc error: code = Unknown desc = %s: unknown request",
 				latestBlock.Height, finalitytypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", latestBlock.Height).Error())
 			if !strings.EqualFold(err.Error(), allowedErr) {
-				// if some other error occured then the finality-provider is not registered in the Babylon chain yet
+				// if some other error occurred, then the finality-provider is not registered in the Babylon chain yet
 				continue
 			}
 		}
@@ -335,7 +336,6 @@ func (app *FinalityProviderApp) Stop() error {
 		}
 
 		app.logger.Debug("FinalityProviderApp successfully stopped")
-
 	})
 	return stopErr
 }
@@ -346,7 +346,6 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 	description *stakingtypes.Description,
 	commission *sdkmath.LegacyDec,
 ) (*CreateFinalityProviderResult, error) {
-
 	req := &createFinalityProviderRequest{
 		keyName:         keyName,
 		chainID:         chainID,
@@ -501,7 +500,7 @@ func (app *FinalityProviderApp) loadChainKeyring(
 }
 
 // UpdateClientController sets a new client controoller in the App.
-// Usefull for testing with multiples PKs with different keys, it needs
+// Useful for testing with multiples PKs with different keys, it needs
 // to update who is the signer
 func (app *FinalityProviderApp) UpdateClientController(cc clientcontroller.ClientController) {
 	app.cc = cc

@@ -69,7 +69,7 @@ func NewFinalityProviderInstance(
 ) (*FinalityProviderInstance, error) {
 	sfp, err := s.GetFinalityProvider(fpPk.MustToBTCPK())
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrive the finality provider %s from DB: %w", fpPk.MarshalHex(), err)
+		return nil, fmt.Errorf("failed to retrieve the finality provider %s from DB: %w", fpPk.MarshalHex(), err)
 	}
 
 	if !sfp.ShouldStart() {
@@ -78,8 +78,8 @@ func NewFinalityProviderInstance(
 
 	return &FinalityProviderInstance{
 		btcPk:           bbntypes.NewBIP340PubKeyFromBTCPK(sfp.BtcPk),
-		fpState:         NewFpState(sfp, s),
-		pubRandState:    NewPubRandState(prStore),
+		fpState:         newFpState(sfp, s),
+		pubRandState:    newPubRandState(prStore),
 		cfg:             cfg,
 		logger:          logger,
 		isStarted:       atomic.NewBool(false),
@@ -470,7 +470,6 @@ func (fp *FinalityProviderInstance) retrySubmitFinalitySignatureUntilBlockFinali
 			// error will be returned if max retries have been reached
 			res, err := fp.SubmitFinalitySignature(targetBlock)
 			if err != nil {
-
 				fp.logger.Debug(
 					"failed to submit finality signature to the consumer chain",
 					zap.String("pk", fp.GetBtcPkHex()),
@@ -487,7 +486,7 @@ func (fp *FinalityProviderInstance) retrySubmitFinalitySignatureUntilBlockFinali
 					return nil, nil
 				}
 
-				failedCycles += 1
+				failedCycles++
 				if failedCycles > fp.cfg.MaxSubmissionRetries {
 					return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
 				}
@@ -556,7 +555,7 @@ func (fp *FinalityProviderInstance) retryCommitPubRandUntilBlockFinalized(target
 				zap.Error(err),
 			)
 
-			failedCycles += 1
+			failedCycles++
 			if failedCycles > fp.cfg.MaxSubmissionRetries {
 				return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
 			}
@@ -599,14 +598,15 @@ func (fp *FinalityProviderInstance) CommitPubRand(tipHeight uint64) (*types.TxRe
 	}
 
 	var startHeight uint64
-	if lastCommittedHeight == uint64(0) {
+	switch {
+	case lastCommittedHeight == uint64(0):
 		// the finality-provider has never submitted public rand before
 		startHeight = tipHeight + 1
-	} else if lastCommittedHeight < uint64(fp.cfg.MinRandHeightGap)+tipHeight {
+	case lastCommittedHeight < uint64(fp.cfg.MinRandHeightGap)+tipHeight:
 		// (should not use subtraction because they are in the type of uint64)
 		// we are running out of the randomness
 		startHeight = lastCommittedHeight + 1
-	} else {
+	default:
 		fp.logger.Debug(
 			"the finality-provider has sufficient public randomness, skip committing more",
 			zap.String("pk", fp.GetBtcPkHex()),
@@ -622,7 +622,7 @@ func (fp *FinalityProviderInstance) CommitPubRand(tipHeight uint64) (*types.TxRe
 	}
 
 	// make sure that the start height is at least the finality activation height
-	// and updated to generate the list with the same as the commited height.
+	// and updated to generate the list with the same as the committed height.
 	startHeight = fppath.MaxUint64(startHeight, activationBlkHeight)
 	// generate a list of Schnorr randomness pairs
 	// NOTE: currently, calling this will create and save a list of randomness
@@ -638,7 +638,7 @@ func (fp *FinalityProviderInstance) CommitPubRand(tipHeight uint64) (*types.TxRe
 	commitment, proofList := types.GetPubRandCommitAndProofs(pubRandList)
 
 	// store them to database
-	if err := fp.pubRandState.AddPubRandProofList(pubRandList, proofList); err != nil {
+	if err := fp.pubRandState.addPubRandProofList(pubRandList, proofList); err != nil {
 		return nil, fmt.Errorf("failed to save public randomness to DB: %w", err)
 	}
 
@@ -671,12 +671,12 @@ func (fp *FinalityProviderInstance) SubmitFinalitySignature(b *types.BlockInfo) 
 	// get public randomness at the height
 	prList, err := fp.getPubRandList(b.Height, 1)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get public randomness list: %v", err)
+		return nil, fmt.Errorf("failed to get public randomness list: %w", err)
 	}
 	pubRand := prList[0]
 
 	// get inclusion proof
-	proofBytes, err := fp.pubRandState.GetPubRandProof(pubRand)
+	proofBytes, err := fp.pubRandState.getPubRandProof(pubRand)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to get inclusion proof of public randomness %s for FP %s for block %d: %w",
@@ -718,13 +718,13 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 	// #nosec G115 -- performed the conversion check above
 	prList, err := fp.getPubRandList(blocks[0].Height, uint32(len(blocks)))
 	if err != nil {
-		return nil, fmt.Errorf("failed to get public randomness list: %v", err)
+		return nil, fmt.Errorf("failed to get public randomness list: %w", err)
 	}
 	// get proof list
-	// TODO: how to recover upon having an error in GetPubRandProofList?
-	proofBytesList, err := fp.pubRandState.GetPubRandProofList(prList)
+	// TODO: how to recover upon having an error in getPubRandProofList?
+	proofBytesList, err := fp.pubRandState.getPubRandProofList(prList)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %v", err)
+		return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w", err)
 	}
 
 	// sign blocks
@@ -763,14 +763,14 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 	// get public randomness
 	prList, err := fp.getPubRandList(b.Height, 1)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get public randomness list: %v", err)
+		return nil, nil, fmt.Errorf("failed to get public randomness list: %w", err)
 	}
 	pubRand := prList[0]
 
 	// get proof
-	proofBytes, err := fp.pubRandState.GetPubRandProof(pubRand)
+	proofBytes, err := fp.pubRandState.getPubRandProof(pubRand)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %v", err)
+		return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %w", err)
 	}
 
 	// sign block

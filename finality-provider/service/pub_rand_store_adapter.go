@@ -10,21 +10,21 @@ type pubRandState struct {
 	s *store.PubRandProofStore
 }
 
-func NewPubRandState(s *store.PubRandProofStore) *pubRandState {
+func newPubRandState(s *store.PubRandProofStore) *pubRandState {
 	return &pubRandState{s: s}
 }
 
-func (st *pubRandState) AddPubRandProofList(
+func (st *pubRandState) addPubRandProofList(
 	pubRandList []*btcec.FieldVal,
 	proofList []*merkle.Proof,
 ) error {
 	return st.s.AddPubRandProofList(pubRandList, proofList)
 }
 
-func (st *pubRandState) GetPubRandProof(pubRand *btcec.FieldVal) ([]byte, error) {
+func (st *pubRandState) getPubRandProof(pubRand *btcec.FieldVal) ([]byte, error) {
 	return st.s.GetPubRandProof(pubRand)
 }
 
-func (st *pubRandState) GetPubRandProofList(pubRandList []*btcec.FieldVal) ([][]byte, error) {
+func (st *pubRandState) getPubRandProofList(pubRandList []*btcec.FieldVal) ([][]byte, error) {
 	return st.s.GetPubRandProofList(pubRandList)
 }

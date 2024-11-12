@@ -186,7 +186,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 
 	args := []string{
 		fpIns.GetBtcPkHex(),
-		"--" + fpdDaemonAddressFlag, tm.FpConfig.RpcListener,
+		"--" + fpdDaemonAddressFlag, tm.FpConfig.RPCListener,
 		"--" + monikerFlag, moniker,
 		"--" + websiteFlag, website,
 		"--" + securityContactFlag, securityContact,
@@ -217,7 +217,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	moniker = "test2-moniker"
 	args = []string{
 		fpIns.GetBtcPkHex(),
-		"--" + fpdDaemonAddressFlag, tm.FpConfig.RpcListener,
+		"--" + fpdDaemonAddressFlag, tm.FpConfig.RPCListener,
 		"--" + monikerFlag, moniker,
 	}
 

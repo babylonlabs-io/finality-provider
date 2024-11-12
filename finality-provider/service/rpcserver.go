@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 
 	"cosmossdk.io/math"
-	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc"
@@ -37,7 +36,6 @@ type rpcServer struct {
 func newRPCServer(
 	fpa *FinalityProviderApp,
 ) *rpcServer {
-
 	return &rpcServer{
 		quit: make(chan struct{}),
 		app:  fpa,
@@ -77,15 +75,14 @@ func (r *rpcServer) RegisterWithGrpcServer(grpcServer *grpc.Server) error {
 
 // GetInfo returns general information relating to the active daemon
 func (r *rpcServer) GetInfo(context.Context, *proto.GetInfoRequest) (*proto.GetInfoResponse, error) {
-
 	return &proto.GetInfoResponse{
-		Version: version.VersionRpc(),
+		Version: version.RPC(),
 	}, nil
 }
 
 // CreateFinalityProvider generates a finality-provider object and saves it in the database
 func (r *rpcServer) CreateFinalityProvider(
-	ctx context.Context,
+	_ context.Context,
 	req *proto.CreateFinalityProviderRequest,
 ) (*proto.CreateFinalityProviderResponse, error) {
 	commissionRate, err := math.LegacyNewDecFromStr(req.Commission)
@@ -123,9 +120,8 @@ func (r *rpcServer) CreateFinalityProvider(
 }
 
 // RegisterFinalityProvider sends a transactions to Babylon to register a BTC finality-provider
-func (r *rpcServer) RegisterFinalityProvider(ctx context.Context, req *proto.RegisterFinalityProviderRequest) (
+func (r *rpcServer) RegisterFinalityProvider(_ context.Context, req *proto.RegisterFinalityProviderRequest) (
 	*proto.RegisterFinalityProviderResponse, error) {
-
 	txRes, err := r.app.RegisterFinalityProvider(req.BtcPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register the finality-provider to Babylon: %w", err)
@@ -141,12 +137,14 @@ func (r *rpcServer) RegisterFinalityProvider(ctx context.Context, req *proto.Reg
 
 // AddFinalitySignature adds a manually constructed finality signature to Babylon
 // NOTE: this is only used for presentation/testing purposes
-func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFinalitySignatureRequest) (
-	res *proto.AddFinalitySignatureResponse,
-	err error,
+func (r *rpcServer) AddFinalitySignature(_ context.Context, req *proto.AddFinalitySignatureRequest) (
+	*proto.AddFinalitySignatureResponse,
+	error,
 ) {
 	r.app.wg.Add(1)
 	defer r.app.wg.Done()
+
+	var res *proto.AddFinalitySignatureResponse
 
 	select {
 	case <-r.app.quit:
@@ -193,14 +191,15 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 			res.ExtractedSkHex = privKey.Key.String()
 			localSkHex := localPrivKey.Key.String()
 			localSkNegateHex := localPrivKey.Key.Negate().String()
-			if res.ExtractedSkHex == localSkHex {
+			switch {
+			case res.ExtractedSkHex == localSkHex:
 				res.LocalSkHex = localSkHex
-			} else if res.ExtractedSkHex == localSkNegateHex {
+			case res.ExtractedSkHex == localSkNegateHex:
 				res.LocalSkHex = localSkNegateHex
-			} else {
+			default:
 				msg := fmt.Sprintf(
 					"the finality-provider's BTC private key is extracted but does not match the local key,"+
-						"extrated: %s, local: %s, local-negated: %s",
+						" extracted: %s, local: %s, local-negated: %s",
 					res.ExtractedSkHex, localSkHex, localSkNegateHex,
 				)
 				return nil, errors.New(msg)
@@ -211,7 +210,7 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 }
 
 // UnjailFinalityProvider unjails a finality-provider
-func (r *rpcServer) UnjailFinalityProvider(ctx context.Context, req *proto.UnjailFinalityProviderRequest) (
+func (r *rpcServer) UnjailFinalityProvider(_ context.Context, req *proto.UnjailFinalityProviderRequest) (
 	*proto.UnjailFinalityProviderResponse, error) {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 	if err != nil {
@@ -232,9 +231,8 @@ func (r *rpcServer) UnjailFinalityProvider(ctx context.Context, req *proto.Unjai
 }
 
 // QueryFinalityProvider queries the information of the finality-provider
-func (r *rpcServer) QueryFinalityProvider(ctx context.Context, req *proto.QueryFinalityProviderRequest) (
+func (r *rpcServer) QueryFinalityProvider(_ context.Context, req *proto.QueryFinalityProviderRequest) (
 	*proto.QueryFinalityProviderResponse, error) {
-
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 	if err != nil {
 		return nil, err
@@ -247,13 +245,13 @@ func (r *rpcServer) QueryFinalityProvider(ctx context.Context, req *proto.QueryF
 	return &proto.QueryFinalityProviderResponse{FinalityProvider: fp}, nil
 }
 
-func (r *rpcServer) EditFinalityProvider(ctx context.Context, req *proto.EditFinalityProviderRequest) (*proto.EmptyResponse, error) {
+func (r *rpcServer) EditFinalityProvider(_ context.Context, req *proto.EditFinalityProviderRequest) (*proto.EmptyResponse, error) {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 	if err != nil {
 		return nil, err
 	}
 
-	rate, err := sdkmath.LegacyNewDecFromStr(req.Commission)
+	rate, err := math.LegacyNewDecFromStr(req.Commission)
 	if err != nil {
 		return nil, err
 	}
@@ -277,9 +275,8 @@ func (r *rpcServer) EditFinalityProvider(ctx context.Context, req *proto.EditFin
 }
 
 // QueryFinalityProviderList queries the information of a list of finality providers
-func (r *rpcServer) QueryFinalityProviderList(ctx context.Context, req *proto.QueryFinalityProviderListRequest) (
+func (r *rpcServer) QueryFinalityProviderList(_ context.Context, _ *proto.QueryFinalityProviderListRequest) (
 	*proto.QueryFinalityProviderListResponse, error) {
-
 	fps, err := r.app.ListAllFinalityProvidersInfo()
 	if err != nil {
 		return nil, err
@@ -289,7 +286,7 @@ func (r *rpcServer) QueryFinalityProviderList(ctx context.Context, req *proto.Qu
 }
 
 // SignMessageFromChainKey signs a message from the chain keyring.
-func (r *rpcServer) SignMessageFromChainKey(ctx context.Context, req *proto.SignMessageFromChainKeyRequest) (
+func (r *rpcServer) SignMessageFromChainKey(_ context.Context, req *proto.SignMessageFromChainKeyRequest) (
 	*proto.SignMessageFromChainKeyResponse, error) {
 	signature, err := r.app.SignRawMsg(req.KeyName, req.Passphrase, req.HdPath, req.MsgToSign)
 	if err != nil {

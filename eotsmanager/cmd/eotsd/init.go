@@ -54,5 +54,5 @@ func initHome(cmd *cobra.Command, _ []string) error {
 	defaultConfig.DatabaseConfig.DBPath = dataDir
 	fileParser := flags.NewParser(defaultConfig, flags.Default)
 
-	return flags.NewIniParser(fileParser).WriteFile(eotscfg.ConfigFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
+	return flags.NewIniParser(fileParser).WriteFile(eotscfg.CfgFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
 }

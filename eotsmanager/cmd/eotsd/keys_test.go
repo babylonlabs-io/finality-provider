@@ -54,7 +54,7 @@ func FuzzNewKeysCmd(f *testing.F) {
 
 		// Load the EOTS manager and verify the key existence
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(tempHome)
-		dbBackend, err := eotsCfg.DatabaseConfig.GetDbBackend()
+		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
 		defer func() {
 			err := dbBackend.Close()

@@ -12,8 +12,8 @@ import (
 // version set at build-time
 var version = "main"
 
-func CommitInfo() (hash string, timestamp string) {
-	hash, timestamp = "unknown", "unknown"
+func CommitInfo() (string, string) {
+	hash, timestamp := "unknown", "unknown"
 	hashLen := 7
 
 	info, ok := debug.ReadBuildInfo()
@@ -40,7 +40,7 @@ func Version() string {
 	return version
 }
 
-func VersionRpc() string {
+func RPC() string {
 	commit, ts := CommitInfo()
 	return fmt.Sprintf("version: %s, commit: %s, timestamp: %s ", version, commit, ts)
 }

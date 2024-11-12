@@ -23,7 +23,7 @@ func FuzzEOTSStore(f *testing.F) {
 		homePath := t.TempDir()
 		cfg := config.DefaultDBConfigWithHomePath(homePath)
 
-		dbBackend, err := cfg.GetDbBackend()
+		dbBackend, err := cfg.GetDBBackend()
 		require.NoError(t, err)
 
 		vs, err := store.NewEOTSStore(dbBackend)
@@ -53,9 +53,9 @@ func FuzzEOTSStore(f *testing.F) {
 		)
 		require.ErrorIs(t, err, store.ErrDuplicateEOTSKeyName)
 
-		keyNameFromDb, err := vs.GetEOTSKeyName(schnorr.SerializePubKey(btcPk))
+		keyNameFromDB, err := vs.GetEOTSKeyName(schnorr.SerializePubKey(btcPk))
 		require.NoError(t, err)
-		require.Equal(t, expectedKeyName, keyNameFromDb)
+		require.Equal(t, expectedKeyName, keyNameFromDB)
 
 		_, randomBtcPk, err := datagen.GenRandomBTCKeyPair(r)
 		require.NoError(t, err)

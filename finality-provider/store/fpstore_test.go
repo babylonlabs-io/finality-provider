@@ -19,12 +19,13 @@ import (
 func FuzzFinalityProvidersStore(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		homePath := t.TempDir()
 		cfg := config.DefaultDBConfigWithHomePath(homePath)
 
-		fpdb, err := cfg.GetDbBackend()
+		fpdb, err := cfg.GetDBBackend()
 		require.NoError(t, err)
 		vs, err := fpstore.NewFinalityProviderStore(fpdb)
 		require.NoError(t, err)
@@ -81,6 +82,7 @@ func FuzzFinalityProvidersStore(f *testing.F) {
 }
 
 func TestUpdateFpStatusFromVotingPower(t *testing.T) {
+	t.Parallel()
 	r := rand.New(rand.NewSource(10))
 	anyFpStatus := proto.FinalityProviderStatus(100)
 
@@ -173,20 +175,22 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 	homePath := t.TempDir()
 	cfg := config.DefaultDBConfigWithHomePath(homePath)
 
-	fpdb, err := cfg.GetDbBackend()
+	fpdb, err := cfg.GetDBBackend()
 	require.NoError(t, err)
 	fps, err := fpstore.NewFinalityProviderStore(fpdb)
 	require.NoError(t, err)
 
-	defer func() {
+	t.Cleanup(func() {
 		err := fpdb.Close()
 		require.NoError(t, err)
 		err = os.RemoveAll(homePath)
 		require.NoError(t, err)
-	}()
+	})
 
 	for _, tc := range tcs {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			fp := testutil.GenRandomFinalityProvider(r, t)
 			fp.Status = tc.fpStoredStatus
 			if tc.expErr == nil {

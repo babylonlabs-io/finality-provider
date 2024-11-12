@@ -125,6 +125,7 @@ func FuzzFastSync_NoRandomness(f *testing.F) {
 }
 
 func TestFinalityActivationBlockHeight(t *testing.T) {
+	t.Parallel()
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
 	randomStartingHeight := uint64(r.Int63n(100) + 100)

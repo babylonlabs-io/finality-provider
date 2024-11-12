@@ -47,7 +47,6 @@ func NewBabylonController(
 	btcParams *chaincfg.Params,
 	logger *zap.Logger,
 ) (*BabylonController, error) {
-
 	bbnConfig := fpcfg.BBNConfigToBabylonConfig(cfg)
 
 	bc, err := bbnclient.New(
@@ -281,11 +280,12 @@ func (bc *BabylonController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*typ
 	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }
 
-func (bc *BabylonController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error) {
+// QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
+func (bc *BabylonController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
-		return false, false, fmt.Errorf("failed to query the finality provider %s: %v", fpPubKey.MarshalHex(), err)
+		return false, false, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
 	}
 
 	return res.FinalityProvider.SlashedBtcHeight > 0, res.FinalityProvider.Jailed, nil
@@ -347,7 +347,7 @@ func (bc *BabylonController) queryLatestBlocks(startKey []byte, count uint64, st
 
 	res, err := bc.bbnClient.QueryClient.ListBlocks(status, pagination)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query finalized blocks: %v", err)
+		return nil, fmt.Errorf("failed to query finalized blocks: %w", err)
 	}
 
 	for _, b := range res.Blocks {
@@ -509,7 +509,7 @@ func (bc *BabylonController) QueryFinalityProviders() ([]*btcstakingtypes.Finali
 	for {
 		res, err := bc.bbnClient.QueryClient.FinalityProviders(pagination)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query finality providers: %v", err)
+			return nil, fmt.Errorf("failed to query finality providers: %w", err)
 		}
 		fps = append(fps, res.FinalityProviders...)
 		if res.Pagination == nil || res.Pagination.NextKey == nil {
@@ -526,7 +526,7 @@ func (bc *BabylonController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcs
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
-		return nil, fmt.Errorf("failed to query the finality provider %s: %v", fpPubKey.MarshalHex(), err)
+		return nil, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
 	}
 
 	return res, nil
@@ -580,7 +580,7 @@ func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
 
 	_, err = bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query the finality provider %s: %v", fpPk.SerializeCompressed(), err)
+		return nil, fmt.Errorf("failed to query the finality provider %s: %w", fpPk.SerializeCompressed(), err)
 	}
 
 	return msg, nil
@@ -589,7 +589,7 @@ func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
 func (bc *BabylonController) QueryBtcLightClientTip() (*btclctypes.BTCHeaderInfoResponse, error) {
 	res, err := bc.bbnClient.QueryClient.BTCHeaderChainTip()
 	if err != nil {
-		return nil, fmt.Errorf("failed to query BTC tip: %v", err)
+		return nil, fmt.Errorf("failed to query BTC tip: %w", err)
 	}
 
 	return res.Header, nil
@@ -598,7 +598,7 @@ func (bc *BabylonController) QueryBtcLightClientTip() (*btclctypes.BTCHeaderInfo
 func (bc *BabylonController) QueryCurrentEpoch() (uint64, error) {
 	res, err := bc.bbnClient.QueryClient.CurrentEpoch()
 	if err != nil {
-		return 0, fmt.Errorf("failed to query BTC tip: %v", err)
+		return 0, fmt.Errorf("failed to query BTC tip: %w", err)
 	}
 
 	return res.CurrentEpoch, nil
@@ -631,7 +631,7 @@ func (bc *BabylonController) queryDelegationsWithStatus(status btcstakingtypes.B
 
 	res, err := bc.bbnClient.QueryClient.BTCDelegations(status, pagination)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query BTC delegations: %v", err)
+		return nil, fmt.Errorf("failed to query BTC delegations: %w", err)
 	}
 
 	return res.BtcDelegations, nil
@@ -641,13 +641,13 @@ func (bc *BabylonController) QueryStakingParams() (*types.StakingParams, error) 
 	// query btc checkpoint params
 	ckptParamRes, err := bc.bbnClient.QueryClient.BTCCheckpointParams()
 	if err != nil {
-		return nil, fmt.Errorf("failed to query params of the btccheckpoint module: %v", err)
+		return nil, fmt.Errorf("failed to query params of the btccheckpoint module: %w", err)
 	}
 
 	// query btc staking params
 	stakingParamRes, err := bc.bbnClient.QueryClient.BTCStakingParams()
 	if err != nil {
-		return nil, fmt.Errorf("failed to query staking params: %v", err)
+		return nil, fmt.Errorf("failed to query staking params: %w", err)
 	}
 
 	covenantPks := make([]*btcec.PublicKey, 0, len(stakingParamRes.Params.CovenantPks))

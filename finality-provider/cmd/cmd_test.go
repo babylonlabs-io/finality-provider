@@ -19,6 +19,7 @@ import (
 )
 
 func TestPersistClientCtx(t *testing.T) {
+	t.Parallel()
 	ctx := client.Context{}
 	cmd := &cobra.Command{}
 	cmd.SetContext(context.Background())
@@ -58,7 +59,7 @@ func TestPersistClientCtx(t *testing.T) {
 	config.BabylonConfig.ChainID = randChainID
 	fileParser := goflags.NewParser(&config, goflags.Default)
 
-	err = goflags.NewIniParser(fileParser).WriteFile(fpcfg.ConfigFile(flagHomeValue), goflags.IniIncludeComments|goflags.IniIncludeDefaults)
+	err = goflags.NewIniParser(fileParser).WriteFile(fpcfg.CfgFile(flagHomeValue), goflags.IniIncludeComments|goflags.IniIncludeDefaults)
 	require.NoError(t, err)
 
 	// parses the ctx from cmd with config, should modify the chain ID

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -25,7 +26,7 @@ func MakeDirectory(dir string) error {
 		// Show a nicer error message if it's because a symlink
 		// is linked to a directory that does not exist
 		// (probably because it's not mounted).
-		if e, ok := err.(*os.PathError); ok && os.IsExist(err) {
+		if e := new(os.PathError); errors.As(err, &e) && os.IsExist(err) {
 			link, lerr := os.Readlink(e.Path)
 			if lerr == nil {
 				str := "is symlink %s -> %s mounted?"
