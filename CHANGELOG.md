@@ -41,6 +41,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 * [#126](https://github.com/babylonlabs-io/finality-provider/pull/126) Adds linting config
 
+### Documentation
+
+* [#117](https://github.com/babylonlabs-io/finality-provider/pull/117) Spec of
+commit public randomness
+
+### Bug Fixes
+
+* [#124](https://github.com/babylonlabs-io/finality-provider/pull/124) Ignore
+duplicated finality vote error
+
 ## v0.10.0
 
 ### Improvements

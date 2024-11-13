@@ -16,8 +16,6 @@ import (
 	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil"
@@ -29,6 +27,9 @@ import (
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 	protobuf "google.golang.org/protobuf/proto"
+
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 var _ ClientController = &BabylonController{}
@@ -206,9 +207,17 @@ func (bc *BabylonController) SubmitFinalitySig(
 		btcstakingtypes.ErrFpAlreadySlashed,
 	}
 
-	res, err := bc.reliablySendMsg(msg, emptyErrs, unrecoverableErrs)
+	expectedErrs := []*sdkErr.Error{
+		finalitytypes.ErrDuplicatedFinalitySig,
+	}
+
+	res, err := bc.reliablySendMsg(msg, expectedErrs, unrecoverableErrs)
 	if err != nil {
 		return nil, err
+	}
+
+	if res == nil {
+		return &types.TxResponse{}, nil
 	}
 
 	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
@@ -251,9 +260,17 @@ func (bc *BabylonController) SubmitBatchFinalitySigs(
 		btcstakingtypes.ErrFpAlreadySlashed,
 	}
 
-	res, err := bc.reliablySendMsgs(msgs, emptyErrs, unrecoverableErrs)
+	expectedErrs := []*sdkErr.Error{
+		finalitytypes.ErrDuplicatedFinalitySig,
+	}
+
+	res, err := bc.reliablySendMsgs(msgs, expectedErrs, unrecoverableErrs)
 	if err != nil {
 		return nil, err
+	}
+
+	if res == nil {
+		return &types.TxResponse{}, nil
 	}
 
 	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
