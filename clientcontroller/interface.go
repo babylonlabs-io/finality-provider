@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	babylonConsumerChainName = "babylon"
+	babylonConsumerChainType = "babylon"
 )
 
 type ClientController interface {
@@ -82,14 +82,14 @@ type ClientController interface {
 	Close() error
 }
 
-func NewClientController(chainName string, bbnConfig *fpcfg.BBNConfig, netParams *chaincfg.Params, logger *zap.Logger) (ClientController, error) {
+func NewClientController(chainType string, bbnConfig *fpcfg.BBNConfig, netParams *chaincfg.Params, logger *zap.Logger) (ClientController, error) {
 	var (
 		cc  ClientController
 		err error
 	)
 
-	switch chainName {
-	case babylonConsumerChainName:
+	switch chainType {
+	case babylonConsumerChainType:
 		cc, err = NewBabylonController(bbnConfig, netParams, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
