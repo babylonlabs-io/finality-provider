@@ -21,19 +21,18 @@ consists of:
 
 To generate a new commit, following steps are needed:
 
-- Generate a list of randomness. This requires an RPC call to the EOTS manager
+1. Generate a list of randomness. This requires an RPC call to the EOTS manager
   (eotsd) to generate a list of public randomness, each corresponding to a
   specific height according to the start height and the number of randomness in
-  the request. The details of the generator can be found in [eotsmanager/randgenerator](../eotsmanager/randgenerator/randgenerator.go).
-- Construct the merkle tree based on the list of randomness using the CometBFT's [merkle](https://github.com/cometbft/cometbft/tree/main/crypto/merkle)
-  library.
-- Save each randomness along with the merkle
-  [proof](https://github.com/cometbft/cometbft/blob/978b84614992cb009b2e37500b6b3a598665a535/crypto/merkle/proof.go#L53)
-  to the database indexed by height.
-- Send a [Schnorr](https://github.com/btcsuite/btcd/blob/684d64ad74fed203fb846c032f2b55b3e3c36734/btcec/schnorr/signature.go#L391)
+  the request. Randomness generation is required to be deterministic.
+2. Construct the merkle tree based on the list of randomness using the CometBFT's [merkle](https://github.com/cometbft/cometbft/tree/main/crypto/merkle)
+  library. The merkle root will be used in the commit, while each randomness
+  number and their merkle proofs will be used for finality vote submission
+  in the future.
+3. Send a [Schnorr](https://github.com/btcsuite/btcd/blob/684d64ad74fed203fb846c032f2b55b3e3c36734/btcec/schnorr/signature.go#L391)
   signature request to the EOTS manager over the hash of the commit
   (concatenated by the start height, number of randomness, and the merkle root).
-- Build the commit message ([MsgCommitPubRandList](https://github.com/babylonlabs-io/babylon/blob/aa99e2eb093e06cb9a28a58f373e8fa5f2494383/proto/babylon/finality/v1/tx.proto#L29))
+4. Build the commit message ([MsgCommitPubRandList](https://github.com/babylonlabs-io/babylon/blob/aa99e2eb093e06cb9a28a58f373e8fa5f2494383/proto/babylon/finality/v1/tx.proto#L29))
   and send a transaction to Babylon.
 
 ### Timing to Commit
