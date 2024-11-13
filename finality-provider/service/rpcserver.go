@@ -7,7 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"cosmossdk.io/math"
+	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc"
@@ -85,7 +85,7 @@ func (r *rpcServer) CreateFinalityProvider(
 	_ context.Context,
 	req *proto.CreateFinalityProviderRequest,
 ) (*proto.CreateFinalityProviderResponse, error) {
-	commissionRate, err := math.LegacyNewDecFromStr(req.Commission)
+	commissionRate, err := sdkmath.LegacyNewDecFromStr(req.Commission)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +251,7 @@ func (r *rpcServer) EditFinalityProvider(_ context.Context, req *proto.EditFinal
 		return nil, err
 	}
 
-	rate, err := math.LegacyNewDecFromStr(req.Commission)
+	rate, err := sdkmath.LegacyNewDecFromStr(req.Commission)
 	if err != nil {
 		return nil, err
 	}

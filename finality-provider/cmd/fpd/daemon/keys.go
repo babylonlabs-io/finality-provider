@@ -26,8 +26,7 @@ func CommandKeys() *cobra.Command {
 		// check the config file exists
 		cfg, err := fpcfg.LoadConfig(ctx.HomeDir)
 		if err != nil {
-			//nolint:nilerr
-			return nil // config does not exist, so does not update it
+			return err
 		}
 
 		keyringBackend, err := cmd.Flags().GetString(sdkflags.FlagKeyringBackend)
