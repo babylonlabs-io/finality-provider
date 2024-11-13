@@ -1,4 +1,4 @@
-FROM golang:1.21.4-alpine as builder
+FROM golang:1.23-alpine as builder
 
 # Version to build. Default is the Git HEAD.
 ARG VERSION="HEAD"
@@ -35,7 +35,7 @@ RUN CGO_LDFLAGS="$CGO_LDFLAGS -lstdc++ -lm -lsodium" \
     make build
 
 # FINAL IMAGE
-FROM alpine:3.16 AS run
+FROM alpine:3.20 AS run
 
 RUN addgroup --gid 1138 -S finality-provider && adduser --uid 1138 -S finality-provider -G finality-provider
 
