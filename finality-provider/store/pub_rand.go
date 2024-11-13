@@ -57,7 +57,7 @@ func (s *PubRandProofStore) AddPubRandProofList(
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		bucket := tx.ReadWriteBucket(pubRandProofBucketName)
 		if bucket == nil {
-			return ErrCorruptedPubRandProofDb
+			return ErrCorruptedPubRandProofDB
 		}
 
 		for i := range pubRandBytesList {
@@ -82,7 +82,7 @@ func (s *PubRandProofStore) GetPubRandProof(pubRand *btcec.FieldVal) ([]byte, er
 	err := s.db.View(func(tx kvdb.RTx) error {
 		bucket := tx.ReadBucket(pubRandProofBucketName)
 		if bucket == nil {
-			return ErrCorruptedPubRandProofDb
+			return ErrCorruptedPubRandProofDB
 		}
 
 		proofBytes = bucket.Get(pubRandBytes[:])
@@ -112,7 +112,7 @@ func (s *PubRandProofStore) GetPubRandProofList(pubRandList []*btcec.FieldVal) (
 	err := s.db.View(func(tx kvdb.RTx) error {
 		bucket := tx.ReadBucket(pubRandProofBucketName)
 		if bucket == nil {
-			return ErrCorruptedPubRandProofDb
+			return ErrCorruptedPubRandProofDB
 		}
 
 		for i := range pubRandBytesList {

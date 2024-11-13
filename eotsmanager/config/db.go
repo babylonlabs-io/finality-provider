@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	defaultDbName = "eots.db"
+	defaultDBName = "eots.db"
 )
 
 type DBConfig struct {
@@ -47,7 +47,7 @@ func DefaultDBConfig() *DBConfig {
 func DefaultDBConfigWithHomePath(homePath string) *DBConfig {
 	return &DBConfig{
 		DBPath:            DataDir(homePath),
-		DBFileName:        defaultDbName,
+		DBFileName:        defaultDBName,
 		NoFreelistSync:    true,
 		AutoCompact:       false,
 		AutoCompactMinAge: kvdb.DefaultBoltAutoCompactMinAge,
@@ -66,6 +66,6 @@ func (db *DBConfig) DBConfigToBoltBackendConfig() *kvdb.BoltBackendConfig {
 	}
 }
 
-func (db *DBConfig) GetDbBackend() (kvdb.Backend, error) {
+func (db *DBConfig) GetDBBackend() (kvdb.Backend, error) {
 	return kvdb.GetBoltBackend(db.DBConfigToBoltBackendConfig())
 }

@@ -9,7 +9,7 @@ const (
 	appHashFlag          = "app-hash"
 	passphraseFlag       = "passphrase"
 	hdPathFlag           = "hd-path"
-	chainIdFlag          = "chain-id"
+	chainIDFlag          = "chain-id"
 	signedFlag           = "signed"
 
 	// flags for description

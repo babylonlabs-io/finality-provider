@@ -26,6 +26,7 @@ func CommandKeys() *cobra.Command {
 		// check the config file exists
 		cfg, err := fpcfg.LoadConfig(ctx.HomeDir)
 		if err != nil {
+			//nolint:nilerr
 			return nil // config does not exist, so does not update it
 		}
 
@@ -39,13 +40,13 @@ func CommandKeys() *cobra.Command {
 		cfg.BabylonConfig.KeyringBackend = keyringBackend
 		fileParser := goflags.NewParser(cfg, goflags.Default)
 
-		return goflags.NewIniParser(fileParser).WriteFile(fpcfg.ConfigFile(ctx.HomeDir), goflags.IniIncludeComments|goflags.IniIncludeDefaults)
+		return goflags.NewIniParser(fileParser).WriteFile(fpcfg.CfgFile(ctx.HomeDir), goflags.IniIncludeComments|goflags.IniIncludeDefaults)
 	})
 
 	return keysCmd
 }
 
-// GetSubCommand retuns the command if it finds, otherwise it returns nil
+// GetSubCommand returns the command if it finds, otherwise it returns nil
 func GetSubCommand(cmd *cobra.Command, commandName string) *cobra.Command {
 	for _, c := range cmd.Commands() {
 		if !strings.EqualFold(c.Name(), commandName) {

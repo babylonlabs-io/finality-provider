@@ -66,11 +66,12 @@ func FuzzStatusUpdate(f *testing.F) {
 		if votingPower == 0 {
 			// 0 means is slashed, 1 means is jailed, 2 means neither slashed nor jailed
 			isSlashedOrJailed = r.Intn(3)
-			if isSlashedOrJailed == 0 {
+			switch isSlashedOrJailed {
+			case 0:
 				mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(true, false, nil).AnyTimes()
-			} else if isSlashedOrJailed == 1 {
+			case 1:
 				mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, true, nil).AnyTimes()
-			} else {
+			case 2:
 				mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, false, nil).AnyTimes()
 			}
 		}
@@ -86,11 +87,12 @@ func FuzzStatusUpdate(f *testing.F) {
 		if votingPower > 0 {
 			waitForStatus(t, fpIns, proto.FinalityProviderStatus_ACTIVE)
 		} else {
-			if isSlashedOrJailed == 2 && fpIns.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
+			switch {
+			case isSlashedOrJailed == 2 && fpIns.GetStatus() == proto.FinalityProviderStatus_ACTIVE:
 				waitForStatus(t, fpIns, proto.FinalityProviderStatus_INACTIVE)
-			} else if isSlashedOrJailed == 1 {
+			case isSlashedOrJailed == 1:
 				waitForStatus(t, fpIns, proto.FinalityProviderStatus_JAILED)
-			} else if isSlashedOrJailed == 0 {
+			case isSlashedOrJailed == 0:
 				waitForStatus(t, fpIns, proto.FinalityProviderStatus_SLASHED)
 			}
 		}
@@ -109,7 +111,7 @@ func newFinalityProviderManagerWithRegisteredFp(t *testing.T, r *rand.Rand, cc c
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
-	eotsdb, err := eotsCfg.DatabaseConfig.GetDbBackend()
+	eotsdb, err := eotsCfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 	em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, eotsdb, logger)
 	require.NoError(t, err)
@@ -128,7 +130,7 @@ func newFinalityProviderManagerWithRegisteredFp(t *testing.T, r *rand.Rand, cc c
 	require.NoError(t, err)
 	err = util.MakeDirectory(fpcfg.DataDir(fpHomeDir))
 	require.NoError(t, err)
-	db, err := fpCfg.DatabaseConfig.GetDbBackend()
+	db, err := fpCfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 	fpStore, err := fpstore.NewFinalityProviderStore(db)
 	require.NoError(t, err)

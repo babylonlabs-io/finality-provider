@@ -41,7 +41,7 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 		// create an EOTS manager
 		eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
-		dbBackend, err := eotsCfg.DatabaseConfig.GetDbBackend()
+		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
 		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
@@ -64,7 +64,7 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
 		fpCfg.PollerConfig.AutoChainScanningMode = false
 		fpCfg.PollerConfig.StaticChainScanningStartHeight = randomStartingHeight
-		fpdb, err := fpCfg.DatabaseConfig.GetDbBackend()
+		fpdb, err := fpCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
 		app, err := service.NewFinalityProviderApp(&fpCfg, mockClientController, em, fpdb, logger)
 		require.NoError(t, err)
@@ -156,7 +156,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		// create an EOTS manager
 		eotsHomeDir := filepath.Join(t.TempDir(), "eots-home", pathSuffix)
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
-		dbBackend, err := eotsCfg.DatabaseConfig.GetDbBackend()
+		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
 		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
@@ -168,7 +168,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		// no need for other intervals to run
 		fpCfg.StatusUpdateInterval = time.Minute * 10
 		fpCfg.SubmissionRetryInterval = time.Minute * 10
-		fpdb, err := fpCfg.DatabaseConfig.GetDbBackend()
+		fpdb, err := fpCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
 
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
@@ -236,7 +236,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		// create an EOTS manager
 		eotsHomeDir := filepath.Join(t.TempDir(), "eots-home", pathSuffix)
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
-		dbBackend, err := eotsCfg.DatabaseConfig.GetDbBackend()
+		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
 		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
@@ -248,7 +248,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		fpCfg.SyncFpStatusInterval = time.Millisecond * 10
 		fpCfg.StatusUpdateInterval = time.Millisecond * 10
 		fpCfg.SubmissionRetryInterval = time.Millisecond * 10
-		fpdb, err := fpCfg.DatabaseConfig.GetDbBackend()
+		fpdb, err := fpCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
 
 		randomStartingHeight := uint64(r.Int63n(100) + 1)

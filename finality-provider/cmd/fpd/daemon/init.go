@@ -27,7 +27,7 @@ func CommandInit() *cobra.Command {
 	return cmd
 }
 
-func runInitCmd(ctx client.Context, cmd *cobra.Command, args []string) error {
+func runInitCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	homePath, err := filepath.Abs(ctx.HomeDir)
 	if err != nil {
 		return err
@@ -55,5 +55,5 @@ func runInitCmd(ctx client.Context, cmd *cobra.Command, args []string) error {
 	defaultConfig := fpcfg.DefaultConfigWithHome(homePath)
 	fileParser := flags.NewParser(&defaultConfig, flags.Default)
 
-	return flags.NewIniParser(fileParser).WriteFile(fpcfg.ConfigFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
+	return flags.NewIniParser(fileParser).WriteFile(fpcfg.CfgFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
 }

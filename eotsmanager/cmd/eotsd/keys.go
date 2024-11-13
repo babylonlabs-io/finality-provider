@@ -77,7 +77,7 @@ func saveKeyNameMapping(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get database backend
-	dbBackend, err := cfg.DatabaseConfig.GetDbBackend()
+	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
 	if err != nil {
 		return fmt.Errorf("failed to create db backend: %w", err)
 	}
