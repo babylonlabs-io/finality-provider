@@ -38,7 +38,7 @@ The following graphic demonstrates the interconnections between the above progra
 
 ### Prerequisites
 
-This project requires Go version 1.21 or later.
+This project requires Go version 1.23 or later.
 
 Install Go by following the instructions on
 the [official Go installation guide](https://golang.org/doc/install).
