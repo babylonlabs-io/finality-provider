@@ -37,9 +37,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v0.11.0
+
 ### Improvements
 
 * [#126](https://github.com/babylonlabs-io/finality-provider/pull/126) Adds linting config
+* [#128](https://github.com/babylonlabs-io/finality-provider/pull/128) Upgrade Babylon to v0.16.0
 
 ### Documentation
 
