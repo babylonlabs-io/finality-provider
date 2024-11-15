@@ -32,6 +32,7 @@ It consists of the following programs:
 
 The following graphic demonstrates the interconnections between the above programs:
 
+<!-- insert updated graphic -->
 
 ## Finality Provider Phase 2 Migration Guide
 
