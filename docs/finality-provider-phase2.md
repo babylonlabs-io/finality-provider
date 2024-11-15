@@ -12,14 +12,14 @@ with a focus on Phase 2-specific requirements.
 
 The following explains the migration from Phase 1 to 2.
 
-### Phase 1 (Previous phase)
+**Phase 1 (Previous phase)**
 
 - Only involves Bitcoin holders submitting staking transactions
 - No active Proof of Stake (PoS) chain operation
 - Finality providers only need EOTS keys registered
 - No need to run finality service
 
-### Phase 2 (New phase)
+**Phase 2 (New phase)**
 
 - Active participation in finality voting
 - Running the complete finality provider toolset:
