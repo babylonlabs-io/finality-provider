@@ -12,14 +12,14 @@ with a focus on Phase 2-specific requirements.
 
 The following explains the migration from Phase 1 to 2.
 
-## Phase 1 (Previous phase)
+### Phase 1 (Previous phase)
 
 - Only involves Bitcoin holders submitting staking transactions
 - No active Proof of Stake (PoS) chain operation
 - Finality providers only need EOTS keys registered
 - No need to run finality service
 
-## Phase 2 (New phase)
+### Phase 2 (New phase)
 
 - Active participation in finality voting
 - Running the complete finality provider toolset:
@@ -48,9 +48,6 @@ If you are a new operator, start with the
 If you have an existing EOTS key from Phase 1 please skip to 
 [Loading Existing Keys](#loading-existing-keys-only-for-phase-1-finality-providers) 
 steps
-
-For an introduction on the finality providers see (here)
-<!-- #[this-should-link-to-a-highlevel-document-of-what-a-finality-provider-is] -->
 
 ## Install Finality Provider Binary 
 <!-- TODO: check add in the correct tag forthe testnet --> 
@@ -301,80 +298,7 @@ fpd init --home <path>
 `service injective.evm.v1beta1.Msg does not have cosmos.msg.v1.service proto annotation`, 
 which is expected and can be ignored.
 
-### Step 2: Add a Key for the Finality Provider on the Babylon Chain
-
-The Finality Provider Daemon uses a keyring to store keys locally, enabling it to sign 
-transactions on the Babylon chain.
-
-Add a key for your finality provider:
-
-```shell 
-Copy code
-fpd keys add --keyname <key-name> --keyring-backend test --home <path>
---keyring-backend 
-```
-
-Options:
-- `test`: Stores keys unencrypted on disk. This is suitable for testing but not recommended 
-for production.
-- `file`: Stores encrypted keys on disk, offering more security than the test option.
-- `os`: Uses the operating system's native keyring for the highest level of security, 
-relying on OS-managed encryption and access controls.
-
-The command will create a new key pair and store it in your keyring. Sample output:
-
-```shell 
-- address: bbn19gulf0a4yz87twpjl8cxnerc2wr2xqm9fsygn9
-  name: finality-provider
-  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey", 
-  "key":"AhZAL00gKplLQKpLMiXPBqaKCoiessoewOaEATKd4Rcy"}'
-  type: local
-```
-
->Note: Verify the chain-id by checking the Babylon RPC node status at 
-[https://rpc.testnet5.babylonlabs.io/status](https://rpc.testnet5.babylonlabs.io/status).
-
-### Step 3: Configure fpd.config
-
-After initializing the Finality Provider Daemon, it will generate an fpd.config file. 
-Open config.toml to set the necessary parameters as shown below:
-
-```shell 
-[Application Options]
-EOTSManagerAddress = 127.0.0.1:12582
-RpcListener = 127.0.0.1:12581
-
-[babylon]
-Key = <finality-provider-key-name-signer>  # the key you used above
-ChainID = bbn-test-5
-RPCAddr = http://127.0.0.1:26657
-GRPCAddr = https://127.0.0.1:9090
-KeyDirectory = ./fpKey
-```
-
-The Key field stores the name of the key used for signing transactions on the 
-Babylon chain and should match the key name specified during key creation. 
-KeyDirectory points to the location where the keyring is stored.
-
-The Finality Provider Daemon is responsible for monitoring for new Babylon
-blocks, committing public randomness for the blocks it intends to provide
-finality signatures for, and submitting finality signatures. To read more on
-Finality Providers please see [here](#) 
-<!-- add link to finality providers high level docs-->
-
-The `fpd init` command initializes a home directory for the EOTS manager. You
-can wish to set/change your home directory with the `--home` tag.  For the home
-`<path>` we have used `./fpKey`
-
-``` shell
-fpd init  --home <path> 
-```
-
-Note: will return 
-`service injective.evm.v1beta1.Msg does not have cosmos.msg.v1.service proto annotation`
-which is expected and can be ignored.
-
-### Step 4: Add key for the finality provider on the Babylon chain
+### Step 2: Add key for the Finality Provider on the Babylon Chain
 
 The keyring is maintained by the finality provider daemon, this is local storage
 of the keys that the daemon uses. The account associated with this key exists on
@@ -394,9 +318,11 @@ use `file` or `os` backend.
  There are three options for the keyring backend:
 
  `test`: Stores keys unencrypted on disk. It’s meant for testing purposes and
- should never be used in production.  `file`: Stores encrypted keys on disk,
+ should never be used in production.  
+ `file`: Stores encrypted keys on disk,
  which is a more secure option than test but less secure than using the OS
- keyring.  `os`: Uses the operating system's native keyring, providing the
+ keyring.  
+ `os`: Uses the operating system's native keyring, providing the
  highest level of security by relying on OS-managed encryption and access
  controls.
 
@@ -456,8 +382,9 @@ registration or voting participation.
 Start the daemon with:
 
 ``` shell
-fpd start  --home ./fp 
+fpd start  --home <path> 
 ```
+An example of the `--home` flag is `--home ./fpKeys`.
 
 The command flags:
 - `start`: Initiates the FPD daemon
@@ -497,21 +424,32 @@ instance locally. This command:
 - Creates a Babylon account to receive staking rewards
 
 ``` shell
-fpd create-finality-provider \ --daemon-address 127.0.0.1:12581 \ --chain-id
-bbn-test-5 \ --commission 0.05 \ --key-name finality-provider \ --moniker
-"MyFinalityProvider" \ --website "https://myfinalityprovider.com" \
---security-contact "security@myfinalityprovider.com" \ --details "finality
-provider for the Babylon network" \ --home ./fp \ --passphrase "passphrase" 
+fpd create-finality-provider \ 
+--daemon-address 127.0.0.1:12581 \ 
+--chain-id bbn-test-5 \ 
+--commission 0.05 \ 
+--key-name finality-provider \ 
+--moniker "MyFinalityProvider" \ 
+--website "https://myfinalityprovider.com" \
+--security-contact "security@myfinalityprovider.com" \ 
+--details "finality provider for the Babylon network" \ 
+--home ./fp \ --passphrase "passphrase" 
 ```
 
-Required parameters: - `--chain-id`: The Babylon chain ID (`bbn-test-5`) -
-`--commission`: The commission rate (between 0 and 1) that you'll receive from
-delegators - `--key-name`: Name of the key in your keyring for signing
-transactions - `--moniker`: A human-readable name for your finality provider
+Required parameters: 
+- `--chain-id`: The Babylon chain ID (`bbn-test-5`) 
+- `--commission`: The commission rate (between 0 and 1) that you'll receive from
+delegators 
+- `--key-name`: Name of the key in your keyring for signing
+transactions - 
+`--moniker`: A human-readable name for your finality provider
 
-Optional parameters: - `--website`: Your finality provider's website -
-`--security-contact`: Contact email for security issues - `--details`:
-Additional description of your finality provider - `--daemon-address`: RPC
+Optional parameters: 
+- `--website`: Your finality provider's website 
+- `--security-contact`: Contact email for security issues 
+- `--details`:
+Additional description of your finality provider 
+- `--daemon-address`: RPC
 address of the finality provider daemon (default: 127.0.0.1:12581)
 
 Upon successful creation, the command will return a JSON response containing
@@ -524,7 +462,7 @@ your finality provider's details:
     "cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41",
       "description": 
       {
-	      "moniker": "MyFinalityProvider", 
+        "moniker": "MyFinalityProvider", 
         "website": "https://myfinalityprovider.com", 
         "security_contact": "security@myfinalityprovider.com", 
         "details": "finality provider for the Babylon network"
@@ -556,7 +494,9 @@ Babylon chain. This command requires:
 ``` shell
 fpd register-finality-provider \
 cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41 \
---daemon-address 127.0.0.1:12581 \ --passphrase "Zubu99012" \ --home ./fp \ 
+--daemon-address 127.0.0.1:12581 \ 
+--passphrase <passphrase> \ 
+--home <path> \ 
 ```
 
 > Note: The BTC public key (`cf0f03...1a41`) is obtained from the previous
