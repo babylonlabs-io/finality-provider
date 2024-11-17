@@ -5,42 +5,51 @@
 Finality providers submit votes to finalize blocks on the consumer chain.
 This document specifies the process of submitting finality votes.
 
-## Internal State
-
-The finality provider maintains two critical persistent states:
-
-- Last voted height
-- Last processed height
-
-### Last voted height
-
-Tracks the most recent height for which a finality vote was successfully
-submitted. This prevents duplicate voting on previously voted heights.
-
-### Last processed height
-
-Tracks the most recent height for which a voting decision was made
-(whether the decision was to vote or not).
-By definition, `LastProcessedHeight >= LastVotedHeight` always holds.
-
 ## Submission Process
+
+### Internal State
+
+The finality provider maintains a persistent state variable `lastVotedHeight`
+to track the most recent height where a finality vote was successfully submitted
+This is to prevent voting for a previously voted height.
 
 ### Bootstrapping
 
-To determine the initial processing height:
+To determine the initial processing height `startHeight`:
 
-1. Query consumer chain for `lastFinalizedHeight` (`0` if no finalized blocks)
-2. Query consumer chain for `finalityActivationHeight`:
-3. Query `lastVotedHeightRemote` from consumer chain (`0` if no votes are sent)
-4. Synchronize local state:
-   - Ensure local `lastVotedHeight` and `lastProcessedHeight` ≥ `lastVotedHeightRemote`
-5. Begin processing at:
-   - `max(lastProcessedHeight + 1, lastFinalizedHeight + 1, finalityActivationHeight)`
+1. Query consumer chain for:
+   - `lastFinalizedHeight` (defaults to `0` if no blocks are finalized)
+   - `finalityActivationHeight`
+   - `lastVotedHeightRemote` (defaults to `0` if no votes exist)
+
+2. Synchronize local state:
+   - Verify local `lastVotedHeight` >= `lastVotedHeightRemote`
+   - If verification fails, update local state to match remote
+
+3. Calculate starting height based on reward distribution policy:
+   - If rewards are available for already finalized blocks:
+
+     ```go
+     startHeight = max(lastVotedHeight + 1, finalityActivationHeight)
+     ```
+
+   - If rewards are only for unfinalized blocks:
+
+     ```go
+     startHeight = max(lastFinalizedHeight + 1, finalityActivationHeight)
+     ```
+
+The choice between using `lastVotedHeight` or `lastFinalizedHeight` depends on
+the consumer chain's reward distribution mechanism.
+Use `lastVotedHeight` if the chain allows collecting rewards for already
+finalized blocks. Otherwise, use `lastFinalizedHeight` to only process
+unfinalized blocks.
 
 ### Normal Submission Loop
 
-After the finality provider is bootstraped, it continuously monitors for
-new blocks. For each new block, it performs these validation checks:
+After the finality provider is bootstrap, it continuously monitors for
+new blocks from a trusted full node of the consumer chain.
+For each new block, it performs these validation checks:
 
 1. Block hasn't been previously processed
 2. Block height exceeds finality activation height
