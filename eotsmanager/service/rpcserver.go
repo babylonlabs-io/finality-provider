@@ -21,7 +21,6 @@ type rpcServer struct {
 func newRPCServer(
 	em eotsmanager.EOTSManager,
 ) *rpcServer {
-
 	return &rpcServer{
 		em: em,
 	}
@@ -35,14 +34,13 @@ func (r *rpcServer) RegisterWithGrpcServer(grpcServer *grpc.Server) error {
 	return nil
 }
 
-func (r *rpcServer) Ping(ctx context.Context, req *proto.PingRequest) (*proto.PingResponse, error) {
+func (r *rpcServer) Ping(_ context.Context, _ *proto.PingRequest) (*proto.PingResponse, error) {
 	return &proto.PingResponse{}, nil
 }
 
 // CreateKey generates and saves an EOTS key
-func (r *rpcServer) CreateKey(ctx context.Context, req *proto.CreateKeyRequest) (
+func (r *rpcServer) CreateKey(_ context.Context, req *proto.CreateKeyRequest) (
 	*proto.CreateKeyResponse, error) {
-
 	pk, err := r.em.CreateKey(req.Name, req.Passphrase, req.HdPath)
 
 	if err != nil {
@@ -53,9 +51,8 @@ func (r *rpcServer) CreateKey(ctx context.Context, req *proto.CreateKeyRequest) 
 }
 
 // CreateRandomnessPairList returns a list of Schnorr randomness pairs
-func (r *rpcServer) CreateRandomnessPairList(ctx context.Context, req *proto.CreateRandomnessPairListRequest) (
+func (r *rpcServer) CreateRandomnessPairList(_ context.Context, req *proto.CreateRandomnessPairListRequest) (
 	*proto.CreateRandomnessPairListResponse, error) {
-
 	pubRandList, err := r.em.CreateRandomnessPairList(req.Uid, req.ChainId, req.StartHeight, req.Num, req.Passphrase)
 
 	if err != nil {
@@ -73,9 +70,8 @@ func (r *rpcServer) CreateRandomnessPairList(ctx context.Context, req *proto.Cre
 }
 
 // KeyRecord returns the key record
-func (r *rpcServer) KeyRecord(ctx context.Context, req *proto.KeyRecordRequest) (
+func (r *rpcServer) KeyRecord(_ context.Context, req *proto.KeyRecordRequest) (
 	*proto.KeyRecordResponse, error) {
-
 	record, err := r.em.KeyRecord(req.Uid, req.Passphrase)
 	if err != nil {
 		return nil, err
@@ -90,9 +86,8 @@ func (r *rpcServer) KeyRecord(ctx context.Context, req *proto.KeyRecordRequest) 
 }
 
 // SignEOTS signs an EOTS with the EOTS private key and the relevant randomness
-func (r *rpcServer) SignEOTS(ctx context.Context, req *proto.SignEOTSRequest) (
+func (r *rpcServer) SignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 	*proto.SignEOTSResponse, error) {
-
 	sig, err := r.em.SignEOTS(req.Uid, req.ChainId, req.Msg, req.Height, req.Passphrase)
 	if err != nil {
 		return nil, err
@@ -104,9 +99,8 @@ func (r *rpcServer) SignEOTS(ctx context.Context, req *proto.SignEOTSRequest) (
 }
 
 // SignSchnorrSig signs a Schnorr sig with the EOTS private key
-func (r *rpcServer) SignSchnorrSig(ctx context.Context, req *proto.SignSchnorrSigRequest) (
+func (r *rpcServer) SignSchnorrSig(_ context.Context, req *proto.SignSchnorrSigRequest) (
 	*proto.SignSchnorrSigResponse, error) {
-
 	sig, err := r.em.SignSchnorrSig(req.Uid, req.Msg, req.Passphrase)
 	if err != nil {
 		return nil, err

@@ -1,11 +1,12 @@
 package math
 
-func MaxUint64(values ...uint64) (max uint64) {
+func MaxUint64(values ...uint64) uint64 {
+	var maxVal uint64
 	for _, v := range values {
-		if v < max {
+		if v < maxVal {
 			continue
 		}
-		max = v
+		maxVal = v
 	}
-	return max
+	return maxVal
 }

@@ -28,7 +28,7 @@ func NewStartCmd() *cobra.Command {
 	return cmd
 }
 
-func startFn(cmd *cobra.Command, args []string) error {
+func startFn(cmd *cobra.Command, _ []string) error {
 	homePath, err := getHomePath(cmd)
 	if err != nil {
 		return fmt.Errorf("failed to load home flag: %w", err)
@@ -48,7 +48,7 @@ func startFn(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("invalid RPC listener address %s: %w", rpcListener, err)
 		}
-		cfg.RpcListener = rpcListener
+		cfg.RPCListener = rpcListener
 	}
 
 	logger, err := log.NewRootLoggerWithFile(config.LogFile(homePath), cfg.LogLevel)
@@ -56,7 +56,7 @@ func startFn(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load the logger: %w", err)
 	}
 
-	dbBackend, err := cfg.DatabaseConfig.GetDbBackend()
+	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
 	if err != nil {
 		return fmt.Errorf("failed to create db backend: %w", err)
 	}

@@ -42,6 +42,7 @@ func PersistClientCtx(ctx client.Context) func(cmd *cobra.Command, _ []string) e
 		// check the config file exists
 		cfg, err := fpcfg.LoadConfig(ctx.HomeDir)
 		if err != nil {
+			//nolint:nilerr
 			return nil // if no conifg is found just stop.
 		}
 

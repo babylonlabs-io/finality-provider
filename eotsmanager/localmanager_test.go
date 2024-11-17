@@ -30,7 +30,7 @@ func FuzzCreateKey(f *testing.F) {
 		fpName := testutil.GenRandomHexStr(r, 4)
 		homeDir := filepath.Join(t.TempDir(), "eots-home")
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(homeDir)
-		dbBackend, err := eotsCfg.DatabaseConfig.GetDbBackend()
+		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
 		defer func() {
 			dbBackend.Close()
@@ -65,7 +65,7 @@ func FuzzCreateRandomnessPairList(f *testing.F) {
 		fpName := testutil.GenRandomHexStr(r, 4)
 		homeDir := filepath.Join(t.TempDir(), "eots-home")
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(homeDir)
-		dbBackend, err := eotsCfg.DatabaseConfig.GetDbBackend()
+		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
 		defer func() {
 			dbBackend.Close()
 			err := os.RemoveAll(homeDir)

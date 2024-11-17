@@ -137,15 +137,15 @@ func StartManager(t *testing.T) *TestManager {
 	// 3. prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
 	eotsCfg := eotsconfig.DefaultConfigWithHomePath(eotsHomeDir)
-	eotsCfg.RpcListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir, shutdownInterceptor)
 	eh.Start()
-	cfg.RpcListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RpcListener)
+	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener)
 	require.NoError(t, err)
 
 	// 4. prepare finality-provider
-	fpdb, err := cfg.DatabaseConfig.GetDbBackend()
+	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, eotsCli, fpdb, logger)
 	require.NoError(t, err)

@@ -18,13 +18,13 @@ type FinalityProviderServiceGRpcClient struct {
 }
 
 // NewFinalityProviderServiceGRpcClient creates a new GRPC connection with finality provider daemon.
-func NewFinalityProviderServiceGRpcClient(remoteAddr string) (client *FinalityProviderServiceGRpcClient, cleanUp func() error, err error) {
-	conn, err := grpc.Dial(remoteAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func NewFinalityProviderServiceGRpcClient(remoteAddr string) (*FinalityProviderServiceGRpcClient, func() error, error) {
+	conn, err := grpc.NewClient(remoteAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build gRPC connection to %s: %w", remoteAddr, err)
 	}
 
-	cleanUp = func() error {
+	cleanUp := func() error {
 		if conn == nil {
 			return nil
 		}
@@ -51,7 +51,6 @@ func (c *FinalityProviderServiceGRpcClient) RegisterFinalityProvider(
 	fpPk *bbntypes.BIP340PubKey,
 	passphrase string,
 ) (*proto.RegisterFinalityProviderResponse, error) {
-
 	req := &proto.RegisterFinalityProviderRequest{BtcPk: fpPk.MarshalHex(), Passphrase: passphrase}
 	res, err := c.client.RegisterFinalityProvider(ctx, req)
 	if err != nil {
@@ -67,7 +66,6 @@ func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 	description types.Description,
 	commission *sdkmath.LegacyDec,
 ) (*proto.CreateFinalityProviderResponse, error) {
-
 	descBytes, err := description.Marshal()
 	if err != nil {
 		return nil, err

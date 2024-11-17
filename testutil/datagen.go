@@ -16,7 +16,6 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbn "github.com/babylonlabs-io/babylon/types"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -105,7 +104,7 @@ func GenBlocks(r *rand.Rand, startHeight, endHeight uint64) []*types.BlockInfo {
 }
 
 // GenStoredFinalityProvider generates a random finality-provider from the keyring and store it in DB
-func GenStoredFinalityProvider(r *rand.Rand, t *testing.T, app *service.FinalityProviderApp, passphrase, hdPath string, eotsPk *bbntypes.BIP340PubKey) *store.StoredFinalityProvider {
+func GenStoredFinalityProvider(r *rand.Rand, t *testing.T, app *service.FinalityProviderApp, passphrase, hdPath string, eotsPk *bbn.BIP340PubKey) *store.StoredFinalityProvider {
 	// generate keyring
 	keyName := GenRandomHexStr(r, 4)
 	chainID := GenRandomHexStr(r, 4)

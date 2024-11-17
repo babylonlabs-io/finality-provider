@@ -48,7 +48,7 @@ var (
 
 	defaultBTCNetParams       = chaincfg.SigNetParams
 	defaultEOTSManagerAddress = "127.0.0.1:" + strconv.Itoa(eotscfg.DefaultRPCPort)
-	DefaultRpcListener        = "127.0.0.1:" + strconv.Itoa(DefaultRPCPort)
+	DefaultRPCListener        = "127.0.0.1:" + strconv.Itoa(DefaultRPCPort)
 	DefaultDataDir            = DataDir(DefaultFpdDir)
 )
 
@@ -80,7 +80,7 @@ type Config struct {
 
 	BabylonConfig *BBNConfig `group:"babylon" namespace:"babylon"`
 
-	RpcListener string `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
+	RPCListener string `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
 
 	Metrics *metrics.Config `group:"metrics" namespace:"metrics"`
 }
@@ -109,7 +109,7 @@ func DefaultConfigWithHome(homePath string) Config {
 		BitcoinNetwork:           defaultBitcoinNetwork,
 		BTCNetParams:             defaultBTCNetParams,
 		EOTSManagerAddress:       defaultEOTSManagerAddress,
-		RpcListener:              DefaultRpcListener,
+		RPCListener:              DefaultRPCListener,
 		Metrics:                  metrics.DefaultFpConfig(),
 		SyncFpStatusInterval:     defaultSyncFpStatusInterval,
 	}
@@ -125,7 +125,7 @@ func DefaultConfig() Config {
 	return DefaultConfigWithHome(DefaultFpdDir)
 }
 
-func ConfigFile(homePath string) string {
+func CfgFile(homePath string) string {
 	return filepath.Join(homePath, defaultConfigFileName)
 }
 
@@ -152,7 +152,7 @@ func DataDir(homePath string) string {
 func LoadConfig(homePath string) (*Config, error) {
 	// The home directory is required to have a configuration file with a specific name
 	// under it.
-	cfgFile := ConfigFile(homePath)
+	cfgFile := CfgFile(homePath)
 	if !util.FileExists(cfgFile) {
 		return nil, fmt.Errorf("specified config file does "+
 			"not exist in %s", cfgFile)
@@ -190,9 +190,9 @@ func (cfg *Config) Validate() error {
 	}
 	cfg.BTCNetParams = btcNetConfig
 
-	_, err = net.ResolveTCPAddr("tcp", cfg.RpcListener)
+	_, err = net.ResolveTCPAddr("tcp", cfg.RPCListener)
 	if err != nil {
-		return fmt.Errorf("invalid RPC listener address %s, %w", cfg.RpcListener, err)
+		return fmt.Errorf("invalid RPC listener address %s, %w", cfg.RPCListener, err)
 	}
 
 	if cfg.Metrics == nil {
@@ -208,7 +208,7 @@ func (cfg *Config) Validate() error {
 }
 
 // NetParamsBTC parses the BTC net params from config.
-func NetParamsBTC(btcNet string) (p chaincfg.Params, err error) {
+func NetParamsBTC(btcNet string) (chaincfg.Params, error) {
 	switch btcNet {
 	case "mainnet":
 		return chaincfg.MainNetParams, nil
@@ -221,6 +221,6 @@ func NetParamsBTC(btcNet string) (p chaincfg.Params, err error) {
 	case "signet":
 		return chaincfg.SigNetParams, nil
 	default:
-		return p, fmt.Errorf("invalid network: %v", btcNet)
+		return chaincfg.Params{}, fmt.Errorf("invalid network: %v", btcNet)
 	}
 }

@@ -8,6 +8,7 @@ import (
 )
 
 func TestExpectedErr(t *testing.T) {
+	t.Parallel()
 	expectedErr := Expected(fmt.Errorf("some error"))
 	require.True(t, IsExpected(expectedErr))
 	wrappedErr := fmt.Errorf("expected: %w", expectedErr)

@@ -221,7 +221,6 @@ func (cp *ChainPoller) waitForActivation() {
 			return
 		}
 	}
-
 }
 
 func (cp *ChainPoller) pollChain() {
