@@ -54,7 +54,6 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 
 	// override to control the exact block height to commit to
 	cfg.MinRandHeightGap = 0
-	prCommitInterval := cfg.RandomnessCommitInterval
 
 	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.LogLevel)
 	if err != nil {
@@ -76,7 +75,7 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return fmt.Errorf("failed to get finality provider instance: %w", err)
 	}
 
-	return commitUntilHeight(fp, blkHeight, prCommitInterval)
+	return commitUntilHeight(fp, blkHeight, cfg.RandomnessCommitInterval)
 }
 
 func commitUntilHeight(
