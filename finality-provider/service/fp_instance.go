@@ -669,6 +669,7 @@ func (fp *FinalityProviderInstance) retryCommitPubRandUntilMaxRetry(targetBlockH
 // CommitPubRand generates a list of Schnorr rand pairs,
 // commits the public randomness for the managed finality providers,
 // and save the randomness pair to DB
+// Note: if the targetBlockHeight is too large, it will only commit fp.cfg.NumPubRand pairs
 func (fp *FinalityProviderInstance) CommitPubRand(targetBlockHeight uint64) (*types.TxResponse, error) {
 	lastCommittedHeight, err := fp.GetLastCommittedHeight()
 	if err != nil {
