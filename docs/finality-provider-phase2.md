@@ -1,13 +1,14 @@
-# Finality Provider Phase 2 Migration Guide
+# Finality Provider Registration
 
-This guide covers the Phase 2 launch of the Babylon network, 
-a critical transition that introduces active participation 
-in finality voting, rewards distribution, and the Proof of 
-Stake (PoS) system. This migration represents a shift from 
-the limited role of finality providers in Phase 1 to a fully 
-active role in network security and governance in Phase 2.
+This guide covers the ongoing operation of the Babylonchain 
+but in this guide we cover the registration process for 
+finality providers in Phase 2.
+
+Phase 2 launch of the Babylon network is a critical transition
+that introduces active participation in finality voting, 
+rewards distribution, and the Proof of Stake (PoS) system. 
 This guide provides a step-by-step process for operators to 
-onboard, whether setting up anew or using a pre-existing setup, 
+onboard, whether setting up a new or pre-existing setup, 
 with a focus on Phase 2-specific requirements.
 
 The following explains the migration from Phase 1 to 2.
@@ -16,7 +17,7 @@ The following explains the migration from Phase 1 to 2.
 
 - Only involves Bitcoin holders submitting staking transactions
 - No active Proof of Stake (PoS) chain operation
-- Finality providers only need EOTS keys registered
+- Finality providers only need EOTS keys generated
 - No need to run finality service
 
 **Phase 2 (New phase)**
@@ -26,14 +27,22 @@ The following explains the migration from Phase 1 to 2.
   - Babylon full node
   - EOTS manager daemon
   - Finality provider daemon
-- Earning commissions from delegations
-- Proof of Stake (PoS) and network security
+- Earning commissions from Bitcoin Stake delegations
 - Rewards distribution
-- Participating in governance
 
 There are 2 different types of paths for Finality providers
 
-1. **New Setup** 
+1. **Has existing EOTS Key**
+   - Already have EOTS key from [Phase 1](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/finality-providers)
+   - Reference existing EOTS key in setup
+
+If you have an existing EOTS key from Phase 1, please skip to 
+[Loading Existing Keys](#loading-existing-keys-only-for-phase-1-finality-providers) 
+steps
+
+>Note: Any finality providers from phase-1 that do not transition their existing key, will not have any of their delegations from phase-1.
+
+2. **New Setup** 
  - For operators starting fresh
  - Need to generate both EOTS and FP keys
  - Complete full configuration process
@@ -41,19 +50,11 @@ There are 2 different types of paths for Finality providers
 If you are a new operator, start with the 
 [Install Finality Provider Binary](#install-finality-provider-binary) section.
 
- 2. **Has existing EOTS Key**
-   - Already have EOTS key from Phase 1
-   - Reference existing EOTS key in setup
-
-If you have an existing EOTS key from Phase 1 please skip to 
-[Loading Existing Keys](#loading-existing-keys-only-for-phase-1-finality-providers) 
-steps
-
 ## Install Finality Provider Binary 
-<!-- TODO: check add in the correct tag forthe testnet --> 
-Download [Golang 1.21](https://go.dev/dl) 
+<!-- TODO: check add in the correct tag for the testnet --> 
 
-Download and install Golang 1.21. Verify the installation with the following command:
+Download and install [Golang 1.23](https://go.dev/dl). 
+Verify the installation with the following command:
 
 ```shell 
 go version 
@@ -61,9 +62,10 @@ go version
 
 ### Step 1: Clone the Finality Provider Repository
 
-Subsequently Clone the finality provider 
+Subsequently clone the finality provider 
 [repository](https://github.com/babylonlabs-io/finality-provider) and navigate to the 
-`bbn-testnet-5` tag.
+`bbn-test-5` tag. 
+<!-- TODO: change to a specific version -->
 
 ```shell 
 git clone https://github.com/babylonchain/finality-provider.git
@@ -88,10 +90,10 @@ This command will:
 
 ### Step 3: Verify Installation
 
-Run `eotsd` to check the available actions:
+Run `eotsd --help` to check the available actions:
 
 ```shell 
-eotsd 
+eotsd --help
 ```
 
 Sample output:
@@ -118,65 +120,15 @@ export PATH=$HOME/go/bin:$PATHecho 'export PATH=$HOME/go/bin:$PATH' >>
 ~/.profile 
 ```
 
-## Install Babylon Binary
+## Run Babylon Full Node
 
-Clone the Babylon [repository](https://github.com/babylonlabs-io/babylon) and 
-checkout the `bbn-testnet-5` tag:
+Before proceeding with the finality provider setup, you'll need to have a Babylon 
+full node running. Please follow the instructions at:
 
-```shell 
-git clone git@github.com:babylonlabs-io/babylon.git
-cd babylon
-git checkout <tag>
-```
+[Babylon Node Setup Guide](https://github.com/babylonlabs-io/networks/blob/main/bbn-test-5/babylon-node/README.md) <!-- TODO: Update link when mainnet is live -->
 
-### Step 1: Build and Install the Babylon Binary
-
-Run:
-```shell 
-make install 
-```
-
-This command will:
-- Build and compile all Go packages
-- Install binary to `$GOPATH/bin`:
-  - `babylond`: Babylon network daemon
-- Make command globally accessible from your terminal
-
-### Step 2: Verify Installation
-
-Run `babylond` to see the available commands:
-
-```shell 
-babylond
-```
-
-Sample output:  
-
-```shell 
-Available Commands:
-  add-genesis-account Add a genesis account to genesis.json 
-  collect-gentxs Collect genesis txs and output a genesis.json file 
-  comet CometBFT subcommands
-  config Utilities for managing application configuration ...
-```
-
-If your shell cannot find the installed binaries, make sure `$GOPATH/bin` 
-is in the `$PATH` of your shell. The following command should help this issue. 
-
-```shell
-export PATH=$HOME/go/bin:$PATH
-echo 'export PATH=$HOME/go/bin:$PATH' >> ~/.profile
-```
-
-## Connecting to a Babylon Node
-
-To operate as a finality provider, the Finality Provider program must be connected
-to a Babylon node. It is highly recommended for each finality provider to set up 
-their own node to ensure network reliability and direct access to network updates.
-
-For detailed instructions on setting up a Babylon node, please refer to the 
-[Setting up a Node](https://github.com/babylonlabs-io/networks/syncing-a-node) 
-section of the Babylon Networks repository. 
+Once you have completed the node setup and it is fully synced, return here 
+to continue with the finality provider configuration.
 
 ## Setting up the EOTS Manager
 
@@ -228,17 +180,17 @@ Sample output:
 } 
 ``` 
 
-## Loading Existing Keys (Only for Phase 1 Finality Providers)
+## Loading Existing Keys 
 
-Note: This section is only for users who participated in Phase 1 and already 
-have an EOTS key. If you are a new user, you can skip this section.
-
-If you participated in Phase 1, follow these steps to load your existing EOTS 
+>Note: If you participated in Phase 1, follow these steps to load your existing EOTS 
 key and configure it for Phase 2.
 
+>This section is only for Finality Providers who participated in Phase 1 and already 
+have an EOTS key. If you are a new user, you can skip this section.
+
 ### Step 1: Verify Your EOTS Key Backup
-Before proceeding, ensure you have a backup of your Phase 1 EOTS key. 
-You will need this backup file to import the key into the Phase 2 environment.
+Before proceeding, ensure you have access to your original EOTS key from Phase 1. 
+This is the same key that was registered in the [Phase 1 registration](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/finality-providers).
 
 ### Step 2: Import Your EOTS Key into the Keyring
 To load your existing EOTS key, use the following command to import it into the 
@@ -253,15 +205,15 @@ eotsd keys import <key-name> <path-to-backup>
 
 ## Starting the EOTS Daemon
 
-You will need to navigate to the You can start the EOTS daemon using the following command:
+You can start the EOTS daemon using the following command:
 
 ```shell 
 eotsd start --home <path> 
 ```
 
 This command starts the EOTS RPC server at the address specified in eotsd.conf 
-under the RpcListener field (default: 127.0.0.1:12582). You can override this value 
-by specifying a custom address with the --rpc-listener flag.
+under the `RPCListener` field (default: `127.0.0.1:12582`). You can override this value 
+by specifying a custom address with the `--rpc-listener` flag.
 
 ```shell
 2024-10-30T12:42:29.393259Z     info    Metrics server is starting
@@ -274,7 +226,7 @@ EOTS Manager Daemon is fully active!
 >**Note**: It is recommended to run the `eotsd` daemon on a separate machine or
 network segment to enhance security. This helps isolate the key management
 functionality and reduces the potential attack surface. You can edit
-the`EOTSManagerAddress` in the configuration file of the finality provider to
+the `EOTSManagerAddress` in the configuration file of the finality provider to
 reference the address of the machine where `eotsd` is running.
 
 ## Setting up the Finality Provider
@@ -286,7 +238,7 @@ and submitting finality signatures. For more information on Finality Providers, 
 
 ### Step 1: Initialize the Finality Provider Daemon
 
-Use the fpd init command to initialize a home directory for the Finality Provider. 
+Use the `fpd init` command to initialize a home directory for the Finality Provider. 
 You can set or change the home directory using the `--home` tag. For example, use 
 `--home ./fpKeys` to specify a custom directory.
 
@@ -313,7 +265,6 @@ fpd keys add --keyname <key-name> --keyring-backend test --home <path>
 We use `--keyring-backend test`, which specifies which backend to use for the
 keyring, `test` stores keys unencrypted on disk. For production environments,
 use `file` or `os` backend.
-
 
  There are three options for the keyring backend:
 
@@ -352,12 +303,16 @@ Once the node is initialized with the above command. It should generate a
 below
 
 ```shell 
-[Application Options] EOTSManagerAddress = 127.0.0.1:12582 RpcListener
-= 127.0.0.1:12581
+[Application Options] 
+EOTSManagerAddress = 127.0.0.1:12582 
+RpcListener = 127.0.0.1:12581
 
-[babylon] Key = <finality-provider-key-name-signer> // the key you used above
-ChainID = bbn-test-5 RPCAddr = http://127.0.0.1:26657 GRPCAddr =
-https://127.0.0.1:9090 KeyDirectory = ./fpKey 
+[babylon] 
+Key = <finality-provider-key-name-signer> // the key you used above
+ChainID = bbn-test-5 
+RPCAddr = http://127.0.0.1:26657 
+GRPCAddr = https://127.0.0.1:9090 
+KeyDirectory = ./fpKey 
 ``` 
 
 ### Step 3: Verify the Key Import
@@ -372,7 +327,6 @@ it has been imported correctly.
 
 >Note: Make sure you're using the same key name and EOTS public key that were 
 registered in Phase 1.
-
 
 ## Starting the Finality provider Daemon
 
@@ -400,7 +354,11 @@ You should see logs indicating successful startup:
 [INFO] RPC server listening on...
 ```
 
->Note: Keep this terminal window open as the daemon needs to run continuously.
+>Note: The daemon needs to run continuously. It's recommended to set up a system 
+service (like `systemd` on Linux or `launchd` on macOS) to manage the daemon 
+process, handle automatic restarts, and collect logs. For testing purposes, 
+you can run the daemon directly in a terminal, but remember it must stay 
+running to function properly.
 
 The above will start the Finality provider RPC server at the address specified
 in `fpd.conf` under the `RpcListener` field, which has a default value
@@ -421,7 +379,6 @@ The `create-finality-provider` command initializes a new finality provider
 instance locally. This command:
 
 - Generates a BTC public key that uniquely identifies your finality provider 
-- Creates a Babylon account to receive staking rewards
 
 ``` shell
 fpd create-finality-provider \ 
@@ -488,7 +445,8 @@ The `register-finality-provider` command registers your finality provider on the
 Babylon chain. This command requires:
 
 1. The BTC public key (obtained from the `create-finality-provider` command) 
-2. A funded Babylon account (needs BBN tokens for transaction fees) 
+2. A funded Babylon account (needs BBN tokens for transaction fees). 
+This account will be bonded to your finality provider and used to claim rewards.
 3. A running FPD daemon
 
 ``` shell
@@ -509,16 +467,8 @@ If successful, the command will return a transaction hash:
 "C08377CF289DF0DC5FA462E6409ADCB65A3492C22A112C58EA449F4DC544A3B1" } 
 ```
 
- You can query this hash to confirm the transaction was successful by navigating
- to the babylon chain and making a query, such as below:
-
-```shell 
-babylond query tx <transaction-hash> --chain-id bbn-test-5 
-```
-
->Note: This query must be executed using the Babylon daemon (`babylond`), not
-the finality provider daemon (`fpd`), as the registration transaction is
-recorded on the Babylon blockchain.
+You can verify the transaction was successful by looking up this transaction 
+hash on the Babylon chain.
 
 The hash returned should look something similar to below:
 
@@ -556,14 +506,16 @@ gas_used: "82063" gas_wanted: "94429" height: "66693" info: "" logs: [] raw_log:
 When a finality provider is created, it's associated with two key elements:
 
 **a) BTC Public Key:** - This serves as the unique identifier for the finality
-provider.  - It's derived from a Bitcoin private key, likely using the secp256k1
-elliptic curve.  - This key is used in the Bitcoin-based security model of
+provider.  
+- It's derived from a Bitcoin private key, likely using the secp256k1
+elliptic curve.  
+- This key is used in the Bitcoin-based security model of
 Babylon.
 
 **b) Babylon Account:** - This is an account on the Babylon blockchain.  - It's
-where staking rewards for the finality provider are sent.  - This account is
-controlled by the key you use to create and manage the finality provider (the
-one you added with fpd keys add).
+where staking rewards for the finality provider are sent.  
+- This account is controlled by the key you use to create and manage the 
+finality provider (the one you added with fpd keys add).
 
 This dual association allows the finality provider to interact with both the
 Bitcoin network (for security) and the Babylon network (for rewards and
