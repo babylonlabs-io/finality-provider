@@ -33,11 +33,11 @@ The following explains the migration from Phase 1 to 2.
 There are 2 different types of paths for Finality providers
 
 1. **Has existing EOTS Key**
-   - Already have EOTS key from [Phase 1](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/finality-providers)
+   - Already have EOTS key from [Phase 1](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers)
    - Reference existing EOTS key in setup
 
 If you have an existing EOTS key from Phase 1, please skip to 
-[Loading Existing Keys](#loading-existing-keys-only-for-phase-1-finality-providers) 
+[Loading Existing Keys](#loading-existing-keys) 
 steps
 
 >Note: Any finality providers from phase-1 that do not transition their existing key, will not have any of their delegations from phase-1.
@@ -49,6 +49,37 @@ steps
 
 If you are a new operator, start with the 
 [Install Finality Provider Binary](#install-finality-provider-binary) section.
+
+## Overview of Keys for Finality Provider and EOTS Manager
+
+There are two distinct keys you'll be working with:
+
+- **EOTS Key**: 
+  - Used for generating EOTS signatures
+  - Used to generate the BTC public key for the finality provider
+  - Stored in the EOTS manager daemon's keyring
+  - Example of the EOTS key output:
+    ```json
+    {
+     "name": "eots", 
+     "pub_key_hex":
+     "e1e72d270b90b24f395e76b417218430a75683bd07cf98b91cf9219d1c777c19",
+     "mnemonic": "parade hybrid century project toss gun undo ocean exercise
+     figure decorate basket peace raw spot gap dose daring patch ski purchase
+     prefer can pair"
+    }
+    ```
+
+- **Finality Provider Key**: 
+  - Used for signing transactions on Babylon
+  - Associated with a Babylon account that receives rewards
+  - Stored in the finality provider daemon's keyring
+
+  - Example of the finality provider key output:
+    ```shell
+    - address: bbn19gulf0a4yz87twpjl8cxnerc2wr2xqm9fsygn9
+   name: finality-provider
+    ```
 
 ## Install Finality Provider Binary 
 <!-- TODO: check add in the correct tag for the testnet --> 
@@ -116,8 +147,7 @@ If your shell cannot find the installed binaries, make sure `$GOPATH/bin` is i
 the `$PATH` of your shell. Usually these commands will do the job
 
 ```shell 
-export PATH=$HOME/go/bin:$PATHecho 'export PATH=$HOME/go/bin:$PATH' >>
-~/.profile 
+echo 'export PATH=$HOME/go/bin:$PATH' >> ~/.profile
 ```
 
 ## Run Babylon Full Node
@@ -189,8 +219,8 @@ key and configure it for Phase 2.
 have an EOTS key. If you are a new user, you can skip this section.
 
 ### Step 1: Verify Your EOTS Key Backup
-Before proceeding, ensure you have access to your original EOTS key from Phase 1. 
-This is the same key that was registered in the [Phase 1 registration](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/finality-providers).
+>Note: Before proceeding, ensure you have access to your original EOTS key from Phase 1. 
+This is the same key that was registered in the [Phase 1 registration](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers).
 
 ### Step 2: Import Your EOTS Key into the Keyring
 To load your existing EOTS key, use the following command to import it into the 
@@ -277,22 +307,31 @@ use `file` or `os` backend.
  highest level of security by relying on OS-managed encryption and access
  controls.
 
-This command will create a new key pair and store it in your keyring. The output
-should look similar to the below.
+This command will create a new key pair and store it in your keyring. 
+The output should look similar to the below:
 
-``` shell
-- address: bbn19gulf0a4yz87twpjl8cxnerc2wr2xqm9fsygn9
-  name: finality-provider pubkey:
-  '{"@type":"/cosmos.crypto.secp256k1.PubKey",
-  "key":"AhZAL00gKplLQKpLMiXPBqaKCoiessoewOaEATKd4Rcy"}'
-  type: local
+
+``` json
+{
+  "address": "bbn19gulf0a4yz87twpjl8cxnerc2wr2xqm9fsygn9",
+  "name": "finality-provider",
+  "pubkey": {
+    "@type": "/cosmos.crypto.secp256k1.PubKey",
+    "key": "AhZAL00gKplLQKpLMiXPBqaKCoiessoewOaEATKd4Rcy"
+  },
+  "type": "local"
+}
 ```
 
->Note: Please verify the `chain-id` from the Babylon RPC
-node [https://rpc.testnet5.babylonlabs.io/status]
-(https://rpc.testnet5.babylonlabs.io/status)
+>Note: This command will automatically update the `Key` field in 
+the config file to use this key name. This key will be used for all interactions 
+with the Babylon chain, including finality provider registration and transaction 
+signing.
 
- >The configuration below requires to point to the path where this keyring is
+>Note: Please verify the `chain-id` and other network parameters from the official 
+Babylon Networks repository at [https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers)
+
+>The configuration below requires to point to the path where this keyring is
  stored `KeyDirectory`. This `Key` field stores the key name used for
  interacting with the babylon chain and will be specified along with
  the `KeyringBackend`field in the next step. So we can ignore the setting of the
@@ -528,7 +567,33 @@ finality provider signs conflicting blocks at the same height. This results in
 the extraction of the provider's private key and automatically triggers shutdown
 of the finality provider.
 
-### Withdrawing Rewards
+## Jailing and Unjailing
+
+As mentioned above, a finality provider can be jailed for various reasons, 
+including not signing for a certain number of blocks, not committing public 
+randomness for a certain number of blocks, or not being responsive to the 
+finality provider daemon.
+
+When jailed, the following happens to a finality provider:
+- Their voting power becomes 0
+- Status is set to `JAILED`
+- Delegator rewards stop
+
+To unjail a finality provider, you must complete the following steps:
+- Fix the underlying issue that caused jailing
+- Wait for the jailing period to pass (if it was due to downtime)
+- Then send the unjail transaction to the Babylon chain.
+
+So while slashing is permanent, jailing is a temporary state that can be recovered 
+from through the unjailing process, as long as the finality provider wasn't slashed.
+
+## Public Randomness Submission
+<!-- Waiting for clarification on this -->
+
+## Reading the logs
+<!--  TODO: Add information on how to read the logs -->
+
+## Withdrawing Rewards
 
 When withdrawing rewards, you need to use the Babylon chain's CLI since rewards
 are managed by the main chain.
