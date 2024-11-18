@@ -193,45 +193,21 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 
 	for {
 		select {
-		case b := <-fp.poller.GetBlockInfoChan():
-			fp.logger.Debug(
-				"the finality-provider received a new block, start processing",
+		case <-fp.quit:
+			fp.logger.Info("the finality signature submission loop is closing")
+			return
+		default:
+			pollerBlocks := fp.getAllBlocksFromChan()
+			if len(pollerBlocks) == 0 {
+				continue
+			}
+			targetHeight := pollerBlocks[len(pollerBlocks)-1].Height
+			fp.logger.Debug("the finality-provider received new block(s), start processing",
 				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint64("height", b.Height),
+				zap.Uint64("start_height", pollerBlocks[0].Height),
+				zap.Uint64("end_height", targetHeight),
 			)
-
-			// check whether the block has been processed before
-			if fp.hasProcessed(b) {
-				continue
-			}
-
-			activationBlkHeight, err := fp.cc.QueryFinalityActivationBlockHeight()
-			if err != nil {
-				fp.reportCriticalErr(fmt.Errorf("failed to get activation height during fast sync %w", err))
-				continue
-			}
-
-			// check if it is allowed to send finality
-			if b.Height < activationBlkHeight {
-				continue
-			}
-
-			// check whether the finality provider has voting power
-			hasVp, err := fp.hasVotingPower(b)
-			if err != nil {
-				fp.reportCriticalErr(err)
-				continue
-			}
-			if !hasVp {
-				// the finality provider does not have voting power
-				// and it will never will at this block
-				fp.MustSetLastProcessedHeight(b.Height)
-				fp.metrics.IncrementFpTotalBlocksWithoutVotingPower(fp.GetBtcPkHex())
-				continue
-			}
-			// use the copy of the block to avoid the impact to other receivers
-			nextBlock := *b
-			res, err := fp.retrySubmitFinalitySignatureUntilBlockFinalized(&nextBlock)
+			res, err := fp.retrySubmitFinalitySignaturesUntilBlocksFinalized(pollerBlocks)
 			if err != nil {
 				fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
 				if !errors.Is(err, ErrFinalityProviderShutDown) {
@@ -246,51 +222,57 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 				continue
 			}
 			fp.logger.Info(
-				"successfully submitted a finality signature to the consumer chain",
+				"successfully submitted the finality signature to the consumer chain",
+				zap.String("consumer_id", string(fp.GetChainID())),
 				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint64("height", b.Height),
+				zap.Uint64("start_height", pollerBlocks[0].Height),
+				zap.Uint64("end_height", targetHeight),
 				zap.String("tx_hash", res.TxHash),
 			)
-
-		case targetBlock := <-fp.laggingTargetChan:
-			res, err := fp.tryFastSync(targetBlock)
-			fp.isLagging.Store(false)
-			if err != nil {
-				if errors.Is(err, ErrFinalityProviderSlashed) {
-					fp.reportCriticalErr(err)
-					continue
-				}
-				fp.logger.Debug(
-					"failed to sync up, will try again later",
-					zap.String("pk", fp.GetBtcPkHex()),
-					zap.Error(err),
-				)
-				continue
-			}
-			// response might be nil if sync is not needed
-			if res != nil {
-				fp.logger.Info(
-					"fast sync is finished",
-					zap.String("pk", fp.GetBtcPkHex()),
-					zap.Uint64("synced_height", res.SyncedHeight),
-					zap.Uint64("last_processed_height", res.LastProcessedHeight),
-				)
-
-				// inform the poller to skip to the next block of the last
-				// processed one
-				err := fp.poller.SkipToHeight(fp.GetLastProcessedHeight() + 1)
-				if err != nil {
-					fp.logger.Debug(
-						"failed to skip heights from the poller",
-						zap.Error(err),
-					)
-				}
-			}
-		case <-fp.quit:
-			fp.logger.Info("the finality signature submission loop is closing")
-			return
 		}
 	}
+}
+
+func (fp *FinalityProviderInstance) getAllBlocksFromChan() []*types.BlockInfo {
+	var pollerBlocks []*types.BlockInfo
+	for {
+		select {
+		case b := <-fp.poller.GetBlockInfoChan():
+			shouldProcess, err := fp.shouldProcessBlock(b)
+			if err != nil {
+				if !errors.Is(err, ErrFinalityProviderShutDown) {
+					fp.reportCriticalErr(err)
+				}
+				break
+			}
+			if shouldProcess {
+				pollerBlocks = append(pollerBlocks, b)
+			}
+		default:
+			return pollerBlocks
+		}
+	}
+}
+
+func (fp *FinalityProviderInstance) shouldProcessBlock(b *types.BlockInfo) (bool, error) {
+	// check whether the block has been processed before
+	if fp.hasProcessed(b) {
+		return false, nil
+	}
+	// check whether the finality provider has voting power
+	hasVp, err := fp.hasVotingPower(b)
+	if err != nil {
+		return false, err
+	}
+	if !hasVp {
+		// the finality provider does not have voting power
+		// and it will never will at this block
+		fp.MustSetLastProcessedHeight(b.Height)
+		fp.metrics.IncrementFpTotalBlocksWithoutVotingPower(fp.GetBtcPkHex())
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (fp *FinalityProviderInstance) randomnessCommitmentLoop() {
@@ -458,10 +440,11 @@ func (fp *FinalityProviderInstance) checkLagging(currentBlock *types.BlockInfo) 
 	return currentBlock.Height >= fp.GetLastProcessedHeight()+fp.cfg.FastSyncGap
 }
 
-// retrySubmitFinalitySignatureUntilBlockFinalized periodically tries to submit finality signature until success or the block is finalized
+// retrySubmitFinalitySignaturesUntilBlocksFinalized periodically tries to submit finality signature until success or the block is finalized
 // error will be returned if maximum retries have been reached or the query to the consumer chain fails
-func (fp *FinalityProviderInstance) retrySubmitFinalitySignatureUntilBlockFinalized(targetBlock *types.BlockInfo) (*types.TxResponse, error) {
+func (fp *FinalityProviderInstance) retrySubmitFinalitySignaturesUntilBlocksFinalized(targetBlocks []*types.BlockInfo) (*types.TxResponse, error) {
 	var failedCycles uint32
+	targetHeight := targetBlocks[len(targetBlocks)-1].Height
 
 	// we break the for loop if the block is finalized or the signature is successfully submitted
 	// error will be returned if maximum retries have been reached or the query to the consumer chain fails
@@ -469,13 +452,20 @@ func (fp *FinalityProviderInstance) retrySubmitFinalitySignatureUntilBlockFinali
 		select {
 		case <-time.After(fp.cfg.SubmissionRetryInterval):
 			// error will be returned if max retries have been reached
-			res, err := fp.SubmitFinalitySignature(targetBlock)
+			var res *types.TxResponse
+			var err error
+			if len(targetBlocks) == 1 {
+				res, err = fp.SubmitFinalitySignature(targetBlocks[0])
+			} else {
+				res, err = fp.SubmitBatchFinalitySignatures(targetBlocks)
+			}
 			if err != nil {
 				fp.logger.Debug(
 					"failed to submit finality signature to the consumer chain",
 					zap.String("pk", fp.GetBtcPkHex()),
 					zap.Uint32("current_failures", failedCycles),
-					zap.Uint64("target_block_height", targetBlock.Height),
+					zap.Uint64("target_start_height", targetBlocks[0].Height),
+					zap.Uint64("target_end_height", targetHeight),
 					zap.Error(err),
 				)
 
@@ -497,15 +487,15 @@ func (fp *FinalityProviderInstance) retrySubmitFinalitySignatureUntilBlockFinali
 			}
 
 			// periodically query the index block to be later checked whether it is Finalized
-			finalized, err := fp.checkBlockFinalization(targetBlock.Height)
+			finalized, err := fp.checkBlockFinalization(targetHeight)
 			if err != nil {
-				return nil, fmt.Errorf("failed to query block finalization at height %v: %w", targetBlock.Height, err)
+				return nil, fmt.Errorf("failed to query block finalization at height %v: %w", targetHeight, err)
 			}
 			if finalized {
 				fp.logger.Debug(
 					"the block is already finalized, skip submission",
 					zap.String("pk", fp.GetBtcPkHex()),
-					zap.Uint64("target_height", targetBlock.Height),
+					zap.Uint64("target_height", targetHeight),
 				)
 				// TODO: returning nil here is to safely break the loop
 				//  the error still exists
