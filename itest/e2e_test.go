@@ -109,55 +109,6 @@ func TestDoubleSigning(t *testing.T) {
 	t.Logf("the equivocation attack is successful")
 }
 
-// TestFastSync tests the fast sync process where the finality-provider is terminated and restarted with fast sync
-func TestFastSync(t *testing.T) {
-	tm, fpIns := StartManagerWithFinalityProvider(t)
-	defer tm.Stop(t)
-
-	// check the public randomness is committed
-	tm.WaitForFpPubRandTimestamped(t, fpIns)
-
-	// send a BTC delegation
-	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, stakingTime, stakingAmount)
-
-	// check the BTC delegation is pending
-	delsResp := tm.WaitForNPendingDels(t, 1)
-	del, err := ParseRespBTCDelToBTCDel(delsResp[0])
-	require.NoError(t, err)
-
-	// send covenant sigs
-	tm.InsertCovenantSigForDelegation(t, del)
-
-	// check the BTC delegation is active
-	_ = tm.WaitForNActiveDels(t, 1)
-
-	// check the last voted block is finalized
-	lastVotedHeight := tm.WaitForFpVoteCast(t, fpIns)
-	tm.CheckBlockFinalization(t, lastVotedHeight, 1)
-
-	t.Logf("the block at height %v is finalized", lastVotedHeight)
-
-	var finalizedBlocks []*types.BlockInfo
-	finalizedBlocks = tm.WaitForNFinalizedBlocks(t, 1)
-
-	n := 3
-	// stop the finality-provider for a few blocks then restart to trigger the fast sync
-	tm.FpConfig.FastSyncGap = uint64(n)
-	tm.StopAndRestartFpAfterNBlocks(t, n, fpIns)
-
-	// check there are n+1 blocks finalized
-	finalizedBlocks = tm.WaitForNFinalizedBlocks(t, n+1)
-	finalizedHeight := finalizedBlocks[0].Height
-	t.Logf("the latest finalized block is at %v", finalizedHeight)
-
-	// check if the fast sync works by checking if the gap is not more than 1
-	currentHeaderRes, err := tm.BBNClient.QueryBestBlock()
-	currentHeight := currentHeaderRes.Height
-	t.Logf("the current block is at %v", currentHeight)
-	require.NoError(t, err)
-	require.True(t, currentHeight < finalizedHeight+uint64(n))
-}
-
 func TestFinalityProviderEditCmd(t *testing.T) {
 	tm, fpIns := StartManagerWithFinalityProvider(t)
 	defer tm.Stop(t)

@@ -31,10 +31,7 @@ const (
 	defaultStatusUpdateInterval    = 20 * time.Second
 	defaultRandomInterval          = 30 * time.Second
 	defaultSubmitRetryInterval     = 1 * time.Second
-	defaultFastSyncInterval        = 10 * time.Second
 	defaultSyncFpStatusInterval    = 30 * time.Second
-	defaultFastSyncLimit           = 10
-	defaultFastSyncGap             = 3
 	defaultMaxSubmissionRetries    = 20
 	defaultBitcoinNetwork          = "signet"
 	defaultDataDirname             = "data"
@@ -64,9 +61,6 @@ type Config struct {
 	RandomnessCommitInterval time.Duration `long:"randomnesscommitinterval" description:"The interval between each attempt to commit public randomness"`
 	SubmissionRetryInterval  time.Duration `long:"submissionretryinterval" description:"The interval between each attempt to submit finality signature or public randomness after a failure"`
 	MaxSubmissionRetries     uint32        `long:"maxsubmissionretries" description:"The maximum number of retries to submit finality signature or public randomness"`
-	FastSyncInterval         time.Duration `long:"fastsyncinterval" description:"The interval between each try of fast sync, which is disabled if the value is 0"`
-	FastSyncLimit            uint32        `long:"fastsynclimit" description:"The maximum number of blocks to catch up for each fast sync"`
-	FastSyncGap              uint64        `long:"fastsyncgap" description:"The block gap that will trigger the fast sync"`
 	EOTSManagerAddress       string        `long:"eotsmanageraddress" description:"The address of the remote EOTS manager; Empty if the EOTS manager is running locally"`
 	SyncFpStatusInterval     time.Duration `long:"syncfpstatusinterval" description:"The duration of time that it should sync FP status with the client blockchain"`
 
@@ -102,9 +96,6 @@ func DefaultConfigWithHome(homePath string) Config {
 		StatusUpdateInterval:     defaultStatusUpdateInterval,
 		RandomnessCommitInterval: defaultRandomInterval,
 		SubmissionRetryInterval:  defaultSubmitRetryInterval,
-		FastSyncInterval:         defaultFastSyncInterval,
-		FastSyncLimit:            defaultFastSyncLimit,
-		FastSyncGap:              defaultFastSyncGap,
 		MaxSubmissionRetries:     defaultMaxSubmissionRetries,
 		BitcoinNetwork:           defaultBitcoinNetwork,
 		BTCNetParams:             defaultBTCNetParams,
