@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#132](https://github.com/babylonlabs-io/finality-provider/pull/132) Replace fast sync with batch processing
+
 ## v0.11.0
 
 ### Improvements
