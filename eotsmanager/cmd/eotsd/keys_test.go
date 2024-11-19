@@ -8,8 +8,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	bbntypes "github.com/babylonlabs-io/babylon/types"
+	"github.com/btcsuite/btcd/btcec/v2"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -17,6 +22,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/testutil"
+	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 )
 
 func FuzzNewKeysCmd(f *testing.F) {
@@ -89,4 +95,56 @@ func exec(t *testing.T, root *cobra.Command, rootCmdBuf *bytes.Buffer, args ...s
 	require.NoError(t, err)
 
 	return c, buf.String()
+}
+
+func TestCreateKeyOldNew(t *testing.T) {
+	mnemonic, err := eotsmanager.NewMnemonic()
+	require.NoError(t, err)
+
+	homeDir := filepath.Join(t.TempDir(), "eots-home")
+	keyringBackend := "test"
+	dbBackend, err := eotscfg.DefaultDBConfigWithHomePath(homeDir).GetDBBackend()
+	require.NoError(t, err)
+
+	lm, err := eotsmanager.NewLocalEOTSManager(homeDir, keyringBackend, dbBackend, zap.NewNop())
+	require.NoError(t, err)
+
+	hdPath := ""
+	pwd := ""
+
+	// OLD WAY
+	eotsPk, err := lm.CreateKeyWithMnemonic("legoo", pwd, hdPath, mnemonic)
+	require.NoError(t, err)
+	require.NotNil(t, eotsPk)
+
+	// NEW WAY
+	cmd := NewKeysCmd()
+	cmd.Flags().AddFlagSet(NewKeysCmd().PersistentFlags())
+
+	mockIn := sdktestutil.ApplyMockIODiscardOutErr(cmd)
+	kbHome := t.TempDir()
+
+	cdc := moduletestutil.MakeTestEncodingConfig().Codec
+	kb, err := keyring.New("testingAppService", keyringBackend, kbHome, mockIn, cdc)
+	require.NoError(t, err)
+
+	newAccountKey, err := kb.NewAccount("legoo2", mnemonic, pwd, hdPath, hd.Secp256k1)
+	require.NoError(t, err)
+
+	newAccPub, err := newAccountKey.GetPubKey()
+	require.NoError(t, err)
+
+	var eotsPkNew *bbntypes.BIP340PubKey
+	switch v := newAccPub.(type) {
+	case *secp256k1.PubKey:
+		pk, err := btcec.ParsePubKey(v.Key)
+		require.NoError(t, err)
+
+		eotsPkNew = bbntypes.NewBIP340PubKeyFromBTCPK(pk)
+		require.NotNil(t, eotsPkNew)
+	default:
+		panic("iha")
+	}
+
+	require.True(t, eotsPk.Equals(eotsPkNew))
 }
