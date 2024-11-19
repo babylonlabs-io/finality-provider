@@ -830,7 +830,7 @@ func defaultFpConfig(keyringDir, homeDir string) *fpcfg.Config {
 	cfg.BitcoinNetwork = "simnet"
 	cfg.BTCNetParams = chaincfg.SimNetParams
 
-	cfg.PollerConfig.AutoChainScanningMode = false
+	cfg.PollerConfig.PollInterval = 1 * time.Millisecond
 	// babylon configs for sending transactions
 	cfg.BabylonConfig.KeyDirectory = keyringDir
 	// need to use this one to send otherwise we will have account sequence mismatch
