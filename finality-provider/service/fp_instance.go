@@ -160,10 +160,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 
 	for {
 		select {
-		case <-fp.quit:
-			fp.logger.Info("the finality signature submission loop is closing")
-			return
-		default:
+		case <-time.After(fp.cfg.SignatureSubmissionInterval):
 			pollerBlocks := fp.getAllBlocksFromChan()
 			if len(pollerBlocks) == 0 {
 				continue
@@ -196,6 +193,10 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 				zap.Uint64("end_height", targetHeight),
 				zap.String("tx_hash", res.TxHash),
 			)
+
+		case <-fp.quit:
+			fp.logger.Info("the finality signature submission loop is closing")
+			return
 		}
 	}
 }
