@@ -23,7 +23,8 @@ func CommandCommitPubRand() *cobra.Command {
 		Aliases: []string{"unsafe-cpr"},
 		Short:   "[UNSAFE] Manually trigger public randomness commitment for a finality provider",
 		Long: `Manually trigger public randomness commitment for a finality provider. ` +
-			`WARNING: this can drain the finality provider's balance if the block-height is too high.`,
+			`WARNING: this can drain the finality provider's balance if the block-height is too high.` +
+			`Note: if there is no pubrand committed before, it will only commit the pubrand for the target block-height.`,
 		Example: `fpd unsafe-commit-pubrand --home /home/user/.fpd [fp-eots-pk-hex] [block-height]`,
 		Args:    cobra.ExactArgs(2),
 		RunE:    fpcmd.RunEWithClientCtx(runCommandCommitPubRand),
