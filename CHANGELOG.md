@@ -37,6 +37,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Documentation
+
+[#120](https://github.com/babylonlabs-io/finality-provider/pull/120) Spec of
+finality vote submission
+
 ## v0.11.0
 
 ### Improvements
