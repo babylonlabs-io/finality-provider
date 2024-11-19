@@ -165,7 +165,7 @@ to continue with the finality provider configuration.
 >Note: If you have already set up an EOTS Manager, you can skip this section. 
 The following steps are only for users who have not yet set up an EOTS Manager. 
 Phase 1 users who already have an EOTS Manager set up can skip to the 
-[Loading Existing Keys](#loading-existing-keys-only-for-phase-1-finality-providers) 
+[Loading Existing Keys](#loading-existing-keys) 
 section at the end of this guide for specific instructions 
 on re-using their Phase 1 EOTS keys.
 
@@ -222,16 +222,46 @@ have an EOTS key. If you are a new user, you can skip this section.
 >Note: Before proceeding, ensure you have access to your original EOTS key from Phase 1. 
 This is the same key that was registered in the [Phase 1 registration](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers).
 
+To export your EOTS key, use the following command:
+
+```shell 
+eotsd keys export <name>  --home <path> --keyring-backend test > key.asc
+```
+
+- `<name>`: Your EOTS key name from Phase 1
+- `--home`: Path to your EOTS daemon home directory
+- `--keyring-backend`: Type of keyring backend (use `test` for testing)
+- `key.asc`: Output file for the exported key
+
+If successful your private key will be saved in `key.asc`
+
+The exported key will look like:
+
+```
+-----BEGIN TENDERMINT PRIVATE KEY-----
+salt: 35ED0BBC00376EC7FC696838F34A7C36
+type: secp256k1
+kdf: argon2
+
+8VOGhpuaZhTPZrKHysx24OhaxuBhVnKqb3WcTwJY+jvfNv/EJRoqmrHZfCnNgd13
+VP88GFE=
+=D87O
+-----END TENDERMINT PRIVATE KEY-----
+```
+
 ### Step 2: Import Your EOTS Key into the Keyring
+
 To load your existing EOTS key, use the following command to import it into the 
 keyring:
 
 ```shell 
-eotsd keys import <key-name> <path-to-backup>
+eotsd keys import <name> <path-to-key.asc> --home <path> --keyring-backend test
 ```
 
-- `<key-name>`: The name you want to assign to this key in Phase 2.
-- `<path-to-backup>`: The path to your EOTS key backup file from Phase 1.
+- `<name>`: New name for your key in Phase 2
+- `<path-to-key.asc>`: Path to the exported key file
+- `--home`: EOTS daemon home directory for Phase 2
+- `--keyring-backend`: Keyring backend type (use `test` for testing)
 
 ## Starting the EOTS Daemon
 
