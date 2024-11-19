@@ -19,10 +19,12 @@ import (
 // CommandCommitPubRand returns the commit-pubrand command by connecting to the fpd daemon.
 func CommandCommitPubRand() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "commit-pubrand [fp-eots-pk-hex] [block-height]",
-		Aliases: []string{"cpr"},
-		Short:   "Manually trigger public randomness commitment for a finality provider",
-		Example: `fpd commit-pubrand --home /home/user/.fpd [fp-eots-pk-hex] [block-height]`,
+		Use:     "unsafe-commit-pubrand [fp-eots-pk-hex] [block-height]",
+		Aliases: []string{"unsafe-cpr"},
+		Short:   "[UNSAFE] Manually trigger public randomness commitment for a finality provider",
+		Long: `Manually trigger public randomness commitment for a finality provider. ` +
+			`WARNING: this can drain the finality provider's balance if the block-height is too high.`,
+		Example: `fpd unsafe-commit-pubrand --home /home/user/.fpd [fp-eots-pk-hex] [block-height]`,
 		Args:    cobra.ExactArgs(2),
 		RunE:    fpcmd.RunEWithClientCtx(runCommandCommitPubRand),
 	}
