@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug Fixes
+
+* [139](https://github.com/babylonlabs-io/finality-provider/pull/139) Ignore voting power not updated error
+
 ### Improvements
 
 * [#132](https://github.com/babylonlabs-io/finality-provider/pull/132) Replace fast sync with batch processing
