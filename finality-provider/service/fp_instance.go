@@ -220,6 +220,9 @@ func (fp *FinalityProviderInstance) getAllBlocksFromChan() []*types.BlockInfo {
 			if len(pollerBlocks) == int(fp.cfg.BatchSubmissionSize) {
 				return pollerBlocks
 			}
+		case <-fp.quit:
+			fp.logger.Info("the get all blocks loop is closing")
+			return nil
 		default:
 			return pollerBlocks
 		}
