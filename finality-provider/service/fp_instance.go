@@ -171,7 +171,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 				zap.Uint64("start_height", pollerBlocks[0].Height),
 				zap.Uint64("end_height", targetHeight),
 			)
-			res, err := fp.retrySubmitFinalitySignaturesUntilBlocksFinalized(pollerBlocks)
+			res, err := fp.retrySubmitSigsUntilFinalized(pollerBlocks)
 			if err != nil {
 				fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
 				if !errors.Is(err, ErrFinalityProviderShutDown) {
@@ -206,6 +206,7 @@ func (fp *FinalityProviderInstance) getAllBlocksFromChan() []*types.BlockInfo {
 	for {
 		select {
 		case b := <-fp.poller.GetBlockInfoChan():
+			// TODO: in cases of catching up, this could issue frequent RPC calls
 			shouldProcess, err := fp.shouldProcessBlock(b)
 			if err != nil {
 				if !errors.Is(err, ErrFinalityProviderShutDown) {
@@ -215,6 +216,9 @@ func (fp *FinalityProviderInstance) getAllBlocksFromChan() []*types.BlockInfo {
 			}
 			if shouldProcess {
 				pollerBlocks = append(pollerBlocks, b)
+			}
+			if len(pollerBlocks) == int(fp.cfg.BatchSubmissionSize) {
+				return pollerBlocks
 			}
 		default:
 			return pollerBlocks
@@ -319,9 +323,13 @@ func (fp *FinalityProviderInstance) reportCriticalErr(err error) {
 	}
 }
 
-// retrySubmitFinalitySignaturesUntilBlocksFinalized periodically tries to submit finality signature until success or the block is finalized
+// retrySubmitSigsUntilFinalized periodically tries to submit finality signature until success or the block is finalized
 // error will be returned if maximum retries have been reached or the query to the consumer chain fails
-func (fp *FinalityProviderInstance) retrySubmitFinalitySignaturesUntilBlocksFinalized(targetBlocks []*types.BlockInfo) (*types.TxResponse, error) {
+func (fp *FinalityProviderInstance) retrySubmitSigsUntilFinalized(targetBlocks []*types.BlockInfo) (*types.TxResponse, error) {
+	if len(targetBlocks) == 0 {
+		return nil, fmt.Errorf("cannot send signatures for empty blocks")
+	}
+
 	var failedCycles uint32
 	targetHeight := targetBlocks[len(targetBlocks)-1].Height
 
@@ -333,11 +341,7 @@ func (fp *FinalityProviderInstance) retrySubmitFinalitySignaturesUntilBlocksFina
 			// error will be returned if max retries have been reached
 			var res *types.TxResponse
 			var err error
-			if len(targetBlocks) == 1 {
-				res, err = fp.SubmitFinalitySignature(targetBlocks[0])
-			} else {
-				res, err = fp.SubmitBatchFinalitySignatures(targetBlocks)
-			}
+			res, err = fp.SubmitBatchFinalitySignatures(targetBlocks)
 			if err != nil {
 				fp.logger.Debug(
 					"failed to submit finality signature to the consumer chain",
@@ -533,47 +537,7 @@ func (fp *FinalityProviderInstance) CommitPubRand(tipHeight uint64) (*types.TxRe
 
 // SubmitFinalitySignature builds and sends a finality signature over the given block to the consumer chain
 func (fp *FinalityProviderInstance) SubmitFinalitySignature(b *types.BlockInfo) (*types.TxResponse, error) {
-	sig, err := fp.signFinalitySig(b)
-	if err != nil {
-		return nil, err
-	}
-
-	// get public randomness at the height
-	prList, err := fp.getPubRandList(b.Height, 1)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get public randomness list: %w", err)
-	}
-	pubRand := prList[0]
-
-	// get inclusion proof
-	proofBytes, err := fp.pubRandState.getPubRandProof(pubRand)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to get inclusion proof of public randomness %s for FP %s for block %d: %w",
-			pubRand.String(),
-			fp.btcPk.MarshalHex(),
-			b.Height,
-			err,
-		)
-	}
-
-	// send finality signature to the consumer chain
-	res, err := fp.cc.SubmitFinalitySig(fp.GetBtcPk(), b, pubRand, proofBytes, sig.ToModNScalar())
-	if err != nil {
-		return nil, fmt.Errorf("failed to send finality signature to the consumer chain: %w", err)
-	}
-
-	// it is possible that the vote is duplicate so the metrics do need to update
-	if res.TxHash != "" {
-		// update DB
-		fp.MustUpdateStateAfterFinalitySigSubmission(b.Height)
-
-		// update metrics
-		fp.metrics.RecordFpVoteTime(fp.GetBtcPkHex())
-		fp.metrics.IncrementFpTotalVotedBlocks(fp.GetBtcPkHex())
-	}
-
-	return res, nil
+	return fp.SubmitBatchFinalitySignatures([]*types.BlockInfo{b})
 }
 
 // SubmitBatchFinalitySignatures builds and sends a finality signature over the given block to the consumer chain
@@ -630,7 +594,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 }
 
 // TestSubmitFinalitySignatureAndExtractPrivKey is exposed for presentation/testing purpose to allow manual sending finality signature
-// this API is the same as SubmitFinalitySignature except that we don't constraint the voting height and update status
+// this API is the same as SubmitBatchFinalitySignatures except that we don't constraint the voting height and update status
 // Note: this should not be used in the submission loop
 func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey(b *types.BlockInfo) (*types.TxResponse, *btcec.PrivateKey, error) {
 	// get public randomness
@@ -700,9 +664,9 @@ func (fp *FinalityProviderInstance) getPollerStartingHeight() (uint64, error) {
 	}
 
 	// TODO: query last voted height and update local height
-	finalityActivationHeight, err := fp.finalityActivationHeightWithRetry()
+	finalityActivationHeight, err := fp.getFinalityActivationHeightWithRetry()
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to get finality activation height: %w", err)
 	}
 
 	// start from finality activation height
@@ -710,7 +674,7 @@ func (fp *FinalityProviderInstance) getPollerStartingHeight() (uint64, error) {
 
 	latestFinalisedBlocks, err := fp.latestFinalizedBlocksWithRetry(1)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to get the last finalized block: %w", err)
 	}
 
 	// if we have finalized blocks, consider the height after the latest finalized block
@@ -791,7 +755,7 @@ func (fp *FinalityProviderInstance) latestFinalizedBlocksWithRetry(count uint64)
 	return response, nil
 }
 
-func (fp *FinalityProviderInstance) finalityActivationHeightWithRetry() (uint64, error) {
+func (fp *FinalityProviderInstance) getFinalityActivationHeightWithRetry() (uint64, error) {
 	var response uint64
 	if err := retry.Do(func() error {
 		finalityActivationHeight, err := fp.cc.QueryFinalityActivationBlockHeight()

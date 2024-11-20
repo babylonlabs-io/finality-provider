@@ -28,6 +28,7 @@ const (
 	defaultNumPubRand                  = 70000 // support running of 1 week with block production time as 10s
 	defaultNumPubRandMax               = 100000
 	defaultMinRandHeightGap            = 35000
+	defaultBatchSubmissionSize         = 1000
 	defaultStatusUpdateInterval        = 20 * time.Second
 	defaultRandomInterval              = 30 * time.Second
 	defaultSubmitRetryInterval         = 1 * time.Second
@@ -60,6 +61,7 @@ type Config struct {
 	MinRandHeightGap            uint32        `long:"minrandheightgap" description:"The minimum gap between the last committed rand height and the current Babylon block height"`
 	MaxSubmissionRetries        uint32        `long:"maxsubmissionretries" description:"The maximum number of retries to submit finality signature or public randomness"`
 	EOTSManagerAddress          string        `long:"eotsmanageraddress" description:"The address of the remote EOTS manager; Empty if the EOTS manager is running locally"`
+	BatchSubmissionSize         uint32        `long:"batchsubmissionsize" description:"The size of a batch in one submission"`
 	StatusUpdateInterval        time.Duration `long:"statusupdateinterval" description:"The interval between each update of finality-provider status"`
 	RandomnessCommitInterval    time.Duration `long:"randomnesscommitinterval" description:"The interval between each attempt to commit public randomness"`
 	SubmissionRetryInterval     time.Duration `long:"submissionretryinterval" description:"The interval between each attempt to submit finality signature or public randomness after a failure"`
@@ -95,6 +97,7 @@ func DefaultConfigWithHome(homePath string) Config {
 		NumPubRand:                  defaultNumPubRand,
 		NumPubRandMax:               defaultNumPubRandMax,
 		MinRandHeightGap:            defaultMinRandHeightGap,
+		BatchSubmissionSize:         defaultBatchSubmissionSize,
 		StatusUpdateInterval:        defaultStatusUpdateInterval,
 		RandomnessCommitInterval:    defaultRandomInterval,
 		SubmissionRetryInterval:     defaultSubmitRetryInterval,
