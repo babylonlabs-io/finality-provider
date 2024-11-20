@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
@@ -22,7 +21,7 @@ func CommandCommitPubRand() *cobra.Command {
 		Use:     "unsafe-commit-pubrand [fp-eots-pk-hex] [block-height]",
 		Aliases: []string{"unsafe-cpr"},
 		Short:   "[UNSAFE] Manually trigger public randomness commitment for a finality provider",
-		Long: `Manually trigger public randomness commitment for a finality provider. ` +
+		Long: `[UNSAFE] Manually trigger public randomness commitment for a finality provider. ` +
 			`WARNING: this can drain the finality provider's balance if the block-height is too high.` +
 			`Note: if there is no pubrand committed before, it will only commit the pubrand for the target block-height.`,
 		Example: `fpd unsafe-commit-pubrand --home /home/user/.fpd [fp-eots-pk-hex] [block-height]`,
@@ -55,9 +54,6 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// override to control the exact block height to commit to
-	cfg.MinRandHeightGap = 0
-
 	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.LogLevel)
 	if err != nil {
 		return fmt.Errorf("failed to initialize the logger: %w", err)
@@ -78,33 +74,5 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return fmt.Errorf("failed to get finality provider instance: %w", err)
 	}
 
-	return commitUntilHeight(fp, blkHeight, cfg.RandomnessCommitInterval)
-}
-
-func commitUntilHeight(
-	fp *service.FinalityProviderInstance,
-	blkHeight uint64,
-	interval time.Duration,
-) error {
-	commitRandTicker := time.NewTicker(interval)
-	defer commitRandTicker.Stop()
-
-	lastCommittedHeight, err := fp.GetLastCommittedHeight()
-	if err != nil {
-		return fmt.Errorf("failed to get last committed height: %w", err)
-	}
-
-	for lastCommittedHeight < blkHeight {
-		<-commitRandTicker.C
-		_, err = fp.CommitPubRand(blkHeight)
-		if err != nil {
-			return fmt.Errorf("failed to commit public randomness: %w", err)
-		}
-
-		lastCommittedHeight, err = fp.GetLastCommittedHeight()
-		if err != nil {
-			return fmt.Errorf("failed to get last committed height: %w", err)
-		}
-	}
-	return nil
+	return fp.TestCommitPubRand(blkHeight)
 }
