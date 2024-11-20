@@ -76,10 +76,10 @@ There are two distinct keys you'll be working with:
   - Stored in the finality provider daemon's keyring
 
   - Example of the finality provider key output:
-    ```shell
-    - address: bbn19gulf0a4yz87twpjl8cxnerc2wr2xqm9fsygn9
-   name: finality-provider
-    ```
+```shell
+- address: bbn19gulf0a4yz87twpjl8cxnerc2wr2xqm9fsygn9
+name: finality-provider
+```
 
 ## Install Finality Provider Binary 
 <!-- TODO: check add in the correct tag for the testnet --> 
@@ -169,7 +169,7 @@ Phase 1 users who already have an EOTS Manager set up can skip to the
 section at the end of this guide for specific instructions 
 on re-using their Phase 1 EOTS keys.
 
-After a node and a keyring have been set up, the operator can set up and run the
+After the full node has been setup, the operator can set up and run the
 Extractable One Time Signature (EOTS) manager daemon.
 
 The EOTS daemon is responsible for managing EOTS keys, producing EOTS
@@ -193,6 +193,11 @@ Once the EOTS Manager is initialized, you need to create an EOTS key:
 ``` shell
 eotsd keys add --key-name <key-name> --home <path> 
 ```
+
+- `<key-name>`: Name for your EOTS key (e.g., "eots-key-1")
+- `--home`: Path to your EOTS daemon home directory (e.g., "~/.eotsd")
+- `--keyring-backend`: Type of keyring storage (use "test" for testing)
+
 
 You will be prompted to enter and confirm a passphrase. 
 Ensure this is completed before starting the daemon.
@@ -222,22 +227,11 @@ have an EOTS key. If you are a new user, you can skip this section.
 >Note: Before proceeding, ensure you have access to your original EOTS key from Phase 1. 
 This is the same key that was registered in the [Phase 1 registration](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers).
 
-To export your EOTS key, use the following command:
+### Step 2: Import Your EOTS Key into the Keyring
 
-```shell 
-eotsd keys export <name>  --home <path> --keyring-backend test > key.asc
-```
+Before importing the key, it should be in a file in the following format.
 
-- `<name>`: Your EOTS key name from Phase 1
-- `--home`: Path to your EOTS daemon home directory
-- `--keyring-backend`: Type of keyring backend (use `test` for testing)
-- `key.asc`: Output file for the exported key
-
-If successful your private key will be saved in `key.asc`
-
-The exported key will look like:
-
-```
+``````
 -----BEGIN TENDERMINT PRIVATE KEY-----
 salt: 35ED0BBC00376EC7FC696838F34A7C36
 type: secp256k1
@@ -247,19 +241,17 @@ kdf: argon2
 VP88GFE=
 =D87O
 -----END TENDERMINT PRIVATE KEY-----
-```
-
-### Step 2: Import Your EOTS Key into the Keyring
+``` 
 
 To load your existing EOTS key, use the following command to import it into the 
 keyring:
 
 ```shell 
-eotsd keys import <name> <path-to-key.asc> --home <path> --keyring-backend test
+eotsd keys import <name> <path-to-key> --home <path> --keyring-backend test
 ```
 
 - `<name>`: New name for your key in Phase 2
-- `<path-to-key.asc>`: Path to the exported key file
+- `<path-to-key>`: Path to the exported key file
 - `--home`: EOTS daemon home directory for Phase 2
 - `--keyring-backend`: Keyring backend type (use `test` for testing)
 
@@ -294,7 +286,7 @@ reference the address of the machine where `eotsd` is running.
 The Finality Provider Daemon (FPD) is responsible for monitoring new Babylon blocks, 
 committing public randomness for the blocks it intends to provide finality signatures for, 
 and submitting finality signatures. For more information on Finality Providers, please see 
-[here](#).
+[here](./finality-provider.md).
 
 ### Step 1: Initialize the Finality Provider Daemon
 
@@ -381,14 +373,14 @@ Key = <finality-provider-key-name-signer> // the key you used above
 ChainID = bbn-test-5 
 RPCAddr = http://127.0.0.1:26657 
 GRPCAddr = https://127.0.0.1:9090 
-KeyDirectory = ./fpKey 
+KeyDirectory = <path> # The `--home`path to the directory where the keyring is stored
 ``` 
 
 ### Step 3: Verify the Key Import
 After importing, verify that your EOTS key was successfully loaded:
 
 ```shell 
-eotsd keys list
+eotsd keys list <key-name> --keyring-backend test --home <path>
 ```
 
 You should see your EOTS key listed with the correct details, confirming that 
@@ -445,9 +437,9 @@ options can also be set in the configuration file.
 ## Create Finality Provider
 
 The `create-finality-provider` command initializes a new finality provider
-instance locally. This command:
+instance locally. 
 
-- Generates a BTC public key that uniquely identifies your finality provider 
+This command generates a BTC public key that uniquely identifies your finality provider. 
 
 ``` shell
 fpd create-finality-provider \ 
@@ -520,10 +512,26 @@ This account will be bonded to your finality provider and used to claim rewards.
 
 ``` shell
 fpd register-finality-provider \
-cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41 \
---daemon-address 127.0.0.1:12581 \ 
+ <btc-public-key> \
+--daemon-address <rpc-address> \ 
 --passphrase <passphrase> \ 
 --home <path> \ 
+```
+
+- `<btc-public-key>`: Your BTC public key from create-finality-provider (e.g., "cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41")
+- `--daemon-address`: RPC address of your finality provider daemon (default: "127.0.0.1:12581")
+- `--passphrase`: Passphrase for your key
+- `--home`: Path to your finality provider daemon home directory (e.g., "~/.fpd")
+- `--keyring-backend`: Type of keyring storage (use "test" for testing, "file" for production)
+
+Example:
+```shell
+fpd register-finality-provider \
+    cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41 \
+    --daemon-address 127.0.0.1:12581 \
+    --passphrase "my-secure-passphrase" \
+    --home ~/.fpd \
+    --keyring-backend test
 ```
 
 > Note: The BTC public key (`cf0f03...1a41`) is obtained from the previous
@@ -581,10 +589,10 @@ elliptic curve.
 - This key is used in the Bitcoin-based security model of
 Babylon.
 
-**b) Babylon Account:** - This is an account on the Babylon blockchain.  - It's
-where staking rewards for the finality provider are sent.  
+**b) Babylon Account:** - This is an account on the Babylon blockchain.  
+- It's where staking rewards for the finality provider are sent.  
 - This account is controlled by the key you use to create and manage the 
-finality provider (the one you added with fpd keys add).
+finality provider (the one you added with `fpd keys add`).
 
 This dual association allows the finality provider to interact with both the
 Bitcoin network (for security) and the Babylon network (for rewards and
@@ -621,7 +629,54 @@ from through the unjailing process, as long as the finality provider wasn't slas
 <!-- Waiting for clarification on this -->
 
 ## Reading the logs
-<!--  TODO: Add information on how to read the logs -->
+
+The logs are stored based on your daemon home directories:
+
+- EOTS Daemon logs
+<eots-home>/logs/eotsd.log
+
+- Finality Provider Daemon logs
+<fpd-home>/logs/fpd.log
+
+You also can access the logs via flags when starting the daemon:
+
+```
+fpd start --home <path> --log_level debug
+```
+ Important Log Events to Monitor
+
+**Status Changes:**
+```shell
+DEBUG "the finality-provider status is changed to ACTIVE"
+DEBUG "the finality-provider is slashed"
+DEBUG "the finality-provider status is changed to INACTIVE"
+```
+
+**Block Finalization Logs:**
+```shell
+INFO "successfully committed public randomness to the consumer chain"
+DEBUG "failed to commit public randomness to the consumer chain"
+DEBUG "checking randomness"
+```
+
+**Finality Votes:**
+```shell
+DEBUG "the block is already finalized, skip submission"
+DEBUG "the finality-provider instance is closing"
+```
+
+You can also review the logs in real-time using standard Unix tools:
+
+```shell
+# Follow EOTS daemon logs
+tail -f <eots-home>/logs/eotsd.log
+
+# Follow Finality Provider daemon logs
+tail -f <fpd-home>/logs/fpd.log
+
+# Filter for specific events (example: status changes)
+tail -f <fpd-home>/logs/fpd.log | grep "status is changed"
+```
 
 ## Withdrawing Rewards
 
