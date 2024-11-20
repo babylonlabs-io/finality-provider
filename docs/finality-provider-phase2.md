@@ -231,7 +231,7 @@ This is the same key that was registered in the [Phase 1 registration](https://g
 
 Before importing the key, it should be in a file in the following format.
 
-``````
+```
 -----BEGIN TENDERMINT PRIVATE KEY-----
 salt: 35ED0BBC00376EC7FC696838F34A7C36
 type: secp256k1
