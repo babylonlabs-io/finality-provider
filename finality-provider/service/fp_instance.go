@@ -767,6 +767,7 @@ func (fp *FinalityProviderInstance) TestCommitPubRand(targetBlockHeight uint64) 
 			lastCommittedHeight,
 		)
 	}
+	fmt.Printf("Start committing pubrand from block height %d...\n", startHeight)
 
 	commitRandTicker := time.NewTicker(fp.cfg.RandomnessCommitInterval)
 	defer commitRandTicker.Stop()
@@ -779,6 +780,7 @@ func (fp *FinalityProviderInstance) TestCommitPubRand(targetBlockHeight uint64) 
 		}
 		lastCommittedHeight = startHeight + fp.cfg.NumPubRand - 1
 		fp.metrics.RecordFpLastCommittedRandomnessHeight(fp.GetBtcPkHex(), lastCommittedHeight)
+		fmt.Printf("Committed pubrand to block height %d\n", lastCommittedHeight)
 	}
 
 	// no error. success
