@@ -669,12 +669,15 @@ func (fp *FinalityProviderInstance) retryCommitPubRandUntilMaxRetry(targetBlockH
 // CommitPubRand generates a list of Schnorr rand pairs,
 // commits the public randomness for the managed finality providers,
 // and save the randomness pair to DB
-// Note: if the targetBlockHeight is too large, it will only commit fp.cfg.NumPubRand pairs
+// Note:
+// - if there is no pubrand committed before, it will start from the targetBlockHeight
+// - if the targetBlockHeight is too large, it will only commit fp.cfg.NumPubRand pairs
 func (fp *FinalityProviderInstance) CommitPubRand(targetBlockHeight uint64) (*types.TxResponse, error) {
 	lastCommittedHeight, err := fp.GetLastCommittedHeight()
 	if err != nil {
 		return nil, err
 	}
+	fp.metrics.RecordFpLastCommittedRandomnessHeight(fp.GetBtcPkHex(), lastCommittedHeight)
 
 	var startHeight uint64
 	if lastCommittedHeight == uint64(0) {
@@ -694,6 +697,11 @@ func (fp *FinalityProviderInstance) CommitPubRand(targetBlockHeight uint64) (*ty
 		return nil, nil
 	}
 
+	return fp.commitPubRandPairs(startHeight)
+}
+
+// it will commit fp.cfg.NumPubRand pairs of public randomness starting from startHeight
+func (fp *FinalityProviderInstance) commitPubRandPairs(startHeight uint64) (*types.TxResponse, error) {
 	// generate a list of Schnorr randomness pairs
 	// NOTE: currently, calling this will create and save a list of randomness
 	// in case of failure, randomness that has been created will be overwritten
@@ -725,10 +733,56 @@ func (fp *FinalityProviderInstance) CommitPubRand(targetBlockHeight uint64) (*ty
 
 	// Update metrics
 	fp.metrics.RecordFpRandomnessTime(fp.GetBtcPkHex())
-	fp.metrics.RecordFpLastCommittedRandomnessHeight(fp.GetBtcPkHex(), lastCommittedHeight)
 	fp.metrics.AddToFpTotalCommittedRandomness(fp.GetBtcPkHex(), float64(len(pubRandList)))
 
 	return res, nil
+}
+
+// TestCommitPubRand is exposed for devops/testing purpose to allow manual committing public randomness in cases
+// where FP is stuck due to lack of public randomness (https://github.com/babylonlabs-io/finality-provider/issues/115).
+//
+// Note:
+// - this function is similar to `CommitPubRand` but should not be used in the main pubrand submission loop.
+// - it will always start from the last committed height + 1
+// - if targetBlockHeight is too large, it will commit multiple fp.cfg.NumPubRand pairs in a loop until reaching the targetBlockHeight
+func (fp *FinalityProviderInstance) TestCommitPubRand(targetBlockHeight uint64) error {
+	lastCommittedHeight, err := fp.GetLastCommittedHeight()
+	if err != nil {
+		return err
+	}
+	fp.metrics.RecordFpLastCommittedRandomnessHeight(fp.GetBtcPkHex(), lastCommittedHeight)
+
+	var startHeight uint64
+	if lastCommittedHeight == uint64(0) {
+		// Note: it can also be the case that the finality-provider has committed 1 pubrand before (but in practice, we
+		// will never set cfg.NumPubRand to 1. so we can safely assume it has never committed before)
+		startHeight = 0
+	} else if lastCommittedHeight < targetBlockHeight {
+		startHeight = lastCommittedHeight + 1
+	} else {
+		return fmt.Errorf(
+			"finality provider has already committed pubrand to target block height (pk: %s, target: %d, last committed: %d)",
+			fp.GetBtcPkHex(),
+			targetBlockHeight,
+			lastCommittedHeight,
+		)
+	}
+
+	commitRandTicker := time.NewTicker(fp.cfg.RandomnessCommitInterval)
+	defer commitRandTicker.Stop()
+
+	for lastCommittedHeight < targetBlockHeight {
+		<-commitRandTicker.C
+		_, err = fp.commitPubRandPairs(startHeight)
+		if err != nil {
+			return err
+		}
+		lastCommittedHeight = startHeight + fp.cfg.NumPubRand - 1
+		fp.metrics.RecordFpLastCommittedRandomnessHeight(fp.GetBtcPkHex(), lastCommittedHeight)
+	}
+
+	// no error. success
+	return nil
 }
 
 // SubmitFinalitySignature builds and sends a finality signature over the given block to the consumer chain
