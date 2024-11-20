@@ -109,8 +109,8 @@ func TestDoubleSigning(t *testing.T) {
 	t.Logf("the equivocation attack is successful")
 }
 
-// TestFastSync tests the fast sync process where the finality-provider is terminated and restarted with fast sync
-func TestFastSync(t *testing.T) {
+// TestCatchingUp tests if a fp can catch up after restarted
+func TestCatchingUp(t *testing.T) {
 	tm, fpIns := StartManagerWithFinalityProvider(t)
 	defer tm.Stop(t)
 
@@ -142,7 +142,6 @@ func TestFastSync(t *testing.T) {
 
 	n := 3
 	// stop the finality-provider for a few blocks then restart to trigger the fast sync
-	tm.FpConfig.FastSyncGap = uint64(n)
 	tm.StopAndRestartFpAfterNBlocks(t, n, fpIns)
 
 	// check there are n+1 blocks finalized
