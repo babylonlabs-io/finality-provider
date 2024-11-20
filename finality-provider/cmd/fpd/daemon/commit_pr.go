@@ -6,10 +6,14 @@ import (
 	"strconv"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
+	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/log"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/util"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
@@ -60,19 +64,37 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return fmt.Errorf("failed to initialize the logger: %w", err)
 	}
 
-	dbBackend, err := cfg.DatabaseConfig.GetDbBackend()
+	db, err := cfg.DatabaseConfig.GetDbBackend()
 	if err != nil {
 		return fmt.Errorf("failed to create db backend: %w", err)
 	}
 
-	fpApp, err := service.NewFinalityProviderAppFromConfig(cfg, dbBackend, logger)
+	fpStore, err := store.NewFinalityProviderStore(db)
 	if err != nil {
-		return fmt.Errorf("failed to create finality-provider app: %w", err)
+		return fmt.Errorf("failed to initiate finality provider store: %w", err)
+	}
+	pubRandStore, err := store.NewPubRandProofStore(db)
+	if err != nil {
+		return fmt.Errorf("failed to initiate public randomness store: %w", err)
+	}
+	cc, err := fpcc.NewClientController(cfg, logger)
+	if err != nil {
+		return fmt.Errorf("failed to create rpc client for the Babylon chain: %w", err)
+	}
+	consumerCon, err := fpcc.NewConsumerController(cfg, logger)
+	if err != nil {
+		return fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
+	}
+	em, err := eotsclient.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress)
+	if err != nil {
+		return fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}
 
-	fp, err := fpApp.GetFinalityProviderInstance(fpPk)
+	fp, err := service.TestNewUnregisteredFinalityProviderInstance(
+		fpPk, cfg, fpStore, pubRandStore, cc, consumerCon, em, metrics.NewFpMetrics(), "",
+		make(chan<- *service.CriticalError), logger)
 	if err != nil {
-		return fmt.Errorf("failed to get finality provider instance: %w", err)
+		return fmt.Errorf("failed to create finality-provider %s instance: %w", fpPk.MarshalHex(), err)
 	}
 
 	return fp.TestCommitPubRand(blkHeight)

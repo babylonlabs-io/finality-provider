@@ -81,6 +81,46 @@ func NewFinalityProviderInstance(
 		return nil, fmt.Errorf("the finality-provider %s has not been registered", sfp.KeyName)
 	}
 
+	return newFinalityProviderInstanceFromStore(sfp, cfg, s, prStore, cc, consumerCon, em, metrics, passphrase, errChan, logger)
+}
+
+// TestNewUnregisteredFinalityProviderInstance creates a FinalityProviderInstance without checking registration status
+// Note: this is only for testing purposes
+func TestNewUnregisteredFinalityProviderInstance(
+	fpPk *bbntypes.BIP340PubKey,
+	cfg *fpcfg.Config,
+	s *store.FinalityProviderStore,
+	prStore *store.PubRandProofStore,
+	cc ccapi.ClientController,
+	consumerCon ccapi.ConsumerController,
+	em eotsmanager.EOTSManager,
+	metrics *metrics.FpMetrics,
+	passphrase string,
+	errChan chan<- *CriticalError,
+	logger *zap.Logger,
+) (*FinalityProviderInstance, error) {
+	sfp, err := s.GetFinalityProvider(fpPk.MustToBTCPK())
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrive the finality-provider %s from DB: %w", fpPk.MarshalHex(), err)
+	}
+
+	return newFinalityProviderInstanceFromStore(sfp, cfg, s, prStore, cc, consumerCon, em, metrics, passphrase, errChan, logger)
+}
+
+// Helper function to create FinalityProviderInstance from store data
+func newFinalityProviderInstanceFromStore(
+	sfp *store.StoredFinalityProvider,
+	cfg *fpcfg.Config,
+	s *store.FinalityProviderStore,
+	prStore *store.PubRandProofStore,
+	cc ccapi.ClientController,
+	consumerCon ccapi.ConsumerController,
+	em eotsmanager.EOTSManager,
+	metrics *metrics.FpMetrics,
+	passphrase string,
+	errChan chan<- *CriticalError,
+	logger *zap.Logger,
+) (*FinalityProviderInstance, error) {
 	return &FinalityProviderInstance{
 		btcPk:           bbntypes.NewBIP340PubKeyFromBTCPK(sfp.BtcPk),
 		fpState:         NewFpState(sfp, s),
