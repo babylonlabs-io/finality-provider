@@ -5,32 +5,38 @@ management of Finality Providers.
 
 ## 1. Overview
 
-Finality providers are responsible for voting
-at a finality round on top of [CometBFT](https://github.com/cometbft/cometbft).
-Similar to any native PoS validator,
-a finality provider can receive voting power delegations from BTC stakers, and
-can earn commission from the staking rewards denominated in Babylon tokens.
-The core logic of a finality provider instance can be found in
-[Finality Provider Core](./docs/fp-core.md).
+Finality providers are key participants in Babylon's consensus 
+mechanism. They provide finality votes on top of 
+[CometBFT](https://github.com/cometbft/cometbft), manage public randomness 
+commitments, and participate in the Proof of Stake (PoS) system. Through these 
+activities, they can earn commissions from BTC staking delegations.
 
-The finality provider toolset does not have
-any special hardware requirements
-and can operate on standard mid-sized machines
-running a UNIX-flavored operating system.
-It consists of the following programs:
+The finality provider toolset operates on standard UNIX-based 
+systems and consists of three core components:
 
-- *Babylon full node*: An instance of a Babylon node connecting to
-  the Babylon network. Running one is not a strict requirement,
-  but it is recommended for security compared to trusting a third-party RPC node.
-- *Extractable One-Time Signature (EOTS) manager*:
-  A daemon responsible for securely maintaining the finality provider’s
-  private key and producing extractable one time signatures from it.
-- *Finality Provider*: A daemon managing the finality provider.
-  It connects to the EOTS manager to generate EOTS public randomness and
-  finality votes for Babylon blocks, which it submits to Babylon through
-  the node connection.
+### 1. Babylon Full Node
+A Babylon network node that provides chain data and transaction 
+submission capabilities. While not mandatory, running your own node is 
+strongly recommended for security rather than relying on third-party RPC nodes. 
+See the [Setup Node Guide](https://docs.babylonchain.io/docs/user-guides/btc-staking-testnet/setup-node) for details.
 
-The following graphic demonstrates the interconnections between the above programs:
+### 2. Extractable One-Time Signature (EOTS) Manager
+A secure key management daemon that handles private key operations, 
+generates extractable one-time signatures, and produces public randomness. 
+For enhanced security, this component should run on a separate machine or 
+network segment. Full details are available in the [EOTS Manager Guide](docs/eots.md).
+
+### 3. Finality Provider Daemon
+The main daemon that monitors Babylon blocks, commits public randomness, and 
+submits finality signatures. It manages provider status transitions and handles 
+rewards distribution. See the [Finality Provider Guide](docs/finality-provider.md) 
+for complete documentation.
+
+### Component Interactions
+The Finality Provider daemon communicates with the Babylon Node to monitor blocks 
+and submit transactions. It interacts with the EOTS Manager for signature and 
+randomness generation. The EOTS Manager maintains secure key storage and handles 
+all private key operations.
 
 ![Finality Provider Interconnections](./docs/FP.png)
 

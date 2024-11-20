@@ -11,16 +11,26 @@ providers:
 
 1. **Creation and Registration**: Creates and registers finality providers to
    Babylon.
+
 2. **EOTS Randomness Commitment**: The daemon monitors the Babylon chain and commits
    EOTS public randomness for every Babylon block each finality provider intends to
-   vote for. The commit intervals can be specified in the configuration. The EOTS
-   public randomness is retrieved through the finality provider daemon's connection
-   with the [EOTS daemon](eots.md).
+   vote for. The commit intervals can be specified in the configuration.
+
 3. **Finality Votes Submission**: The daemon monitors the Babylon chain and produces
    finality votes for each block each maintained finality provider has committed to
    vote for.
 
-The daemon is controlled by the `fpd` tool, which has overall commands for
+4. **Status Management**: The daemon continuously monitors voting power and overall
+   provider status. It manages state transitions between `ACTIVE`, `INACTIVE`,
+   `JAILED`, and `SLASHED` states, while enforcing slashing conditions and handling
+   the jailing process when violations occur.
+
+5. **Security and Key Management**: The system manages EOTS keys for signature
+   generation and Babylon keys for transaction processing and rewards distribution.
+   It maintains secure coordination with the EOTS daemon for all key-related
+   operations.
+
+The daemon is controlled by the `fpd` tool, which provides commands for
 interacting with the running daemon.
 
 ## 2. Configuration
