@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
+
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
@@ -48,7 +49,7 @@ func FuzzCommitPubRandList(f *testing.F) {
 	})
 }
 
-func FuzzSubmitFinalitySig(f *testing.F) {
+func FuzzSubmitFinalitySigs(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
@@ -87,9 +88,9 @@ func FuzzSubmitFinalitySig(f *testing.F) {
 		}
 		expectedTxHash := testutil.GenRandomHexStr(r, 32)
 		mockConsumerController.EXPECT().
-			SubmitFinalitySig(fpIns.GetBtcPk(), nextBlock, gomock.Any(), gomock.Any(), gomock.Any()).
+			SubmitBatchFinalitySigs(fpIns.GetBtcPk(), []*types.BlockInfo{nextBlock}, gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
-		providerRes, err := fpIns.SubmitFinalitySignature(nextBlock)
+		providerRes, err := fpIns.SubmitBatchFinalitySignatures([]*types.BlockInfo{nextBlock})
 		require.NoError(t, err)
 		require.Equal(t, expectedTxHash, providerRes.TxHash)
 

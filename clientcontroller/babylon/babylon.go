@@ -18,6 +18,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
+	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	sttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -145,7 +146,125 @@ func (bc *BabylonController) RegisterFinalityProvider(
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-func (bc *BabylonController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error) {
+// CommitPubRandList commits a list of Schnorr public randomness via a MsgCommitPubRand to Babylon
+// it returns tx hash and error
+func (bc *BabylonController) CommitPubRandList(
+	fpPk *btcec.PublicKey,
+	startHeight uint64,
+	numPubRand uint64,
+	commitment []byte,
+	sig *schnorr.Signature,
+) (*types.TxResponse, error) {
+	msg := &finalitytypes.MsgCommitPubRandList{
+		Signer:      bc.MustGetTxSigner(),
+		FpBtcPk:     bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
+		StartHeight: startHeight,
+		NumPubRand:  numPubRand,
+		Commitment:  commitment,
+		Sig:         bbntypes.NewBIP340SignatureFromBTCSig(sig),
+	}
+
+	unrecoverableErrs := []*sdkErr.Error{
+		finalitytypes.ErrInvalidPubRand,
+		finalitytypes.ErrTooFewPubRand,
+		finalitytypes.ErrNoPubRandYet,
+		btcstakingtypes.ErrFpNotFound,
+	}
+
+	res, err := bc.reliablySendMsg(msg, emptyErrs, unrecoverableErrs)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.TxResponse{TxHash: res.TxHash}, nil
+}
+
+// SubmitFinalitySig submits the finality signature via a MsgAddVote to Babylon
+func (bc *BabylonController) SubmitFinalitySig(
+	fpPk *btcec.PublicKey,
+	block *types.BlockInfo,
+	pubRand *btcec.FieldVal,
+	proof []byte, // TODO: have a type for proof
+	sig *btcec.ModNScalar,
+) (*types.TxResponse, error) {
+	return bc.SubmitBatchFinalitySigs(
+		fpPk, []*types.BlockInfo{block}, []*btcec.FieldVal{pubRand},
+		[][]byte{proof}, []*btcec.ModNScalar{sig},
+	)
+}
+
+// SubmitBatchFinalitySigs submits a batch of finality signatures to Babylon
+func (bc *BabylonController) SubmitBatchFinalitySigs(
+	fpPk *btcec.PublicKey,
+	blocks []*types.BlockInfo,
+	pubRandList []*btcec.FieldVal,
+	proofList [][]byte,
+	sigs []*btcec.ModNScalar,
+) (*types.TxResponse, error) {
+	if len(blocks) != len(sigs) {
+		return nil, fmt.Errorf("the number of blocks %v should match the number of finality signatures %v", len(blocks), len(sigs))
+	}
+
+	msgs := make([]sdk.Msg, 0, len(blocks))
+	for i, b := range blocks {
+		cmtProof := cmtcrypto.Proof{}
+		if err := cmtProof.Unmarshal(proofList[i]); err != nil {
+			return nil, err
+		}
+
+		msg := &finalitytypes.MsgAddFinalitySig{
+			Signer:       bc.MustGetTxSigner(),
+			FpBtcPk:      bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
+			BlockHeight:  b.Height,
+			PubRand:      bbntypes.NewSchnorrPubRandFromFieldVal(pubRandList[i]),
+			Proof:        &cmtProof,
+			BlockAppHash: b.Hash,
+			FinalitySig:  bbntypes.NewSchnorrEOTSSigFromModNScalar(sigs[i]),
+		}
+		msgs = append(msgs, msg)
+	}
+
+	unrecoverableErrs := []*sdkErr.Error{
+		finalitytypes.ErrInvalidFinalitySig,
+		finalitytypes.ErrPubRandNotFound,
+		btcstakingtypes.ErrFpAlreadySlashed,
+	}
+
+	res, err := bc.reliablySendMsgs(msgs, emptyErrs, unrecoverableErrs)
+	if err != nil {
+		return nil, err
+	}
+
+	if res == nil {
+		return &types.TxResponse{}, nil
+	}
+
+	return &types.TxResponse{TxHash: res.TxHash}, nil
+}
+
+// UnjailFinalityProvider sends an unjail transaction to the consumer chain
+func (bc *BabylonController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error) {
+	msg := &finalitytypes.MsgUnjailFinalityProvider{
+		Signer:  bc.MustGetTxSigner(),
+		FpBtcPk: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
+	}
+
+	unrecoverableErrs := []*sdkErr.Error{
+		btcstakingtypes.ErrFpNotFound,
+		btcstakingtypes.ErrFpNotJailed,
+		btcstakingtypes.ErrFpAlreadySlashed,
+	}
+
+	res, err := bc.reliablySendMsg(msg, emptyErrs, unrecoverableErrs)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.TxResponse{TxHash: res.TxHash}, nil
+}
+
+// QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
+func (bc *BabylonController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {

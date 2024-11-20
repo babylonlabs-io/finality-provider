@@ -357,8 +357,6 @@ func createBaseFpConfig(fpHomeDir string, index int, logger *zap.Logger) *fpcfg.
 	cfg.RandomnessCommitInterval = 2 * time.Second
 	cfg.NumPubRand = 100
 	cfg.MinRandHeightGap = 1000
-	cfg.FastSyncGap = 60
-	cfg.FastSyncLimit = 100
 	return cfg
 }
 
