@@ -95,7 +95,8 @@ func FuzzNewValidateSignedFinalityProviderCmd(f *testing.F) {
 		tx, err = tempApp.TxConfig().TxJSONDecoder()([]byte(signedMsgStr))
 		require.NoError(t, err)
 
-		msgSigned := tx.GetMsgs()[0].(*btcstakingtypes.MsgCreateFinalityProvider)
+		msgSigned, ok := tx.GetMsgs()[0].(*btcstakingtypes.MsgCreateFinalityProvider)
+		require.True(t, ok)
 		require.Equal(t, msgSigned.Addr, fpAddr.String())
 
 		// executes the verification.
@@ -148,7 +149,7 @@ func execUnmarshal[structure any](t *testing.T, root *cobra.Command, rootCmdBuf 
 	var typed structure
 	_, outStr := exec(t, root, rootCmdBuf, args...)
 
-	// helpfull for debug
+	// helpful for debug
 	// fmt.Printf("\nargs %s", strings.Join(args, " "))
 	// fmt.Printf("\nout %s", outStr)
 

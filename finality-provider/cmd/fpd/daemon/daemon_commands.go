@@ -13,7 +13,6 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/types"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -44,7 +43,7 @@ func CommandGetDaemonInfo() *cobra.Command {
 	return cmd
 }
 
-func runCommandGetDaemonInfo(cmd *cobra.Command, args []string) error {
+func runCommandGetDaemonInfo(cmd *cobra.Command, _ []string) error {
 	daemonAddress, err := cmd.Flags().GetString(fpdDaemonAddressFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
@@ -90,7 +89,7 @@ func CommandCreateFP() *cobra.Command {
 	f.String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
 	f.String(keyNameFlag, "", "The unique name of the finality provider key")
 	f.String(sdkflags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
-	f.String(chainIdFlag, "", "The identifier of the consumer chain")
+	f.String(chainIDFlag, "", "The identifier of the consumer chain")
 	f.String(passphraseFlag, "", "The pass phrase used to encrypt the keys")
 	f.String(hdPathFlag, "", "The hd path used to derive the private key")
 	f.String(commissionRateFlag, "0.05", "The commission rate for the finality provider, e.g., 0.05")
@@ -140,9 +139,9 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		}
 	}()
 
-	chainId, err := flags.GetString(chainIdFlag)
+	chainID, err := flags.GetString(chainIDFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", chainIdFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", chainIDFlag, err)
 	}
 
 	passphrase, err := flags.GetString(passphraseFlag)
@@ -171,7 +170,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 	info, err := client.CreateFinalityProvider(
 		context.Background(),
 		keyName,
-		chainId,
+		chainID,
 		eotsPkHex,
 		passphrase,
 		hdPath,
@@ -228,8 +227,9 @@ func runCommandUnjailFP(_ client.Context, cmd *cobra.Command, args []string) err
 	return nil
 }
 
-func getDescriptionFromFlags(f *pflag.FlagSet) (desc stakingtypes.Description, err error) {
+func getDescriptionFromFlags(f *pflag.FlagSet) (stakingtypes.Description, error) {
 	// get information for description
+	var desc stakingtypes.Description
 	monikerStr, err := f.GetString(monikerFlag)
 	if err != nil {
 		return desc, fmt.Errorf("failed to read flag %s: %w", monikerFlag, err)
@@ -269,7 +269,7 @@ func CommandLsFP() *cobra.Command {
 	return cmd
 }
 
-func runCommandLsFP(cmd *cobra.Command, args []string) error {
+func runCommandLsFP(cmd *cobra.Command, _ []string) error {
 	daemonAddress, err := cmd.Flags().GetString(fpdDaemonAddressFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
@@ -309,7 +309,7 @@ func CommandInfoFP() *cobra.Command {
 }
 
 func runCommandInfoFP(cmd *cobra.Command, args []string) error {
-	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
+	fpPk, err := types.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
 		return err
 	}
@@ -355,7 +355,7 @@ func CommandRegisterFP() *cobra.Command {
 }
 
 func runCommandRegisterFP(cmd *cobra.Command, args []string) error {
-	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
+	fpPk, err := types.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
 		return err
 	}
@@ -406,7 +406,7 @@ func CommandAddFinalitySig() *cobra.Command {
 }
 
 func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
-	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
+	fpPk, err := types.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
 		return err
 	}
@@ -476,7 +476,7 @@ func CommandEditFinalityDescription() *cobra.Command {
 }
 
 func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error {
-	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
+	fpPk, err := types.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
 		return err
 	}
@@ -513,7 +513,7 @@ func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error 
 	}
 
 	if err := grpcClient.EditFinalityProvider(cmd.Context(), fpPk, desc, rate); err != nil {
-		return fmt.Errorf("failed to edit finality provider %v err %v", fpPk.MarshalHex(), err)
+		return fmt.Errorf("failed to edit finality provider %v err %w", fpPk.MarshalHex(), err)
 	}
 
 	return nil
@@ -543,7 +543,7 @@ func loadKeyName(homeDir string, cmd *cobra.Command) (string, error) {
 	// beforehand
 	cfg, err := fpcfg.LoadConfig(homeDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to load config from %s: %w", fpcfg.ConfigFile(homeDir), err)
+		return "", fmt.Errorf("failed to load config from %s: %w", fpcfg.CfgFile(homeDir), err)
 	}
 
 	keyName = cfg.BabylonConfig.Key

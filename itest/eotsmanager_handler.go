@@ -19,7 +19,7 @@ type EOTSServerHandler struct {
 }
 
 func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string, shutdownInterceptor signal.Interceptor) *EOTSServerHandler {
-	dbBackend, err := cfg.DatabaseConfig.GetDbBackend()
+	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 	logger := zap.NewNop()
 	eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, cfg.KeyringBackend, dbBackend, logger)

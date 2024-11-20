@@ -49,7 +49,7 @@ func FuzzCommitPubRandList(f *testing.F) {
 	})
 }
 
-func FuzzSubmitFinalitySig(f *testing.F) {
+func FuzzSubmitFinalitySigs(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
@@ -87,9 +87,9 @@ func FuzzSubmitFinalitySig(f *testing.F) {
 		}
 		expectedTxHash := testutil.GenRandomHexStr(r, 32)
 		mockClientController.EXPECT().
-			SubmitFinalitySig(fpIns.GetBtcPk(), nextBlock, gomock.Any(), gomock.Any(), gomock.Any()).
+			SubmitBatchFinalitySigs(fpIns.GetBtcPk(), []*types.BlockInfo{nextBlock}, gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
-		providerRes, err := fpIns.SubmitFinalitySignature(nextBlock)
+		providerRes, err := fpIns.SubmitBatchFinalitySignatures([]*types.BlockInfo{nextBlock})
 		require.NoError(t, err)
 		require.Equal(t, expectedTxHash, providerRes.TxHash)
 
@@ -104,7 +104,7 @@ func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc cli
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
-	eotsdb, err := eotsCfg.DatabaseConfig.GetDbBackend()
+	eotsdb, err := eotsCfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 	em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, eotsdb, logger)
 	require.NoError(t, err)
@@ -115,7 +115,7 @@ func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc cli
 	fpCfg.NumPubRand = testutil.TestPubRandNum
 	fpCfg.PollerConfig.AutoChainScanningMode = false
 	fpCfg.PollerConfig.StaticChainScanningStartHeight = startingHeight
-	db, err := fpCfg.DatabaseConfig.GetDbBackend()
+	db, err := fpCfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 	app, err := service.NewFinalityProviderApp(&fpCfg, cc, em, db, logger)
 	require.NoError(t, err)

@@ -64,7 +64,7 @@ type fpState struct {
 	s  *store.FinalityProviderStore
 }
 
-func NewFpState(
+func newFpState(
 	fp *store.StoredFinalityProvider,
 	s *store.FinalityProviderStore,
 ) *fpState {

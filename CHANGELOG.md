@@ -37,6 +37,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#132](https://github.com/babylonlabs-io/finality-provider/pull/132) Replace fast sync with batch processing
+
+### Documentation
+
+[#120](https://github.com/babylonlabs-io/finality-provider/pull/120) Spec of
+finality vote submission
+
+## v0.11.0
+
+### Improvements
+
+* [#126](https://github.com/babylonlabs-io/finality-provider/pull/126) Adds linting config
+* [#128](https://github.com/babylonlabs-io/finality-provider/pull/128) Upgrade Babylon to v0.16.0
+
+### Documentation
+
+* [#117](https://github.com/babylonlabs-io/finality-provider/pull/117) Spec of
+commit public randomness
+
+### Bug Fixes
+
+* [#124](https://github.com/babylonlabs-io/finality-provider/pull/124) Ignore
+duplicated finality vote error
+
 ## v0.10.0
 
 ### Improvements

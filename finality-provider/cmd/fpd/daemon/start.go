@@ -36,7 +36,7 @@ func CommandStart() *cobra.Command {
 	return cmd
 }
 
-func runStartCmd(ctx client.Context, cmd *cobra.Command, args []string) error {
+func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	homePath, err := filepath.Abs(ctx.HomeDir)
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("invalid RPC listener address %s, %w", rpcListener, err)
 		}
-		cfg.RpcListener = rpcListener
+		cfg.RPCListener = rpcListener
 	}
 
 	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.LogLevel)
@@ -77,7 +77,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to initialize the logger: %w", err)
 	}
 
-	dbBackend, err := cfg.DatabaseConfig.GetDbBackend()
+	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
 	if err != nil {
 		return fmt.Errorf("failed to create db backend: %w", err)
 	}
@@ -109,7 +109,7 @@ func loadApp(
 ) (*service.FinalityProviderApp, error) {
 	fpApp, err := service.NewFinalityProviderAppFromConfig(cfg, dbBackend, logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create finality-provider app: %v", err)
+		return nil, fmt.Errorf("failed to create finality-provider app: %w", err)
 	}
 
 	return fpApp, nil
