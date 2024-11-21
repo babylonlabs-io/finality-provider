@@ -10,30 +10,26 @@ that will be receiving your rewards
 
 <!--- need table of contents -->
 
-## Preliminaries
-
-
-
-### Finality Provider
-
-* Finality provider and EOTS manager -> we can link to them from the README.
-* 
-
-
-## Prerequisites
-
-1. Babylon Full Node: Operating a finality provider requires a connection
-   with a Babylon blockchain node in order to receive new blocks to vote for
-   and submitting votes and public randomness. It is highly recommended for finality
-   providers to operate their own Babylon full node instead of relying on third parties.
-   You can find instructions on how to set up a Babylon node
-   [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/node-setup) <!-- TODO: update link -->
-2. Funded Babylon keyring: You need to have a keyring to submit transactions.
-   Note that successful block votes get their gas refunded, while randomness submissions
-   come out of your pocket. 
-   You can find more details on the required funds for operating a finality provider [here]().
-   If you are operating a finality provider for the testnet, you can get funds from our [faucet]().
-<!--- the finality provider won't have set up a key at the moment so, the above comments might be out of place -->
+<!--- This document is an operational document.
+It is not targeted to people that need to understand on a deep
+level what the finality provider is or does, it is targeted
+to devops people that are responsible for operating a finality provider.
+These people need to know the following:
+* How do I install the finality provider toolset and set it up.
+* What is included in the finality provider toolset (fpd, eotsd),
+  and what do these tools correspond to.
+* How do I set up the toolset and daemons and how do I connect them
+  with each other. Security tips?
+* What keys do I need for the operation of this stack,
+  and what is the security level I should apply to them.
+    * should I hold funds into them?
+* What is the lifecycle of my finality provider:
+   * registration, creation, submitting votes and public randomness
+   * being active/inactive
+   * being jailed and unjailing
+   * being slahsed and how it can happen and how I can be protected against it
+* How do I understand my rewards and retrieve them?
+-->
 
 ## Phase-1 Finality Providers
 
@@ -308,6 +304,13 @@ signing.
 
 >Note: Please verify the `chain-id` and other network parameters from the official 
 Babylon Networks repository at [https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers)
+ 
+Funded Babylon keyring: You need to have a keyring to submit transactions.
+   Note that successful block votes get their gas refunded, while randomness submissions
+   come out of your pocket.
+   You can find more details on the required funds for operating a finality provider [here]().
+   If you are operating a finality provider for the testnet, you can get funds from our [faucet]().
+<!--- the finality provider won't have set up a key at the moment so, the above comments might be out of place -->
 
 >The configuration below requires to point to the path where this keyring is
  stored `KeyDirectory`. This `Key` field stores the key name used for
@@ -331,6 +334,13 @@ RPCAddr = http://127.0.0.1:26657
 GRPCAddr = https://127.0.0.1:9090 
 KeyDirectory = <path> # The `--home`path to the directory where the keyring is stored
 ``` 
+
+RPC Address: Operating a finality provider requires a connection
+with a Babylon blockchain node in order to receive new blocks to vote for
+and submitting votes and public randomness. It is highly recommended for finality
+providers to operate their own Babylon full node instead of relying on third parties.
+You can find instructions on how to set up a Babylon node
+[here](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/node-setup) <!-- TODO: update link -->
 
 ### Step 3: Verify the Key Import
 After importing, verify that your EOTS key was successfully loaded:
