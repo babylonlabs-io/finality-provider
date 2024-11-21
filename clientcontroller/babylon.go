@@ -284,6 +284,13 @@ func (bc *BabylonController) QueryFinalityProviderVotingPower(fpPk *btcec.Public
 		blockHeight,
 	)
 	if err != nil {
+		// voting power table not updated indicates that no fp has voting power
+		// therefore, it should be treated as the fp having 0 voting power
+		if strings.Contains(err.Error(), finalitytypes.ErrVotingPowerTableNotUpdated.Error()) {
+			bc.logger.Info("the voting power table not updated yet")
+			return 0, nil
+		}
+
 		return 0, fmt.Errorf("failed to query Finality Voting Power at Height %d: %w", blockHeight, err)
 	}
 
