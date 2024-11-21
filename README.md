@@ -13,31 +13,29 @@ Through these activities, they can earn commissions from BTC staking delegations
 The finality provider toolset operates on standard UNIX-based 
 systems and consists of three core components:
 
-### 1. Babylon Full Node
+1. **Babylon Node**:
 A Babylon network node that provides chain data and transaction 
 submission capabilities. While not mandatory, running your own node is 
 strongly recommended for security rather than relying on third-party RPC nodes. 
 See the [Setup Node Guide](https://docs.babylonchain.io/docs/user-guides/btc-staking-testnet/setup-node) for details.
-
-### 2. Extractable One-Time Signature (EOTS) Manager
+2. **Extractable One-Time Signature (EOTS) Manager**:
 A secure key management daemon that handles EOTS key operations, 
 generates extractable one-time signatures, and produces public randomness. 
 For enhanced security, this component should run on a separate machine or 
 network segment. Full details are available in the [EOTS Manager Guide](docs/eots.md).
-
-### 3. Finality Provider Daemon
+3. **Finality Provider Daemon**:
 The core daemon that polls Babylon blocks, commits public randomness, and 
 submits finality signatures. It manages provider status transitions and handles 
 rewards distribution. See the [Finality Provider Guide](docs/finality-provider.md) 
 for complete documentation.
 
-### Component Interactions
+**Component Interactions**:
 The Finality Provider daemon communicates with the Babylon Node to monitor blocks 
 and submit transactions. It interacts with the EOTS Manager for signature and 
 randomness generation. The EOTS Manager maintains secure key storage and handles 
 all EOTS key operations.
 
-![Finality Provider Interconnections](./docs/FP.png)
+![Finality Provider Architecture Diagram](./docs/static/finality-provider-arch.png)
 
 ## 2. Installation
 

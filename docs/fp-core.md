@@ -10,7 +10,7 @@ A finality provider has the following 5 possible states: `Registered`,
 `Inactive`, `Active`, `Jailed`, `Slashed`. The state transition is depicted
 in the following diagram.
 
-![Finality Provider Status Transition](./fp-status-transition.png).
+![Finality Provider Status Transition](./static/fp-status-transition.png).
 
 ## Invariants
 
