@@ -276,14 +276,7 @@ func (app *FinalityProviderApp) SyncFinalityProviderStatus() (fpInstanceRunning 
 	for _, fp := range fps {
 		hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(fp.BtcPk, latestBlockHeight)
 		if err != nil {
-			// if ther error is that there is nothing in the voting power table
-			// it should continue and consider the voting power
-			// as zero to start the finality provider and send public randomness
-			allowedErr := fmt.Sprintf("failed to query Finality Voting Power at Height %d: rpc error: code = Unknown desc = %s: unknown request", latestBlockHeight, bstypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", latestBlockHeight).Error())
-			if !strings.EqualFold(err.Error(), allowedErr) {
-				// if some other error occured then the finality-provider is not registered in the Babylon chain yet
-				continue
-			}
+			continue
 		}
 
 		bip340PubKey := fp.GetBIP340BTCPK()
