@@ -1,11 +1,14 @@
 # Finality Provider Operation
 
-This document covers the operation and lifecycle of a finality provider, including:
-* Installation and configuration
-* Key management and security
-* Provider registration process
-* Operational monitoring and maintenance
-* Rewards management
+This document guides operators through the complete lifecycle of running a finality provider, including:
+
+* Installing and configuring the finality provider components (EOTS Manager and FP daemon)
+* Managing keys (EOTS key for signatures and Babylon key for rewards)
+* Registering your finality provider on the Babylon network
+* Operating and maintaining your finality provider
+* Collecting rewards
+
+This is an operational guide intended for DevOps teams running finality providers. For conceptual understanding, see our [Technical Documentation](./docs/fp-core.md).
 
 ## Table of Contents
 
@@ -23,7 +26,6 @@ This document covers the operation and lifecycle of a finality provider, includi
 12. [Public Randomness Submission](#public-randomness-submission)
 13. [Reading the logs](#reading-the-logs)
 14. [Withdrawing Rewards](#withdrawing-rewards)
-15. [Overview of Keys for Finality Provider and EOTS Manager](#overview-of-keys-for-finality-provider-and-eots-manager)
 
 <!--- This document is an operational document.
 It is not targeted to people that need to understand on a deep
