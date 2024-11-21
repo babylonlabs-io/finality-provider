@@ -833,15 +833,9 @@ func (fp *FinalityProviderInstance) TestCommitPubRandWithStartHeight(startHeight
 
 	fp.logger.Info("Start committing pubrand from block height", zap.Uint64("start_height", startHeight))
 
-	// TODO: removing the interval will lead to nonce mismatch error (see https://bit.ly/3UYruIE)
-	//  we need to investigate more
-	commitRandTicker := time.NewTicker(fp.cfg.RandomnessCommitInterval)
-	defer commitRandTicker.Stop()
-
 	// TODO: instead of sending multiple txs, a better way is to bundle all the commit messages into
 	// one like we do for batch finality signatures. see discussion https://bit.ly/3OmbjkN
 	for startHeight <= targetBlockHeight {
-		<-commitRandTicker.C
 		_, err = fp.commitPubRandPairs(startHeight)
 		if err != nil {
 			return err
