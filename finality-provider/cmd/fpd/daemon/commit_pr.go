@@ -23,7 +23,6 @@ import (
 // CommandCommitPubRand returns the commit-pubrand command by connecting to the fpd daemon.
 func CommandCommitPubRand() *cobra.Command {
 	var cmd = &cobra.Command{
-		// TODO: add --start-height as an optional flag
 		Use:     "unsafe-commit-pubrand [fp-eots-pk-hex] [target-height]",
 		Aliases: []string{"unsafe-cpr"},
 		Short:   "[UNSAFE] Manually trigger public randomness commitment for a finality provider",
