@@ -455,6 +455,7 @@ transactions -
 `--moniker`: A human-readable name for your finality provider
 
 Optional parameters: 
+- `--eots-pk`: The EOTS public key of the finality provider which was generated in `eotsd keys add`
 - `--website`: Your finality provider's website 
 - `--security-contact`: Contact email for security issues 
 - `--details`:
@@ -468,7 +469,7 @@ your finality provider's details:
 ``` json
 {
     "fp_addr": "bbn1ht2nxa6hlyl89m8xpdde9xsj40n0sxd2f9shsq", 
-    "btc_pk_hex":
+    "eots_pk_hex":
     "cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41",
       "description": 
       {
@@ -485,7 +486,7 @@ your finality provider's details:
 The response includes: 
 - `fp_addr`: Your Babylon account address for receiving
 rewards 
-- `btc_pk_hex`: Your unique BTC public key identifier (needed for
+- `eots_pk_hex`: Your unique BTC public key identifier (needed for
 registration) 
 - `description`: Your finality provider's metadata 
 - `commission`:
