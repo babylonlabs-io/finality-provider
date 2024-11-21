@@ -611,10 +611,10 @@ For detailed information about public randomness commits, see:
 The logs are stored based on your daemon home directories:
 
 - EOTS Daemon logs
-<eots-home>/logs/eotsd.log
+`<eots-home>/logs/eotsd.log`
 
 - Finality Provider Daemon logs
-<fpd-home>/logs/fpd.log
+`<fpd-home>/logs/fpd.log`
 
 You also can access the logs via flags when starting the daemon:
 
