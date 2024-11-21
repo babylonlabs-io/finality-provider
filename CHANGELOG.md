@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
+* [#127](https://github.com/babylonlabs-io/finality-provider/pull/127) Bump docker workflow version and fix some dockerfile issue
 * [#132](https://github.com/babylonlabs-io/finality-provider/pull/132) Replace fast sync with batch processing
 
 ### Documentation
