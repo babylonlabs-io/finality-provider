@@ -1,14 +1,29 @@
 # Finality Provider Operation
 
-This document describes the
-* setup of the finality provider toolset
-* creation of your EOTS keys as well as the Babylon keyring
-that will be receiving your rewards
-* the registration of a finality provider on Babylon
-* the operation of a finality provider and its lifecycle
-* withdrawing your rewards
+This document covers the operation and lifecycle of a finality provider, including:
+* Installation and configuration
+* Key management and security
+* Provider registration process
+* Operational monitoring and maintenance
+* Rewards management
 
-<!--- need table of contents -->
+## Table of Contents
+
+1. [Phase-1 Finality Providers](#phase-1-finality-providers)
+2. [Install Finality Provider Binary](#install-finality-provider-binary)
+3. [Setting up the EOTS Manager](#setting-up-the-eots-manager)
+4. [Loading Existing Keys](#loading-existing-keys)
+5. [Starting the EOTS Daemon](#starting-the-eots-daemon)
+6. [Setting up the Finality Provider](#setting-up-the-finality-provider)
+7. [Starting the Finality Provider Daemon](#starting-the-finality-provider-daemon)
+8. [Create Finality Provider](#create-finality-provider)
+9. [Register Finality Provider](#register-finality-provider)
+10. [Slashing Conditions](#slashing-conditions)
+11. [Jailing and Unjailing](#jailing-and-unjailing)
+12. [Public Randomness Submission](#public-randomness-submission)
+13. [Reading the logs](#reading-the-logs)
+14. [Withdrawing Rewards](#withdrawing-rewards)
+15. [Overview of Keys for Finality Provider and EOTS Manager](#overview-of-keys-for-finality-provider-and-eots-manager)
 
 <!--- This document is an operational document.
 It is not targeted to people that need to understand on a deep
@@ -33,12 +48,34 @@ These people need to know the following:
 
 ## Phase-1 Finality Providers
 
-<!-- brief note about finality providers being on phase-1, not needing to create new keys-->
-* If you were an fp on phase-1, you don't need to create new keys.
+* `Phase-1` operators should use their existing EOTS keys for `Phase-2` participation.
+* All your delegations are associated with your existing EOTS key - you must import your existing key instead of creating a new one, as **creating new keys will result in loss of delegations**.
+* For those who participated in both testnet and mainnet, ensure you **use the correct key for each network to avoid delegation loss and potential slashing**.
+* Locate your `Phase-1` EOTS key backup and proceed to the [Loading Existing Keys](#loading-existing-keys) section for import instructions.
+
+
+<!-- * If you were an fp on phase-1, you don't need to create new keys.
 * All your delegations are associated with your existing EOTS key,
   so you need to import that instead of creating a new one. (highlight this as its dangerous)
 * If you participated in both the testnet and the mainnet,
-  make sure that you transition the finality provider key you used on the respective network. (highlight this as its dangerous)
+  make sure that you transition the finality provider key you used on the respective network. (highlight this as its dangerous) -->
+
+
+## Security Requirements
+
+> ⚠️ **Critical**: Implement these measures before starting daemons or handling keys
+
+* EOTS Manager: Restrict access to RPC (127.0.0.1:12582)
+* FP Daemon: Secure RPC listener (127.0.0.1:12581)
+* Keys:
+  - EOTS: Secure offline backup required
+  - Babylon: Use `os` or `file` backend for production
+* Monitor:
+  - Double-signing attempts
+  - Status changes (Active/Inactive/Jailed)
+  - Public randomness commits
+
+> ⚠️ **Warning**: Security breaches can result in slashing and permanent loss of provider status
 
 
 ## Install Finality Provider Binary 
@@ -78,28 +115,17 @@ This command will:
   - `fpd`: Finality provider daemon
 - Make commands globally accessible from your terminal
 
-### Step 3: Verify Installation
-
-Run `eotsd --help` to check the available actions:
-
-```shell 
-eotsd --help
-```
-
-Sample output:
+### Step 3: Verify Installation 
+<!-- fix this section -->
+Run `fpd version` to verify the installation:
 
 ```shell 
-NAME:
-   eotsd - Extractable One Time Signature Daemon (eotsd).
-
-USAGE:
-   eotsd [global options] command [command options] [arguments...]
-
-COMMANDS:
-   start            Start the Extractable One Time Signature Daemon.  
-   init             Initialize the eotsd home directory.  
-   sign-schnorr     Signs a Schnorr signature over arbitrary data with
-...
+fpd version
+``` 
+The output should be:
+```shell 
+version: <version>
+build: <build>
 ```
 
 If your shell cannot find the installed binaries, make sure `$GOPATH/bin` is in
@@ -108,7 +134,6 @@ the `$PATH` of your shell. Usually these commands will do the job
 ```shell 
 echo 'export PATH=$HOME/go/bin:$PATH' >> ~/.profile
 ```
-
 
 ## Setting up the EOTS Manager
 
@@ -297,13 +322,20 @@ The output should look similar to the below:
 }
 ```
 
->Note: This command will automatically update the `Key` field in 
+This command will automatically update the `Key` field in 
 the config file to use this key name. This key will be used for all interactions 
 with the Babylon chain, including finality provider registration and transaction 
 signing.
 
->Note: Please verify the `chain-id` and other network parameters from the official 
+Please verify the `chain-id` and other network parameters from the official 
 Babylon Networks repository at [https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers)
+
+> **Important**: Funding Your Babylon Account
+> * You need to have funds in your Babylon account to submit transactions
+> * Block vote transactions get their gas refunded
+> * Public randomness submissions require you to pay gas fees
+> * For testnet operations, you can get funds from our [faucet]()
+> * For mainnet operations, see the required funds documentation [here]()
  
 Funded Babylon keyring: You need to have a keyring to submit transactions.
    Note that successful block votes get their gas refunded, while randomness submissions
@@ -312,15 +344,10 @@ Funded Babylon keyring: You need to have a keyring to submit transactions.
    If you are operating a finality provider for the testnet, you can get funds from our [faucet]().
 <!--- the finality provider won't have set up a key at the moment so, the above comments might be out of place -->
 
->The configuration below requires to point to the path where this keyring is
- stored `KeyDirectory`. This `Key` field stores the key name used for
- interacting with the babylon chain and will be specified along with
- the `KeyringBackend`field in the next step. So we can ignore the setting of the
- two fields in this step.
 
-Once the node is initialized with the above command. It should generate a
-`fpd.config` Edit the `config.toml` to set the necessary parameters with the
-below
+### Step 3: Configure Your Finality Provider
+
+Edit the `config.toml` file in your finality provider home directory with the following parameters:
 
 ```shell 
 [Application Options] 
@@ -335,12 +362,17 @@ GRPCAddr = https://127.0.0.1:9090
 KeyDirectory = <path> # The `--home`path to the directory where the keyring is stored
 ``` 
 
-RPC Address: Operating a finality provider requires a connection
-with a Babylon blockchain node in order to receive new blocks to vote for
-and submitting votes and public randomness. It is highly recommended for finality
-providers to operate their own Babylon full node instead of relying on third parties.
-You can find instructions on how to set up a Babylon node
-[here](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/node-setup) <!-- TODO: update link -->
+> **Important**: Operating a finality provider requires a connection to a Babylon blockchain node. It is **highly recommended** to operate your own Babylon full node instead of relying on third parties. You can find instructions on setting up a Babylon node [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/node-setup).
+
+Configuration parameters explained:
+* `EOTSManagerAddress`: Address where your EOTS daemon is running
+* `RpcListener`: Address for the finality provider RPC server
+* `Key`: Your Babylon key name from Step 2
+* `ChainID`: The Babylon network chain ID
+* `RPCAddr`: Your Babylon node's RPC endpoint
+* `GRPCAddr`: Your Babylon node's GRPC endpoint
+* `KeyDirectory`: Path to your keyring directory (same as --home path)
+
 
 ### Step 3: Verify the Key Import
 After importing, verify that your EOTS key was successfully loaded:
@@ -639,29 +671,3 @@ To withdraw your finality provider rewards:
 <!-- //this code needs to be updated before further instructions can be provided
 -->
 
-## Overview of Keys for Finality Provider and EOTS Manager
-
-There are two distinct keys you'll be working with:
-
-- **EOTS Key**:
-    - Used for generating EOTS signatures, Schnorr signatures, and randomness pairs
-    - This serves as the unique identifier for the finality provider
-    - It's derived from a Bitcoin private key, likely using the secp256k1
-      elliptic curve.
-    - Stored in the EOTS manager daemon's keyring
-    - This key is used in the Bitcoin-based security model of Babylon.
-
-- **Babylon Key**:
-    - Used for signing transactions on Babylon
-    - It's where staking rewards for the finality provider are sent.
-    - Associated with a Babylon account that receives rewards
-    - Stored in the finality provider daemon's keyring
-    - This account is controlled by the key you use to create and manage the
-      finality provider (the one you added with `fpd keys add`).
-
-This dual association allows the finality provider to interact with both the
-Bitcoin network (for security) and the Babylon network (for rewards and
-governance).
-
-Once a finality provider is created, neither key can be rotated or changed -
-they are permanently associated with that specific finality provider instance.

@@ -34,13 +34,11 @@ all EOTS key operations.
 
 ## Become a Finality Provider
 
-If you are interested in becoming a finality provider
-you can find more details [here](./docs/finality-provider-operation.md)
+For instructions on becoming a finality provider, see our [Finality Provider Guide](./docs/finality-provider-phase2.md).
 
 ## Technical Documentation
 
-You can find more about the internals of the finality provider
-toolset operation in the following docs:
+For detailed technical information about the finality provider's internal operations, see:
 * [Core Heuristics](./docs/fp-core.md)
 * [Public Randomness Commits](./docs/commit-pub-rand.md)
 
@@ -111,3 +109,31 @@ providers:
 
 The daemon is controlled by the `fpd` tool, which provides commands for
 interacting with the running daemon.
+
+
+## Overview of Keys for Finality Provider and EOTS Manager
+
+There are two distinct keys you'll be working with:
+
+- **EOTS Key**:
+    - Used for generating EOTS signatures, Schnorr signatures, and randomness pairs
+    - This serves as the unique identifier for the finality provider
+    - It's derived from a Bitcoin private key, likely using the secp256k1
+      elliptic curve.
+    - Stored in the EOTS manager daemon's keyring
+    - This key is used in the Bitcoin-based security model of Babylon.
+
+- **Babylon Key**:
+    - Used for signing transactions on Babylon
+    - It's where staking rewards for the finality provider are sent.
+    - Associated with a Babylon account that receives rewards
+    - Stored in the finality provider daemon's keyring
+    - This account is controlled by the key you use to create and manage the
+      finality provider (the one you added with `fpd keys add`).
+
+This dual association allows the finality provider to interact with both the
+Bitcoin network (for security) and the Babylon network (for rewards and
+governance).
+
+Once a finality provider is created, neither key can be rotated or changed -
+they are permanently associated with that specific finality provider instance.
