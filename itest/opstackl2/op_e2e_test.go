@@ -26,8 +26,20 @@ func TestOpFpNoVotingPower(t *testing.T) {
 	fpInstance := fpList[0]
 
 	e2eutils.WaitForFpPubRandCommitted(t, fpInstance)
-	// query the first committed pub rand
 	opcc := ctm.getOpCCAtIndex(0)
+
+	// query the last committed pub rand
+	lastCommittedPubRand, err := queryFirstOrLastPublicRandCommit(opcc, fpInstance.GetBtcPk(), false)
+	require.NoError(t, err)
+	require.NotNil(t, lastCommittedPubRand)
+
+	// no public randomness at this height, so the FP has no voting power
+	nextLastCommittedPubRandHeight := lastCommittedPubRand.StartHeight + lastCommittedPubRand.NumPubRand
+	hasPower, err := opcc.QueryFinalityProviderHasPower(fpInstance.GetBtcPk(), nextLastCommittedPubRandHeight)
+	require.NoError(t, err)
+	require.Equal(t, false, hasPower)
+
+	// query the first committed pub rand
 	committedPubRand, err := queryFirstPublicRandCommit(opcc, fpInstance.GetBtcPk())
 	require.NoError(t, err)
 	committedStartHeight := committedPubRand.StartHeight
@@ -42,7 +54,7 @@ func TestOpFpNoVotingPower(t *testing.T) {
 	}
 
 	// no BTC delegation, so the FP has no voting power
-	hasPower, err := opcc.QueryFinalityProviderHasPower(fpInstance.GetBtcPk(), queryBlock.BlockHeight)
+	hasPower, err = opcc.QueryFinalityProviderHasPower(fpInstance.GetBtcPk(), queryBlock.BlockHeight)
 	require.NoError(t, err)
 	require.Equal(t, false, hasPower)
 
