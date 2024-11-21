@@ -5,11 +5,10 @@ management of Finality Providers.
 
 ## 1. Overview
 
-Finality providers are key participants in Babylon's consensus 
-mechanism. They provide finality votes on top of 
-[CometBFT](https://github.com/cometbft/cometbft), manage public randomness 
-commitments, and participate in the Proof of Stake (PoS) system. Through these 
-activities, they can earn commissions from BTC staking delegations.
+Finality providers are key participants in Babylon BTC staking protocol.
+They provide finality votes on top of
+[CometBFT](https://github.com/cometbft/cometbft), Babylon's consensus mechanism.
+Through these activities, they can earn commissions from BTC staking delegations.
 
 The finality provider toolset operates on standard UNIX-based 
 systems and consists of three core components:
@@ -21,13 +20,13 @@ strongly recommended for security rather than relying on third-party RPC nodes.
 See the [Setup Node Guide](https://docs.babylonchain.io/docs/user-guides/btc-staking-testnet/setup-node) for details.
 
 ### 2. Extractable One-Time Signature (EOTS) Manager
-A secure key management daemon that handles private key operations, 
+A secure key management daemon that handles EOTS key operations, 
 generates extractable one-time signatures, and produces public randomness. 
 For enhanced security, this component should run on a separate machine or 
 network segment. Full details are available in the [EOTS Manager Guide](docs/eots.md).
 
 ### 3. Finality Provider Daemon
-The main daemon that monitors Babylon blocks, commits public randomness, and 
+The core daemon that polls Babylon blocks, commits public randomness, and 
 submits finality signatures. It manages provider status transitions and handles 
 rewards distribution. See the [Finality Provider Guide](docs/finality-provider.md) 
 for complete documentation.
@@ -36,7 +35,7 @@ for complete documentation.
 The Finality Provider daemon communicates with the Babylon Node to monitor blocks 
 and submit transactions. It interacts with the EOTS Manager for signature and 
 randomness generation. The EOTS Manager maintains secure key storage and handles 
-all private key operations.
+all EOTS key operations.
 
 ![Finality Provider Interconnections](./docs/FP.png)
 
@@ -97,6 +96,7 @@ It is highly recommended that operators run their own node to avoid
 trusting third parties. Instructions on how to set up a full Babylon node
 can be found in
 [the Babylon documentation](https://docs.babylonchain.io/docs/user-guides/btc-staking-testnet/setup-node).
+<!-- TODO: Replace the link when available-->
 
 ### 3.2. Setting up the EOTS Manager
 
