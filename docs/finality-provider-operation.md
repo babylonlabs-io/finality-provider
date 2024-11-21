@@ -1,77 +1,49 @@
-# Finality Provider Registration
+# Finality Provider Operation
 
-Phase-2 launch of the Babylon network is a critical transition
-that introduces active participation in finality voting, 
-rewards distribution, and the Proof of Stake (PoS) system. 
-This guide provides a step-by-step process for operators to 
-onboard, whether setting up a new or pre-existing setup, 
-with a focus on Phase-2 specific requirements.
+This document describes the
+* setup of the finality provider toolset
+* creation of your EOTS keys as well as the Babylon keyring
+that will be receiving your rewards
+* the registration of a finality provider on Babylon
+* the operation of a finality provider and its lifecycle
+* withdrawing your rewards
 
-The following explains the migration from Phase-1 to Phase-2.
+<!--- need table of contents -->
 
-**Phase-1 (Previous phase)**
+## Preliminaries
 
-- Only involves Bitcoin holders locking their assets on the Bitcoin chain
-- No active Proof of Stake (PoS) chain operation
-- Finality providers only need EOTS keys generated
-- No need to run finality service
 
-**Phase-2 (New phase)**
 
-- Active participation in finality voting
-- Running the complete finality provider toolset:
-  - Babylon full node
-  - EOTS manager daemon
-  - Finality provider daemon
-- Earning rewards from Bitcoin delegations
+### Finality Provider
 
-There are 2 paths for setting up a finality provider:
+* Finality provider and EOTS manager -> we can link to them from the README.
+* 
 
-1. **Has existing EOTS Key**
-   - Already generated a EOTS key pair from [Phase-1](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers) 
-   <!-- TODO: waiting on merge, ensure this link is up to date -->
-   - Reference the existing EOTS key in setup
 
-If you have an existing EOTS key from Phase-1, please skip to 
-[Loading Existing Keys](#loading-existing-keys) 
-steps
+## Prerequisites
 
->Note: Any finality providers from Phase-1 that do not transition their existing key, cannot claim any rewards if they dont have their Finality Provider setup on Phase-2
+1. Babylon Full Node: Operating a finality provider requires a connection
+   with a Babylon blockchain node in order to receive new blocks to vote for
+   and submitting votes and public randomness. It is highly recommended for finality
+   providers to operate their own Babylon full node instead of relying on third parties.
+   You can find instructions on how to set up a Babylon node
+   [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/node-setup) <!-- TODO: update link -->
+2. Funded Babylon keyring: You need to have a keyring to submit transactions.
+   Note that successful block votes get their gas refunded, while randomness submissions
+   come out of your pocket. 
+   You can find more details on the required funds for operating a finality provider [here]().
+   If you are operating a finality provider for the testnet, you can get funds from our [faucet]().
+<!--- the finality provider won't have set up a key at the moment so, the above comments might be out of place -->
 
-2. **New Setup** 
- - For operators starting fresh
- - Need to generate the EOTS key first
- - Complete full configuration process
+## Phase-1 Finality Providers
 
-If you are a new operator, start with the 
-[Install Finality Provider Binary](#install-finality-provider-binary) section.
+<!-- brief note about finality providers being on phase-1, not needing to create new keys-->
+* If you were an fp on phase-1, you don't need to create new keys.
+* All your delegations are associated with your existing EOTS key,
+  so you need to import that instead of creating a new one. (highlight this as its dangerous)
+* If you participated in both the testnet and the mainnet,
+  make sure that you transition the finality provider key you used on the respective network. (highlight this as its dangerous)
 
-## Overview of Keys for Finality Provider and EOTS Manager
-
-There are two distinct keys you'll be working with:
-
-- **EOTS Key**: 
-  - Used for generating EOTS signatures, Schnorr signatures, and randomness pairs
-  - This serves as the unique identifier for the finality provider
-  - It's derived from a Bitcoin private key, likely using the secp256k1
-  elliptic curve.  
-  - Stored in the EOTS manager daemon's keyring
-  - This key is used in the Bitcoin-based security model of Babylon.
-
-- **Babylon Key**: 
-  - Used for signing transactions on Babylon
-  - It's where staking rewards for the finality provider are sent. 
-  - Associated with a Babylon account that receives rewards
-  - Stored in the finality provider daemon's keyring
-  - This account is controlled by the key you use to create and manage the 
-finality provider (the one you added with `fpd keys add`).
-
-This dual association allows the finality provider to interact with both the
-Bitcoin network (for security) and the Babylon network (for rewards and
-governance).
-
-Once a finality provider is created, neither key can be rotated or changed - 
-they are permanently associated with that specific finality provider instance.
 
 ## Install Finality Provider Binary 
 <!-- TODO: check add in the correct tag for the testnet --> 
@@ -141,15 +113,6 @@ the `$PATH` of your shell. Usually these commands will do the job
 echo 'export PATH=$HOME/go/bin:$PATH' >> ~/.profile
 ```
 
-## Run Babylon Full Node
-
-Before proceeding with the finality provider setup, you'll need to have a Babylon 
-full node running. Please follow the instructions at:
-
-[Babylon Node Setup Guide](https://github.com/babylonlabs-io/networks/blob/main/bbn-test-5/babylon-node/README.md) <!-- TODO: Update link when mainnet is live -->
-
-Once you have completed the node setup and it is fully synced, return here 
-to continue with the finality provider configuration.
 
 ## Setting up the EOTS Manager
 
@@ -665,3 +628,30 @@ To withdraw your finality provider rewards:
 
 <!-- //this code needs to be updated before further instructions can be provided
 -->
+
+## Overview of Keys for Finality Provider and EOTS Manager
+
+There are two distinct keys you'll be working with:
+
+- **EOTS Key**:
+    - Used for generating EOTS signatures, Schnorr signatures, and randomness pairs
+    - This serves as the unique identifier for the finality provider
+    - It's derived from a Bitcoin private key, likely using the secp256k1
+      elliptic curve.
+    - Stored in the EOTS manager daemon's keyring
+    - This key is used in the Bitcoin-based security model of Babylon.
+
+- **Babylon Key**:
+    - Used for signing transactions on Babylon
+    - It's where staking rewards for the finality provider are sent.
+    - Associated with a Babylon account that receives rewards
+    - Stored in the finality provider daemon's keyring
+    - This account is controlled by the key you use to create and manage the
+      finality provider (the one you added with `fpd keys add`).
+
+This dual association allows the finality provider to interact with both the
+Bitcoin network (for security) and the Babylon network (for rewards and
+governance).
+
+Once a finality provider is created, neither key can be rotated or changed -
+they are permanently associated with that specific finality provider instance.
