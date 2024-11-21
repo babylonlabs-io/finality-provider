@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"fmt"
+	"math"
 	"path/filepath"
 	"strconv"
 
@@ -32,6 +33,7 @@ WARNING: this can drain the finality provider's balance if the target height is 
 		Args:    cobra.ExactArgs(2),
 		RunE:    fpcmd.RunEWithClientCtx(runCommandCommitPubRand),
 	}
+	cmd.Flags().Uint64("start-height", math.MaxUint64, "The block height to start committing pubrand from (optional)")
 	return cmd
 }
 
@@ -41,6 +43,10 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return err
 	}
 	targetHeight, err := strconv.ParseUint(args[1], 10, 64)
+	if err != nil {
+		return err
+	}
+	startHeight, err := cmd.Flags().GetUint64("start-height")
 	if err != nil {
 		return err
 	}
@@ -96,5 +102,9 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return fmt.Errorf("failed to create finality-provider %s instance: %w", fpPk.MarshalHex(), err)
 	}
 
-	return fp.TestCommitPubRand(targetHeight)
+	if startHeight == math.MaxUint64 {
+		return fp.TestCommitPubRand(targetHeight)
+	} else {
+		return fp.TestCommitPubRandWithStartHeight(startHeight, targetHeight)
+	}
 }

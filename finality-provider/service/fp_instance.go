@@ -786,12 +786,12 @@ func (fp *FinalityProviderInstance) commitPubRandPairs(startHeight uint64) (*typ
 // - it will always start from the last committed height + 1
 // - if targetBlockHeight is too large, it will commit multiple fp.cfg.NumPubRand pairs in a loop until reaching the targetBlockHeight
 func (fp *FinalityProviderInstance) TestCommitPubRand(targetBlockHeight uint64) error {
+	var startHeight, lastCommittedHeight uint64
+
 	lastCommittedHeight, err := fp.GetLastCommittedHeight()
 	if err != nil {
 		return err
 	}
-
-	var startHeight uint64
 	if lastCommittedHeight == uint64(0) {
 		// Note: it can also be the case that the finality-provider has committed 1 pubrand before (but in practice, we
 		// will never set cfg.NumPubRand to 1. so we can safely assume it has never committed before)
@@ -806,6 +806,31 @@ func (fp *FinalityProviderInstance) TestCommitPubRand(targetBlockHeight uint64) 
 			lastCommittedHeight,
 		)
 	}
+
+	return fp.TestCommitPubRandWithStartHeight(startHeight, targetBlockHeight)
+}
+
+// TestCommitPubRandWithStartHeight is exposed for devops/testing purpose to allow manual committing public randomness
+// in cases where FP is stuck due to lack of public randomness.
+func (fp *FinalityProviderInstance) TestCommitPubRandWithStartHeight(startHeight uint64, targetBlockHeight uint64) error {
+	if startHeight > targetBlockHeight {
+		return fmt.Errorf("start height should not be greater than target block height")
+	}
+
+	var lastCommittedHeight uint64
+	lastCommittedHeight, err := fp.GetLastCommittedHeight()
+	if err != nil {
+		return err
+	}
+	if lastCommittedHeight >= startHeight {
+		return fmt.Errorf(
+			"finality provider has already committed pubrand at the start height (pk: %s, startHeight: %d, lastCommittedHeight: %d)",
+			fp.GetBtcPkHex(),
+			startHeight,
+			lastCommittedHeight,
+		)
+	}
+
 	fp.logger.Info("Start committing pubrand from block height", zap.Uint64("start_height", startHeight))
 
 	commitRandTicker := time.NewTicker(fp.cfg.RandomnessCommitInterval)
@@ -813,7 +838,7 @@ func (fp *FinalityProviderInstance) TestCommitPubRand(targetBlockHeight uint64) 
 
 	// TODO: instead of sending multiple txs, a better way is to bundle all the commit messages into
 	// one like we do for batch finality signatures. see discussion https://bit.ly/3OmbjkN
-	for lastCommittedHeight < targetBlockHeight {
+	for startHeight <= targetBlockHeight {
 		<-commitRandTicker.C
 		_, err = fp.commitPubRandPairs(startHeight)
 		if err != nil {
