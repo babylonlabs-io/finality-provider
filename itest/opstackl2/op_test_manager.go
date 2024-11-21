@@ -20,7 +20,17 @@ import (
 	"github.com/babylonlabs-io/finality-gadget/db"
 	"github.com/babylonlabs-io/finality-gadget/finalitygadget"
 	fgsrv "github.com/babylonlabs-io/finality-gadget/server"
-	api "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+	"github.com/btcsuite/btcd/btcec/v2"
+	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
+	ope2e "github.com/ethereum-optimism/optimism/op-e2e"
+	optestlog "github.com/ethereum-optimism/optimism/op-service/testlog"
+	gethlog "github.com/ethereum/go-ethereum/log"
+	"github.com/lightningnetwork/lnd/signal"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/opstackl2"
 	opcc "github.com/babylonlabs-io/finality-provider/clientcontroller/opstackl2"
@@ -33,15 +43,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/testutil/log"
 	"github.com/babylonlabs-io/finality-provider/types"
-	"github.com/btcsuite/btcd/btcec/v2"
-	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
-	ope2e "github.com/ethereum-optimism/optimism/op-e2e"
-	optestlog "github.com/ethereum-optimism/optimism/op-service/testlog"
-	gethlog "github.com/ethereum/go-ethereum/log"
-	"github.com/lightningnetwork/lnd/signal"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -354,7 +355,7 @@ func createBaseFpConfig(fpHomeDir string, index int, logger *zap.Logger) *fpcfg.
 	cfg.LogLevel = logger.Level().String()
 	cfg.StatusUpdateInterval = 2 * time.Second
 	cfg.RandomnessCommitInterval = 2 * time.Second
-	cfg.NumPubRand = 64
+	cfg.NumPubRand = 100
 	cfg.MinRandHeightGap = 1000
 	cfg.FastSyncGap = 60
 	cfg.FastSyncLimit = 100
