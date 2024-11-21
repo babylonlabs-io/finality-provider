@@ -717,7 +717,6 @@ func (fp *FinalityProviderInstance) CommitPubRand(targetBlockHeight uint64) (*ty
 	if err != nil {
 		return nil, err
 	}
-	fp.metrics.RecordFpLastCommittedRandomnessHeight(fp.GetBtcPkHex(), lastCommittedHeight)
 
 	var startHeight uint64
 	if lastCommittedHeight == uint64(0) {
@@ -774,12 +773,13 @@ func (fp *FinalityProviderInstance) commitPubRandPairs(startHeight uint64) (*typ
 	// Update metrics
 	fp.metrics.RecordFpRandomnessTime(fp.GetBtcPkHex())
 	fp.metrics.AddToFpTotalCommittedRandomness(fp.GetBtcPkHex(), float64(len(pubRandList)))
+	fp.metrics.RecordFpLastCommittedRandomnessHeight(fp.GetBtcPkHex(), startHeight+numPubRand-1)
 
 	return res, nil
 }
 
 // TestCommitPubRand is exposed for devops/testing purpose to allow manual committing public randomness in cases
-// where FP is stuck due to lack of public randomness (https://github.com/babylonlabs-io/finality-provider/issues/115).
+// where FP is stuck due to lack of public randomness.
 //
 // Note:
 // - this function is similar to `CommitPubRand` but should not be used in the main pubrand submission loop.
@@ -790,7 +790,6 @@ func (fp *FinalityProviderInstance) TestCommitPubRand(targetBlockHeight uint64) 
 	if err != nil {
 		return err
 	}
-	fp.metrics.RecordFpLastCommittedRandomnessHeight(fp.GetBtcPkHex(), lastCommittedHeight)
 
 	var startHeight uint64
 	if lastCommittedHeight == uint64(0) {
@@ -807,11 +806,13 @@ func (fp *FinalityProviderInstance) TestCommitPubRand(targetBlockHeight uint64) 
 			lastCommittedHeight,
 		)
 	}
-	fmt.Printf("Start committing pubrand from block height %d...\n", startHeight)
+	fp.logger.Info("Start committing pubrand from block height", zap.Uint64("start_height", startHeight))
 
 	commitRandTicker := time.NewTicker(fp.cfg.RandomnessCommitInterval)
 	defer commitRandTicker.Stop()
 
+	// TODO: instead of sending multiple txs, a better way is to bundle all the commit messages into
+	// one like we do for batch finality signatures. see discussion https://bit.ly/3OmbjkN
 	for lastCommittedHeight < targetBlockHeight {
 		<-commitRandTicker.C
 		_, err = fp.commitPubRandPairs(startHeight)
@@ -819,8 +820,8 @@ func (fp *FinalityProviderInstance) TestCommitPubRand(targetBlockHeight uint64) 
 			return err
 		}
 		lastCommittedHeight = startHeight + fp.cfg.NumPubRand - 1
-		fp.metrics.RecordFpLastCommittedRandomnessHeight(fp.GetBtcPkHex(), lastCommittedHeight)
-		fmt.Printf("Committed pubrand to block height %d\n", lastCommittedHeight)
+		startHeight = lastCommittedHeight + 1
+		fp.logger.Info("Committed pubrand to block height", zap.Uint64("height", lastCommittedHeight))
 	}
 
 	// no error. success

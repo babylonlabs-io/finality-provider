@@ -23,13 +23,12 @@ import (
 func CommandCommitPubRand() *cobra.Command {
 	var cmd = &cobra.Command{
 		// TODO: add --start-height as an optional flag
-		Use:     "unsafe-commit-pubrand [fp-eots-pk-hex] [block-height]",
+		Use:     "unsafe-commit-pubrand [fp-eots-pk-hex] [target-height]",
 		Aliases: []string{"unsafe-cpr"},
 		Short:   "[UNSAFE] Manually trigger public randomness commitment for a finality provider",
-		Long: `[UNSAFE] Manually trigger public randomness commitment for a finality provider. ` +
-			`WARNING: this can drain the finality provider's balance if the block-height is too high.` +
-			`Note: if there is no pubrand committed before, it will only commit the pubrand for the target block-height.`,
-		Example: `fpd unsafe-commit-pubrand --home /home/user/.fpd [fp-eots-pk-hex] [block-height]`,
+		Long: `[UNSAFE] Manually trigger public randomness commitment for a finality provider.
+WARNING: this can drain the finality provider's balance if the target height is too high.`,
+		Example: `fpd unsafe-commit-pubrand --home /home/user/.fpd [fp-eots-pk-hex] [target-height]`,
 		Args:    cobra.ExactArgs(2),
 		RunE:    fpcmd.RunEWithClientCtx(runCommandCommitPubRand),
 	}
@@ -41,7 +40,7 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 	if err != nil {
 		return err
 	}
-	blkHeight, err := strconv.ParseUint(args[1], 10, 64)
+	targetHeight, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
 		return err
 	}
@@ -97,5 +96,5 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return fmt.Errorf("failed to create finality-provider %s instance: %w", fpPk.MarshalHex(), err)
 	}
 
-	return fp.TestCommitPubRand(blkHeight)
+	return fp.TestCommitPubRand(targetHeight)
 }
