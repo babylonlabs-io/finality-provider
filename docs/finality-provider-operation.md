@@ -190,7 +190,7 @@ Sample output:
 } 
 ``` 
 
->**Important**: The mnemonic phrase must be stored securely and kept private, as it is the 
+>⚠️ **Important**: The mnemonic phrase must be stored securely and kept private, as it is the 
 only way to recover your EOTS key if access is lost and is critical for maintaining control 
 of your finality provider operations.
 
@@ -332,20 +332,13 @@ signing.
 Please verify the `chain-id` and other network parameters from the official 
 Babylon Networks repository at [https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers)
 
-> **Important**: Funding Your Babylon Account
+> ⚠️ **Important**: Funding Your Babylon Account
 > * You need to have funds in your Babylon account to submit transactions
 > * Block vote transactions get their gas refunded
 > * Public randomness submissions require you to pay gas fees
 > * For testnet operations, you can get funds from our [faucet]()
 > * For mainnet operations, see the required funds documentation [here]()
  
-Funded Babylon keyring: You need to have a keyring to submit transactions.
-   Note that successful block votes get their gas refunded, while randomness submissions
-   come out of your pocket.
-   You can find more details on the required funds for operating a finality provider [here]().
-   If you are operating a finality provider for the testnet, you can get funds from our [faucet]().
-<!--- the finality provider won't have set up a key at the moment so, the above comments might be out of place -->
-
 
 ### Step 3: Configure Your Finality Provider
 
@@ -364,7 +357,7 @@ GRPCAddr = https://127.0.0.1:9090
 KeyDirectory = <path> # The `--home`path to the directory where the keyring is stored
 ``` 
 
-> **Important**: Operating a finality provider requires a connection to a Babylon blockchain node. It is **highly recommended** to operate your own Babylon full node instead of relying on third parties. You can find instructions on setting up a Babylon node [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/node-setup).
+> ⚠️ **Important**: Operating a finality provider requires a connection to a Babylon blockchain node. It is **highly recommended** to operate your own Babylon full node instead of relying on third parties. You can find instructions on setting up a Babylon node [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/node-setup).
 
 Configuration parameters explained:
 * `EOTSManagerAddress`: Address where your EOTS daemon is running
@@ -609,8 +602,10 @@ So while slashing is permanent, jailing is a temporary state that can be recover
 from through the unjailing process, as long as the finality provider wasn't slashed.
 
 ## Public Randomness Submission
-<!-- Waiting for clarification on this -->
 
+For detailed information about public randomness commits, see:
+* [Technical Overview](./docs/commit-pub-rand.md)
+* [Core Implementation Details](./docs/fp-core.md#committing-public-randomness)
 ## Reading the logs
 
 The logs are stored based on your daemon home directories:
