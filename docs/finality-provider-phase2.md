@@ -171,7 +171,8 @@ Manager see [here](#)
 
 Use the `eotsd init` command to initialize a home directory for the EOTS Manager.
 You can set or change your home directory using the `--home` tag. For example, use 
-`--home ./eotsHome` to specify a custom directory.
+`--home ./eotsHome` to specify a custom directory. The application default home directory is 
+`/Users/<username>/Library/Application Support/Eotsd`.
 
 ```shell 
 eotsd init --home <path> 
@@ -283,7 +284,8 @@ reference the address of the machine where `eotsd` is running.
 
 Use the `fpd init` command to initialize a home directory for the Finality Provider. 
 You can set or change the home directory using the `--home` tag. For example, use 
-`--home ./fpHome` to specify a custom directory.
+`--home ./fpHome` to specify a custom directory. The application default home directory is 
+`/Users/<username>/Library/Application Support/Fpd`.
 
 ```shell 
 fpd init --home <path> 
@@ -430,12 +432,11 @@ options can also be set in the configuration file.
 The `create-finality-provider` command initializes a new finality provider
 instance locally. 
 
-This command generates a BTC public key that uniquely identifies your finality provider. 
-
 ``` shell
 fpd create-finality-provider \ 
 --daemon-address 127.0.0.1:12581 \ 
 --chain-id bbn-test-5 \ 
+--eots-pk <eots-pk-hex> \ //this is the EOTS public key of the finality provider which was generated in `eotsd keys add`
 --commission 0.05 \ 
 --key-name finality-provider \ 
 --moniker "MyFinalityProvider" \ 
@@ -509,7 +510,8 @@ fpd register-finality-provider \
 --home <path> \ 
 ```
 
-- `<btc-public-key>`: Your BTC public key from create-finality-provider (e.g., "cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41")
+- `<btc-public-key>`: Your BTC public key from create-finality-provider 
+(e.g., "cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41")
 - `--daemon-address`: RPC address of your finality provider daemon (default: "127.0.0.1:12581")
 - `--passphrase`: Passphrase for your key
 - `--home`: Path to your finality provider daemon home directory (e.g., "~/.fpd")
