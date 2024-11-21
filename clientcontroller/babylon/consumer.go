@@ -4,15 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	sdkErr "cosmossdk.io/errors"
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
-	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -21,6 +19,10 @@ import (
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
+
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 var _ api.ConsumerController = &BabylonConsumerController{}
@@ -225,6 +227,13 @@ func (bc *BabylonConsumerController) QueryFinalityProviderHasPower(
 		blockHeight,
 	)
 	if err != nil {
+		// voting power table not updated indicates that no fp has voting power
+		// therefore, it should be treated as the fp having 0 voting power
+		if strings.Contains(err.Error(), btcstakingtypes.ErrVotingPowerTableNotUpdated.Error()) {
+			bc.logger.Info("the voting power table not updated yet")
+			return false, nil
+		}
+
 		return false, fmt.Errorf("failed to query the finality provider's voting power at height %d: %w", blockHeight, err)
 	}
 
