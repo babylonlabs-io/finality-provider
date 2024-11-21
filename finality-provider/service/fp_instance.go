@@ -833,6 +833,8 @@ func (fp *FinalityProviderInstance) TestCommitPubRandWithStartHeight(startHeight
 
 	fp.logger.Info("Start committing pubrand from block height", zap.Uint64("start_height", startHeight))
 
+	// TODO: removing the interval will lead to nonce mismatch error (see https://bit.ly/3UYruIE)
+	//  we need to investigate more
 	commitRandTicker := time.NewTicker(fp.cfg.RandomnessCommitInterval)
 	defer commitRandTicker.Stop()
 
