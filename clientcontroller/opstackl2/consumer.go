@@ -5,11 +5,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
+	"math/big"
+
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
-	"math"
-	"math/big"
 
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
@@ -139,9 +140,10 @@ func (cc *OPStackL2ConsumerController) CommitPubRandList(
 	commitment []byte,
 	sig *schnorr.Signature,
 ) (*types.TxResponse, error) {
+	fpPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
 	msg := CommitPublicRandomnessMsg{
 		CommitPublicRandomness: CommitPublicRandomnessMsgParams{
-			FpPubkeyHex: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex(),
+			FpPubkeyHex: fpPkHex,
 			StartHeight: startHeight,
 			NumPubRand:  numPubRand,
 			Commitment:  commitment,
@@ -162,6 +164,11 @@ func (cc *OPStackL2ConsumerController) CommitPubRandList(
 	if err != nil {
 		return nil, err
 	}
+	cc.logger.Debug("Successfully committed public randomness",
+		zap.String("fp_pk_hex", fpPkHex),
+		zap.Uint64("start_height", startHeight),
+		zap.Uint64("num_pub_rand", numPubRand),
+	)
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
@@ -264,13 +271,31 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 }
 
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
-// This interface function only used for checking if the FP is eligible for submitting sigs.
-// Now we can simply hardcode the voting power to true
-// TODO: see this issue https://github.com/babylonlabs-io/finality-provider/issues/390 for more details
 func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
+	pubRand, err := cc.QueryLastPublicRandCommit(fpPk)
+	if err != nil {
+		return false, err
+	}
+	if pubRand == nil {
+		return false, nil
+	}
+
+	// fp has 0 voting power if there is no public randomness at this height
+	lastCommittedPubRandHeight := pubRand.StartHeight + pubRand.NumPubRand - 1
+	cc.logger.Debug(
+		"FP last committed public randomness",
+		zap.Uint64("height", lastCommittedPubRandHeight),
+	)
+	if blockHeight > lastCommittedPubRandHeight {
+		cc.logger.Debug(
+			"FP has 0 voting power because there is no public randomness at this height",
+			zap.Uint64("height", blockHeight),
+		)
+		return false, nil
+	}
+
 	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
 	var nextKey []byte
-
 	btcStakingParams, err := cc.bbnClient.QueryClient.BTCStakingParams()
 	if err != nil {
 		return false, err
@@ -298,7 +323,11 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec
 		}
 		nextKey = resp.Pagination.NextKey
 	}
-
+	cc.logger.Debug(
+		"FP has 0 voting power because there is no BTC delegation",
+		zap.String("fp_btc_pk", fpBtcPkHex),
+		zap.Uint64("height", blockHeight),
+	)
 	return false, nil
 }
 
