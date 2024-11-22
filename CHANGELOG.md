@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Improvements
 
 * [149](https://github.com/babylonlabs-io/finality-provider/pull/149) Remove update of config after `fpd keys add`
+* [153](https://github.com/babylonlabs-io/finality-provider/pull/153) Add `unsafe-commit-pubrand` command
 
 ## v0.12.0
 
