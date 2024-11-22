@@ -47,7 +47,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 * [#127](https://github.com/babylonlabs-io/finality-provider/pull/127) Bump docker workflow version and fix some dockerfile issue
 * [#132](https://github.com/babylonlabs-io/finality-provider/pull/132) Replace fast sync with batch processing
-* [#146](https://github.com/babylonlabs-io/finality-provider/pull/146) Upgrade Babylon to v0.17.0
+* [#146](https://github.com/babylonlabs-io/finality-provider/pull/146) Upgrade Babylon to v0.17.1
 
 ### Documentation
 
