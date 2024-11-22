@@ -8,7 +8,7 @@ This document guides operators through the complete lifecycle of running a final
 * Operating and maintaining your finality provider
 * Collecting rewards
 
-This is an operational guide intended for DevOps teams running finality providers. 
+This is an operational guide intended for DevOps teams running finality providers.
 For conceptual understanding, see our [Technical Documentation](./docs/fp-core.md). 
 Please review the [high-level](./README.md) documentation before proceeding to 
 gain an overall understanding of the finality provider. 
@@ -148,7 +148,8 @@ fpd version
 ``` 
 The expected output should be:
 ```shell
-version: v0.11.0
+# example output
+version: v0.11.0 
 commit: 7d37c88e9a33c0b6a86614f743e9426ce6e31d4a
 ```
 
