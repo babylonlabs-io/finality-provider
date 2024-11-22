@@ -54,9 +54,13 @@ These people need to know the following:
 ## Phase-1 Finality Providers
 
 * `Phase-1` operators should use their existing EOTS keys for `Phase-2` participation.
-* All your delegations are associated with your existing EOTS key - you must import your existing key instead of creating a new one, as **creating new keys will result in loss of delegations**.
-* For those who participated in both testnet and mainnet, ensure you **use the correct key for each network to avoid delegation loss and potential slashing**.
-* Locate your `Phase-1` EOTS key backup and proceed to the [Loading Existing Keys](#loading-existing-keys) section for import instructions.
+* All your delegations are associated with your existing EOTS key - you must import 
+your existing key instead of creating a new one, as 
+**creating new keys will result in loss of delegations**.
+* For those who participated in both testnet and mainnet, ensure you 
+**use the correct key for each network to avoid delegation loss and potential slashing**.
+* Locate your `Phase-1` EOTS key backup and proceed to the [Loading Existing Keys](#loading-existing-keys) 
+section for import instructions.
 
 
 <!-- * If you were an fp on phase-1, you don't need to create new keys.
@@ -64,7 +68,6 @@ These people need to know the following:
   so you need to import that instead of creating a new one. (highlight this as its dangerous)
 * If you participated in both the testnet and the mainnet,
   make sure that you transition the finality provider key you used on the respective network. (highlight this as its dangerous) -->
-
 
 ## Security Requirements
 
@@ -80,8 +83,24 @@ These people need to know the following:
   - Status changes (`Active`/`Inactive`/`Jailed`)
   - Public randomness commits
 
-> ⚠️ **Warning**: Security breaches can result in slashing and permanent loss of provider status
+> ⚠️ **Important Note on Keyring Security**: 
+The finality provider daemon uses the `--keyring-backend test` which stores keys unencrypted on disk. 
+While this is generally not secure, it's necessary for the finality provider service because:
 
+* The daemon needs to automatically sign and send transactions frequently
+* If transactions stop for too long, the provider gets jailed
+* Using encrypted keystores would require manual password entry after every restart
+* Service availability is critical to avoid jailing
+
+For other Babylon services that don't require automatic transaction signing, we recommend:
+* Use `os` backend (most secure, uses system keyring)
+* Or use `file` backend (encrypted storage)
+* Never use `test` backend outside of automated services
+
+We are actively working on implementing more secure keyring solutions that maintain both security 
+and high availability.
+
+> ⚠️ **Warning**: Security breaches can result in slashing and permanent loss of provider status
 
 ## Install Finality Provider Binary 
 <!-- TODO: check add in the correct tag for the testnet --> 
@@ -363,7 +382,9 @@ GRPCAddr = https://127.0.0.1:9090
 KeyDirectory = <path> # The `--home`path to the directory where the keyring is stored
 ``` 
 
-> ⚠️ **Important**: Operating a finality provider requires a connection to a Babylon blockchain node. It is **highly recommended** to operate your own Babylon full node instead of relying on third parties. You can find instructions on setting up a Babylon node [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/node-setup).
+> ⚠️ **Important**: Operating a finality provider requires a connection to a Babylon blockchain node. 
+It is **highly recommended** to operate your own Babylon full node instead of relying on third parties. 
+You can find instructions on setting up a Babylon node [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/node-setup).
 
 Configuration parameters explained:
 * `EOTSManagerAddress`: Address where your EOTS daemon is running
@@ -446,7 +467,8 @@ instance locally.
 fpd create-finality-provider \ 
 --daemon-address 127.0.0.1:12581 \ 
 --chain-id bbn-test-5 \ 
---eots-pk <eots-pk-hex> \ //this is the EOTS public key of the finality provider which was generated in `eotsd keys add`
+--eots-pk <eots-pk-hex> \ //this is the EOTS public key of the finality provider which was generated in 
+`eotsd keys add`
 --commission 0.05 \ 
 --key-name finality-provider \ 
 --moniker "MyFinalityProvider" \ 
