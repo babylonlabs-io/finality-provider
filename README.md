@@ -17,12 +17,11 @@ See the [Setup Node Guide](https://docs.babylonchain.io/docs/user-guides/btc-sta
 A secure key management daemon that handles EOTS key operations, 
 generates extractable one-time signatures, and produces public randomness. 
 For enhanced security, this component should run on a separate machine or 
-network segment. Full details are available in the [EOTS Manager Guide](docs/eots.md).
+network segment.
 3. **Finality Provider Daemon**:
 The core daemon that polls Babylon blocks, commits public randomness, and 
 submits finality signatures. It manages provider status transitions and handles 
-rewards distribution. See the [Finality Provider Guide](docs/finality-provider.md) 
-for complete documentation.
+rewards distribution.
 
 **Component Interactions**:
 The Finality Provider daemon communicates with the Babylon Node to monitor blocks 
@@ -34,7 +33,8 @@ all EOTS key operations.
 
 ## Become a Finality Provider
 
-For instructions on becoming a finality provider, see our [Finality Provider Guide](./docs/finality-provider-phase2.md).
+For instructions on creating and operating a finality provider,
+see our [Finality Provider Guide](./docs/finality-provider-operation.md).
 
 ## Technical Documentation
 
