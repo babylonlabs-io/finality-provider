@@ -34,7 +34,7 @@ func TestOpFpNoVotingPower(t *testing.T) {
 	require.NotNil(t, lastCommittedPubRand)
 
 	// no public randomness at this height, so the FP has no voting power
-	nextLastCommittedPubRandHeight := lastCommittedPubRand.StartHeight + lastCommittedPubRand.NumPubRand
+	nextLastCommittedPubRandHeight := lastCommittedPubRand.EndHeight() + 1
 	hasPower, err := opcc.QueryFinalityProviderHasPower(fpInstance.GetBtcPk(), nextLastCommittedPubRandHeight)
 	require.NoError(t, err)
 	require.Equal(t, false, hasPower)

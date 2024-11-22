@@ -281,7 +281,7 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec
 	}
 
 	// fp has 0 voting power if there is no public randomness at this height
-	lastCommittedPubRandHeight := pubRand.StartHeight + pubRand.NumPubRand - 1
+	lastCommittedPubRandHeight := pubRand.EndHeight()
 	cc.logger.Debug(
 		"FP last committed public randomness",
 		zap.Uint64("height", lastCommittedPubRandHeight),
