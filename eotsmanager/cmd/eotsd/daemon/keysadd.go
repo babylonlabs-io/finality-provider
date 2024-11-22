@@ -17,7 +17,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	cryptokeyring "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -53,6 +52,7 @@ output
     mostly coppied from the cosmos-sdk@v0.50.9 and
     replaced to allow use of empty hd path
 */
+//nolint:gocyclo,maintidx
 func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *bufio.Reader) error {
 	var err error
 
@@ -65,14 +65,14 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 
 	keyringAlgos, _ := kb.SupportedAlgorithms()
 	algoStr, _ := cmd.Flags().GetString(flags.FlagKeyType)
-	algo, err := keyring.NewSigningAlgoFromString(algoStr, keyringAlgos)
+	algo, err := cryptokeyring.NewSigningAlgoFromString(algoStr, keyringAlgos)
 	if err != nil {
 		return err
 	}
 
 	if dryRun, _ := cmd.Flags().GetBool(flags.FlagDryRun); dryRun {
 		// use in memory keybase
-		kb = keyring.NewInMemory(ctx.Codec)
+		kb = cryptokeyring.NewInMemory(ctx.Codec)
 	} else {
 		_, err = kb.Key(name)
 		if err == nil {
@@ -301,7 +301,7 @@ func validateMultisigThreshold(k, nKeys int) error {
 	return nil
 }
 
-func printCreate(cmd *cobra.Command, k *keyring.Record, showMnemonic bool, mnemonic, outputFormat string) error {
+func printCreate(cmd *cobra.Command, k *cryptokeyring.Record, showMnemonic bool, mnemonic, outputFormat string) error {
 	switch outputFormat {
 	case flags.OutputFormatText:
 		cmd.PrintErrln()
@@ -312,7 +312,7 @@ func printCreate(cmd *cobra.Command, k *keyring.Record, showMnemonic bool, mnemo
 		// print mnemonic unless requested not to.
 		if showMnemonic {
 			if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "\n**Important** write this mnemonic phrase in a safe place.\nIt is the only way to recover your account if you ever forget your password.\n\n%s\n", mnemonic); err != nil {
-				return fmt.Errorf("failed to print mnemonic: %v", err)
+				return fmt.Errorf("failed to print mnemonic: %s", err.Error())
 			}
 		}
 	case flags.OutputFormatJSON:
