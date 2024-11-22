@@ -73,8 +73,8 @@ section for import instructions.
 
 > ⚠️ **Critical**: Implement these measures before starting daemons or handling keys
 
-* EOTS Manager: Restrict access to RPC (127.0.0.1:12582)
-* FP Daemon: Secure RPC listener (127.0.0.1:12581)
+* EOTS Manager: Restrict access to RPC (`127.0.0.1:12582`)
+* FP Daemon: Secure RPC listener (`127.0.0.1:12581`)
 * Keys:
   - EOTS: Secure offline backup required
   - Babylon: Use `os` or `file` backend for production
