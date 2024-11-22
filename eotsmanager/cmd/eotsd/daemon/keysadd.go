@@ -42,6 +42,8 @@ func runAddCmdPrepare(cmd *cobra.Command, args []string) error {
 }
 
 /*
+Code adapted from cosmos-sdk https://github.com/cosmos/cosmos-sdk/blob/c64d1010800d60677cc25e2fca5b3d8c37b683cc/client/keys/add.go#L127-L128
+where the only diff is to allow empty HD path
 input
   - bip39 mnemonic
   - bip39 passphrase
@@ -187,6 +189,9 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 	hdPath, _ := cmd.Flags().GetString(flagHDPath)
 	useLedger, _ := cmd.Flags().GetBool(flags.FlagUseLedger)
 
+	// This is the diff point, the sdk verifies if the hd path in flag was empty,
+	// and if it was it would assign something, we do allow empty hd path to be used.
+	// https://github.com/cosmos/cosmos-sdk/blob/c64d1010800d60677cc25e2fca5b3d8c37b683cc/client/keys/add.go#L261
 	if useLedger {
 		return errors.New("cannot set custom bip32 path with ledger")
 	}
