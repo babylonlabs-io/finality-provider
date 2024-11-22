@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [149](https://github.com/babylonlabs-io/finality-provider/pull/149) Remove update of config after `fpd keys add`
+
 ## v0.12.0
 
 ### Bug Fixes
