@@ -7,6 +7,8 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 // FileExists reports whether the named file or directory exists.
@@ -62,4 +64,15 @@ func CleanAndExpandPath(path string) string {
 	// NOTE: The os.ExpandEnv doesn't work with Windows-style %VARIABLE%,
 	// but the variables can still be expanded via POSIX-style $VARIABLE.
 	return filepath.Clean(os.ExpandEnv(path))
+}
+
+// GetSubCommand returns the command if it finds, otherwise it returns nil
+func GetSubCommand(cmd *cobra.Command, commandName string) *cobra.Command {
+	for _, c := range cmd.Commands() {
+		if !strings.EqualFold(c.Name(), commandName) {
+			continue
+		}
+		return c
+	}
+	return nil
 }

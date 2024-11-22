@@ -1,18 +1,17 @@
-package main
+package daemon
 
 import (
 	"bytes"
 	"fmt"
 
-	"sigs.k8s.io/yaml"
-
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/keys"
-	"github.com/spf13/cobra"
-
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/log"
+	"github.com/babylonlabs-io/finality-provider/util"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/keys"
+	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
 )
 
 type KeyOutput struct {
@@ -24,20 +23,21 @@ func NewKeysCmd() *cobra.Command {
 	keysCmd := keys.Commands()
 
 	// Find the "add" subcommand
-	addCmd := findSubCommand(keysCmd, "add")
+	addCmd := util.GetSubCommand(keysCmd, "add")
 	if addCmd == nil {
 		panic("failed to find keys add command")
 	}
 
-	// Wrap the original RunE function
-	originalRunE := addCmd.RunE
+	// Override the original RunE function to run almost the same as
+	// the sdk, but it allows empty hd path and allow to save the key
+	// in the name mapping
 	addCmd.RunE = func(cmd *cobra.Command, args []string) error {
 		// Create a buffer to intercept the key items
 		var buf bytes.Buffer
 		cmd.SetOut(&buf)
 
 		// Run the original command
-		err := originalRunE(cmd, args)
+		err := runAddCmdPrepare(cmd, args)
 		if err != nil {
 			return err
 		}
@@ -46,15 +46,6 @@ func NewKeysCmd() *cobra.Command {
 	}
 
 	return keysCmd
-}
-
-func findSubCommand(cmd *cobra.Command, name string) *cobra.Command {
-	for _, subCmd := range cmd.Commands() {
-		if subCmd.Name() == name {
-			return subCmd
-		}
-	}
-	return nil
 }
 
 func saveKeyNameMapping(cmd *cobra.Command, args []string) error {
