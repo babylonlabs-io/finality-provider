@@ -8,7 +8,10 @@ This document guides operators through the complete lifecycle of running a final
 * Operating and maintaining your finality provider
 * Collecting rewards
 
-This is an operational guide intended for DevOps teams running finality providers. For conceptual understanding, see our [Technical Documentation](./docs/fp-core.md).
+This is an operational guide intended for DevOps teams running finality providers. 
+For conceptual understanding, see our [Technical Documentation](./docs/fp-core.md). 
+Please review the [high-level](./README.md) documentation before proceeding to 
+gain an overall understanding of the finality provider. 
 
 ## Table of Contents
 
@@ -74,7 +77,7 @@ These people need to know the following:
   - Babylon: Use `os` or `file` backend for production
 * Monitor:
   - Double-signing attempts
-  - Status changes (Active/Inactive/Jailed)
+  - Status changes (`Active`/`Inactive`/`Jailed`)
   - Public randomness commits
 
 > ⚠️ **Warning**: Security breaches can result in slashing and permanent loss of provider status
@@ -105,7 +108,7 @@ git checkout <tag>
 
 ### Step 2: Build and Install Finality Provider Binaries
 
-Run:
+Run to build the binaries and install them to your `$GOPATH/bin` directory:
 ```shell 
 make install 
 ```
@@ -124,14 +127,14 @@ Run `fpd version` to verify the installation:
 ```shell 
 fpd version
 ``` 
-The output should be:
-```shell 
-version: <version>
-build: <build>
+The expected output should be:
+```shell
+version: v0.11.0
+commit: 7d37c88e9a33c0b6a86614f743e9426ce6e31d4a
 ```
 
 If your shell cannot find the installed binaries, make sure `$GOPATH/bin` is in
-the `$PATH` of your shell. Usually these commands will do the job
+the `$PATH` of your shell. Use the following command to add it to your profile.
 
 ```shell 
 echo 'export PATH=$HOME/go/bin:$PATH' >> ~/.profile
@@ -139,12 +142,13 @@ echo 'export PATH=$HOME/go/bin:$PATH' >> ~/.profile
 
 ## Setting up the EOTS Manager
 
->Note: If you have already set up an EOTS Manager, you can skip this section. 
+>If you have already set up an EOTS Manager, you can skip this section. 
 The following steps are only for users who have not yet set up an EOTS Manager. 
 Phase-1 users who already had an EOTS Manager set up can skip to the 
-[Loading Existing Keys](#loading-existing-keys) 
+[Loading Existing Keys](#loading-existing-keys)
 section at the end of this guide for specific instructions 
-on re-using their Phase-1 EOTS keys.
+on re-using their Phase-1 EOTS keys unless you would like to familiarlize yourself 
+with the backup and recovery process.
 
 After the full node has been setup, the operator can set up and run the
 Extractable One Time Signature (EOTS) manager daemon.
@@ -155,14 +159,16 @@ Manager see [here](#)
 
 ### Step 1: Initialize the EOTS Manager
 
-Use the `eotsd init` command to initialize a home directory for the EOTS Manager.
-You can set or change your home directory using the `--home` tag. For example, use 
-`--home ./eotsHome` to specify a custom directory. The application default home directory is 
-`/Users/<username>/Library/Application Support/Eotsd`.
+Initialize a home directory for the EOTS Manager with the following command:
 
-```shell 
-eotsd init --home <path> 
+```shell
+eotsd init --home <path>
 ```
+
+Parameters:
+* `--home`: Directory for EOTS Manager configuration and data
+  - Default: `/Users/<username>/Library/Application Support/Eotsd`
+  - Example: `--home ./eotsHome`
 
 ### Step 2: Create an EOTS Key
 
@@ -196,15 +202,15 @@ of your finality provider operations.
 
 ## Loading Existing Keys 
 
->Note: If you participated in Phase-1, follow these steps to load your existing EOTS 
+If you participated in Phase-1, follow these steps to load your existing EOTS 
 key and configure it for Phase-2. 
 
->This section is only for Finality Providers who participated in Phase-1 and already 
+This section is only for Finality Providers who participated in Phase-1 and already 
 had an EOTS key. If you are a new user, you can skip this section unless you would like to 
 familiarlize yourself with the backup and recovery process. 
 
 ### Step 1: Verify Your EOTS Key Backup
->Note: Before proceeding, ensure you have access to your original EOTS key from Phase-1. 
+>⚠️ **Important**: Before proceeding, ensure you have access to your original EOTS key from Phase-1. 
 This is the same key that was registered in the [Phase-1 registration](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers). 
 <!-- TODO: update link when merged -->
 
@@ -376,10 +382,14 @@ After importing, verify that your EOTS key was successfully loaded:
 eotsd keys list <key-name> --keyring-backend test --home <path>
 ```
 
+* `<key-name>`: Name of the EOTS key to verify
+* `--keyring-backend`: Type of keyring backend to use (default: test)
+* `--home`: Directory containing EOTS Manager configuration and data
+
 You should see your EOTS key listed with the correct details, confirming that 
 it has been imported correctly.
 
->Note: Make sure you're using the same key name and EOTS public key that were 
+>⚠️ **Important**: Make sure you're using the same key name and EOTS public key that were 
 registered in Phase-1.
 
 ## Starting the Finality Provider Daemon
@@ -512,7 +522,7 @@ fpd register-finality-provider \
 ```
 
 - `<btc-public-key>`: Your BTC public key from create-finality-provider 
-(e.g., "cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41")
+(e.g., `cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41`)
 - `--daemon-address`: RPC address of your finality provider daemon (default: "127.0.0.1:12581")
 - `--passphrase`: Passphrase for your key
 - `--home`: Path to your finality provider daemon home directory (e.g., "~/.fpd")
@@ -596,7 +606,30 @@ When jailed, the following happens to a finality provider:
 To unjail a finality provider, you must complete the following steps:
 - Fix the underlying issue that caused jailing
 - Wait for the jailing period to pass (if it was due to downtime)
-- Then send the unjail transaction to the Babylon chain.
+- Then send the unjail transaction to the Babylon chain (not the finality provider daemon).
+
+You can use the following command to send the unjail transaction:
+```shell
+babylond tx slashing unjail \
+--from=<your-key-name> \
+--chain-id="euphrates-0.5.0" \
+--gas="auto" \
+--gas-adjustment=1.5 \
+--gas-prices=0.025ubbn \
+--keyring-backend=test \
+--home=./nodeDir
+```
+
+Parameters:
+* `--from`: Your Babylon key name
+* `--chain-id`: Current Babylon network chain ID
+* `--gas`: Gas limit for transaction (auto recommended)
+* `--gas-adjustment`: Multiplier for auto gas calculation
+* `--gas-prices`: Gas price in ubbn
+* `--keyring-backend`: Keyring backend type
+* `--home`: Babylon node home directory
+
+> ⚠️ **Important**: Before unjailing, ensure you've fixed the underlying issue that caused jailing
 
 So while slashing is permanent, jailing is a temporary state that can be recovered 
 from through the unjailing process, as long as the finality provider wasn't slashed.
@@ -605,7 +638,7 @@ from through the unjailing process, as long as the finality provider wasn't slas
 
 For detailed information about public randomness commits, see:
 * [Technical Overview](./docs/commit-pub-rand.md)
-* [Core Implementation Details](./docs/fp-core.md#committing-public-randomness)
+* [Core Implementation Details](./fp-core.md#committing-public-randomness)
 ## Reading the logs
 
 The logs are stored based on your daemon home directories:
