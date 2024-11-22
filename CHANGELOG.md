@@ -40,6 +40,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Bug Fixes
 
 * [139](https://github.com/babylonlabs-io/finality-provider/pull/139) Ignore voting power not updated error
+* [148](https://github.com/babylonlabs-io/finality-provider/pull/148) Allow command `eotsd keys add` to use
+empty HD path to derive new key and use master private key.
 
 ### Improvements
 
