@@ -9,7 +9,6 @@ import (
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
@@ -30,13 +29,13 @@ func CommandCommitPubRand() *cobra.Command {
 WARNING: this can drain the finality provider's balance if the target height is too high.`,
 		Example: `fpd unsafe-commit-pubrand --home /home/user/.fpd [fp-eots-pk-hex] [target-height]`,
 		Args:    cobra.ExactArgs(2),
-		RunE:    fpcmd.RunEWithClientCtx(runCommandCommitPubRand),
+		RunE:    runCommandCommitPubRand,
 	}
 	cmd.Flags().Uint64("start-height", math.MaxUint64, "The block height to start committing pubrand from (optional)")
 	return cmd
 }
 
-func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []string) error {
+func runCommandCommitPubRand(cmd *cobra.Command, args []string) error {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
 		return err
@@ -99,7 +98,6 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 
 	if startHeight == math.MaxUint64 {
 		return fp.TestCommitPubRand(targetHeight)
-	} else {
-		return fp.TestCommitPubRandWithStartHeight(startHeight, targetHeight)
 	}
+	return fp.TestCommitPubRandWithStartHeight(startHeight, targetHeight)
 }
