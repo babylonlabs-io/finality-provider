@@ -1035,9 +1035,7 @@ func (fp *FinalityProviderInstance) GetLastCommittedHeight() (uint64, error) {
 		return 0, nil
 	}
 
-	lastCommittedHeight := pubRandCommit.StartHeight + pubRandCommit.NumPubRand - 1
-
-	return lastCommittedHeight, nil
+	return pubRandCommit.EndHeight(), nil
 }
 
 func (fp *FinalityProviderInstance) lastCommittedPublicRandWithRetry() (*types.PubRandCommit, error) {

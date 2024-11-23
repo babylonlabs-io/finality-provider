@@ -447,7 +447,6 @@ replace (
 	github.com/ethereum/go-ethereum => github.com/ethereum-optimism/op-geth v1.101408.0-rc.4.0.20240827042333-110c433a2469
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-
 	// avoid v1.66 that has a breaking change for protobuf. That change breaks the relayer.
 	// https://github.com/grpc/grpc-go/issues/7569
 	google.golang.org/grpc => google.golang.org/grpc v1.65.0
