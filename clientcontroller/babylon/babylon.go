@@ -3,6 +3,7 @@ package babylon
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	sdkErr "cosmossdk.io/errors"
 	"cosmossdk.io/math"
@@ -161,6 +162,13 @@ func (bc *BabylonController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey
 		blockHeight,
 	)
 	if err != nil {
+		// voting power table not updated indicates that no fp has voting power
+		// therefore, it should be treated as the fp having 0 voting power
+		if strings.Contains(err.Error(), btcstakingtypes.ErrVotingPowerTableNotUpdated.Error()) {
+			bc.logger.Info("the voting power table not updated yet")
+			return false, nil
+		}
+
 		return false, fmt.Errorf("failed to query Finality Voting Power at Height %d: %w", blockHeight, err)
 	}
 

@@ -281,11 +281,16 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec
 	}
 
 	// fp has 0 voting power if there is no public randomness at this height
-	lastCommittedPubRandHeight := pubRand.StartHeight + pubRand.NumPubRand - 1
+	lastCommittedPubRandHeight := pubRand.EndHeight()
 	cc.logger.Debug(
 		"FP last committed public randomness",
 		zap.Uint64("height", lastCommittedPubRandHeight),
 	)
+	// TODO: Handle the case where public randomness is not consecutive.
+	// For example, if the FP is down for a while and misses some public randomness commits:
+	// Assume blocks 1-100 and 200-300 have public randomness, and lastCommittedPubRandHeight is 300.
+	// For blockHeight 101 to 199, even though blockHeight < lastCommittedPubRandHeight,
+	// the finality provider should have 0 voting power.
 	if blockHeight > lastCommittedPubRandHeight {
 		cc.logger.Debug(
 			"FP has 0 voting power because there is no public randomness at this height",

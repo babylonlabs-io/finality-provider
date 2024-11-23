@@ -23,6 +23,11 @@ func (prc *PubRandCommit) Validate() error {
 	return nil
 }
 
+// EndHeight returns the last height covered by this public randomness commitment
+func (prc *PubRandCommit) EndHeight() uint64 {
+	return prc.StartHeight + prc.NumPubRand - 1
+}
+
 // GetPubRandCommitAndProofs commits a list of public randomness and returns
 // the commitment (i.e., Merkle root) and all Merkle proofs
 func GetPubRandCommitAndProofs(pubRandList []*btcec.FieldVal) ([]byte, []*merkle.Proof) {

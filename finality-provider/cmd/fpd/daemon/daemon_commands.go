@@ -327,10 +327,11 @@ func runCommandRegisterFP(cmd *cobra.Command, args []string) error {
 // CommandAddFinalitySig returns the add-finality-sig command by connecting to the fpd daemon.
 func CommandAddFinalitySig() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "add-finality-sig [fp-eots-pk-hex] [block-height]",
-		Aliases: []string{"afs"},
-		Short:   "Send a finality signature to the consumer chain. This command should only be used for presentation/testing purposes",
-		Example: fmt.Sprintf(`fpd add-finality-sig --daemon-address %s`, defaultFpdDaemonAddress),
+		Use:     "unsafe-add-finality-sig [fp-eots-pk-hex] [block-height]",
+		Aliases: []string{"unsafe-afs"},
+		Short:   "[UNSAFE] Send a finality signature to the consumer chain.",
+		Long:    "[UNSAFE] Send a finality signature to the consumer chain. This command should only be used for presentation/testing purposes",
+		Example: fmt.Sprintf(`fpd unsafe-add-finality-sig [fp-eots-pk-hex] [block-height] --daemon-address %s`, defaultFpdDaemonAddress),
 		Args:    cobra.ExactArgs(2),
 		RunE:    runCommandAddFinalitySig,
 	}
