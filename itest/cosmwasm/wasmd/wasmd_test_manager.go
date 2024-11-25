@@ -23,6 +23,7 @@ import (
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	dbm "github.com/cosmos/cosmos-db"
@@ -107,7 +108,10 @@ func StartWasmdTestManager(t *testing.T) *WasmdTestManager {
 	// 5. prepare finality-provider
 	fpdb, err := cfg.DatabaseConfig.GetDbBackend()
 	require.NoError(t, err)
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, wcc, eotsCli, fpdb, logger)
+
+	fpMetrics := metrics.NewFpMetrics()
+	pollerFactory := service.NewChainPollerFactory(logger, cfg.PollerConfig, bc, wcc, fpMetrics)
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, wcc, pollerFactory, eotsCli, fpdb, fpMetrics, logger)
 	require.NoError(t, err)
 	err = fpApp.Start()
 	require.NoError(t, err)

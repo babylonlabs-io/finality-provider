@@ -71,3 +71,24 @@ type ConsumerController interface {
 
 	Close() error
 }
+
+// ChainPoller is a interface that got block info from the consumer chain.
+type ConsumerChainPoller interface {
+	// Start the poller, will begin with the `startHeight`
+	Start(startHeight uint64) error
+
+	// SkipToHeight make poller skip blocks in `GetBlockInfoChan` until the `height`.
+	SkipToHeight(height uint64) error
+
+	// Return read only channel for incoming blocks
+	// TODO: Handle the case when there is more than one consumer. Currently with more than
+	// one consumer blocks most probably will be received out of order to those consumers.
+	GetBlockInfoChan() <-chan *types.BlockInfo
+
+	Stop() error
+}
+
+// ConsumerChainPollerFactory is a factory for creating chain pollers by fp manager
+type ConsumerChainPollerFactory interface {
+	CreateChainPoller() (ConsumerChainPoller, error)
+}

@@ -118,7 +118,12 @@ func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc cca
 	fpCfg.PollerConfig.StaticChainScanningStartHeight = startingHeight
 	db, err := fpCfg.DatabaseConfig.GetDbBackend()
 	require.NoError(t, err)
-	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, db, logger)
+
+	// TODO: use mock metrics
+	fpMetrics := metrics.NewFpMetrics()
+	pollerFactory := service.NewChainPollerFactory(logger, fpCfg.PollerConfig, cc, consumerCon, fpMetrics)
+
+	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, pollerFactory, em, db, fpMetrics, logger)
 	require.NoError(t, err)
 	err = app.Start()
 	require.NoError(t, err)
@@ -131,9 +136,11 @@ func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc cca
 	fpStore := app.GetFinalityProviderStore()
 	err = fpStore.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_REGISTERED)
 	require.NoError(t, err)
-	// TODO: use mock metrics
-	m := metrics.NewFpMetrics()
-	fpIns, err := service.NewFinalityProviderInstance(fp.GetBIP340BTCPK(), &fpCfg, app.GetFinalityProviderStore(), pubRandProofStore, cc, consumerCon, em, m, passphrase, make(chan *service.CriticalError), logger)
+
+	poller, err := pollerFactory.CreateChainPoller()
+	require.NoError(t, err)
+
+	fpIns, err := service.NewFinalityProviderInstance(fp.GetBIP340BTCPK(), &fpCfg, app.GetFinalityProviderStore(), pubRandProofStore, cc, consumerCon, poller, em, fpMetrics, passphrase, make(chan *service.CriticalError), logger)
 	require.NoError(t, err)
 
 	cleanUp := func() {
