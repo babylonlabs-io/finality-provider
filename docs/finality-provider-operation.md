@@ -315,15 +315,15 @@ fpd keys add --keyname <key-name> --keyring-backend test --home <path>
 
 >⚠️ **Important**:
 >To operate your Finality Provider, ensure your Babylon account is funded. Block vote transactions 
-have their gas fees refunded, but public randomness >submissions require gas payments. For testnet, 
+have their gas fees refunded, but public randomness submissions require gas payments. For testnet, 
 you can obtain funds from our [faucet](#add-faucet).
->
-<!-- >add faucet link -->
+
+<!-- add faucet link -->
 >We use the `--keyring-backend test`, which stores keys unencrypted on disk. This backend is suitable 
-for testing but not recommended for large fund storage. >Rewards from Finality Provider commissions 
+for testing but not recommended for large fund storage. Rewards from Finality Provider commissions 
 are stored in this keyring. Other keyring backends are not supported yet, and prolonged inactivity 
-(missing >transactions) can lead to your Finality Provider being jailed.
->
+(missing transactions) can lead to your Finality Provider being jailed.
+
 >Keep only enough funds in the keyring for operations, which you can view [here](#keyring-maintenance-and-gas-requirements). 
 We are also exploring options to support different withdrawal addresses.
 
@@ -462,8 +462,7 @@ Optional parameters:
 - `--security-contact`: Contact email for security issues 
 - `--details`:
 Additional description of your finality provider 
-- `--daemon-address`: RPC
-address of the finality provider daemon (default: 127.0.0.1:12581)
+- `--daemon-address`: RPC address of the finality provider daemon (default: `127.0.0.1:12581`)
 
 Upon successful creation, the command will return a JSON response containing
 your finality provider's details:
@@ -516,10 +515,10 @@ fpd register-finality-provider \
 Parameters:
 - `<btc-public-key>`: Your BTC public key from create-finality-provider 
 (e.g., `cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41`)
-- `--daemon-address`: RPC address of your finality provider daemon (default: "127.0.0.1:12581")
+- `--daemon-address`: RPC address of your finality provider daemon (default: `127.0.0.1:12581`)
 - `--passphrase`: Passphrase for your key
-- `--home`: Path to your finality provider daemon home directory (e.g., "~/.fpd")
-- `--keyring-backend`: Type of keyring storage (use "test" for testing, "file" for production)
+- `--home`: Path to your finality provider daemon home directory (e.g., `~/.fpdHome`)
+- `--keyring-backend`: Type of keyring storage (use `test` for testing, `file` for production)
 
 > Note: The BTC public key (`cf0f03...1a41`) is obtained from the previous
 `eotsd keys add` command.
@@ -583,8 +582,7 @@ To see the logs of the finality provider daemon, you can use the following comma
 tail -f <fpd-home>/logs/fpd.log | grep "successfully submitted a finality signature to the consumer chain"
 ```
 
-To see the technical documentation for sending finality votes, see: 
-[send-finality-vote.md](./send-finality-vote.md)
+To see the technical documentation for [sending finality votes](./send-finality-vote.md)
 
 ### 5.5. Keyring maintenance and gas requirements
 
@@ -708,7 +706,7 @@ fpd unjail-finality-provider <eots-pk> --daemon-address <rpc-address> --home <pa
 
 Parameters:
 - `<eots-pk>`: Your finality provider's EOTS public key in hex format
-- `--daemon-address`: RPC server address of fpd (default: "127.0.0.1:12581")
+- `--daemon-address`: RPC server address of fpd (default: `127.0.0.1:12581`)
 - `--home`: Path to your finality provider daemon home directory
 
 >  Before unjailing, ensure you've fixed the underlying issue that caused jailing
@@ -786,12 +784,14 @@ Once Prometheus is running:
 
 ## 6. Security and Slashing
 
-Slashing occurs when a finality provider **double signs**. This occurs when a
+**Slashing occurs** when a finality provider **double signs**. This occurs when a
 finality provider signs conflicting blocks at the same height. This results in
 the extraction of the provider's private key and automatically triggers shutdown
-of the finality provider.
+of the finality provider, removal from the active set, jailing and compromised rewards.
 
-**Keyring Security**:
+> **Critical**: Slashing is irreversible and results in permanent removal from the network.
+
+**Keyring Security 🔒**:
 The finality provider daemon uses the `--keyring-backend test` which stores keys unencrypted on disk.
 While this is generally not secure, it's necessary for the finality provider service because:
 
@@ -800,6 +800,15 @@ While this is generally not secure, it's necessary for the finality provider ser
 * Using encrypted keystores would require manual password entry after every restart
 * Service availability is critical to avoid jailing
 
-
 We are actively working on implementing more secure keyring solutions that maintain both security
 and high availability.
+
+**Security Best Practices 🔒**:
+Here are some best practices to secure your finality provider:
+* Run EOTS Manager and Finality Provider on separate machine/network segment
+* Regular system security audits
+* Monitor for unauthorized activities
+* Allow only necessary ports (`12581`, `12582`)
+* Active monitoring of the logs
+
+
