@@ -3,8 +3,7 @@
 This document guides operators through the complete
 lifecycle of running a finality provider, including:
 
-* Installing and configuring the finality provider 
-  toolset (EOTS Manager and FP daemon)
+* Installing and configuring the finality provider toolset (EOTS Manager and Finality Provider daemon)
 * Managing keys (EOTS key for signatures and Babylon key for rewards)
 * Registering your finality provider on the Babylon network
 * Operating and maintaining your finality provider
@@ -17,45 +16,30 @@ gain an overall understanding of the finality provider.
 
 ## Table of Contents
 
-1. [A note about Phase-1 Finality Providers](#phase-1-finality-providers)
-2. [Install Finality Provider Toolset](#install-finality-provider-binary)
-3. [Setting up the EOTS Manager](#setting-up-the-eots-manager)
-   1. [Loading Existing Keys](#loading-existing-keys)
-   2. [Starting the EOTS Daemon](#starting-the-eots-daemon)
-4. [Setting up the Finality Provider](#setting-up-the-finality-provider)
-   1. [Starting the Finality Provider Daemon](#starting-the-finality-provider-daemon)
-5. [Finality Provider Operation]()
-   1. [Create Finality Provider](#create-finality-provider)
-   2. [Register Finality Provider](#register-finality-provider)
-   3. [Public Randomness Submission](#public-randomness-submission)
-   4. [Submission of votes]()
-   5. [Keyring maintenance and gas requirements]()
-   6. [Reading the logs](#reading-the-logs)
-   7. [Withdrawing Rewards](#withdrawing-rewards)
-   8. [Jailing and Unjailing](#jailing-and-unjailing)
-   9. [Monitoring]() <!-- ask filippos -->
-6. [Security and Slashing]()
-
-<!--- This document is an operational document.
-It is not targeted to people that need to understand on a deep
-level what the finality provider is or does, it is targeted
-to devops people that are responsible for operating a finality provider.
-These people need to know the following:
-* How do I install the finality provider toolset and set it up.
-* What is included in the finality provider toolset (fpd, eotsd),
-  and what do these tools correspond to.
-* How do I set up the toolset and daemons and how do I connect them
-  with each other. Security tips?
-* What keys do I need for the operation of this stack,
-  and what is the security level I should apply to them.
-    * should I hold funds into them?
-* What is the lifecycle of my finality provider:
-   * registration, creation, submitting votes and public randomness
-   * being active/inactive
-   * being jailed and unjailing
-   * being slahsed and how it can happen and how I can be protected against it
-* How do I understand my rewards and retrieve them?
--->
+1. [A note about Phase-1 Finality Providers](#1-a-note-about-phase-1-finality-providers)
+2. [Install Finality Provider Toolset](#2-install-finality-provider-toolset)
+3. [Setting up the EOTS Daemon](#3-setting-up-the-eots-daemon)
+   1. [Initialize the EOTS Daemon](#31-initialize-the-eots-daemon)
+   2. [Create/Add an EOTS Key](#32-createadd-an-eots-key)
+      1. [Import an existing EOTS key](#321-import-an-existing-eots-key)
+      2. [Create an EOTS key](#322-create-an-eots-key)
+   3. [Starting the EOTS Daemon](#33-starting-the-eots-daemon)
+4. [Setting up the Finality Provider](#4-setting-up-the-finality-provider)
+   1. [Initialize the Finality Provider Daemon](#41-initialize-the-finality-provider-daemon)
+   2. [Add key for the Babylon account](#42-add-key-for-the-babylon-account)
+   3. [Configure Your Finality Provider](#43-configure-your-finality-provider)
+   4. [Starting the Finality Provider Daemon](#44-starting-the-finality-provider-daemon)
+5. [Finality Provider Operation](#5-finality-provider-operations)
+   1. [Create Finality Provider](#51-create-finality-provider)
+   2. [Register Finality Provider](#52-register-finality-provider)
+   3. [Public Randomness Submission](#53-public-randomness-submission)
+   4. [Submission of votes](#54-submission-of-votes)
+   5. [Keyring maintenance and gas requirements](#55-keyring-maintenance-and-gas-requirements)
+   6. [Reading the logs](#56-reading-the-logs)
+   7. [Withdrawing Rewards](#57-withdrawing-rewards)
+   8. [Jailing and Unjailing](#58-jailing-and-unjailing)
+   9. [Monitoring](#59-monitoring)
+6. [Security and Slashing](#6-security-and-slashing)
 
 ## 1. A note about Phase-1 Finality Providers
 
@@ -71,26 +55,6 @@ second phase of the Babylon launch.
 * how to proceed with the guide.
 
 > ⚠️ **Critical**: Ensure that you use 
-
-Finality providers that participated in the first phase of the Babylon mainnet,
-should use the same EOTS keys for the second phase instead of creating new ones,
-as all their BTC stake delegations are associated with the keys they used on phase-1.
-
-* `Phase-1` operators should use their existing EOTS keys for `Phase-2` participation.
-* All your delegations are associated with your existing EOTS key - you must import 
-your existing key instead of creating a new one, as 
-**creating new keys will result in loss of delegations**.
-* For those who participated in both testnet and mainnet, ensure you 
-**use the correct key for each network to avoid delegation loss and potential slashing**.
-* Locate your `Phase-1` EOTS key backup and proceed to the [Loading Existing Keys](#loading-existing-keys) 
-section for import instructions.
-
-<!-- * If you were an fp on phase-1, you don't need to create new keys.
-* All your delegations are associated with your existing EOTS key,
-  so you need to import that instead of creating a new one. (highlight this as its dangerous)
-* If you participated in both the testnet and the mainnet,
-  make sure that you transition the finality provider key you used on the respective network. (highlight this as its dangerous) -->
-
 
 ## 2. Install Finality Provider Toolset 
 <!-- TODO: check add in the correct tag for the testnet --> 
@@ -117,7 +81,8 @@ git checkout <tag>
 
 ### 2.2. Build and Install Finality Provider Toolset Binaries
 
-Run to build the binaries and install them to your `$GOPATH/bin` directory:
+Run the following command to build the binaries and install them to your `$GOPATH/bin` directory:
+
 ```shell 
 make install 
 ```
@@ -131,12 +96,14 @@ This command will:
 
 ### 2.3. Verify Installation 
 <!-- fix this section -->
-Run `fpd version` to verify the installation:
+Run the following command to verify the installation:
 
 ```shell 
 fpd version
 ``` 
+
 The expected output should be:
+
 ```shell
 # example output
 version: v0.11.0 
@@ -150,30 +117,24 @@ the `$PATH` of your shell. Use the following command to add it to your profile.
 echo 'export PATH=$HOME/go/bin:$PATH' >> ~/.profile
 ```
 
-## 3. Setting up the EOTS Manager Daemon
+## 3. Setting up the EOTS Daemon
 
 The EOTS manager daemon is a core component of the finality provider
 stack responsible for managing your EOTS keys and producing EOTS signatures
 to be used for votes. In this section, we are going to go through
 its setup and key generation process.
 
-> Note: If you were a participant of a phase-1 Babylon launch network
-> intending to transition your finality provider to a later phase,
-> you do not need to create a new EOTS key. Please follow this section
-> as it will guide you in transitioning your existing keys to the
-> phase-2 and beyond finality provider stack.
+### 3.1. Initialize the EOTS Daemon
 
-### 3.1. Initialize the EOTS Manager
-
-If you haven't already,
-initialize a home directory for the EOTS Manager with the following command:
+If you haven't already, initialize a home directory for the EOTS Manager 
+with the following command:
 
 ```shell
 eotsd init --home <path>
 ```
 
 Parameters:
-* `--home`: Directory for EOTS Manager configuration and data
+- `--home`: Directory for EOTS Manager configuration and data
   - Default: `/Users/<username>/Library/Application Support/Eotsd`
   - Example: `--home ./eotsHome`
 
@@ -181,35 +142,33 @@ Parameters:
 
 #### 3.2.1. Import an existing EOTS key
 
-<!-- TODO: Different cases people might have backed up their existing key:
-1. Mnemonic -> need to instruct them how to import via mnemonic.
-2. Just export (`.asc` file) -> need to instruct them how to import like this.
-3. Backed up entire home directory -> need to instruct them on what to move -->
+>⚠️ **Important**:This section is for Finality Providers who participated in Phase-1 and already posess an EOTS key. 
+>If you are a new user, you can skip this section unless you would like to familiarize yourself 
+>with the backup and recovery process.
 
->If you have already set up an EOTS Manager, you can skip this section.
-The following steps are only for users who have not yet set up an EOTS Manager.
-Phase-1 users who already had an EOTS Manager set up can skip to the
-[Loading Existing Keys](#loading-existing-keys)
-section at the end of this guide for specific instructions
-on re-using their Phase-1 EOTS keys unless you would like to familiarize yourself
-with the backup and recovery process.
+There are 3 supported methods of loading your existing EOTS keys: using a mnemonic phrase,
+exporting the `.asc` file and backing up your entire home directory. We have outlined
+each of these three paths for you below.
 
-If you participated in Phase-1, follow these steps to load your existing EOTS
-key and configure it for Phase-2.
+####  Using your Mnemonic Phrase
 
-This section is only for Finality Providers who participated in Phase-1 and already
-had an EOTS key. If you are a new user, you can skip this section unless you would like to
-familiarlize yourself with the backup and recovery process.
+If you are using your mnemonic seed phrase, use the following command to import your key:
 
-##### Verify Your EOTS Key Backup
->⚠️ **Important**: Before proceeding, ensure you have access to your original EOTS key from Phase-1.
-This is the same key that was registered in the [Phase-1 registration](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers).
-<!-- TODO: update link when merged -->
+```shell
+eotsd keys add <key-name> --recover
+```
 
-##### Import Your EOTS Key into the Keyring
+You'll be prompted to enter:
+1. Your bip39 mnemonic phrase (24 words)
+2. A passphrase to encrypt your key
+3. HD path (optional - press Enter to use default)
 
-Before importing the key, it should be in a file (the file will be named `key.asc`)
-in the following format.
+> ⚠️ **Note**: The HD path is optional. If you used the default path when creating your key, 
+you can skip this by pressing Enter.
+
+#### Using your `.asc` file
+
+If you exported your key to a `.asc` file. The `.asc` file should be in the following format:
 
 ```
 -----BEGIN TENDERMINT PRIVATE KEY-----
@@ -223,26 +182,38 @@ VP88GFE=
 -----END TENDERMINT PRIVATE KEY-----
 ``` 
 
-To load your existing EOTS key, use the following command to import it into the
-keyring:
+To load your existing EOTS key, use the following command:
 
-```shell 
+```shell
 eotsd keys import <name> <path-to-key> --home <path> --keyring-backend test
 ```
 
-- `<name>`: New name for your key in Phase-2. This should be unique from the keyname
-  used in Phase-1.
-- `<path-to-key>`: Path to the exported key file
-- `--home`: EOTS daemon home directory for Phase-2
-- `--keyring-backend`: Keyring backend type (use `test` for testing)
+#### Using Home Directory Backup
+
+If you backed up your entire EOTS home directory or are using your `--home` directory.
+
+1. Check to see if the EOTS daemon is running. If it is, stop it.
+2. Copy your backup directory or your old home directory to the new location.
+
+```shell
+# Stop the EOTS daemon if running
+# Copy your Phase-1 directory to Phase-2 location
+cp -r ~/.eotsd ~/.eotsd-phase2
+
+# Initialize it for Phase-2
+eotsd init --home ~/.eotsd-phase2
+```
+>⚠️ **Important**: Please note that the above directory is just an example. 
+Your directory will be located at the path you specified.
 
 ##### Verify the Key Import
-After importing, verify that your EOTS key was successfully loaded:
+After importing, you can verify that your EOTS key was successfully loaded:
 
 ```shell 
 eotsd keys list <key-name> --keyring-backend test --home <path>
 ```
 
+Parameters:
 * `<key-name>`: Name of the EOTS key to verify
 * `--keyring-backend`: Type of keyring backend to use (default: test)
 * `--home`: Directory containing EOTS Manager configuration and data
@@ -255,16 +226,23 @@ registered in Phase-1.
 
 #### 3.2.2. Create an EOTS key
 
+If you have not created an EOTS key yet, use the following command to create a new one:
+
 ``` shell
 eotsd keys add --key-name <key-name> --home <path>  --keyring-backend test 
 ```
 
+Parameters:
 - `<key-name>`: Name for your EOTS key (e.g., "eots-key-1"). We do not allow the same
 `keyname` for an existing keyname.
-- `--home`: Path to your EOTS daemon home directory (e.g., "~/.eotsd")
-- `--keyring-backend`: Type of keyring storage (use "test" for testing)
+- `--home`: Path to your EOTS daemon home directory (e.g., "~/.eotsHome")
+- `--keyring-backend`: Type of keyring storage:
+  - `test`: Stores keys unencrypted, no passphrase prompts
+  - `os`: Uses system's secure keyring, requires passphrase at startup
+  - `file`: Encrypted file storage, requires passphrase at startup
 
-Sample output:
+
+The command will return a JSON response containing your EOTS key details:
 
 ```json 
 {
@@ -283,7 +261,8 @@ of your finality provider operations.
 
 ### 3.3. Starting the EOTS Daemon
 
-You can start the EOTS daemon using the following command:
+To start the EOTS daemon using the following command:
+
 ```shell 
 eotsd start --home <path> 
 ```
@@ -303,34 +282,27 @@ EOTS Manager Daemon is fully active!
 >**Security Tip 🔒**:
 > * `eotsd` holds your private keys which are used for signing
 > * keep it in a separate machine or network segment with enhanced security
-> * only allow access to the RPC server specified by the `RPCListener` port to trusted sources
-
-<!--- It is recommended to run the `eotsd` daemon on a separate machine or
-network segment to enhance security with restricted access to the RPC server specified `RPCListener`.
-This helps isolate the key management functionality and reduces the potential attack surface. You can edit
+> * only allow access to the RPC server specified by the `RPCListener` port to trusted sources. You can edit
 the `EOTSManagerAddress` in the configuration file of the finality provider to
-reference the address of the machine where `eotsd` is running. -->
+reference the address of the machine where `eotsd` is running
 
 ## 4. Setting up the Finality Provider
 
 ### 4.1. Initialize the Finality Provider Daemon
 
-Use the `fpd init` command to initialize a home directory for the Finality Provider. 
-You can set or change the home directory using the `--home` tag. For example, use 
-`--home ./fpHome` to specify a custom directory. The application default home directory is 
-`/Users/<username>/Library/Application Support/Fpd`.
+To initialize the finality provider daemon, use the following command:
 
 ```shell 
 fpd init --home <path> 
 ```
 
->Note: Running this command may return the message 
+>**Note**: Running this command may return the message 
 `service injective.evm.v1beta1.Msg does not have cosmos.msg.v1.service proto annotation`, 
 which is expected and can be ignored.
 
 ### 4.2. Add key for the Babylon account
 
-The keyring is kept in the local storage of the finality provider daemon. 
+For the Finality Provider Daemon, the keyring is kept in the local storage of the finality provider daemon. 
 The key associates a Babylon account with the finality provider to receive BTC 
 delegation rewards.
 
@@ -340,22 +312,21 @@ Use the following command to add the Babylon key for your finality provider:
 fpd keys add --keyname <key-name> --keyring-backend test --home <path>
 ```
 
-We use `--keyring-backend test`, which specifies which backend to use for the
-keyring, `test` stores keys unencrypted on disk. For production environments,
-use `file` or `os` backend.
+>**Important🔒**:
+>To operate your Finality Provider, ensure your Babylon account is funded. Block vote transactions 
+have their gas fees refunded, but public randomness >submissions require gas payments. For testnet, 
+you can obtain funds from our [faucet](#add-faucet).
+>
+<!-- >add faucet link -->
+>We use the `--keyring-backend test`, which stores keys unencrypted on disk. This backend is suitable 
+for testing but not recommended for large fund storage. >Rewards from Finality Provider commissions 
+are stored in this keyring. Other keyring backends are not supported yet, and prolonged inactivity 
+(missing >transactions) can lead to your Finality Provider being jailed.
+>
+>Keep only enough funds in the keyring for operations, which you can view [here](#keyring-maintenance-and-gas-requirements). 
+We are also exploring options to support different withdrawal addresses.
 
-<!-- TODO: we should say that this keyring is where the rewards of
-the finality provider commissions go to -->
-
-<!-- TODO: Explanation on why we require a test key ring.
-Maybe a tip that they should not hold a lot of funds there,
-just enough for operations, with a link to the later section
-which specifies the operational costs for a finality provider.
-Also, we can tell them that we are examining ways to support
-different withdrawal addresses. -->
-
-
-This command will create a new key pair and store it in your keyring. 
+The above `keys add` command will create a new key pair and store it in your keyring. 
 The output should look similar to the below:
 
 
@@ -375,18 +346,7 @@ This command will automatically update the `Key` field in
 the config file to use this key name. This key will be used for all interactions 
 with the Babylon chain, including finality provider registration and transaction 
 signing.
-
-Please verify the `chain-id` and other network parameters from the official 
-Babylon Networks repository at [https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers)
-
-> ⚠️ **Important**: Funding Your Babylon Account
-> * You need to have funds in your Babylon account to submit transactions
-> * Block vote transactions get their gas refunded
-> * Public randomness submissions require you to pay gas fees
-> * For testnet operations, you can get funds from our [faucet]()
-> * For mainnet operations, see the required funds documentation [here]()
  
-
 ### 4.3. Configure Your Finality Provider
 
 Edit the `config.toml` file in your finality provider home directory with the following parameters:
@@ -417,6 +377,9 @@ Configuration parameters explained:
 * `GRPCAddr`: Your Babylon node's GRPC endpoint
 * `KeyDirectory`: Path to your keyring directory (same as --home path)
 
+Please verify the `chain-id` and other network parameters from the official 
+Babylon Networks repository at [https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/finality-providers)
+
 ### 4.4. Starting the Finality Provider Daemon
 
 The finality provider daemon (FPD) needs to be running before proceeding with 
@@ -443,7 +406,7 @@ You should see logs indicating successful startup:
 [INFO] RPC server listening on...
 ```
 
->Note: The daemon needs to run continuously. It's recommended to set up a system 
+>⚠️**Important**: The daemon needs to run continuously. It's recommended to set up a system 
 service (like `systemd` on Linux or `launchd` on macOS) to manage the daemon 
 process, handle automatic restarts, and collect logs. For testing purposes, 
 you can run the daemon directly in a terminal, but remember it must stay 
@@ -549,22 +512,13 @@ fpd register-finality-provider \
 --home <path> \ 
 ```
 
+Parameters:
 - `<btc-public-key>`: Your BTC public key from create-finality-provider 
 (e.g., `cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41`)
 - `--daemon-address`: RPC address of your finality provider daemon (default: "127.0.0.1:12581")
 - `--passphrase`: Passphrase for your key
 - `--home`: Path to your finality provider daemon home directory (e.g., "~/.fpd")
 - `--keyring-backend`: Type of keyring storage (use "test" for testing, "file" for production)
-
-Example:
-```shell
-fpd register-finality-provider \
-    cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41 \
-    --daemon-address 127.0.0.1:12581 \
-    --passphrase "my-secure-passphrase" \
-    --home ~/.fpd \
-    --keyring-backend test
-```
 
 > Note: The BTC public key (`cf0f03...1a41`) is obtained from the previous
 `eotsd keys add` command.
@@ -612,49 +566,6 @@ The hash returned should look something similar to below:
 gas_used: "82063" gas_wanted: "94429" height: "66693" info: "" logs: [] raw_log:""
 ```
 
-### 5.3. Jailing and Unjailing
-
-As mentioned above, a finality provider can be jailed for various reasons, 
-including not signing for a certain number of blocks, not committing public 
-randomness for a certain number of blocks, or not being responsive to the 
-finality provider daemon.
-
-When jailed, the following happens to a finality provider:
-- Their voting power becomes 0
-- Status is set to `JAILED`
-- Delegator rewards stop
-
-To unjail a finality provider, you must complete the following steps:
-- Fix the underlying issue that caused jailing
-- Wait for the jailing period to pass (if it was due to downtime)
-- Then send the unjail transaction to the Babylon chain (not the finality provider daemon).
-
-You can use the following command to send the unjail transaction:
-```shell
-babylond tx slashing unjail \
---from=<your-key-name> \
---chain-id="euphrates-0.5.0" \
---gas="auto" \
---gas-adjustment=1.5 \
---gas-prices=0.025ubbn \
---keyring-backend=test \
---home=./nodeDir
-```
-
-Parameters:
-* `--from`: Your Babylon key name
-* `--chain-id`: Current Babylon network chain ID
-* `--gas`: Gas limit for transaction (auto recommended)
-* `--gas-adjustment`: Multiplier for auto gas calculation
-* `--gas-prices`: Gas price in ubbn
-* `--keyring-backend`: Keyring backend type
-* `--home`: Babylon node home directory
-
-> ⚠️ **Important**: Before unjailing, ensure you've fixed the underlying issue that caused jailing
-
-So while slashing is permanent, jailing is a temporary state that can be recovered 
-from through the unjailing process, as long as the finality provider wasn't slashed.
-
 ### 5.3. Public Randomness Submission
 
 For detailed information about public randomness commits, see:
@@ -663,10 +574,53 @@ For detailed information about public randomness commits, see:
 
 ### 5.4. Submission of votes
 
-<!-- TODO -->
+There is a responsibility for the finality providers to submit votes to finalize blocks on the consumer chain. The finality provider daemon automatically handles vote submission for finality providers.
+
+To see the logs of the finality provider daemon, you can use the following command:
+
+``` shell
+tail -f <fpd-home>/logs/fpd.log | grep "successfully submitted a finality signature to the consumer chain"
+```
+
+To see the technical documentation for sending finality votes, see: 
+[send-finality-vote.md](./send-finality-vote.md)
 
 ### 5.5. Keyring maintenance and gas requirements
-<!-- TODO -->
+
+The keyring stores funds for gas fees and collects rewards. We recommend not holding a large number of funds here—just enough for operations. We are also exploring ways to support different withdrawal addresses. 
+
+We encourage the following for keyring maintenance:
+- Backup Keys: Use mnemonic phrases, export key files, or back up the home directory.
+- Monitor and Secure: Regularly check for unauthorized activity.
+- Production Transition: Replace the test keyring with a secure backend when available.
+
+For gas requirements, the finality provider daemon will automatically handle gas fees but we recommend monitoring the gas usage to ensure the finality provider is functioning properly.
+
+The transaction types that consume gas are:
+- `MsgCreateFinalityProvider`: Initial creation (requires gas)
+- `MsgRegisterFinalityProvider`: Registration (requires gas)
+- `MsgSubmitFinalityVote`: Block vote transactions (gas is refunded)
+- `MsgCommitPubRandList`: Public randomness submissions (requires gas)
+
+As a guide we recommend using the following formula to estimate gas requirements:
+
+```
+Estimated Gas = (Transaction Size) x (Gas Price)
+```
+
+We recommend holding 2 x Estimated Gas in your keyring to ensure that the finality provider has enough gas to submit votes and other transactions.
+
+To get your finality provider address, you can use the following command:
+
+```shell
+fpd keys show <key-name> --keyring-backend test --home <path>
+```
+
+To check your current balance, you must navigate to the Babylon chain and use the following command:
+
+```shell
+babylond query bank balances <finality-provider-address>
+```
 
 ### 5.6. Reading the logs
 
@@ -680,7 +634,7 @@ The logs are stored based on your daemon home directories:
 
 You also can access the logs via flags when starting the daemon:
 
-```
+```shell
 fpd start --home <path> --log_level debug
 ```
  Important Log Events to Monitor
@@ -732,11 +686,102 @@ To withdraw your finality provider rewards:
 
 ### 5.8. Jailing and Unjailing
 
-<!--- TODO -->
+A finality provider can be jailed for various reasons, 
+including not signing for a certain number of blocks, not committing public 
+randomness for a certain number of blocks, or not being responsive to the 
+finality provider daemon.
+
+When jailed, the following happens to a finality provider:
+- Their voting power becomes 0
+- Status is set to `JAILED`
+- Delegator rewards stop
+
+To unjail a finality provider, you must complete the following steps:
+1. Fix the underlying issue that caused jailing
+2. Wait for the jailing period to pass (if it was due to downtime)
+3. Then send the unjail transaction to the Babylon chain (not the finality provider daemon).
+
+```shell
+fpd unjail-finality-provider <eots-pk> --daemon-address <rpc-address> --home <path>
+```
+
+Parameters:
+- `<eots-pk>`: Your finality provider's EOTS public key in hex format
+- `--daemon-address`: RPC server address of fpd (default: "127.0.0.1:12581")
+- `--home`: Path to your finality provider daemon home directory
+
+> ⚠️ **Important**: Before unjailing, ensure you've fixed the underlying issue that caused jailing
+
+So while slashing is permanent, jailing is a temporary state that can be recovered 
+from through the unjailing process, as long as the finality provider wasn't slashed.
 
 ### 5.9. Monitoring
 
-<!--- TODO -->
+We want to monitor the following metrics to ensure the health and performance of your Finality Provider:
+
+- Public randomness commitment success/failure
+- Double-signing attempts
+- Status changes (`Active`/`Inactive`/`Jailed`)
+- Block vote submission success/failure
+- Missing block signatures
+- Transaction failures
+- RPC endpoint availability
+- Gas usage and balance
+
+There are several ways to monitor these metrics but we suggest using Prometheus.
+
+First, expose the metrics through the following Prometheus endpoints:
+
+- `Port 12581`: Finality Provider Daemon metrics
+- `Port 12582`: EOTS Manager metrics
+
+Next we will enable metric collection in `app.toml` for your node and configure Prometheus to scrape the metrics.
+
+``` toml
+[telemetry]
+enabled = true
+prometheus-retention-time = 600 # 10 minutes
+[api]
+enable = true
+address = "127.0.0.1:12581" # Secure RPC listener for Finality Provider Daemon
+```
+Restrict access to the EOTS Manager RPC by configuring it to listen only on `127.0.0.1:12582`.
+Restart your Finality Provider node to apply these changes.
+
+After enabling metrics in the app.toml, configure Prometheus to scrape these endpoints (prometheus.yml):
+
+``` yaml
+scrape_configs:
+  - job_name: 'finality_provider'
+    static_configs:
+      - targets: ['localhost:12581', 'localhost:12582']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+```
+
+Next we want you to download and install [Prometheus](https://prometheus.io/download/).
+Then create a `prometheus.yml` file and add the following scrape configuration:
+
+``` yaml
+scrape_configs:
+  - job_name: 'finality_provider'
+    static_configs:
+      - targets: ['localhost:12581', 'localhost:12582']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+```
+
+Then start Prometheus using the following command:
+
+``` shell
+./prometheus --config.file=prometheus.yml
+```
+
+Once Prometheus is running:
+
+- Open the Prometheus web interface in your browser (default: `http://localhost:9090`).
+- Navigate to Status > Targets.
+- Confirm that the endpoints `localhost:12581` and `localhost:12582` are listed and their status is UP.
 
 ## 6. Security and Slashing
 
@@ -745,22 +790,7 @@ finality provider signs conflicting blocks at the same height. This results in
 the extraction of the provider's private key and automatically triggers shutdown
 of the finality provider.
 
-<!--- TODO: incorporate on the rest of the document.
-Of course if something doesn't fit anywhere, we can have a separate section,
-but only when the user has context --->
-
-> ⚠️ **Critical**: Implement these measures before starting daemons or handling keys
-
-* Finality Provider Daemon: Secure RPC listener (`127.0.0.1:12581`)
-* Keys:
-    - EOTS: Secure offline backup required
-    - Babylon: Use `os` or `file` backend for production
-* Monitor:
-    - Double-signing attempts
-    - Status changes (`Active`/`Inactive`/`Jailed`)
-    - Public randomness commits
-
-> ⚠️ **Important Note on Keyring Security**:
+**Keyring Security**:
 The finality provider daemon uses the `--keyring-backend test` which stores keys unencrypted on disk.
 While this is generally not secure, it's necessary for the finality provider service because:
 
@@ -769,12 +799,6 @@ While this is generally not secure, it's necessary for the finality provider ser
 * Using encrypted keystores would require manual password entry after every restart
 * Service availability is critical to avoid jailing
 
-For other Babylon services that don't require automatic transaction signing, we recommend:
-* Use `os` backend (most secure, uses system keyring)
-* Or use `file` backend (encrypted storage)
-* Never use `test` backend outside of automated services
 
 We are actively working on implementing more secure keyring solutions that maintain both security
 and high availability.
-
-> ⚠️ **Warning**: Security breaches can result in slashing and permanent loss of provider status
