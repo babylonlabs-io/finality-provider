@@ -43,7 +43,7 @@ gain an overall understanding of the finality provider.
 
 ## 1. A note about Phase-1 Finality Providers
 
-<!-- TODO: Vitalis edit -->
+<!-- TODO: Vitalis edit
 
 Thank you for being a participant in the first phase of the Babylon launch.
 This guide involves instructions for setting up the full finality provider
@@ -54,7 +54,7 @@ second phase of the Babylon launch.
 * migrate mainnet to mainnet and testnet to testnet
 * how to proceed with the guide.
 
-> ⚠️ **Critical**: Ensure that you use 
+> ⚠️ **Critical**: Ensure that you use  -->
 
 ## 2. Install Finality Provider Toolset 
 <!-- TODO: check add in the correct tag for the testnet --> 
@@ -155,7 +155,7 @@ each of these three paths for you below.
 If you are using your mnemonic seed phrase, use the following command to import your key:
 
 ```shell
-eotsd keys add <key-name> --recover
+eotsd keys add <key-name> --home <path> --recover
 ```
 
 You'll be prompted to enter:
