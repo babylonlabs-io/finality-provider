@@ -142,7 +142,7 @@ Parameters:
 
 #### 3.2.1. Import an existing EOTS key
 
->⚠️ **Important**:This section is for Finality Providers who participated in Phase-1 and already posess an EOTS key. 
+> This section is for Finality Providers who participated in Phase-1 and already posess an EOTS key. 
 >If you are a new user, you can skip this section unless you would like to familiarize yourself 
 >with the backup and recovery process.
 
@@ -163,7 +163,7 @@ You'll be prompted to enter:
 2. A passphrase to encrypt your key
 3. HD path (optional - press Enter to use default)
 
-> ⚠️ **Note**: The HD path is optional. If you used the default path when creating your key, 
+> The HD path is optional. If you used the default path when creating your key, 
 you can skip this by pressing Enter.
 
 #### Using your `.asc` file
@@ -203,7 +203,7 @@ cp -r ~/.eotsd ~/.eotsd-phase2
 # Initialize it for Phase-2
 eotsd init --home ~/.eotsd-phase2
 ```
->⚠️ **Important**: Please note that the above directory is just an example. 
+> Please note that the above directory is just an example. 
 Your directory will be located at the path you specified.
 
 ##### Verify the Key Import
@@ -221,8 +221,9 @@ Parameters:
 You should see your EOTS key listed with the correct details, confirming that
 it has been imported correctly.
 
->⚠️ **Important**: Make sure you're using the same key name and EOTS public key that were
-registered in Phase-1.
+>**Important ⚠️**: 
+> Make sure you're using the same key name and EOTS public key that were
+> registered in Phase-1.
 
 #### 3.2.2. Create an EOTS key
 
@@ -255,7 +256,7 @@ The command will return a JSON response containing your EOTS key details:
 } 
 ``` 
 
->⚠️ **Important**: The mnemonic phrase must be stored securely and kept private, as it is the 
+> **Security Tip 🔒**: The mnemonic phrase must be stored securely and kept private, as it is the 
 only way to recover your EOTS key if access is lost and is critical for maintaining control 
 of your finality provider operations.
 
@@ -267,7 +268,7 @@ To start the EOTS daemon using the following command:
 eotsd start --home <path> 
 ```
 
-This command starts the EOTS RPC server at the address specified in eotsd.conf 
+This command starts the EOTS RPC server at the address specified in `eotsd.conf`
 under the `RPCListener` field (default: `127.0.0.1:12582`). You can override this value 
 by specifying a custom address with the `--rpc-listener` flag.
 
@@ -296,7 +297,7 @@ To initialize the finality provider daemon, use the following command:
 fpd init --home <path> 
 ```
 
->**Note**: Running this command may return the message 
+> Running this command may return the message 
 `service injective.evm.v1beta1.Msg does not have cosmos.msg.v1.service proto annotation`, 
 which is expected and can be ignored.
 
@@ -364,9 +365,9 @@ GRPCAddr = https://127.0.0.1:9090
 KeyDirectory = <path> # The `--home`path to the directory where the keyring is stored
 ``` 
 
-> ⚠️ **Important**: Operating a finality provider requires a connection to a Babylon blockchain node. 
-It is **highly recommended** to operate your own Babylon full node instead of relying on third parties. 
-You can find instructions on setting up a Babylon node [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/node-setup).
+> **Important ⚠️**: Operating a finality provider requires a connection to a Babylon blockchain node. 
+> It is **highly recommended** to operate your own Babylon full node instead of relying on third parties. 
+> You can find instructions on setting up a Babylon node [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/node-setup).
 
 Configuration parameters explained:
 * `EOTSManagerAddress`: Address where your EOTS daemon is running
@@ -406,9 +407,9 @@ You should see logs indicating successful startup:
 [INFO] RPC server listening on...
 ```
 
->⚠️**Important**: The daemon needs to run continuously. It's recommended to set up a system 
-service (like `systemd` on Linux or `launchd` on macOS) to manage the daemon 
-process, handle automatic restarts, and collect logs. For testing purposes, 
+>**Important ⚠️**: The daemon needs to run continuously. It's recommended to set up a system 
+>service (like `systemd` on Linux or `launchd` on macOS) to manage the daemon 
+>process, handle automatic restarts, and collect logs. For testing purposes, 
 you can run the daemon directly in a terminal, but remember it must stay 
 running to function properly.
 
@@ -710,7 +711,7 @@ Parameters:
 - `--daemon-address`: RPC server address of fpd (default: "127.0.0.1:12581")
 - `--home`: Path to your finality provider daemon home directory
 
-> ⚠️ **Important**: Before unjailing, ensure you've fixed the underlying issue that caused jailing
+>  Before unjailing, ensure you've fixed the underlying issue that caused jailing
 
 So while slashing is permanent, jailing is a temporary state that can be recovered 
 from through the unjailing process, as long as the finality provider wasn't slashed.
