@@ -110,7 +110,6 @@ providers:
 The daemon is controlled by the `fpd` tool, which provides commands for
 interacting with the running daemon.
 
-
 ## Overview of Keys for Finality Provider and EOTS Manager
 
 There are two distinct keys you'll be working with:
@@ -128,8 +127,6 @@ There are two distinct keys you'll be working with:
     - It's where staking rewards for the finality provider are sent.
     - Associated with a Babylon account that receives rewards
     - Stored in the finality provider daemon's keyring
-    - This account is controlled by the key you use to create and manage the
-      finality provider (the one you added with `fpd keys add`).
 
 This dual association allows the finality provider to interact with both the
 Bitcoin network (for security) and the Babylon network (for rewards and
