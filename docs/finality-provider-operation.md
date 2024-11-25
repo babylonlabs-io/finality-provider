@@ -589,12 +589,12 @@ To see the technical documentation for [sending finality votes](./send-finality-
 
 ### 5.5. Keyring maintenance and gas requirements
 
-The keyring stores funds for gas fees and collects rewards. We recommend not holding a large number of funds here—just enough for operations. We are also exploring ways to support different withdrawal addresses. 
+The keyring stores funds for gas fees and collects rewards. We recommend **not** holding a large number of funds here—just enough for operations. We are also exploring ways to support different withdrawal addresses. 
 
 We encourage the following for keyring maintenance:
 - **Backup Keys**: Use mnemonic phrases, export key files, or back up the home directory.
-- **Monitor and Secure**: Regularly check for unauthorized activity.
-- **Production Transition**: Replace the test keyring with a secure backend when available.
+- **Monitor Regularly**: Check for unauthorized activity, monitor status changes, balance and gas usage.
+- **Keyring Transition**: Replace the test keyring with a secure backend when available.
 
 For gas requirements, the finality provider daemon will automatically handle gas fees but we recommend monitoring the gas usage to ensure the finality provider is functioning properly.
 
@@ -609,7 +609,7 @@ As a guide we recommend using the following formula to estimate gas requirements
 Estimated Gas = (Transaction Size) x (Gas Price)
 ```
 
-We recommend holding 2 x Estimated Gas in your keyring to ensure that the finality provider has enough gas to submit votes and other transactions.
+We recommend holding `2 x Estimated Gas` worth of funds in your keyring to ensure that the finality provider has enough gas to submit votes and other transactions.
 
 To get your finality provider address, you can use the following command:
 
@@ -622,6 +622,8 @@ To check your current balance, you must navigate to the Babylon chain and use th
 ```shell
 babylond query bank balances <finality-provider-address>
 ```
+
+Keep track of your balance and gas usage to ensure your finality provider is functioning properly.
 
 ### 5.6. Reading the logs
 
@@ -693,7 +695,7 @@ randomness for a certain number of blocks, or not being responsive to the
 finality provider daemon.
 
 When jailed, the following happens to a finality provider:
-- Their voting power becomes 0
+- Their voting power becomes `0`
 - Status is set to `JAILED`
 - Delegator rewards stop
 
@@ -791,7 +793,7 @@ finality provider signs conflicting blocks at the same height. This results in
 the extraction of the provider's private key and automatically triggers shutdown
 of the finality provider, removal from the active set, jailing and compromised rewards.
 
-> **Critical**: Slashing is irreversible and results in permanent removal from the network.
+> ⚠️ **Critical**: Slashing is irreversible and results in permanent removal from the network.
 
 **Keyring Security 🔒**:
 The finality provider daemon uses the `--keyring-backend test` which stores keys unencrypted on disk.
