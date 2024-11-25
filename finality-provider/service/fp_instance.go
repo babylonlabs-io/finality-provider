@@ -430,35 +430,34 @@ func (fp *FinalityProviderInstance) retrySubmitSigsUntilFinalized(targetBlocks [
 					return nil, nil
 				}
 
-				failedCycles += 1
-				if failedCycles > uint32(fp.cfg.MaxSubmissionRetries) {
+				failedCycles++
+				if failedCycles > fp.cfg.MaxSubmissionRetries {
 					return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
 				}
 			} else {
 				// the signature has been successfully submitted
 				return res, nil
 			}
-			select {
-			case <-time.After(fp.cfg.SubmissionRetryInterval):
-				// periodically query the index block to be later checked whether it is Finalized
-				finalized, err := fp.consumerCon.QueryIsBlockFinalized(targetHeight)
-				if err != nil {
-					return nil, fmt.Errorf("failed to query block finalization at height %v: %w", targetHeight, err)
-				}
-				if finalized {
-					fp.logger.Debug(
-						"the block is already finalized, skip submission",
-						zap.String("pk", fp.GetBtcPkHex()),
-						zap.Uint64("target_height", targetHeight),
-					)
-					// TODO: returning nil here is to safely break the loop
-					//  the error still exists
-					return nil, nil
-				}
-			case <-fp.quit:
-				fp.logger.Debug("the finality-provider instance is closing", zap.String("pk", fp.GetBtcPkHex()))
-				return nil, ErrFinalityProviderShutDown
+
+			// periodically query the index block to be later checked whether it is Finalized
+			finalized, err := fp.consumerCon.QueryIsBlockFinalized(targetHeight)
+			if err != nil {
+				return nil, fmt.Errorf("failed to query block finalization at height %v: %w", targetHeight, err)
 			}
+			if finalized {
+				fp.logger.Debug(
+					"the block is already finalized, skip submission",
+					zap.String("pk", fp.GetBtcPkHex()),
+					zap.Uint64("target_height", targetHeight),
+				)
+				// TODO: returning nil here is to safely break the loop
+				//  the error still exists
+				return nil, nil
+			}
+
+		case <-fp.quit:
+			fp.logger.Debug("the finality-provider instance is closing", zap.String("pk", fp.GetBtcPkHex()))
+			return nil, ErrFinalityProviderShutDown
 		}
 	}
 }

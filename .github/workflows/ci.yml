@@ -7,9 +7,11 @@ on:
 
 jobs:
   lint_test:
-    uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@v0.1.0
+    uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@v0.7.0
     secrets: inherit
     with:
+      go-version: '1.23'
+      go-lint-version: 'v1.60.2'
       run-unit-tests: true
       run-lint: true
 
@@ -20,7 +22,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22'
+          go-version: '1.23'
       - name: Run e2e Babylon tests
         run: make test-e2e-babylon
 
@@ -31,7 +33,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22'
+          go-version: '1.23'
       - name: Run e2e Wasmd tests
         run: make test-e2e-wasmd
 
@@ -42,7 +44,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22'
+          go-version: '1.23'
       - name: Run e2e BCD tests
         run: make test-e2e-bcd
 
@@ -53,14 +55,14 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22'
+          go-version: '1.23'
       - name: Set up the devnet data
         run: make op-e2e-devnet
       - name: Run e2e OP tests
         run: make test-e2e-op
-        
+
   docker_pipeline:
-    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.1.0
+    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.7.0
     secrets: inherit
     with:
       publish: false
