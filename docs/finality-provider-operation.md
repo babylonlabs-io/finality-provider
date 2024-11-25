@@ -110,6 +110,9 @@ version: v0.11.0
 commit: 7d37c88e9a33c0b6a86614f743e9426ce6e31d4a
 ```
 
+> You wont be able to run `eots version` as its not supported yet but you can 
+> run `eotsd` to verify the installation.
+
 If your shell cannot find the installed binaries, make sure `$GOPATH/bin` is in
 the `$PATH` of your shell. Use the following command to add it to your profile.
 
@@ -358,7 +361,7 @@ EOTSManagerAddress = 127.0.0.1:12582
 RpcListener = 127.0.0.1:12581
 
 [babylon] 
-Key = <finality-provider-key-name-signer> // the key you used above
+Key = <finality-provider-key-name-signer> # the key you used above
 ChainID = bbn-test-5 
 RPCAddr = http://127.0.0.1:26657 
 GRPCAddr = https://127.0.0.1:9090 
@@ -506,21 +509,21 @@ This account will be bonded to your finality provider and used to claim rewards.
 
 ``` shell
 fpd register-finality-provider \
- <btc-public-key> \
+ <fp-eots-pk-hex> \
 --daemon-address <rpc-address> \ 
 --passphrase <passphrase> \ 
 --home <path> \ 
 ```
 
 Parameters:
-- `<btc-public-key>`: Your BTC public key from create-finality-provider 
+- `<fp-eots-pk-hex>`: Your EOTS public key (obtained from running `eotsd keys show <key-name>`)
 (e.g., `cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41`)
 - `--daemon-address`: RPC address of your finality provider daemon (default: `127.0.0.1:12581`)
 - `--passphrase`: Passphrase for your key
 - `--home`: Path to your finality provider daemon home directory (e.g., `~/.fpdHome`)
 - `--keyring-backend`: Type of keyring storage (use `test` for testing, `file` for production)
 
-> Note: The BTC public key (`cf0f03...1a41`) is obtained from the previous
+> The BTC public key (`cf0f03...1a41`) is obtained from the previous
 `eotsd keys add` command.
 
 If successful, the command will return a transaction hash:
@@ -533,7 +536,7 @@ If successful, the command will return a transaction hash:
 You can verify the transaction was successful by looking up this transaction 
 hash on the Babylon chain.
 
-The hash returned should look something similar to below:
+The hash returned should look similar to below:
 
 ```shell
   type: message
