@@ -799,20 +799,19 @@ of the finality provider, removal from the active set, jailing and compromised r
 The finality provider daemon uses the `--keyring-backend test` which stores keys unencrypted on disk.
 While this is generally not secure, it's necessary for the finality provider service because:
 
-* The daemon needs to automatically sign and send transactions frequently
-* If transactions stop for too long, the provider gets jailed
-* Using encrypted keystores would require manual password entry after every restart
-* Service availability is critical to avoid jailing
+- The daemon needs to automatically sign and send transactions frequently
+- If transactions stop for too long, the provider gets jailed
+- Using encrypted keystores would require manual password entry after every restart
+- Service availability is critical to avoid jailing
 
 We are actively working on implementing more secure keyring solutions that maintain both security
 and high availability.
 
 **Security Best Practices 🔒**:
 Here are some best practices to secure your finality provider:
-* Run EOTS Manager and Finality Provider on separate machine/network segment
-* Regular system security audits
-* Monitor for unauthorized activities
-* Allow only necessary ports (`12581`, `12582`)
-* Active monitoring of the logs
-
-
+- Run EOTS Manager and Finality Provider on separate machine/network segment
+- Monitor for unauthorized activities
+- Keep track of your balance and gas usage
+- Keep track of any status changes including jailing
+- Allow only necessary ports (`12581`, `12582`)
+- Active monitoring of the logs and installation of prometheus for metrics
