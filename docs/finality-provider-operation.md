@@ -209,7 +209,7 @@ eotsd init --home ~/.eotsd-phase2
 > Please note that the above directory is just an example. 
 Your directory will be located at the path you specified.
 
-##### Verify the Key Import
+#### Verify the Key Import
 After importing, you can verify that your EOTS key was successfully loaded:
 
 ```shell 
@@ -218,7 +218,7 @@ eotsd keys list <key-name> --keyring-backend test --home <path>
 
 Parameters:
 * `<key-name>`: Name of the EOTS key to verify
-* `--keyring-backend`: Type of keyring backend to use (default: test)
+* `--keyring-backend`: Type of keyring backend to use (default: `test`)
 * `--home`: Directory containing EOTS Manager configuration and data
 
 You should see your EOTS key listed with the correct details, confirming that
@@ -738,7 +738,7 @@ First, expose the metrics through the following Prometheus endpoints:
 - `Port 12581`: Finality Provider Daemon metrics
 - `Port 12582`: EOTS Manager metrics
 
-Next we will enable metric collection in `app.toml` for your node and configure Prometheus to scrape the metrics.
+Next we will enable metric collection in `app.toml` in both the finality provider daemon and the eots manager and configure Prometheus to scrape the metrics.
 
 ``` toml
 [telemetry]
@@ -746,30 +746,22 @@ enabled = true
 prometheus-retention-time = 600 # 10 minutes
 [api]
 enable = true
-address = "127.0.0.1:12581" # Secure RPC listener for Finality Provider Daemon
+address = "127.0.0.1:12581" # change this to 127.0.0.1:12582 for the eots manager
 ```
-Restrict access to the EOTS Manager RPC by configuring it to listen only on `127.0.0.1:12582`.
-Restart your Finality Provider node to apply these changes.
 
-After enabling metrics in the app.toml, configure Prometheus to scrape these endpoints (prometheus.yml):
+After making these changes:
+1. Restart your EOTS Manager: `eotsd start`
+2. Restart your Finality Provider Daemon: `fpd start`
 
-``` yaml
-scrape_configs:
-  - job_name: 'finality_provider'
-    static_configs:
-      - targets: ['localhost:12581', 'localhost:12582']
-    metrics_path: '/metrics'
-    scrape_interval: 10s
-```
 
 Next we want you to download and install [Prometheus](https://prometheus.io/download/).
-Then create a `prometheus.yml` file and add the following scrape configuration:
+Then create a `prometheus.yml` file in both the finality provider daemon and the eots manager and add the following scrape configuration:
 
 ``` yaml
 scrape_configs:
   - job_name: 'finality_provider'
     static_configs:
-      - targets: ['localhost:12581', 'localhost:12582']
+      - targets: ['localhost:12581'] # change this to localhost:12582 for the eots manager
     metrics_path: '/metrics'
     scrape_interval: 10s
 ```
