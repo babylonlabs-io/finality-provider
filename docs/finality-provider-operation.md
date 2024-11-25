@@ -221,7 +221,7 @@ Parameters:
 You should see your EOTS key listed with the correct details, confirming that
 it has been imported correctly.
 
->**Important ⚠️**: 
+>⚠️ **Important**: 
 > Make sure you're using the same key name and EOTS public key that were
 > registered in Phase-1.
 
@@ -313,7 +313,7 @@ Use the following command to add the Babylon key for your finality provider:
 fpd keys add --keyname <key-name> --keyring-backend test --home <path>
 ```
 
->**Important🔒**:
+>⚠️ **Important**:
 >To operate your Finality Provider, ensure your Babylon account is funded. Block vote transactions 
 have their gas fees refunded, but public randomness >submissions require gas payments. For testnet, 
 you can obtain funds from our [faucet](#add-faucet).
@@ -365,7 +365,7 @@ GRPCAddr = https://127.0.0.1:9090
 KeyDirectory = <path> # The `--home`path to the directory where the keyring is stored
 ``` 
 
-> **Important ⚠️**: Operating a finality provider requires a connection to a Babylon blockchain node. 
+> ⚠️ **Important**: Operating a finality provider requires a connection to a Babylon blockchain node. 
 > It is **highly recommended** to operate your own Babylon full node instead of relying on third parties. 
 > You can find instructions on setting up a Babylon node [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-1/node-setup).
 
@@ -407,7 +407,7 @@ You should see logs indicating successful startup:
 [INFO] RPC server listening on...
 ```
 
->**Important ⚠️**: The daemon needs to run continuously. It's recommended to set up a system 
+>⚠️ **Important**: The daemon needs to run continuously. It's recommended to set up a system 
 >service (like `systemd` on Linux or `launchd` on macOS) to manage the daemon 
 >process, handle automatic restarts, and collect logs. For testing purposes, 
 you can run the daemon directly in a terminal, but remember it must stay 
