@@ -456,8 +456,8 @@ Required parameters:
 - `--commission`: The commission rate (between 0 and 1) that you'll receive from
 delegators 
 - `--key-name`: Name of the key in your keyring for signing
-transactions - 
-`--moniker`: A human-readable name for your finality provider
+transactions 
+- `--moniker`: A human-readable name for your finality provider
 
 Optional parameters: 
 - `--eots-pk`: The EOTS public key of the finality provider which was generated in `eotsd keys add`
@@ -592,14 +592,13 @@ To see the technical documentation for [sending finality votes](./send-finality-
 The keyring stores funds for gas fees and collects rewards. We recommend not holding a large number of funds here—just enough for operations. We are also exploring ways to support different withdrawal addresses. 
 
 We encourage the following for keyring maintenance:
-- Backup Keys: Use mnemonic phrases, export key files, or back up the home directory.
-- Monitor and Secure: Regularly check for unauthorized activity.
-- Production Transition: Replace the test keyring with a secure backend when available.
+- **Backup Keys**: Use mnemonic phrases, export key files, or back up the home directory.
+- **Monitor and Secure**: Regularly check for unauthorized activity.
+- **Production Transition**: Replace the test keyring with a secure backend when available.
 
 For gas requirements, the finality provider daemon will automatically handle gas fees but we recommend monitoring the gas usage to ensure the finality provider is functioning properly.
 
 The transaction types that consume gas are:
-- `MsgCreateFinalityProvider`: Initial creation (requires gas)
 - `MsgRegisterFinalityProvider`: Registration (requires gas)
 - `MsgSubmitFinalityVote`: Block vote transactions (gas is refunded)
 - `MsgCommitPubRandList`: Public randomness submissions (requires gas)
@@ -639,7 +638,7 @@ You also can access the logs via flags when starting the daemon:
 ```shell
 fpd start --home <path> --log_level debug
 ```
- Important Log Events to Monitor
+ Important Log Events to Monitor:
 
 **Status Changes:**
 ```shell
