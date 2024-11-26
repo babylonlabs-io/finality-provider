@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
+
+	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -52,7 +53,6 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 	// stop the FP for several blocks and disable fast sync, and then restart FP
 	// finality signature submission should get into the default case
 	var n uint = 3
-	tm.FpConfig.FastSyncInterval = 0
 	// finality signature submission would take about 5 seconds
 	// set the poll interval to 2 seconds to make sure the poller channel has multiple blocks
 	tm.FpConfig.PollerConfig.PollInterval = 2 * time.Second
@@ -125,8 +125,8 @@ func TestDoubleSigning(t *testing.T) {
 	require.Equal(t, false, fps[0].IsRunning)
 }
 
-// TestFastSync tests the fast sync process where the finality-provider is terminated and restarted with fast sync
-func TestFastSync(t *testing.T) {
+// TestCatchingUp tests if a fp can catch up after restarted
+func TestCatchingUp(t *testing.T) {
 	tm, fpInsList := StartManagerWithFinalityProvider(t, 1)
 	defer tm.Stop(t)
 
@@ -159,7 +159,6 @@ func TestFastSync(t *testing.T) {
 
 	var n uint = 3
 	// stop the finality-provider for a few blocks then restart to trigger the fast sync
-	tm.FpConfig.FastSyncGap = uint64(n)
 	tm.StopAndRestartFpAfterNBlocks(t, n, fpIns)
 
 	// check there are n+1 blocks finalized
