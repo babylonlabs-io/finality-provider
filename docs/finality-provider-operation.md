@@ -409,7 +409,7 @@ signing.
  
 ### 4.3. Configure Your Finality Provider
 
-Edit the `config.toml` file in your finality provider home directory with the 
+Edit the `fpd.conf` file in your finality provider home directory with the 
 following parameters:
 
 ```shell 
