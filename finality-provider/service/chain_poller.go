@@ -76,11 +76,6 @@ func (cp *ChainPoller) Start(startHeight uint64) error {
 
 	cp.logger.Info("starting the chain poller")
 
-	err := cp.validateStartHeight(startHeight)
-	if err != nil {
-		return fmt.Errorf("invalid starting height %d: %w", startHeight, err)
-	}
-
 	cp.nextHeight = startHeight
 
 	cp.wg.Add(1)
