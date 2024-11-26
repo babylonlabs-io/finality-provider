@@ -2,21 +2,26 @@ package daemon
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 
+	"github.com/babylonlabs-io/babylon/types"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/log"
 	"github.com/babylonlabs-io/finality-provider/util"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
+	cryptokeyring "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
 
-type KeyOutput struct {
-	Name      string `json:"name" yaml:"name"`
-	PubKeyHex string `json:"pub_key_hex" yaml:"pub_key_hex"`
+type KeyOutputWithPubKeyHex struct {
+	keys.KeyOutput
+	PubKeyHex string `json:"pubkey_hex" yaml:"pubkey_hex"`
 }
 
 func NewKeysCmd() *cobra.Command {
@@ -32,6 +37,8 @@ func NewKeysCmd() *cobra.Command {
 	// the sdk, but it allows empty hd path and allow to save the key
 	// in the name mapping
 	addCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		oldOut := cmd.OutOrStdout()
+
 		// Create a buffer to intercept the key items
 		var buf bytes.Buffer
 		cmd.SetOut(&buf)
@@ -42,6 +49,7 @@ func NewKeysCmd() *cobra.Command {
 			return err
 		}
 
+		cmd.SetOut(oldOut)
 		return saveKeyNameMapping(cmd, args)
 	}
 
@@ -91,21 +99,93 @@ func saveKeyNameMapping(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save key name mapping: %w", err)
 	}
 
-	return printKey(
-		&KeyOutput{
-			Name:      keyName,
-			PubKeyHex: eotsPk.MarshalHex(),
-		},
-	)
+	k, err := clientCtx.Keyring.Key(keyName)
+	if err != nil {
+		return fmt.Errorf("failed to get public get key %s: %w", keyName, err)
+	}
+
+	ctx := cmd.Context()
+	mnemonic := ctx.Value(mnemonicCtxKey).(string)
+	showMnemonic := ctx.Value(mnemonicShowCtxKey).(bool)
+	return printCreatePubKeyHex(cmd, k, eotsPk, showMnemonic, mnemonic, clientCtx.OutputFormat)
 }
 
-func printKey(keyRecord *KeyOutput) error {
-	out, err := yaml.Marshal(keyRecord)
+func printCreatePubKeyHex(cmd *cobra.Command, k *cryptokeyring.Record, eotsPk *types.BIP340PubKey, showMnemonic bool, mnemonic, outputFormat string) error {
+	out, err := keys.MkAccKeyOutput(k)
+	if err != nil {
+		return err
+	}
+	keyOutput := newKeyOutputWithPubKeyHex(out, eotsPk)
+
+	switch outputFormat {
+	case flags.OutputFormatText:
+		cmd.PrintErrln()
+		if err := printKeyringRecord(cmd.OutOrStdout(), k, keyOutput, outputFormat); err != nil {
+			return err
+		}
+
+		// print mnemonic unless requested not to.
+		if showMnemonic {
+			if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "\n**Important** write this mnemonic phrase in a safe place.\nIt is the only way to recover your account if you ever forget your password.\n\n%s\n", mnemonic); err != nil {
+				return fmt.Errorf("failed to print mnemonic: %s", err.Error())
+			}
+		}
+	case flags.OutputFormatJSON:
+		if showMnemonic {
+			keyOutput.Mnemonic = mnemonic
+		}
+
+		jsonString, err := json.Marshal(keyOutput)
+		if err != nil {
+			return err
+		}
+
+		cmd.Println(string(jsonString))
+
+	default:
+		return fmt.Errorf("invalid output format %s", outputFormat)
+	}
+
+	return nil
+}
+
+func newKeyOutputWithPubKeyHex(k keys.KeyOutput, eotsPk *types.BIP340PubKey) KeyOutputWithPubKeyHex {
+	return KeyOutputWithPubKeyHex{
+		KeyOutput: k,
+		PubKeyHex: eotsPk.MarshalHex(),
+	}
+}
+
+func printKeyringRecord(w io.Writer, k *cryptokeyring.Record, ko KeyOutputWithPubKeyHex, output string) error {
+	switch output {
+	case flags.OutputFormatText:
+		if err := printTextRecords(w, []KeyOutputWithPubKeyHex{ko}); err != nil {
+			return err
+		}
+
+	case flags.OutputFormatJSON:
+		out, err := json.Marshal(ko)
+		if err != nil {
+			return err
+		}
+
+		if _, err := fmt.Fprintln(w, string(out)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func printTextRecords(w io.Writer, kos []KeyOutputWithPubKeyHex) error {
+	out, err := yaml.Marshal(&kos)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("\n%s\n", out)
+	if _, err := fmt.Fprintln(w, string(out)); err != nil {
+		return err
+	}
 
 	return nil
 }
