@@ -10,6 +10,7 @@ import (
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -424,13 +425,8 @@ func (app *FinalityProviderApp) handleCreateFinalityProviderRequest(req *createF
 		}
 	}
 
-	fpRecord, err := app.eotsManager.KeyRecord(fpPk.MustMarshal(), req.passPhrase)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get finality-provider record: %w", err)
-	}
-
 	// 3. create proof-of-possession
-	pop, err := kr.CreatePop(fpAddr, fpRecord.PrivKey)
+	pop, err := app.CreatePop(fpAddr, fpPk, req.passPhrase)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proof-of-possession of the finality-provider: %w", err)
 	}
@@ -454,6 +450,26 @@ func (app *FinalityProviderApp) handleCreateFinalityProviderRequest(req *createF
 	return &createFinalityProviderResponse{
 		FpInfo: storedFp.ToFinalityProviderInfo(),
 	}, nil
+}
+
+func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntypes.BIP340PubKey, passphrase string) (*bstypes.ProofOfPossessionBTC, error) {
+	pop := &bstypes.ProofOfPossessionBTC{
+		BtcSigType: bstypes.BTCSigType_BIP340, // by default, we use BIP-340 encoding for BTC signature
+	}
+
+	// generate pop.BtcSig = schnorr_sign(sk_BTC, hash(bbnAddress))
+	// NOTE: *schnorr.Sign has to take the hash of the message.
+	// So we have to hash the address before signing
+	hash := tmhash.Sum(fpAddress.Bytes())
+
+	sig, err := app.eotsManager.SignSchnorrSig(fpPk.MustMarshal(), hash, passphrase)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get schnorr signature from the EOTS manager: %w", err)
+	}
+
+	pop.BtcSig = bbntypes.NewBIP340SignatureFromBTCSig(sig).MustMarshal()
+
+	return pop, nil
 }
 
 // SignRawMsg loads the keyring private key and signs a message.
@@ -495,61 +511,6 @@ func (app *FinalityProviderApp) loadChainKeyring(
 // to update who is the signer
 func (app *FinalityProviderApp) UpdateClientController(cc clientcontroller.ClientController) {
 	app.cc = cc
-}
-
-// StoreFinalityProvider stores a new finality provider in the fp store.
-func (app *FinalityProviderApp) StoreFinalityProvider(
-	keyName, passPhrase, hdPath, chainID string,
-	description *stakingtypes.Description,
-	commission *sdkmath.LegacyDec,
-) (*store.StoredFinalityProvider, error) {
-	// 1. check if the chain key exists
-	kr, _, err := app.loadChainKeyring(keyName, passPhrase, hdPath)
-	if err != nil {
-		return nil, err
-	}
-	fpAddr, err := kr.Address(passPhrase)
-	if err != nil {
-		return nil, err
-	}
-
-	// 2. create EOTS key
-	fpPkBytes, err := app.eotsManager.CreateKey(keyName, passPhrase, hdPath)
-	if err != nil {
-		return nil, err
-	}
-	fpPk, err := bbntypes.NewBIP340PubKey(fpPkBytes)
-	if err != nil {
-		return nil, err
-	}
-	fpRecord, err := app.eotsManager.KeyRecord(fpPk.MustMarshal(), passPhrase)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get finality-provider record: %w", err)
-	}
-
-	// 3. create proof-of-possession
-	pop, err := kr.CreatePop(fpAddr, fpRecord.PrivKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create proof-of-possession of the finality provider: %w", err)
-	}
-
-	if err := app.fps.CreateFinalityProvider(fpAddr, fpPk.MustToBTCPK(), description, commission, keyName, chainID, pop.BtcSig); err != nil {
-		return nil, fmt.Errorf("failed to save finality-provider: %w", err)
-	}
-	app.fpManager.metrics.RecordFpStatus(fpPk.MarshalHex(), proto.FinalityProviderStatus_CREATED)
-
-	app.logger.Info("successfully created a finality-provider",
-		zap.String("btc_pk", fpPk.MarshalHex()),
-		zap.String("fp_addr", fpAddr.String()),
-		zap.String("key_name", keyName),
-	)
-
-	storedFp, err := app.fps.GetFinalityProvider(fpPk.MustToBTCPK())
-	if err != nil {
-		return nil, err
-	}
-
-	return storedFp, nil
 }
 
 func CreateChainKey(keyringDir, chainID, keyName, backend, passphrase, hdPath, mnemonic string) (*types.ChainKeyInfo, error) {

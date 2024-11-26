@@ -39,15 +39,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
-* [149](https://github.com/babylonlabs-io/finality-provider/pull/149) Remove update of config after `fpd keys add`
-* [148](https://github.com/babylonlabs-io/finality-provider/pull/148) Allow command `eotsd keys add` to use
+* [#149](https://github.com/babylonlabs-io/finality-provider/pull/149) Remove update of config after `fpd keys add`
+* [#148](https://github.com/babylonlabs-io/finality-provider/pull/148) Allow command `eotsd keys add` to use
 empty HD path to derive new key and use master private key.
+* [#154](https://github.com/babylonlabs-io/finality-provider/pull/154) Use sign schnorr instead of getting private key from EOTS manager
 
 ## v0.12.0
 
 ### Bug Fixes
 
-* [139](https://github.com/babylonlabs-io/finality-provider/pull/139) Ignore voting power not updated error
+* [#139](https://github.com/babylonlabs-io/finality-provider/pull/139) Ignore voting power not updated error
 
 ### Improvements
 
