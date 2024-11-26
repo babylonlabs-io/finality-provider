@@ -458,33 +458,35 @@ options can also be set in the configuration file.
 
 ### 4.5. Interaction with the EOTS Manager
 
-<!-- quick intro on the relationship of the finality provider with
-the EOTS manager on an operational perspective:
-* One EOTS manager, many finality provider instances. The EOTS manager
-can manage keys for multiple finality providers. You can select which
-key of the EOTS manager you want to use for your finality provider
-with this flag
-   * OLD TEXT: To start the daemon with a specific finality provider instance after 
-     registration, use the `--eots_pk_hex` flag followed by the hex string of the EOTS 
-     public key of the finality provider.
-   * TODO: verify with Gai whether this is needed, it seems weird to specify
-     this at the daemon boot-up level, especially given that the CLI commands
-     receive `--eots-pk` as an argument.
-* How the interaction with EOTS manager happens: Through RPC calls.
-* Setting up the finality provider on a separate machine than EOTS manager
-  as this one is a hot machine.
+There are 2 pieces to a finality provider entity: the EOTS manager and the 
+finality provider instance. These components work together and are managed by 
+separate daemons(`eotsd` and `fpd`).
 
+The EOTS manager is responsible for managing the keys for finality providers and 
+handles operations such as key management, signature generation, and randomness 
+commitments. Where as the finality provider is responsible for creating and 
+registering finality providers and handling the monitoring of the Babylon chain. 
+The finality provider daemon is also responsible for coordinating various 
+operations.
 
-Here, we should also define the difference between the daemons
-and the finality provider entity itself. The daemons, manage two separate
-pieces that are needed to create a finality provider entity.
+The interactions between the EOTS Manager and the finality provider happens 
+through RPC calls. These calls handle key operations, signature generation, 
+and randomness commitments. An easy way to think about it is the EOTS Manager 
+maintains the keys while the FP daemon coordinates any interactions with the 
+Babylon chain.
 
-One holds the keys (which can be for many different finality providers),
-while the fpd holds the finality provider operational layer.
+The EOTS Manager is designed to handle multiple finality provider keys, operating 
+as a centralized key management system. When starting a finality provider instance, 
+you specify which EOTS key to use through the `--eots-pk` flag. This allows you 
+to run different finality provider instances using different keys from the same 
+EOTS Manager.
 
-Ask Gai: A finality provider daemon can only operate a signle fp each time right?
-If yes, we need to make this clear.
--->
+For example, after registering a finality provider, you can start its daemon by 
+providing the EOTS public key:
+
+```shell
+fpd start --eots-pk <hex-string-of-eots-public-key>
+```
 
 ## 5. Finality Provider Operations
 
@@ -517,14 +519,10 @@ Required parameters:
   provider will be associated with
 - `--moniker`: A human-readable name for your finality provider
 
-<!--- TODO: add a note that the same EOTS key should not be used by diff finality providers?
-I think there's a risk of slashing.
-In general, what are the security tips for this command?
-What's the usefulness of the `--eots-pk` flag? Is it an advanced feature?
+> ⚠️ **Important**: The same EOTS key should not be used by different 
+> finality providers. This could lead to slashing. Only use this if you have 
+> multiple finality providers.
 
-We need to clearly designate to the user, that the EOTS key is the unique
-identifier of the finality provider and should only be used with that finality provider.
--->
 Optional parameters: 
 - `--eots-pk`: The EOTS public key maintained by the connected EOTS manager
   instance that the finality provider should use.
@@ -565,7 +563,6 @@ The response includes:
 - `status`: Current status of the finality provider.
 
 
-<!-- TODO: verify with Gai -->
 Below you can see a list of the statuses that a finality provider can transition
 to:
 - `CREATED`: defines a finality provider that is awaiting registration
@@ -575,6 +572,9 @@ to:
 - `INACTIVE`: defines a finality provider whose delegations are reduced to 
   zero but not slashed
 - `JAILED`: defines a finality provider that has been jailed
+
+For more information on statuses please refer to diagram in the core documentation 
+[fp-core](./fp-core).
 
 ### 5.2. Register Finality Provider
 
