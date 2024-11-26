@@ -76,11 +76,6 @@ func (cp *ChainPoller) Start(startHeight uint64) error {
 
 	cp.logger.Info("starting the chain poller")
 
-	err := cp.validateStartHeight(startHeight)
-	if err != nil {
-		return fmt.Errorf("invalid starting height %d: %w", startHeight, err)
-	}
-
 	cp.nextHeight = startHeight
 
 	cp.wg.Add(1)
@@ -122,31 +117,6 @@ func (cp *ChainPoller) GetBlockInfoChan() <-chan *types.BlockInfo {
 	return cp.blockInfoChan
 }
 
-func (cp *ChainPoller) latestBlockWithRetry() (*types.BlockInfo, error) {
-	var (
-		latestBlock *types.BlockInfo
-		err         error
-	)
-
-	if err := retry.Do(func() error {
-		latestBlock, err = cp.cc.QueryBestBlock()
-		if err != nil {
-			return err
-		}
-		return nil
-	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
-		cp.logger.Debug(
-			"failed to query the consumer chain for the latest block",
-			zap.Uint("attempt", n+1),
-			zap.Uint("max_attempts", RtyAttNum),
-			zap.Error(err),
-		)
-	})); err != nil {
-		return nil, err
-	}
-	return latestBlock, nil
-}
-
 func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
 	var (
 		block *types.BlockInfo
@@ -171,34 +141,6 @@ func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
 	}
 
 	return block, nil
-}
-
-func (cp *ChainPoller) validateStartHeight(startHeight uint64) error {
-	// Infinite retry to get initial latest height
-	// TODO: Add possible cancellation or timeout for starting node
-
-	if startHeight == 0 {
-		return fmt.Errorf("start height can't be 0")
-	}
-
-	var currentBestChainHeight uint64
-	for {
-		lastestBlock, err := cp.latestBlockWithRetry()
-		if err != nil {
-			cp.logger.Debug("failed to query babylon for the latest status", zap.Error(err))
-			continue
-		}
-
-		currentBestChainHeight = lastestBlock.Height
-		break
-	}
-
-	// Allow the start height to be the next chain height
-	if startHeight > currentBestChainHeight+1 {
-		return fmt.Errorf("start height %d is more than the next chain tip height %d", startHeight, currentBestChainHeight+1)
-	}
-
-	return nil
 }
 
 // waitForActivation waits until BTC staking is activated
