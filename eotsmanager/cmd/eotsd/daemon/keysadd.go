@@ -294,10 +294,9 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 		mnemonic = ""
 	}
 
-	// used later for printing if needed
-	ctxWithValues := context.WithValue(cmd.Context(), mnemonicCtxKey, mnemonic)
-	ctxWithValues = context.WithValue(ctxWithValues, mnemonicShowCtxKey, showMnemonic)
-	cmd.SetContext(ctxWithValues)
+	// used later for printing the values if needed
+	ctxWithValues := context.WithValue(cmd.Context(), mnemonicCtxKey, mnemonic)        //nolint: revive,staticcheck
+	cmd.SetContext(context.WithValue(ctxWithValues, mnemonicShowCtxKey, showMnemonic)) //nolint: revive,staticcheck
 	return nil
 }
 

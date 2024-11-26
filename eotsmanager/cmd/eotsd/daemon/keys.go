@@ -105,7 +105,7 @@ func saveKeyNameMapping(cmd *cobra.Command, args []string) error {
 	}
 
 	ctx := cmd.Context()
-	mnemonic := ctx.Value(mnemonicCtxKey).(string)
+	mnemonic := ctx.Value(mnemonicCtxKey).(string) //nolint: forcetypeassert
 	showMnemonic := ctx.Value(mnemonicShowCtxKey).(bool)
 	return printCreatePubKeyHex(cmd, k, eotsPk, showMnemonic, mnemonic, clientCtx.OutputFormat)
 }
@@ -120,7 +120,7 @@ func printCreatePubKeyHex(cmd *cobra.Command, k *cryptokeyring.Record, eotsPk *t
 	switch outputFormat {
 	case flags.OutputFormatText:
 		cmd.PrintErrln()
-		if err := printKeyringRecord(cmd.OutOrStdout(), k, keyOutput, outputFormat); err != nil {
+		if err := printKeyringRecord(cmd.OutOrStdout(), keyOutput, outputFormat); err != nil {
 			return err
 		}
 
@@ -156,7 +156,7 @@ func newKeyOutputWithPubKeyHex(k keys.KeyOutput, eotsPk *types.BIP340PubKey) Key
 	}
 }
 
-func printKeyringRecord(w io.Writer, k *cryptokeyring.Record, ko KeyOutputWithPubKeyHex, output string) error {
+func printKeyringRecord(w io.Writer, ko KeyOutputWithPubKeyHex, output string) error {
 	switch output {
 	case flags.OutputFormatText:
 		if err := printTextRecords(w, []KeyOutputWithPubKeyHex{ko}); err != nil {
