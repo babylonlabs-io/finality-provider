@@ -36,7 +36,6 @@ gain an overall understanding of the finality provider.
    3. [Withdrawing Rewards](#53-withdrawing-rewards)
    4. [Jailing and Unjailing](#54-jailing-and-unjailing)
    5. [Slashing](#55-slashing)
-   6. [Monitoring](#56-monitoring)
 6. [Prometheus Metrics](#6-prometheus-metrics)
 
 ## 1. A note about Phase-1 Finality Providers
@@ -681,7 +680,7 @@ removal from the active set.
 Ask devops
 -->
 
-The daemon services of the finality provider stack
+<!-- The daemon services of the finality provider stack
 export Prometheus metrics to support their monitoring.
 In this section, we highlight some key Prometheus metrics
 to monitor for.
@@ -713,7 +712,7 @@ First, expose the metrics through the following Prometheus endpoints:
 - `Port 12582`: EOTS Manager metrics
 
 <!--- TODO: config.toml?? -->
-Next we will enable metric collection in `app.toml`
+<!-- Next we will enable metric collection in `app.toml`
 in both the finality provider daemon and the eots manager and
 configure Prometheus to scrape the metrics.
 
@@ -725,4 +724,4 @@ prometheus-retention-time = 600 # 10 minutes
 [api]
 enable = true
 address = "127.0.0.1:12581" # change this to 127.0.0.1:12582 for the eots manager
-```
+``` --> -->
