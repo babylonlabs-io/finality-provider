@@ -111,7 +111,8 @@ commit: 7d37c88e9a33c0b6a86614f743e9426ce6e31d4a
 ```
 
 If your shell cannot find the installed binaries, make sure `$GOPATH/bin` is in
-the `$PATH` of your shell. Use the following command to add it to your profile.
+the `$PATH` of your shell. Use the following command to add it to your profile 
+depending on your shell.
 
 ```shell 
 echo 'export PATH=$HOME/go/bin:$PATH' >> ~/.profile
@@ -383,7 +384,7 @@ both security and high availability.
 Use the following command to add the Babylon key for your finality provider:
 
 ```shell 
-fpd keys add --keyname <key-name> --keyring-backend test --home <path>
+fpd keys add <key-name> --keyring-backend test --home <path>
 ```
 
 The above `keys add` command will create a new key pair and store it in your keyring. 

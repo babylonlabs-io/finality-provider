@@ -1,0 +1,4 @@
+2024-11-26T12:17:11.276407Z	info	successfully created an EOTS key	{"key name": "eots1", "pk": "64d4fdd7f78950f905b2d957af256e781ed57f790860959a434148aa2e86240f"}
+2024-11-26T12:18:05.346154Z	info	Metrics server is starting	{"addr": "127.0.0.1:2113"}
+2024-11-26T12:18:05.346421Z	info	RPC server listening	{"address": "127.0.0.1:12582"}
+2024-11-26T12:18:05.346476Z	info	EOTS Manager Daemon is fully active!
