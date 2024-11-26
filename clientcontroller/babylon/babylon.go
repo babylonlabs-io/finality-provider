@@ -242,27 +242,6 @@ func (bc *BabylonController) SubmitBatchFinalitySigs(
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-// UnjailFinalityProvider sends an unjail transaction to the consumer chain
-func (bc *BabylonController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error) {
-	msg := &finalitytypes.MsgUnjailFinalityProvider{
-		Signer:  bc.MustGetTxSigner(),
-		FpBtcPk: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
-	}
-
-	unrecoverableErrs := []*sdkErr.Error{
-		btcstakingtypes.ErrFpNotFound,
-		btcstakingtypes.ErrFpNotJailed,
-		btcstakingtypes.ErrFpAlreadySlashed,
-	}
-
-	res, err := bc.reliablySendMsg(msg, emptyErrs, unrecoverableErrs)
-	if err != nil {
-		return nil, err
-	}
-
-	return &types.TxResponse{TxHash: res.TxHash}, nil
-}
-
 // QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
 func (bc *BabylonController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
