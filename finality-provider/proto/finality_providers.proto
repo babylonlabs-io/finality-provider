@@ -158,11 +158,8 @@ message FinalityProvider {
     string chain_id = 7;
     // last_voted_height defines the height of the last voted chain block
     uint64 last_voted_height = 8;
-    // last_processed_height defines the height of the last successfully processed block
-    // even though the vote is not cast
-    uint64 last_processed_height = 9;
     // status defines the current finality provider status
-    FinalityProviderStatus status = 10;
+    FinalityProviderStatus status = 9;
 }
 
 // FinalityProviderInfo is the basic information of a finality provider mainly for external usage
