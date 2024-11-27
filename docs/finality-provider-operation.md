@@ -21,7 +21,7 @@ gain an overall understanding of the finality provider.
 2. [Install Finality Provider Toolset](#2-install-finality-provider-toolset)
 3. [Setting up the EOTS Daemon](#3-setting-up-the-eots-daemon)
    1. [Initialize the EOTS Daemon](#31-initialize-the-eots-daemon)
-   2. [Create/Add an EOTS Key](#32-createadd-an-eots-key)
+   2. [Add an EOTS Key](#32-add-an-eots-key)
       1. [Import an existing EOTS key](#321-import-an-existing-eots-key)
       2. [Create an EOTS key](#322-create-an-eots-key)
    3. [Starting the EOTS Daemon](#33-starting-the-eots-daemon)
@@ -53,7 +53,7 @@ from transitioning to the second phase.
 
 How to follow this guide:
 - If you already have delegations and have set up a key during Phase-1, 
-  please proceed to [Adding Keys](#32-createadd-an-eots-key) to import your 
+  please proceed to [Adding Keys](#32-add-an-eots-key) to import your 
   Phase-1 key.
 - If you are just starting out, you can begin with the setup steps outlined below.
 
@@ -161,10 +161,8 @@ This ensures that the finality provider daemon can promptly submit
 transactions, such as block votes and public randomness submissions that are 
 essential for its liveness and earning of rewards. 
 
-- If you already have an existing key from Phase-1, proceed to 
-  [Import an existing EOTS key](#321-import-an-existing-eots-key)
-- If you need to create a new key,
-  proceed to [Create an EOTS key](#32-createadd-an-eots-key).
+If you already have an existing key from Phase-1, proceed to 
+[Import an existing EOTS key](#321-import-an-existing-eots-key)
 
 #### 3.2.1. Import an existing EOTS key
 
@@ -338,7 +336,7 @@ transactions, such as block votes and public randomness submissions that are
 essential for its liveness and earning of rewards. 
 
 For the `fpd` keyring, the `test` backend will be exclusively used, and it is 
-mandatory that you  follow this practice until automated key management becomes 
+mandatory that you follow this practice until automated key management becomes 
 available. Additionally, we are also exploring options to support different 
 withdrawal addresses, so that rewards can go to a separate address.
 
