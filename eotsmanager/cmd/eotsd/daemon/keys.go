@@ -135,7 +135,7 @@ func printCreatePubKeyHex(cmd *cobra.Command, k *cryptokeyring.Record, eotsPk *t
 			keyOutput.Mnemonic = mnemonic
 		}
 
-		jsonString, err := json.Marshal(keyOutput)
+		jsonString, err := json.MarshalIndent(keyOutput, "", "  ")
 		if err != nil {
 			return err
 		}
