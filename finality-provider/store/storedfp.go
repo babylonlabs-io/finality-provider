@@ -13,16 +13,15 @@ import (
 )
 
 type StoredFinalityProvider struct {
-	FPAddr              string
-	BtcPk               *btcec.PublicKey
-	Description         *stakingtypes.Description
-	Commission          *sdkmath.LegacyDec
-	Pop                 *proto.ProofOfPossession
-	KeyName             string
-	ChainID             string
-	LastVotedHeight     uint64
-	LastProcessedHeight uint64
-	Status              proto.FinalityProviderStatus
+	FPAddr          string
+	BtcPk           *btcec.PublicKey
+	Description     *stakingtypes.Description
+	Commission      *sdkmath.LegacyDec
+	Pop             *proto.ProofOfPossession
+	KeyName         string
+	ChainID         string
+	LastVotedHeight uint64
+	Status          proto.FinalityProviderStatus
 }
 
 func protoFpToStoredFinalityProvider(fp *proto.FinalityProvider) (*StoredFinalityProvider, error) {
@@ -49,11 +48,10 @@ func protoFpToStoredFinalityProvider(fp *proto.FinalityProvider) (*StoredFinalit
 		Pop: &proto.ProofOfPossession{
 			BtcSig: fp.Pop.BtcSig,
 		},
-		KeyName:             fp.KeyName,
-		ChainID:             fp.ChainId,
-		LastVotedHeight:     fp.LastVotedHeight,
-		LastProcessedHeight: fp.LastProcessedHeight,
-		Status:              fp.Status,
+		KeyName:         fp.KeyName,
+		ChainID:         fp.ChainId,
+		LastVotedHeight: fp.LastVotedHeight,
+		Status:          fp.Status,
 	}, nil
 }
 

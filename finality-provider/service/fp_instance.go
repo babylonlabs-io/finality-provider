@@ -230,8 +230,13 @@ func (fp *FinalityProviderInstance) getAllBlocksFromChan() []*types.BlockInfo {
 }
 
 func (fp *FinalityProviderInstance) shouldProcessBlock(b *types.BlockInfo) (bool, error) {
-	// check whether the block has been processed before
-	if fp.hasProcessed(b) {
+	if b.Height <= fp.GetLastVotedHeight() {
+		fp.logger.Debug(
+			"the block height is lower than last processed height",
+			zap.String("pk", fp.GetBtcPkHex()),
+			zap.Uint64("block_height", b.Height),
+			zap.Uint64("last_voted_height", fp.GetLastVotedHeight()),
+		)
 		return false, nil
 	}
 
@@ -243,7 +248,6 @@ func (fp *FinalityProviderInstance) shouldProcessBlock(b *types.BlockInfo) (bool
 	if !hasVp {
 		// the finality provider does not have voting power
 		// and it will never will at this block
-		fp.MustSetLastProcessedHeight(b.Height)
 		fp.metrics.IncrementFpTotalBlocksWithoutVotingPower(fp.GetBtcPkHex())
 		return false, nil
 	}
@@ -285,20 +289,6 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop() {
 			return
 		}
 	}
-}
-
-func (fp *FinalityProviderInstance) hasProcessed(b *types.BlockInfo) bool {
-	if b.Height <= fp.GetLastProcessedHeight() {
-		fp.logger.Debug(
-			"the block has been processed before, skip processing",
-			zap.String("pk", fp.GetBtcPkHex()),
-			zap.Uint64("block_height", b.Height),
-			zap.Uint64("last_processed_height", fp.GetLastProcessedHeight()),
-		)
-		return true
-	}
-
-	return false
 }
 
 func (fp *FinalityProviderInstance) hasVotingPower(b *types.BlockInfo) (bool, error) {
@@ -651,11 +641,11 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 }
 
 // getPollerStartingHeight gets the starting height of the poller with
-// max(lastProcessedHeight+1, lastFinalizedHeight+1, params.FinalityActivationHeight)
+// max(lastVotedHeight+1, lastFinalizedHeight+1, params.FinalityActivationHeight)
 // this ensures that:
 // (1) the fp will not vote for a height lower than params.FinalityActivationHeight
 // (2) the fp will not miss for any non-finalized blocks
-// (3) the fp will not process any blocks that have been already processed
+// (3) the fp will not process any blocks that have been already voted
 // Note: if the fp starting from the last finalized height with a gap to the last
 // processed height, the fp might miss some rewards due to not sending the votes
 // depending on the consumer chain's reward distribution mechanism
@@ -685,9 +675,8 @@ func (fp *FinalityProviderInstance) getPollerStartingHeight() (uint64, error) {
 		startHeight = fppath.MaxUint64(startHeight, latestFinalisedBlocks[0].Height+1)
 	}
 
-	// consider the height after the last processed block
-	lastProcessedHeight := fp.GetLastProcessedHeight()
-	startHeight = fppath.MaxUint64(startHeight, lastProcessedHeight+1)
+	// consider the height after the last voted height
+	startHeight = fppath.MaxUint64(startHeight, fp.GetLastVotedHeight()+1)
 
 	return startHeight, nil
 }

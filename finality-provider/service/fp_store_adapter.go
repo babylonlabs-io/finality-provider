@@ -87,17 +87,9 @@ func (fps *fpState) setStatus(s proto.FinalityProviderStatus) error {
 	return fps.s.SetFpStatus(fps.fp.BtcPk, s)
 }
 
-func (fps *fpState) setLastProcessedHeight(height uint64) error {
-	fps.mu.Lock()
-	fps.fp.LastProcessedHeight = height
-	fps.mu.Unlock()
-	return fps.s.SetFpLastProcessedHeight(fps.fp.BtcPk, height)
-}
-
-func (fps *fpState) setLastProcessedAndVotedHeight(height uint64) error {
+func (fps *fpState) setLastVotedHeight(height uint64) error {
 	fps.mu.Lock()
 	fps.fp.LastVotedHeight = height
-	fps.fp.LastProcessedHeight = height
 	fps.mu.Unlock()
 	return fps.s.SetFpLastVotedHeight(fps.fp.BtcPk, height)
 }
@@ -126,10 +118,6 @@ func (fp *FinalityProviderInstance) GetLastVotedHeight() uint64 {
 	return fp.fpState.getStoreFinalityProvider().LastVotedHeight
 }
 
-func (fp *FinalityProviderInstance) GetLastProcessedHeight() uint64 {
-	return fp.fpState.getStoreFinalityProvider().LastProcessedHeight
-}
-
 func (fp *FinalityProviderInstance) GetChainID() []byte {
 	return []byte(fp.fpState.getStoreFinalityProvider().ChainID)
 }
@@ -145,20 +133,8 @@ func (fp *FinalityProviderInstance) MustSetStatus(s proto.FinalityProviderStatus
 	}
 }
 
-func (fp *FinalityProviderInstance) SetLastProcessedHeight(height uint64) error {
-	return fp.fpState.setLastProcessedHeight(height)
-}
-
-func (fp *FinalityProviderInstance) MustSetLastProcessedHeight(height uint64) {
-	if err := fp.SetLastProcessedHeight(height); err != nil {
-		fp.logger.Fatal("failed to set last processed height",
-			zap.String("pk", fp.GetBtcPkHex()), zap.Uint64("last_processed_height", height))
-	}
-	fp.metrics.RecordFpLastProcessedHeight(fp.GetBtcPkHex(), height)
-}
-
 func (fp *FinalityProviderInstance) updateStateAfterFinalitySigSubmission(height uint64) error {
-	return fp.fpState.setLastProcessedAndVotedHeight(height)
+	return fp.fpState.setLastVotedHeight(height)
 }
 
 func (fp *FinalityProviderInstance) MustUpdateStateAfterFinalitySigSubmission(height uint64) {

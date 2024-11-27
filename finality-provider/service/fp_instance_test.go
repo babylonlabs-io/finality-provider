@@ -95,7 +95,6 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 
 		// check the last_voted_height
 		require.Equal(t, nextBlock.Height, fpIns.GetLastVotedHeight())
-		require.Equal(t, nextBlock.Height, fpIns.GetLastProcessedHeight())
 	})
 }
 
