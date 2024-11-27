@@ -3,7 +3,7 @@
 Finality providers are key participants in Babylon BTC staking protocol.
 They provide finality votes on top of
 [CometBFT](https://github.com/cometbft/cometbft), Babylon's consensus mechanism.
-Through these activities, they can earn commissions from BTC staking delegations.
+and earn commissions from BTC staking delegations.
 
 The finality provider toolset operates on standard UNIX-based 
 systems and consists of three core components:
@@ -36,12 +36,6 @@ all EOTS key operations.
 For instructions on creating and operating a finality provider,
 see our [Finality Provider Guide](./docs/finality-provider-operation.md).
 
-## Technical Documentation
-
-For detailed technical information about the finality provider's internal operations, see:
-* [Core Heuristics](./docs/fp-core.md)
-* [Public Randomness Commits](./docs/commit-pub-rand.md)
-
 ## High Level Descriptions of EOTS and Finality Provider
 
 <!-- These are out of place right now, we need to decide where to place them -->
@@ -53,12 +47,20 @@ using them to produce EOTS signatures.
 **Note:** EOTS stands for Extractable One Time Signature. You can read more about it
 in
 the [Babylon BTC Staking Litepaper](https://docs.babylonchain.io/assets/files/btc_staking_litepaper-32bfea0c243773f0bfac63e148387aef.pdf).
-In short, the EOTS manager produces EOTS public/private randomness pairs. The
+In short, the EOTS manager generates EOTS public/private randomness pairs. The
 finality provider commits the public part of these pairs to Babylon for every future
 block height that they intend to provide a finality signature for. If the finality
 provider votes for two different blocks on the same height, they will have to reuse
-the same private randomness which will lead to their underlying private key being
-exposed, leading to the slashing of them and all their delegators.
+the same private randomness which will lead to their EOTS private key being
+exposed, leading to the slashing. In the context of finality providers, slashing 
+means that once a provider is slashed, its voting power is immediately reduced to
+zero following a double sign, and this consequence is permanent. Additionally, 
+finality providers with an exposed private EOTS key may face a penalty where their
+BTC delegations are partially burned according to a globally defined proportion. 
+For instance, if a finality provider has BTC delegations of 10 BTC and 100 BTC, 
+and the burn proportion is set to 10%, then after a slashing transaction is 
+executed on the Bitcoin network, 1 BTC and 10 BTC, respectively, will be burned, 
+with the remaining amounts returned to the delegators.
 
 The EOTS manager is responsible for the following operations:
 
@@ -66,7 +68,7 @@ The EOTS manager is responsible for the following operations:
     - Generates [Schnorr](https://en.wikipedia.org/wiki/Schnorr_signature) key pairs
       for a given finality provider using the
       [BIP-340](https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki)
-      standard.
+      standard as its EOTS key pair
     - Persists generated key pairs in the internal Cosmos keyring.
 2. **Randomness Generation:**
     - Generates lists of EOTS randomness pairs based on the EOTS key, chainID, and
@@ -102,13 +104,19 @@ providers:
    `JAILED`, and `SLASHED` states, while enforcing slashing conditions and handling
    the jailing process when violations occur.
 
-5. **Security and Key Management**: The system manages EOTS keys for signature
-   generation and Babylon keys for transaction processing and rewards distribution.
-   It maintains secure coordination with the EOTS daemon for all key-related
-   operations.
+5. **Security and Key Management**: The daemon manages Babylon keys for signing
+    transactions and rewards distribution. It maintains secure coordination with 
+    the EOTS daemon for all key-related operations.
 
 The daemon is controlled by the `fpd` tool, which provides commands for
 interacting with the running daemon.
+
+## Technical Documentation
+
+For detailed technical information about the finality provider's internal operations, see:
+* [Core Heuristics](./docs/fp-core.md)
+* [Public Randomness Commits](./docs/commit-pub-rand.md)
+* [Send Finality Votes] is also ready at ./docs/send-finality-vote.md.
 
 ## Overview of Keys for Finality Provider and EOTS Manager
 
