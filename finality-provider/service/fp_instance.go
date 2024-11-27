@@ -488,7 +488,7 @@ func (fp *FinalityProviderInstance) CommitPubRand(tipHeight uint64) (*types.TxRe
 
 	// make sure that the start height is at least the finality activation height
 	// and updated to generate the list with the same as the committed height.
-	startHeight = max[uint64](startHeight, activationBlkHeight)
+	startHeight = max(startHeight, activationBlkHeight)
 	// generate a list of Schnorr randomness pairs
 	// NOTE: currently, calling this will create and save a list of randomness
 	// in case of failure, randomness that has been created will be overwritten
@@ -670,11 +670,11 @@ func (fp *FinalityProviderInstance) getPollerStartingHeight() (uint64, error) {
 
 	// if we have finalized blocks, consider the height after the latest finalized block
 	if len(latestFinalisedBlocks) > 0 {
-		startHeight = max[uint64](startHeight, latestFinalisedBlocks[0].Height+1)
+		startHeight = max(startHeight, latestFinalisedBlocks[0].Height+1)
 	}
 
 	// consider the height after the last voted height
-	startHeight = max[uint64](startHeight, fp.GetLastVotedHeight()+1)
+	startHeight = max(startHeight, fp.GetLastVotedHeight()+1)
 
 	return startHeight, nil
 }
