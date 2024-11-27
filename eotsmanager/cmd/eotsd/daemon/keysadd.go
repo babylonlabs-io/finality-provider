@@ -3,6 +3,7 @@ package daemon
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -24,11 +25,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/yaml"
 )
 
 const (
 	mnemonicEntropySize = 256
+	mnemonicCtxKey      = "mnemonic_ctx"
+	mnemonicShowCtxKey  = "mnemonic_show_ctx"
 )
 
 func runAddCmdPrepare(cmd *cobra.Command, args []string) error {
@@ -64,7 +66,6 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 	noBackup, _ := cmd.Flags().GetBool(flagNoBackup)
 	showMnemonic := !noBackup
 	kb := ctx.Keyring
-	outputFormat := ctx.OutputFormat
 
 	keyringAlgos, _ := kb.SupportedAlgorithms()
 	algoStr, _ := cmd.Flags().GetString(flags.FlagKeyType)
@@ -123,12 +124,12 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 			}
 
 			pk := multisig.NewLegacyAminoPubKey(multisigThreshold, pks)
-			k, err := kb.SaveMultisig(name, pk)
+			_, err := kb.SaveMultisig(name, pk)
 			if err != nil {
 				return err
 			}
 
-			return printCreate(cmd, k, false, "", outputFormat)
+			return nil
 		}
 	}
 
@@ -143,12 +144,12 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 			return err
 		}
 
-		k, err := kb.SaveOfflineKey(name, pk)
+		_, err := kb.SaveOfflineKey(name, pk)
 		if err != nil {
 			return err
 		}
 
-		return printCreate(cmd, k, false, "", outputFormat)
+		return nil
 	}
 	if pubKeyBase64 != "" {
 		b64, err := base64.StdEncoding.DecodeString(pubKeyBase64)
@@ -175,12 +176,12 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 			return err
 		}
 
-		k, err := kb.SaveOfflineKey(name, pk)
+		_, err = kb.SaveOfflineKey(name, pk)
 		if err != nil {
 			return fmt.Errorf("failed to save offline key: %w", err)
 		}
 
-		return printCreate(cmd, k, false, "", outputFormat)
+		return nil
 	}
 
 	coinType, _ := cmd.Flags().GetUint32(flagCoinType)
@@ -199,12 +200,12 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 	// If we're using ledger, only thing we need is the path and the bech32 prefix.
 	if useLedger {
 		bech32PrefixAccAddr := sdk.GetConfig().GetBech32AccountAddrPrefix()
-		k, err := kb.SaveLedgerKey(name, hd.Secp256k1, bech32PrefixAccAddr, coinType, account, index)
+		_, err := kb.SaveLedgerKey(name, hd.Secp256k1, bech32PrefixAccAddr, coinType, account, index)
 		if err != nil {
 			return err
 		}
 
-		return printCreate(cmd, k, false, "", outputFormat)
+		return nil
 	}
 
 	// Get bip39 mnemonic
@@ -281,7 +282,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 		}
 	}
 
-	k, err := kb.NewAccount(name, mnemonic, bip39Passphrase, hdPath, algo)
+	_, err = kb.NewAccount(name, mnemonic, bip39Passphrase, hdPath, algo)
 	if err != nil {
 		return err
 	}
@@ -293,7 +294,10 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 		mnemonic = ""
 	}
 
-	return printCreate(cmd, k, showMnemonic, mnemonic, outputFormat)
+	// used later for printing the values if needed
+	ctxWithValues := context.WithValue(cmd.Context(), mnemonicCtxKey, mnemonic)        //nolint: revive,staticcheck
+	cmd.SetContext(context.WithValue(ctxWithValues, mnemonicShowCtxKey, showMnemonic)) //nolint: revive,staticcheck
+	return nil
 }
 
 func validateMultisigThreshold(k, nKeys int) error {
@@ -304,72 +308,6 @@ func validateMultisigThreshold(k, nKeys int) error {
 		return fmt.Errorf(
 			"threshold k of n multisignature: %d < %d", nKeys, k)
 	}
-	return nil
-}
-
-func printCreate(cmd *cobra.Command, k *cryptokeyring.Record, showMnemonic bool, mnemonic, outputFormat string) error {
-	switch outputFormat {
-	case flags.OutputFormatText:
-		cmd.PrintErrln()
-		if err := printKeyringRecord(cmd.OutOrStdout(), k, keys.MkAccKeyOutput, outputFormat); err != nil {
-			return err
-		}
-
-		// print mnemonic unless requested not to.
-		if showMnemonic {
-			if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "\n**Important** write this mnemonic phrase in a safe place.\nIt is the only way to recover your account if you ever forget your password.\n\n%s\n", mnemonic); err != nil {
-				return fmt.Errorf("failed to print mnemonic: %s", err.Error())
-			}
-		}
-	case flags.OutputFormatJSON:
-		out, err := keys.MkAccKeyOutput(k)
-		if err != nil {
-			return err
-		}
-
-		if showMnemonic {
-			out.Mnemonic = mnemonic
-		}
-
-		jsonString, err := json.Marshal(out)
-		if err != nil {
-			return err
-		}
-
-		cmd.Println(string(jsonString))
-
-	default:
-		return fmt.Errorf("invalid output format %s", outputFormat)
-	}
-
-	return nil
-}
-
-type bechKeyOutFn func(k *cryptokeyring.Record) (keys.KeyOutput, error)
-
-func printKeyringRecord(w io.Writer, k *cryptokeyring.Record, bechKeyOut bechKeyOutFn, output string) error {
-	ko, err := bechKeyOut(k)
-	if err != nil {
-		return err
-	}
-
-	switch output {
-	case flags.OutputFormatText:
-		if err := printTextRecords(w, []keys.KeyOutput{ko}); err != nil {
-			return err
-		}
-
-	case flags.OutputFormatJSON:
-		out, err := json.Marshal(ko)
-		if err != nil {
-			return err
-		}
-
-		if _, err := fmt.Fprintln(w, string(out)); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -385,17 +323,4 @@ func readMnemonicFromFile(filePath string) (string, error) {
 		return "", err
 	}
 	return string(bz), nil
-}
-
-func printTextRecords(w io.Writer, kos []keys.KeyOutput) error {
-	out, err := yaml.Marshal(&kos)
-	if err != nil {
-		return err
-	}
-
-	if _, err := fmt.Fprintln(w, string(out)); err != nil {
-		return err
-	}
-
-	return nil
 }
