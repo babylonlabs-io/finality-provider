@@ -22,8 +22,8 @@ gain an overall understanding of the finality provider.
 3. [Setting up the EOTS Daemon](#3-setting-up-the-eots-daemon)
    1. [Initialize the EOTS Daemon](#31-initialize-the-eots-daemon)
    2. [Add an EOTS Key](#32-add-an-eots-key)
-      1. [Import an existing EOTS key](#321-import-an-existing-eots-key)
-      2. [Create an EOTS key](#322-create-an-eots-key)
+      1. [Create an EOTS key](#321-create-an-eots-key)
+      2. [Import an existing EOTS key](#322-import-an-existing-eots-key)
    3. [Starting the EOTS Daemon](#33-starting-the-eots-daemon)
 4. [Setting up the Finality Provider](#4-setting-up-the-finality-provider)
    1. [Initialize the Finality Provider Daemon](#41-initialize-the-finality-provider-daemon)
@@ -51,11 +51,8 @@ different finality provider which will not inherit the Phase-1 delegations.
 Not transitioning your Phase-1 finality provider prevents your Phase-1 delegations 
 from transitioning to the second phase.
 
-How to follow this guide:
-- If you already have delegations and have set up a key during Phase-1, 
-  please proceed to [Adding Keys](#32-add-an-eots-key) to import your 
-  Phase-1 key.
-- If you are just starting out, you can begin with the setup steps outlined below.
+If you already have set up a key during Phase-1, please proceed to 
+[Adding Keys](#32-add-an-eots-key) to import your Phase-1 key.
 
 ## 2. Install Finality Provider Toolset 
 <!-- TODO: check add in the correct tag for the testnet --> 
@@ -99,6 +96,7 @@ This command will:
 - Make commands globally accessible from your terminal
 
 ### 2.3. Verify Installation 
+
 Run the following command to verify the installation:
 
 ```shell 
@@ -151,43 +149,74 @@ This section explains the process of setting up the private keys for the
 EOTS manager. Operators *must* create an EOTS key before starting the 
 EOTS daemon.
 
-We will be using the [Cosmos SDK](https://docs.cosmos.network/v0.52/user/run-node/keyring)
-backends for key storage. At this point in time we are only offering `test` keyring 
-until further development and testing.
+We will be using the [Cosmos SDK](https://docs.cosmos.network/v0.50/user/run-node/keyring)
+backends for key storage.
 
 Since this key is accessed by an automated daemon process, it must be stored
 unencrypted on disk and associated with the `test` keyring backend.
-This ensures that the finality provider daemon can promptly submit 
+This ensures that we can access the eots keys when requested to promptly submit 
 transactions, such as block votes and public randomness submissions that are 
 essential for its liveness and earning of rewards. 
 
 If you already have an existing key from Phase-1, proceed to 
 [Import an existing EOTS key](#321-import-an-existing-eots-key)
 
-#### 3.2.1. Import an existing EOTS key
+#### 3.2.1. Create an EOTS key
+
+If you have not created an EOTS key,
+use the following command to create a new one:
+
+``` shell
+eotsd keys add <key-name> --home <path> --keyring-backend test 
+```
+
+Parameters:
+- `<key-name>`: Name for your EOTS key (e.g., "eots-key-1"). We do not allow 
+the same `keyname` for an existing keyname.
+- `--home`: Path to your EOTS daemon home directory (e.g., "~/.eotsHome")
+- `--keyring-backend`: Type of keyring storage (`test`)
+
+The command will return a JSON response containing your EOTS key details:
+
+``` 
+{
+    "name": "eots", 
+    "pub_key_hex":
+    "e1e72d270b90b24f395e76b417218430a75683bd07cf98b91cf9219d1c777c19",
+    "mnemonic": "parade hybrid century project toss gun undo ocean exercise
+      figure decorate basket peace raw spot gap dose daring patch ski purchase
+      prefer can pair"
+} 
+``` 
+
+> **🔒 Security Tip**: The mnemonic phrase must be stored securely and kept private.
+> It is the only way to recover your EOTS key if you lose access to it and
+> if lost it can be used by third parties to get access to your key.
+
+#### 3.2.2. Import an existing EOTS key
 
 > ⚡ This section is for Finality Providers who already possess an EOTS key.
-> If you are a new user, you can skip this section.
+> If you don't have keys or want to create new ones, you can skip this section.
 
 There are 3 supported methods of loading your existing EOTS keys: 
-1. sing a mnemonic phrase
-2. exporting the `.asc` file
-3. backing up your entire home directory. We have outlined each of these 
-  three paths for you below.
+1. using a mnemonic phrase
+2. importing the `.asc` file
+3. importing a backed up home directory
+
+We have outlined each of these three paths for you below.
 
 #### Option 1: Using your mnemonic phrase
 
 If you are using your mnemonic seed phrase, use the following command to import 
-your key (with a keyring backend of your choice):
+your key:
 
 ```shell
-eotsd keys add <key-name> --home <path> --recover --keyring-backend <backend>
+eotsd keys add <key-name> --home <path> --recover --keyring-backend test
 ```
 
 You'll be prompted to enter:
 1. Your BIP39 mnemonic phrase (24 words)
-2. A passphrase to encrypt your key if you chose the `os` or `file` keyring backends
-3. HD path (optional - press Enter to use the default)
+2. HD path (optional - press Enter to use the default)
 
 > ⚡ The HD path is optional. If you used the default path when creating your key, 
 you can skip this by pressing `Enter` , which by default uses your original private
@@ -213,7 +242,7 @@ VP88GFE=
 To load the key, use the following command:
 
 ```shell
-eotsd keys import <name> <path-to-key> --home <path> --keyring-backend <backend>
+eotsd keys import <name> <path-to-key> --home <path> --keyring-backend test
 ```
 
 #### Option 3: Using a File System Backup
@@ -227,12 +256,12 @@ the EOTS daemon on and specify its location as the `--home` argument.
 After importing, you can verify that your EOTS key was successfully loaded:
 
 ```shell 
-eotsd keys list <key-name> --home <path> --keyring-backend <backend>
+eotsd keys list <key-name> --home <path> --keyring-backend test
 ```
 
 Parameters:
 * `<key-name>`: Name of the EOTS key to verify
-* `--keyring-backend`: Type of keyring backend to use (default: `test`)
+* `--keyring-backend`: Type of keyring backend to use (`test`)
 * `--home`: Directory containing EOTS Manager configuration and data
 
 You should see your EOTS key listed with the correct details, confirming that
@@ -242,38 +271,6 @@ it has been imported correctly.
 > If you are a finality provider transitioning your stack from Phase-1,
 > make sure that you are using the same EOTS key that you
 > registered in Phase-1. 
-
-#### 3.2.2. Create an EOTS key
-
-If you have not created an EOTS key,
-use the following command to create a new one:
-
-``` shell
-eotsd keys add --key-name <key-name> --home <path> --keyring-backend <backend> 
-```
-
-Parameters:
-- `<key-name>`: Name for your EOTS key (e.g., "eots-key-1"). We do not allow 
-the same `keyname` for an existing keyname.
-- `--home`: Path to your EOTS daemon home directory (e.g., "~/.eotsHome")
-- `--keyring-backend`: Type of keyring storage
-
-The command will return a JSON response containing your EOTS key details:
-
-``` 
-{
-    "name": "eots", 
-    "pub_key_hex":
-    "e1e72d270b90b24f395e76b417218430a75683bd07cf98b91cf9219d1c777c19",
-    "mnemonic": "parade hybrid century project toss gun undo ocean exercise
-      figure decorate basket peace raw spot gap dose daring patch ski purchase
-      prefer can pair"
-} 
-``` 
-
-> **🔒 Security Tip**: The mnemonic phrase must be stored securely and kept private.
-> It is the only way to recover your EOTS key if you lose access to it and
-> if lost it can be used by third parties to get access to your key.
 
 ### 3.3. Starting the EOTS Daemon
 
@@ -352,8 +349,7 @@ more secure locations.
 > To operate your Finality Provider, ensure your Babylon account is funded. 
 > Block vote transactions have their gas fees refunded, but public randomness 
 > submissions require gas payments. For testnet, you can obtain funds from our 
-> [faucet](#add-faucet).
-<!-- TODO: add faucet link -->
+> testnet faucet.
 
 Use the following command to add the Babylon key for your finality provider:
 
@@ -407,7 +403,7 @@ Configuration parameters explained:
 * `ChainID`: The Babylon network chain ID
 * `RPCAddr`: Your Babylon node's RPC endpoint
 * `GRPCAddr`: Your Babylon node's GRPC endpoint
-* `KeyDirectory`: Path to your keyring directory (same as --home path)
+* `KeyDirectory`: Path to your keyring directory (same as `--home` path)
 
 Please verify the `chain-id` and other network parameters from the official 
 [Babylon Networks
@@ -454,18 +450,18 @@ options can also be set in the configuration file.
 
 ### 4.5. Interaction with the EOTS Manager
 
-There are 2 pieces to a finality provider entity: the EOTS manager and the 
+There are two pieces to a finality provider entity: the EOTS manager and the 
 finality provider instance. These components work together and are managed by 
-separate daemons(`eotsd` and `fpd`).
+separate daemons (`eotsd` and `fpd`).
 
 The EOTS manager is responsible for managing the keys for finality providers and 
 handles operations such as key management, signature generation, and randomness 
-commitments. Where as the finality provider is responsible for creating and 
+commitments. Whereas the finality provider is responsible for creating and 
 registering finality providers and handling the monitoring of the Babylon chain. 
 The finality provider daemon is also responsible for coordinating various 
 operations.
 
-The interactions between the EOTS Manager and the finality provider happens 
+The interactions between the EOTS Manager and the finality provider happen 
 through RPC calls. These calls handle key operations, signature generation, 
 and randomness commitments. An easy way to think about it is the EOTS Manager 
 maintains the keys while the FP daemon coordinates any interactions with the 
@@ -475,13 +471,11 @@ The EOTS Manager is designed to handle multiple finality provider keys, operatin
 as a centralized key management system. When starting a finality provider instance, 
 you specify which EOTS key to use through the `--eots-pk` flag. This allows you 
 to run different finality provider instances using different keys from the same 
-EOTS Manager.
+EOTS Manager. Note that someone having access to your EOTS Manager
+RPC will have access to all the EOTS keys held within it
 
 For example, after registering a finality provider, you can start its daemon by 
-providing the EOTS public key:
-
-```shell
-fpd start --eots-pk <hex-string-of-eots-public-key>
+providing the EOTS public key `fpd start --eots-pk <hex-string-of-eots-public-key>`
 ```
 
 ## 5. Finality Provider Operations
@@ -520,8 +514,7 @@ Required parameters:
 - `--moniker`: A human-readable name for your finality provider
 
 > ⚠️ **Important**: The same EOTS key should not be used by different 
-> finality providers. This could lead to slashing. Only use this if you have 
-> multiple finality providers.
+> finality providers. This could lead to slashing.
 
 Optional parameters: 
 - `--website`: Your finality provider's website 
@@ -551,8 +544,7 @@ your finality provider's details:
 ```
 
 The response includes: 
-- `fp_addr`: Your Babylon account address for receiving
-  rewards 
+- `fp_addr`: Your Babylon account address of the finality provider
 - `eots_pk_hex`: Your unique BTC public key identifier
 - `description`: Your finality provider's metadata 
 - `commission`: Your set commission rate 
