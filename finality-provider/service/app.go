@@ -409,6 +409,9 @@ func (app *FinalityProviderApp) handleCreateFinalityProviderRequest(req *createF
 	}
 
 	// 2. create proof-of-possession
+	if req.eotsPk == nil {
+		return nil, fmt.Errorf("eots pk cannot be nil")
+	}
 	pop, err := app.CreatePop(fpAddr, req.eotsPk, req.passPhrase)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proof-of-possession of the finality-provider: %w", err)

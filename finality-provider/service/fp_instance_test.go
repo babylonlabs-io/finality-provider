@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -122,7 +123,13 @@ func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc cli
 	require.NoError(t, err)
 
 	// create registered finality-provider
-	fp := testutil.GenStoredFinalityProvider(r, t, app, passphrase, hdPath, nil)
+	eotsKeyName := testutil.GenRandomHexStr(r, 4)
+	require.NoError(t, err)
+	eotsPkBz, err := em.CreateKey(eotsKeyName, passphrase, hdPath)
+	require.NoError(t, err)
+	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
+	require.NoError(t, err)
+	fp := testutil.GenStoredFinalityProvider(r, t, app, passphrase, hdPath, eotsPk)
 	pubRandProofStore := app.GetPubRandProofStore()
 	fpStore := app.GetFinalityProviderStore()
 	err = fpStore.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_REGISTERED)

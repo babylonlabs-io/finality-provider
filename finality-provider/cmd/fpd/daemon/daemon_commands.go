@@ -74,9 +74,8 @@ func CommandCreateFP() *cobra.Command {
 		Use:     "create-finality-provider",
 		Aliases: []string{"cfp"},
 		Short:   "Create a finality provider object and save it in database.",
-		Long: fmt.Sprintf(`
-		Create a new finality provider object and store it in the finality provider database.
-		It needs to have an operating EOTS manager available and running.`),
+		Long: "Create a new finality provider object and store it in the finality provider database. " +
+			"It needs to have an operating EOTS manager available and running.",
 		Example: fmt.Sprintf(`fpd create-finality-provider --daemon-address %s ...`, defaultFpdDaemonAddress),
 		Args:    cobra.NoArgs,
 		RunE:    fpcmd.RunEWithClientCtx(runCommandCreateFP),
@@ -179,6 +178,10 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 	eotsPkHex, err := flags.GetString(fpEotsPkFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", fpEotsPkFlag, err)
+	}
+
+	if eotsPkHex == "" {
+		return fmt.Errorf("eots-pk cannot be empty")
 	}
 
 	info, err := client.CreateFinalityProvider(
