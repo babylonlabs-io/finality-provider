@@ -517,7 +517,6 @@ func (fp *FinalityProviderInstance) CommitPubRand(tipHeight uint64) (*types.TxRe
 
 // it will commit fp.cfg.NumPubRand pairs of public randomness starting from startHeight
 func (fp *FinalityProviderInstance) commitPubRandPairs(startHeight uint64) (*types.TxResponse, error) {
-
 	activationBlkHeight, err := fp.cc.QueryFinalityActivationBlockHeight()
 	if err != nil {
 		return nil, err
@@ -577,19 +576,22 @@ func (fp *FinalityProviderInstance) TestCommitPubRand(targetBlockHeight uint64) 
 	if err != nil {
 		return err
 	}
-	if lastCommittedHeight == uint64(0) {
-		// Note: it can also be the case that the finality-provider has committed 1 pubrand before (but in practice, we
-		// will never set cfg.NumPubRand to 1. so we can safely assume it has never committed before)
-		startHeight = 0
-	} else if lastCommittedHeight < targetBlockHeight {
-		startHeight = lastCommittedHeight + 1
-	} else {
+
+	if lastCommittedHeight >= targetBlockHeight {
 		return fmt.Errorf(
 			"finality provider has already committed pubrand to target block height (pk: %s, target: %d, last committed: %d)",
 			fp.GetBtcPkHex(),
 			targetBlockHeight,
 			lastCommittedHeight,
 		)
+	}
+
+	if lastCommittedHeight == uint64(0) {
+		// Note: it can also be the case that the finality-provider has committed 1 pubrand before (but in practice, we
+		// will never set cfg.NumPubRand to 1. so we can safely assume it has never committed before)
+		startHeight = 0
+	} else {
+		startHeight = lastCommittedHeight + 1
 	}
 
 	return fp.TestCommitPubRandWithStartHeight(startHeight, targetBlockHeight)
