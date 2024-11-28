@@ -95,7 +95,7 @@ func (r *rpcServer) CreateFinalityProvider(
 		return nil, err
 	}
 
-	eotsPk, err := parseOptEotsPk(req.EotsPkHex)
+	eotsPk, err := parseEotsPk(req.EotsPkHex)
 	if err != nil {
 		return nil, err
 	}
@@ -296,9 +296,10 @@ func (r *rpcServer) SignMessageFromChainKey(_ context.Context, req *proto.SignMe
 	return &proto.SignMessageFromChainKeyResponse{Signature: signature}, nil
 }
 
-func parseOptEotsPk(eotsPkHex string) (*bbntypes.BIP340PubKey, error) {
-	if len(eotsPkHex) > 0 {
-		return bbntypes.NewBIP340PubKeyFromHex(eotsPkHex)
+func parseEotsPk(eotsPkHex string) (*bbntypes.BIP340PubKey, error) {
+	if eotsPkHex == "" {
+		return nil, fmt.Errorf("eots-pk cannot be empty")
 	}
-	return nil, nil
+
+	return bbntypes.NewBIP340PubKeyFromHex(eotsPkHex)
 }

@@ -49,6 +49,7 @@ empty HD path to derive new key and use master private key.
 * [#153](https://github.com/babylonlabs-io/finality-provider/pull/153) Add `unsafe-commit-pubrand` command
 * [#154](https://github.com/babylonlabs-io/finality-provider/pull/154) Use sign schnorr instead of getting private key from EOTS manager
 * [#167](https://github.com/babylonlabs-io/finality-provider/pull/167) Remove last processed height
+* [#168](https://github.com/babylonlabs-io/finality-provider/pull/168) Remove key creation in `create-finality-provider`
 
 ### v0.12.1
 

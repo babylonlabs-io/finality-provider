@@ -213,7 +213,13 @@ func StartManagerWithFinalityProvider(t *testing.T) (*TestManager, *service.Fina
 	_, _, err = tm.manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), "1000000ubbn", "node0")
 	require.NoError(t, err)
 
-	res, err := app.CreateFinalityProvider(testFpName, testChainID, passphrase, hdPath, nil, desc, &commission)
+	eotsKeyName := "eots-key"
+	require.NoError(t, err)
+	eotsPkBz, err := tm.EOTSClient.CreateKey(eotsKeyName, passphrase, hdPath)
+	require.NoError(t, err)
+	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
+	require.NoError(t, err)
+	res, err := app.CreateFinalityProvider(testFpName, testChainID, passphrase, hdPath, eotsPk, desc, &commission)
 	require.NoError(t, err)
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
 	require.NoError(t, err)

@@ -83,22 +83,16 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 		}()
 
 		var eotsPk *bbntypes.BIP340PubKey
-		eotsPk = nil
-		generateEotsKeyBefore := r.Int31n(10) > 5
-		if generateEotsKeyBefore {
-			// sometimes uses the previously generated EOTS pk
-			eotsKeyName := testutil.GenRandomHexStr(r, 4)
-			eotsPkBz, err := em.CreateKey(eotsKeyName, passphrase, hdPath)
-			require.NoError(t, err)
-			eotsPk, err = bbntypes.NewBIP340PubKey(eotsPkBz)
-			require.NoError(t, err)
-		}
+		eotsKeyName := testutil.GenRandomHexStr(r, 4)
+		require.NoError(t, err)
+		eotsPkBz, err := em.CreateKey(eotsKeyName, passphrase, hdPath)
+		require.NoError(t, err)
+		eotsPk, err = bbntypes.NewBIP340PubKey(eotsPkBz)
+		require.NoError(t, err)
 
 		// create a finality-provider object and save it to db
 		fp := testutil.GenStoredFinalityProvider(r, t, app, passphrase, hdPath, eotsPk)
-		if generateEotsKeyBefore {
-			require.Equal(t, eotsPk, bbntypes.NewBIP340PubKeyFromBTCPK(fp.BtcPk))
-		}
+		require.Equal(t, eotsPk, bbntypes.NewBIP340PubKeyFromBTCPK(fp.BtcPk))
 
 		btcSig := new(bbntypes.BIP340Signature)
 		err = btcSig.Unmarshal(fp.Pop.BtcSig)
@@ -199,7 +193,13 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		err = app.Start()
 		require.NoError(t, err)
 
-		fp := testutil.GenStoredFinalityProvider(r, t, app, "", hdPath, nil)
+		eotsKeyName := testutil.GenRandomHexStr(r, 4)
+		require.NoError(t, err)
+		eotsPkBz, err := em.CreateKey(eotsKeyName, passphrase, hdPath)
+		require.NoError(t, err)
+		eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
+		require.NoError(t, err)
+		fp := testutil.GenStoredFinalityProvider(r, t, app, "", hdPath, eotsPk)
 
 		require.Eventually(t, func() bool {
 			fpPk := fp.GetBIP340BTCPK()
@@ -277,7 +277,13 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		}()
 		require.NoError(t, err)
 
-		fp := testutil.GenStoredFinalityProvider(r, t, app, "", hdPath, nil)
+		eotsKeyName := testutil.GenRandomHexStr(r, 4)
+		require.NoError(t, err)
+		eotsPkBz, err := em.CreateKey(eotsKeyName, passphrase, hdPath)
+		require.NoError(t, err)
+		eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
+		require.NoError(t, err)
+		fp := testutil.GenStoredFinalityProvider(r, t, app, "", hdPath, eotsPk)
 		err = app.GetFinalityProviderStore().SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_JAILED)
 		require.NoError(t, err)
 

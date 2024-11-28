@@ -74,12 +74,8 @@ func CommandCreateFP() *cobra.Command {
 		Use:     "create-finality-provider",
 		Aliases: []string{"cfp"},
 		Short:   "Create a finality provider object and save it in database.",
-		Long: fmt.Sprintf(`
-		Create a new finality provider object and store it in the finality provider database.
-		It needs to have an operating EOTS manager available and running.
-
-		If the flag %s is set, it will ask for the key record from the EOTS manager for the
-		corresponding EOTS public key. If it is not set, it will create a new EOTS key`, fpEotsPkFlag),
+		Long: "Create a new finality provider object and store it in the finality provider database. " +
+			"It needs to have an operating EOTS manager available and running.",
 		Example: fmt.Sprintf(`fpd create-finality-provider --daemon-address %s ...`, defaultFpdDaemonAddress),
 		Args:    cobra.NoArgs,
 		RunE:    fpcmd.RunEWithClientCtx(runCommandCreateFP),
@@ -98,7 +94,24 @@ func CommandCreateFP() *cobra.Command {
 	f.String(websiteFlag, "", "An optional website link")
 	f.String(securityContactFlag, "", "An email for security contact")
 	f.String(detailsFlag, "", "Other optional details")
-	f.String(fpEotsPkFlag, "", "Optional hex EOTS public key, if not provided a new one will be created")
+	f.String(fpEotsPkFlag, "", "The hex string of the EOTS public key")
+
+	// make flags required
+	if err := cmd.MarkFlagRequired(chainIDFlag); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired(keyNameFlag); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired(monikerFlag); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired(commissionRateFlag); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired(fpEotsPkFlag); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -129,6 +142,10 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return fmt.Errorf("not able to load key name: %w", err)
 	}
 
+	if keyName == "" {
+		return fmt.Errorf("keyname cannot be empty")
+	}
+
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
 		return err
@@ -142,6 +159,10 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 	chainID, err := flags.GetString(chainIDFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", chainIDFlag, err)
+	}
+
+	if chainID == "" {
+		return fmt.Errorf("chain-id cannot be empty")
 	}
 
 	passphrase, err := flags.GetString(passphraseFlag)
@@ -159,12 +180,8 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return fmt.Errorf("failed to read flag %s: %w", fpEotsPkFlag, err)
 	}
 
-	if len(eotsPkHex) > 0 {
-		// if is set, validate before the creation request
-		_, err := types.NewBIP340PubKeyFromHex(eotsPkHex)
-		if err != nil {
-			return fmt.Errorf("invalid eots public key %s: %w", eotsPkHex, err)
-		}
+	if eotsPkHex == "" {
+		return fmt.Errorf("eots-pk cannot be empty")
 	}
 
 	info, err := client.CreateFinalityProvider(
