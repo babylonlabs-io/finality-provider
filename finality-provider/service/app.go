@@ -405,7 +405,7 @@ func (app *FinalityProviderApp) handleCreateFinalityProviderRequest(req *createF
 	fpAddr, err := kr.Address(req.passPhrase)
 	if err != nil {
 		// the chain key does not exist, should create the chain key first
-		return nil, fmt.Errorf("the keyname %s does not exist, add the key first: %w", err)
+		return nil, fmt.Errorf("the keyname %s does not exist, add the key first: %w", req.keyName, err)
 	}
 
 	// 2. create proof-of-possession
