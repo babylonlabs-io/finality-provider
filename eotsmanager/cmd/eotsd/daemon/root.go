@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"github.com/babylonlabs-io/finality-provider/version"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
@@ -23,6 +24,7 @@ func NewRootCmd() *cobra.Command {
 		NewInitCmd(),
 		NewKeysCmd(),
 		NewStartCmd(),
+		version.CommandVersion("eotsd"),
 	)
 
 	return rootCmd

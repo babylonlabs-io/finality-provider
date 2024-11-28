@@ -2,22 +2,18 @@ package daemon
 
 import (
 	"context"
+	"cosmossdk.io/math"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
-
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
-	fpversion "github.com/babylonlabs-io/finality-provider/version"
-
-	"cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/types"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"strconv"
 
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -569,34 +565,4 @@ func loadKeyName(homeDir string, cmd *cobra.Command) (string, error) {
 		return "", fmt.Errorf("the key in config is empty")
 	}
 	return keyName, nil
-}
-
-// CommandVersion prints cmd version
-func CommandVersion() *cobra.Command {
-	var cmd = &cobra.Command{
-		Use:     "version",
-		Short:   "Prints version of this binary.",
-		Aliases: []string{"v"},
-		Example: `fpd version`,
-		Args:    cobra.NoArgs,
-		Run: func(cmd *cobra.Command, _ []string) {
-			version := fpversion.Version()
-			commit, ts := fpversion.CommitInfo()
-
-			if version == "" {
-				version = "main"
-			}
-
-			var sb strings.Builder
-			_, _ = sb.WriteString("Version:       " + version)
-			_, _ = sb.WriteString("\n")
-			_, _ = sb.WriteString("Git Commit:    " + commit)
-			_, _ = sb.WriteString("\n")
-			_, _ = sb.WriteString("Git Timestamp: " + ts)
-			_, _ = sb.WriteString("\n")
-
-			cmd.Printf(sb.String()) //nolint:govet // it's not an issue
-		},
-	}
-	return cmd
 }
