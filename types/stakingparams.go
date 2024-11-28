@@ -31,13 +31,3 @@ type StakingParams struct {
 	// The minimum time for unbonding transaction timelock in BTC blocks
 	MinUnbondingTime uint32
 }
-
-// MinimumUnbondingTime returns the minimum unbonding time. It is the bigger value from:
-// - MinUnbondingTime
-// - CheckpointFinalizationTimeout
-func (p *StakingParams) MinimumUnbondingTime() uint32 {
-	return sdkmath.Max[uint32](
-		p.MinUnbondingTime,
-		p.FinalizationTimeoutBlocks,
-	)
-}

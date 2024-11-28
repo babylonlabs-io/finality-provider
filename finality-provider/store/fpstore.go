@@ -148,28 +148,11 @@ func (s *FinalityProviderStore) SetFpLastVotedHeight(btcPk *btcec.PublicKey, las
 		if fp.LastVotedHeight < lastVotedHeight {
 			fp.LastVotedHeight = lastVotedHeight
 		}
-		if fp.LastProcessedHeight < lastVotedHeight {
-			fp.LastProcessedHeight = lastVotedHeight
-		}
 
 		return nil
 	}
 
 	return s.setFinalityProviderState(btcPk, setFpLastVotedHeight)
-}
-
-// SetFpLastProcessedHeight sets the last processed height to the stored last processed height
-// only if it is larger than the stored one. This is to ensure the stored state to increase monotonically
-func (s *FinalityProviderStore) SetFpLastProcessedHeight(btcPk *btcec.PublicKey, lastProcessedHeight uint64) error {
-	setFpLastProcessedHeight := func(fp *proto.FinalityProvider) error {
-		if fp.LastProcessedHeight < lastProcessedHeight {
-			fp.LastProcessedHeight = lastProcessedHeight
-		}
-
-		return nil
-	}
-
-	return s.setFinalityProviderState(btcPk, setFpLastProcessedHeight)
 }
 
 func (s *FinalityProviderStore) setFinalityProviderState(
