@@ -12,7 +12,7 @@ func CommandVersion(binaryName string) *cobra.Command {
 		Use:     "version",
 		Short:   "Prints version of this binary.",
 		Aliases: []string{"v"},
-		Example: fmt.Sprintf("%s version"),
+		Example: fmt.Sprintf("%s version", binaryName),
 		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, _ []string) {
 			v := Version()
