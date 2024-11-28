@@ -35,6 +35,7 @@ func main() {
 		daemon.CommandInfoFP(), daemon.CommandRegisterFP(), daemon.CommandAddFinalitySig(),
 		daemon.CommandExportFP(), daemon.CommandTxs(), daemon.CommandUnjailFP(),
 		daemon.CommandEditFinalityDescription(), daemon.CommandVersion(),
+		daemon.CommandCommitPubRand(),
 	)
 
 	if err := cmd.Execute(); err != nil {
