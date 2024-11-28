@@ -140,7 +140,10 @@ overwrite the config file they need to use `--force`.
 
 Parameters:
 - `--home`: Directory for EOTS Manager configuration and data
-  - Default: `DefaultEOTSDir` the default EOTS home directory
+  - Default: `DefaultEOTSDir` the default EOTS home directory:
+    - `C:\Users\<username>\AppData\Local\ on Windows`
+    - `~/.eotsd` on Linux
+    - `~/Library/Application Support/Eotsd` on MacOS
   - Example: `--home ./eotsHome`
 
 ### 3.2. Add an EOTS Key
