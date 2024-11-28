@@ -405,44 +405,30 @@ func (app *FinalityProviderApp) handleCreateFinalityProviderRequest(req *createF
 	fpAddr, err := kr.Address(req.passPhrase)
 	if err != nil {
 		// the chain key does not exist, should create the chain key first
-		keyInfo, err := kr.CreateChainKey(req.passPhrase, req.hdPath, "")
-		if err != nil {
-			return nil, fmt.Errorf("failed to create chain key %s: %w", req.keyName, err)
-		}
-		fpAddr = keyInfo.AccAddress
+		return nil, fmt.Errorf("the keyname %s does not exist, add the key first: %w", err)
 	}
 
-	// 2. create EOTS key
-	fpPk := req.eotsPk
-	if req.eotsPk == nil {
-		fpPkBytes, err := app.eotsManager.CreateKey(req.keyName, req.passPhrase, req.hdPath)
-		if err != nil {
-			return nil, err
-		}
-		fpPk, err = bbntypes.NewBIP340PubKey(fpPkBytes)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// 3. create proof-of-possession
-	pop, err := app.CreatePop(fpAddr, fpPk, req.passPhrase)
+	// 2. create proof-of-possession
+	pop, err := app.CreatePop(fpAddr, req.eotsPk, req.passPhrase)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proof-of-possession of the finality-provider: %w", err)
 	}
 
-	if err := app.fps.CreateFinalityProvider(fpAddr, fpPk.MustToBTCPK(), req.description, req.commission, req.keyName, req.chainID, pop.BtcSig); err != nil {
+	btcPk := req.eotsPk.MustToBTCPK()
+	if err := app.fps.CreateFinalityProvider(fpAddr, btcPk, req.description, req.commission, req.keyName, req.chainID, pop.BtcSig); err != nil {
 		return nil, fmt.Errorf("failed to save finality-provider: %w", err)
 	}
-	app.fpManager.metrics.RecordFpStatus(fpPk.MarshalHex(), proto.FinalityProviderStatus_CREATED)
+
+	pkHex := req.eotsPk.MarshalHex()
+	app.fpManager.metrics.RecordFpStatus(pkHex, proto.FinalityProviderStatus_CREATED)
 
 	app.logger.Info("successfully created a finality-provider",
-		zap.String("btc_pk", fpPk.MarshalHex()),
+		zap.String("eots_pk", pkHex),
 		zap.String("addr", fpAddr.String()),
 		zap.String("key_name", req.keyName),
 	)
 
-	storedFp, err := app.fps.GetFinalityProvider(fpPk.MustToBTCPK())
+	storedFp, err := app.fps.GetFinalityProvider(btcPk)
 	if err != nil {
 		return nil, err
 	}
