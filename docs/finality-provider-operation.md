@@ -507,9 +507,9 @@ fpd create-finality-provider \
 Required parameters: 
 - `--chain-id`: The Babylon chain ID (e.g., for the testnet, `bbn-test-5`) 
 - `--eots-pk`: The EOTS public key maintained by the connected EOTS manager
-  instance that the finality provider should use.
-  If one is not provided the finality provider will request 
-  the creation of a new one from the connected EOTS manager instance.
+  instance that the finality provider should use. If one is not provided the 
+  finality provider will request the creation of a new one from the connected 
+  EOTS manager instance.
 - `--commission`: The commission rate (between 0 and 1) that you'll receive from
   delegators 
 - `--key-name`: The key name in your Babylon keyring that your finality
