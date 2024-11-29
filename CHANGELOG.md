@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#175](https://github.com/babylonlabs-io/finality-provider/pull/175) adds: `eotsd version` command
+
 ### Bug Fixes
 
 * [#166](https://github.com/babylonlabs-io/finality-provider/pull/166) fix: `eotsd keys add` `--output` flag
