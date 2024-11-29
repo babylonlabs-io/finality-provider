@@ -114,7 +114,7 @@ func (fp *FinalityProviderInstance) Start() error {
 
 	fp.logger.Info("Starting finality-provider instance", zap.String("pk", fp.GetBtcPkHex()))
 
-	startHeight, err := fp.determinePollerStartingHeight()
+	startHeight, err := fp.DetermineStartHeight()
 	if err != nil {
 		return fmt.Errorf("failed to get the start height: %w", err)
 	}
@@ -732,7 +732,7 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 	return res, privKey, nil
 }
 
-// determinePollerStartingHeight determines the starting height for block processing by:
+// DetermineStartHeight determines trting height for block processing by:
 //
 // If AutoChainScanningMode is disabled:
 //   - Returns StaticChainScanningStartHeight from config
@@ -753,7 +753,7 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 //
 // Note: Starting from lastFinalizedHeight when there's a gap to the last processed height
 // may result in missed rewards, depending on the consumer chain's reward distribution mechanism.
-func (fp *FinalityProviderInstance) determinePollerStartingHeight() (uint64, error) {
+func (fp *FinalityProviderInstance) DetermineStartHeight() (uint64, error) {
 	// start from a height from config if AutoChainScanningMode is disabled
 	if !fp.cfg.PollerConfig.AutoChainScanningMode {
 		fp.logger.Info("using static chain scanning mode",
