@@ -297,6 +297,17 @@ func (bc *BabylonController) QueryFinalityProviderVotingPower(fpPk *btcec.Public
 	return res.VotingPower, nil
 }
 
+// QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
+func (bc *BabylonController) QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error) {
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+	if err != nil {
+		return 0, fmt.Errorf("failed to query highest voted height for finality provider %s: %w", fpPubKey.MarshalHex(), err)
+	}
+
+	return uint64(res.FinalityProvider.HighestVotedHeight), nil
+}
+
 func (bc *BabylonController) QueryLatestFinalizedBlocks(count uint64) ([]*types.BlockInfo, error) {
 	return bc.queryLatestBlocks(nil, count, finalitytypes.QueriedBlockStatus_FINALIZED, true)
 }

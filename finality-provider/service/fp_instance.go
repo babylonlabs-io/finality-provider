@@ -44,8 +44,6 @@ type FinalityProviderInstance struct {
 	criticalErrChan chan<- *CriticalError
 
 	isStarted *atomic.Bool
-	inSync    *atomic.Bool
-	isLagging *atomic.Bool
 
 	wg   sync.WaitGroup
 	quit chan struct{}
@@ -97,8 +95,6 @@ func newFinalityProviderInstanceFromStore(
 		cfg:             cfg,
 		logger:          logger,
 		isStarted:       atomic.NewBool(false),
-		inSync:          atomic.NewBool(false),
-		isLagging:       atomic.NewBool(false),
 		criticalErrChan: errChan,
 		passphrase:      passphrase,
 		em:              em,
@@ -118,7 +114,7 @@ func (fp *FinalityProviderInstance) Start() error {
 
 	fp.logger.Info("Starting finality-provider instance", zap.String("pk", fp.GetBtcPkHex()))
 
-	startHeight, err := fp.getPollerStartingHeight()
+	startHeight, err := fp.determinePollerStartingHeight()
 	if err != nil {
 		return fmt.Errorf("failed to get the start height: %w", err)
 	}
@@ -736,43 +732,75 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 	return res, privKey, nil
 }
 
-// getPollerStartingHeight gets the starting height of the poller with
-// max(lastVotedHeight+1, lastFinalizedHeight+1, params.FinalityActivationHeight)
-// this ensures that:
-// (1) the fp will not vote for a height lower than params.FinalityActivationHeight
-// (2) the fp will not miss for any non-finalized blocks
-// (3) the fp will not process any blocks that have been already voted
-// Note: if the fp starting from the last finalized height with a gap to the last
-// processed height, the fp might miss some rewards due to not sending the votes
-// depending on the consumer chain's reward distribution mechanism
-// TODO: provide an option to start from the last processed height in case
-// the consumer chain distributes rewards for late voters
-func (fp *FinalityProviderInstance) getPollerStartingHeight() (uint64, error) {
+// determinePollerStartingHeight determines the starting height for block processing by:
+//
+// If AutoChainScanningMode is disabled:
+//   - Returns StaticChainScanningStartHeight from config
+//
+// If AutoChainScanningMode is enabled:
+//   - Gets finalityActivationHeight from chain
+//   - Gets lastFinalizedHeight from chain
+//   - Gets lastVotedHeight from local state
+//   - If fp.GetLastVotedHeight() is 0, sets lastVotedHeight = lastFinalizedHeight
+//   - Gets highestVotedHeight from chain
+//   - Sets lastVotedHeight = max(lastVotedHeight, highestVotedHeight)
+//   - Returns max(finalityActivationHeight, lastVotedHeight + 1)
+//
+// This ensures that:
+// 1. The FP will not vote for heights below the finality activation height
+// 2. The FP will resume from its last voting position or the chain's last finalized height
+// 3. The FP will not process blocks it has already voted on
+//
+// Note: Starting from lastFinalizedHeight when there's a gap to the last processed height
+// may result in missed rewards, depending on the consumer chain's reward distribution mechanism.
+func (fp *FinalityProviderInstance) determinePollerStartingHeight() (uint64, error) {
+	// start from a height from config if AutoChainScanningMode is disabled
 	if !fp.cfg.PollerConfig.AutoChainScanningMode {
+		fp.logger.Info("using static chain scanning mode",
+			zap.String("pk", fp.GetBtcPkHex()),
+			zap.Uint64("start_height", fp.cfg.PollerConfig.StaticChainScanningStartHeight))
 		return fp.cfg.PollerConfig.StaticChainScanningStartHeight, nil
 	}
 
-	// TODO: query last voted height and update local height
+	lastFinalizedHeight, err := fp.latestFinalizedHeightWithRetry()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get the last finalized height: %w", err)
+	}
+
+	// determine an effective lastVotedHeight
+	var lastVotedHeight uint64
+	if fp.GetLastVotedHeight() == 0 {
+		lastVotedHeight = lastFinalizedHeight
+	} else {
+		lastVotedHeight = fp.GetLastVotedHeight()
+	}
+
+	highestVotedHeight, err := fp.highestVotedHeightWithRetry()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get the highest voted height: %w", err)
+	}
+
+	// TODO: if highestVotedHeight > lastVotedHeight, using highestVotedHeight could lead
+	// to issues when there are missed blocks between the gap due to bugs.
+	// A proper solution is to check if the fp has voted for each block within the gap
+	lastVotedHeight = max(lastVotedHeight, highestVotedHeight)
+
 	finalityActivationHeight, err := fp.getFinalityActivationHeightWithRetry()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get finality activation height: %w", err)
 	}
 
-	// start from finality activation height
-	startHeight := finalityActivationHeight
+	// determine the final starting height
+	startHeight := max(finalityActivationHeight, lastVotedHeight+1)
 
-	latestFinalisedBlocks, err := fp.latestFinalizedBlocksWithRetry(1)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get the last finalized block: %w", err)
-	}
-
-	// if we have finalized blocks, consider the height after the latest finalized block
-	if len(latestFinalisedBlocks) > 0 {
-		startHeight = max(startHeight, latestFinalisedBlocks[0].Height+1)
-	}
-
-	// consider the height after the last voted height
-	startHeight = max(startHeight, fp.GetLastVotedHeight()+1)
+	// log how start height is determined
+	fp.logger.Info("determined poller starting height",
+		zap.String("pk", fp.GetBtcPkHex()),
+		zap.Uint64("start_height", startHeight),
+		zap.Uint64("finality_activation_height", finalityActivationHeight),
+		zap.Uint64("last_voted_height", fp.GetLastVotedHeight()),
+		zap.Uint64("last_finalized_height", lastFinalizedHeight),
+		zap.Uint64("highest_voted_height", highestVotedHeight))
 
 	return startHeight, nil
 }
@@ -821,26 +849,54 @@ func (fp *FinalityProviderInstance) lastCommittedPublicRandWithRetry(count uint6
 	return response, nil
 }
 
-func (fp *FinalityProviderInstance) latestFinalizedBlocksWithRetry(count uint64) ([]*types.BlockInfo, error) {
-	var response []*types.BlockInfo
+func (fp *FinalityProviderInstance) latestFinalizedHeightWithRetry() (uint64, error) {
+	var height uint64
 	if err := retry.Do(func() error {
-		latestFinalisedBlock, err := fp.cc.QueryLatestFinalizedBlocks(count)
+		blocks, err := fp.cc.QueryLatestFinalizedBlocks(1)
 		if err != nil {
 			return err
 		}
-		response = latestFinalisedBlock
+		if len(blocks) == 0 {
+			// no finalized block yet
+			return nil
+		}
+		height = blocks[0].Height
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		fp.logger.Debug(
-			"failed to query babylon for the latest finalised blocks",
+			"failed to query babylon for the latest finalised height",
 			zap.Uint("attempt", n+1),
 			zap.Uint("max_attempts", RtyAttNum),
 			zap.Error(err),
 		)
 	})); err != nil {
-		return nil, err
+		return 0, err
 	}
-	return response, nil
+
+	return height, nil
+}
+
+func (fp *FinalityProviderInstance) highestVotedHeightWithRetry() (uint64, error) {
+	var height uint64
+	if err := retry.Do(func() error {
+		h, err := fp.cc.QueryFinalityProviderHighestVotedHeight(fp.GetBtcPk())
+		if err != nil {
+			return err
+		}
+		height = h
+		return nil
+	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
+		fp.logger.Debug(
+			"failed to query babylon for the highest voted height",
+			zap.Uint("attempt", n+1),
+			zap.Uint("max_attempts", RtyAttNum),
+			zap.Error(err),
+		)
+	})); err != nil {
+		return 0, err
+	}
+
+	return height, nil
 }
 
 func (fp *FinalityProviderInstance) getFinalityActivationHeightWithRetry() (uint64, error) {

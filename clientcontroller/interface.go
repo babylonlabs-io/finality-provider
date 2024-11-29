@@ -31,6 +31,9 @@ type ClientController interface {
 		description []byte,
 	) (*types.TxResponse, error)
 
+	// EditFinalityProvider edits description and commission of a finality provider
+	EditFinalityProvider(fpPk *btcec.PublicKey, commission *math.LegacyDec, description []byte) (*btcstakingtypes.MsgEditFinalityProvider, error)
+
 	// CommitPubRandList commits a list of EOTS public randomness the consumer chain
 	// it returns tx hash and error
 	CommitPubRandList(fpPk *btcec.PublicKey, startHeight uint64, numPubRand uint64, commitment []byte, sig *schnorr.Signature) (*types.TxResponse, error)
@@ -44,14 +47,18 @@ type ClientController interface {
 	// UnjailFinalityProvider sends an unjail transaction to the consumer chain
 	UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error)
 
+	/*
+		The following methods are queries to the consumer chain
+	*/
+
 	// QueryFinalityProviderVotingPower queries the voting power of the finality provider at a given height
 	QueryFinalityProviderVotingPower(fpPk *btcec.PublicKey, blockHeight uint64) (uint64, error)
 
 	// QueryFinalityProviderSlashedOrJailed queries if the finality provider is slashed or jailed
 	QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error)
 
-	// EditFinalityProvider edits description and commission of a finality provider
-	EditFinalityProvider(fpPk *btcec.PublicKey, commission *math.LegacyDec, description []byte) (*btcstakingtypes.MsgEditFinalityProvider, error)
+	// QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
+	QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error)
 
 	// QueryLatestFinalizedBlocks returns the latest finalized blocks
 	QueryLatestFinalizedBlocks(count uint64) ([]*types.BlockInfo, error)
