@@ -50,6 +50,8 @@ empty HD path to derive new key and use master private key.
 * [#154](https://github.com/babylonlabs-io/finality-provider/pull/154) Use sign schnorr instead of getting private key from EOTS manager
 * [#167](https://github.com/babylonlabs-io/finality-provider/pull/167) Remove last processed height
 * [#168](https://github.com/babylonlabs-io/finality-provider/pull/168) Remove key creation in `create-finality-provider`
+* [#176](https://github.com/babylonlabs-io/finality-provider/pull/176) Refactor
+determining start height based on [ADR-35](https://github.com/babylonlabs-io/pm/blob/main/adr/adr-035-slashing-protection.md)
 
 ### v0.12.1
 
