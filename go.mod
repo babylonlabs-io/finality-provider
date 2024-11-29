@@ -12,7 +12,7 @@ require (
 	github.com/avast/retry-go/v4 v4.5.1
 	github.com/babylonlabs-io/babylon v0.9.3-0.20240925223611-a98269d17887
 	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20240814002132-55e711397a82
-	github.com/babylonlabs-io/finality-gadget v0.1.1
+	github.com/babylonlabs-io/finality-gadget v0.1.2-0.20241126083346-4ffe20d16406
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
 	github.com/btcsuite/btcd/btcutil v1.1.5
@@ -442,9 +442,8 @@ require (
 replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
-	github.com/babylonlabs-io/finality-gadget => github.com/babylonlabs-io/finality-gadget v0.0.0-20241102200508-e4e40591d7b1
 	github.com/btcsuite/btcd/btcec/v2 => github.com/btcsuite/btcd/btcec/v2 v2.3.2
-	github.com/ethereum-optimism/optimism => github.com/babylonlabs-io/optimism v1.8.1-0.20240901154247-a38e38a679ab
+	github.com/ethereum-optimism/optimism => github.com/babylonlabs-io/optimism v1.9.2-0.20241105020448-32f912d130b8
 	github.com/ethereum/go-ethereum => github.com/ethereum-optimism/op-geth v1.101408.0-rc.4.0.20240827042333-110c433a2469
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// fix for `make build` error: invalid CFI advance_loc expression
