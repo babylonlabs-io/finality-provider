@@ -89,6 +89,8 @@ finality vote submission
 
 * [#117](https://github.com/babylonlabs-io/finality-provider/pull/117) Spec of
 commit public randomness
+* [#130](https://github.com/babylonlabs-io/finality-provider/pull/130) Finality 
+Provider operation documentation
 
 ### Bug Fixes
 
