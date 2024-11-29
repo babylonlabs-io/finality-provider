@@ -186,6 +186,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 			mockClientController.EXPECT().QueryActivatedHeight().Return(currentHeight, nil).AnyTimes()
 			mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), gomock.Any()).Return(uint64(2), nil).AnyTimes()
 		}
+		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
 
 		app, err := service.NewFinalityProviderApp(&fpCfg, mockClientController, em, fpdb, logger)
 		require.NoError(t, err)
@@ -266,6 +267,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), gomock.Any()).Return(uint64(0), nil).AnyTimes()
 		mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
 		mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, false, nil).AnyTimes()
+		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
 
 		app, err := service.NewFinalityProviderApp(&fpCfg, mockClientController, em, fpdb, logger)
 		require.NoError(t, err)
