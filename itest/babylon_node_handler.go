@@ -224,9 +224,12 @@ func (n *babylonNode) TxBankSend(addr, coins string) error {
 	}
 
 	cmd := exec.Command("babylond", flags...)
-	_, err := cmd.Output()
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
 	if err != nil {
-		return err
+		return fmt.Errorf("cmd failed: %v\nstderr: %s", err, stderr.String())
 	}
 	return nil
 }
