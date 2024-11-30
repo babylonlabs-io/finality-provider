@@ -1,8 +1,6 @@
 package container
 
 import (
-	"github.com/babylonlabs-io/finality-provider/testutil"
-	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -20,10 +18,11 @@ const (
 
 // NewImageConfig returns ImageConfig needed for running e2e test.
 func NewImageConfig(t *testing.T) ImageConfig {
-	babylondVersion, err := testutil.GetBabylonVersion()
-	require.NoError(t, err)
+	// TODO: currently use specific commit, should uncomment after having a new release
+	// babylondVersion, err := testutil.GetBabylonVersion()
+	// require.NoError(t, err)
 	return ImageConfig{
 		BabylonRepository: dockerBabylondRepository,
-		BabylonVersion:    babylondVersion,
+		BabylonVersion:    "457909d8c43c8483655c2d3a3a01cd2190344fd4",
 	}
 }

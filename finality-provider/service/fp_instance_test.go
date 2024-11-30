@@ -36,7 +36,7 @@ func FuzzCommitPubRandList(f *testing.F) {
 		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight, 0)
 		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), gomock.Any()).
 			Return(uint64(0), nil).AnyTimes()
-		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockClientController, randomStartingHeight)
+		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockClientController, true, randomStartingHeight)
 		defer cleanUp()
 
 		expectedTxHash := testutil.GenRandomHexStr(r, 32)
@@ -60,7 +60,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		startingBlock := &types.BlockInfo{Height: randomStartingHeight, Hash: testutil.GenRandomByteArray(r, 32)}
 		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight, 0)
 		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
-		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockClientController, randomStartingHeight)
+		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockClientController, true, randomStartingHeight)
 		defer cleanUp()
 
 		// commit pub rand
@@ -99,7 +99,47 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 	})
 }
 
-func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc clientcontroller.ClientController, startingHeight uint64) (*service.FinalityProviderApp, *service.FinalityProviderInstance, func()) {
+func FuzzDetermineStartHeight(f *testing.F) {
+	testutil.AddRandomSeedsToFuzzer(f, 10)
+	f.Fuzz(func(t *testing.T, seed int64) {
+		r := rand.New(rand.NewSource(seed))
+
+		// generate random heights
+		finalityActivationHeight := uint64(r.Int63n(1000) + 1)
+		lastVotedHeight := uint64(r.Int63n(1000))
+		highestVotedHeight := uint64(r.Int63n(1000))
+		lastFinalizedHeight := uint64(r.Int63n(1000) + 1)
+
+		randomStartingHeight := uint64(r.Int63n(100) + 1)
+		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
+		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight, finalityActivationHeight)
+
+		// setup mocks
+		mockClientController.EXPECT().
+			QueryFinalityProviderHighestVotedHeight(gomock.Any()).
+			Return(highestVotedHeight, nil).
+			AnyTimes()
+		finalizedBlocks := []*types.BlockInfo{{
+			Height: lastFinalizedHeight,
+		}}
+		mockClientController.EXPECT().QueryLatestFinalizedBlocks(uint64(1)).Return(finalizedBlocks, nil).AnyTimes()
+
+		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockClientController, false, randomStartingHeight)
+		defer cleanUp()
+		fpIns.MustUpdateStateAfterFinalitySigSubmission(lastVotedHeight)
+
+		startHeight, err := fpIns.DetermineStartHeight()
+		require.NoError(t, err)
+
+		if lastVotedHeight == 0 {
+			require.Equal(t, startHeight, max(finalityActivationHeight, highestVotedHeight+1, lastFinalizedHeight+1))
+		} else {
+			require.Equal(t, startHeight, max(finalityActivationHeight, highestVotedHeight+1, lastVotedHeight+1))
+		}
+	})
+}
+
+func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc clientcontroller.ClientController, isStaticStartHeight bool, startingHeight uint64) (*service.FinalityProviderApp, *service.FinalityProviderInstance, func()) {
 	logger := zap.NewNop()
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
@@ -113,7 +153,7 @@ func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc cli
 	fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
 	fpCfg := config.DefaultConfigWithHome(fpHomeDir)
 	fpCfg.NumPubRand = testutil.TestPubRandNum
-	fpCfg.PollerConfig.AutoChainScanningMode = false
+	fpCfg.PollerConfig.AutoChainScanningMode = !isStaticStartHeight
 	fpCfg.PollerConfig.StaticChainScanningStartHeight = startingHeight
 	db, err := fpCfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
