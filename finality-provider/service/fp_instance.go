@@ -732,7 +732,7 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 	return res, privKey, nil
 }
 
-// DetermineStartHeight determines trting height for block processing by:
+// DetermineStartHeight determines start height for block processing by:
 //
 // If AutoChainScanningMode is disabled:
 //   - Returns StaticChainScanningStartHeight from config
