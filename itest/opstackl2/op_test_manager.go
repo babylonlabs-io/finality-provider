@@ -16,6 +16,7 @@ import (
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	bbncfg "github.com/babylonlabs-io/babylon/client/config"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	fgclient "github.com/babylonlabs-io/finality-gadget/client"
 	fgcfg "github.com/babylonlabs-io/finality-gadget/config"
 	fgdb "github.com/babylonlabs-io/finality-gadget/db"
 	"github.com/babylonlabs-io/finality-gadget/finalitygadget"
@@ -34,6 +35,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/testutil/log"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/btcsuite/btcd/btcec/v2"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	ope2e "github.com/ethereum-optimism/optimism/op-e2e"
@@ -49,8 +51,8 @@ const (
 	opFinalityGadgetContractPath = "../bytecode/op_finality_gadget_16f6154.wasm"
 	consumerChainIdPrefix        = "op-stack-l2-"
 	bbnAddrTopUpAmount           = 100000000
-	finalityGadgetRpc            = "localhost:50051"
-	finalityGadgetHttp           = "localhost:8080"
+	finalityGadgetRpc            = "127.0.0.1:50051"
+	finalityGadgetHttp           = "127.0.0.1:8080"
 	fgDbFilePath                 = "data.db"
 )
 
@@ -58,13 +60,15 @@ type BaseTestManager = base_test_manager.BaseTestManager
 
 type OpL2ConsumerTestManager struct {
 	BaseTestManager
-	BaseDir           string
-	OpSystem          *ope2e.System
-	BabylonHandler    *e2eutils.BabylonNodeHandler
-	EOTSServerHandler *e2eutils.EOTSServerHandler
-	BabylonFpApp      *service.FinalityProviderApp
-	ConsumerFpApp     *service.FinalityProviderApp
-	FinalityGadget    *finalitygadget.FinalityGadget
+	BaseDir              string
+	OpSystem             *ope2e.System
+	BabylonHandler       *e2eutils.BabylonNodeHandler
+	EOTSServerHandler    *e2eutils.EOTSServerHandler
+	BabylonFpApp         *service.FinalityProviderApp
+	ConsumerFpApp        *service.FinalityProviderApp
+	OpConsumerController *opcc.OPStackL2ConsumerController
+	FinalityGadget       *finalitygadget.FinalityGadget
+	FinalityGadgetClient *fgclient.FinalityGadgetGrpcClient
 }
 
 // - setup OP consumer chain
@@ -76,10 +80,6 @@ type OpL2ConsumerTestManager struct {
 //   - deploy finality gadget cw contract
 //   - create and start consumer FP app
 //   - start finality gadget server
-//
-// - update the finality gadget gRPC and then restart op-node
-// - create btc delegation & wait for activation
-// - set enabled to true in CW contract
 func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 	// Setup base dir and logger
 	testDir, err := e2eutils.BaseDir("fpe2etest")
@@ -164,12 +164,12 @@ func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 	consumerFpApp := createAndStartFpApp(t, logger, consumerFpCfg, opConsumerController, EOTSClients[1])
 	t.Log(log.Prefix("Started Consumer FP App"))
 
-	// create and register consumer FP
-	consumerFpPk := createAndRegisterFinalityProvider(t, consumerFpApp, opConsumerId)
-	t.Logf(log.Prefix("Registered Finality Provider %s for %s"), consumerFpPk.MarshalHex(), opConsumerId)
-
 	// start finality gadget server
 	fg := startFinalityGadgetServer(t, logger, opL2ConsumerConfig, shutdownInterceptor)
+
+	// Create grpc client
+	fgClient, err := fgclient.NewFinalityGadgetGrpcClient(finalityGadgetRpc)
+	require.NoError(t, err)
 
 	ctm := &OpL2ConsumerTestManager{
 		BaseTestManager: BaseTestManager{
@@ -177,13 +177,15 @@ func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 			CovenantPrivKeys: covenantPrivKeys,
 			StakingParams:    stakingParams,
 		},
-		BaseDir:           testDir,
-		OpSystem:          opSys,
-		BabylonHandler:    babylonHandler,
-		EOTSServerHandler: eotsHandler,
-		BabylonFpApp:      babylonFpApp,
-		ConsumerFpApp:     consumerFpApp,
-		FinalityGadget:    fg,
+		BaseDir:              testDir,
+		OpSystem:             opSys,
+		BabylonHandler:       babylonHandler,
+		EOTSServerHandler:    eotsHandler,
+		BabylonFpApp:         babylonFpApp,
+		ConsumerFpApp:        consumerFpApp,
+		OpConsumerController: opConsumerController,
+		FinalityGadget:       fg,
+		FinalityGadgetClient: fgClient,
 	}
 
 	return ctm
@@ -229,8 +231,8 @@ func startOpConsumerChain(t *testing.T, logger *zap.Logger) *ope2e.System {
 }
 
 // wait for chain has at least one finalized block
-func waitForOneFinalizedBlock(t *testing.T, opSys *ope2e.System) {
-	rollupClient := opSys.RollupClient("sequencer")
+func (ctm *OpL2ConsumerTestManager) waitForOneFinalizedBlock(t *testing.T) {
+	rollupClient := ctm.OpSystem.RollupClient("sequencer")
 	require.Eventually(t, func() bool {
 		stat, err := rollupClient.SyncStatus(context.Background())
 		require.NoError(t, err)
@@ -464,6 +466,46 @@ func deployCwContract(
 	return listContractsResponse.Contracts[0]
 }
 
+func toggleCwKillswitch(
+	t *testing.T,
+	cwClient *cwclient.Client,
+	cwContractAddress string,
+	enabled bool,
+) {
+	// set enabled to true or false
+	setEnabledMsg := map[string]interface{}{
+		"set_enabled": map[string]interface{}{
+			"enabled": enabled,
+		},
+	}
+	setEnabledMsgBytes, err := json.Marshal(setEnabledMsg)
+	require.NoError(t, err)
+
+	err = cwClient.ExecuteContract(cwContractAddress, setEnabledMsgBytes, nil)
+	require.NoError(t, err)
+
+	queryMsg := map[string]interface{}{
+		"is_enabled": struct{}{},
+	}
+	queryMsgBytes, err := json.Marshal(queryMsg)
+	require.NoError(t, err)
+
+	var querySmartContractStateResponse *wasmtypes.QuerySmartContractStateResponse
+	require.Eventually(t, func() bool {
+		querySmartContractStateResponse, err = cwClient.QuerySmartContractState(
+			cwContractAddress,
+			string(queryMsgBytes),
+		)
+		return err == nil
+	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
+
+	var resp bool
+	err = json.Unmarshal(querySmartContractStateResponse.Data, &resp)
+	require.NoError(t, err)
+	t.Logf("Response is_enabled from CW contract: %t", resp)
+	require.Equal(t, enabled, resp)
+}
+
 func startFinalityGadgetServer(
 	t *testing.T,
 	logger *zap.Logger,
@@ -533,6 +575,8 @@ func createAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProv
 	return fpPk
 }
 
+// - create and register finality providers - babylon & consumer FPs and start consumer FP
+// - create btc delegation & wait for activation
 // A BTC delegation has to stake to at least one Babylon finality provider
 // https://github.com/babylonlabs-io/babylon-private/blob/74a24c962ce2cf64e5216edba9383fe0b460070c/x/btcstaking/keeper/msg_server.go#L220
 func (ctm *OpL2ConsumerTestManager) setupFinalityProviders(t *testing.T) {
@@ -549,6 +593,24 @@ func (ctm *OpL2ConsumerTestManager) setupFinalityProviders(t *testing.T) {
 
 	// wait for consumer FP registration
 	ctm.waitForConsumerFPRegistration(t)
+
+	// send a BTC delegation
+	_ = ctm.InsertBTCDelegation(t, []*btcec.PublicKey{babylonFpPk.MustToBTCPK(), consumerFpPk.MustToBTCPK()},
+		e2eutils.StakingTime, e2eutils.StakingAmount)
+
+	// wait until the delegation is active
+	ctm.WaitForNActiveDels(t, 1)
+
+	// start consumer FP
+	// consumerFpIns, _ := ctm.ConsumerFpApp.GetFinalityProviderInstance(consumerFpPk)
+	// if err != nil && consumerFpIns == nil {
+	// 	err := ctm.ConsumerFpApp.StartHandlingFinalityProvider(consumerFpPk, e2eutils.Passphrase)
+	// 	require.NoError(t, err)
+	// 	consumerFpIns, err = ctm.ConsumerFpApp.GetFinalityProviderInstance(consumerFpPk)
+	// 	require.NoError(t, err)
+	// 	require.True(t, consumerFpIns.IsRunning())
+	// }
+	// return consumerFpIns
 }
 
 func (ctm *OpL2ConsumerTestManager) waitForBabylonFPRegistration(t *testing.T) {
