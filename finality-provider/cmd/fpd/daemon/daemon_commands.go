@@ -2,18 +2,20 @@ package daemon
 
 import (
 	"context"
-	"cosmossdk.io/math"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
+
+	"cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/types"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"strconv"
+
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -467,14 +469,14 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 // CommandEditFinalityDescription edits description of finality provider
 func CommandEditFinalityDescription() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "edit-finality-provider [btc_pk]",
+		Use:     "edit-finality-provider [eots_pk]",
 		Aliases: []string{"efp"},
 		Short:   "Edit finality provider data without resetting unchanged fields",
-		Long: "Edit the details of a finality provider using the specified BTC public key. " +
-			"\nThe provided [btc_pk] must correspond to the Babylon address controlled by the key specified in fpd.conf. " +
+		Long: "Edit the details of a finality provider using the specified EOTS public key. " +
+			"\nThe provided [eots_pk] must correspond to the Babylon address controlled by the key specified in fpd.conf. " +
 			"\nIf one or more optional flags are passed (such as --moniker, --website, etc.), " +
 			"the corresponding values are updated, while unchanged fields retain their current values from the Babylon Node.",
-		Example: fmt.Sprintf(`fpd edit-finality-provider [btc_pk] --daemon-address %s --moniker "new-moniker"`, defaultFpdDaemonAddress),
+		Example: fmt.Sprintf(`fpd edit-finality-provider [eots_pk] --daemon-address %s --moniker "new-moniker"`, defaultFpdDaemonAddress),
 		Args:    cobra.ExactArgs(1),
 		RunE:    runCommandEditFinalityDescription,
 	}
