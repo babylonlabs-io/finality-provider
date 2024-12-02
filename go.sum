@@ -885,8 +885,8 @@ github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20240814002132-55e711397a82 h1
 github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20240814002132-55e711397a82/go.mod h1:QqEn1sL4RPG7DJ94XFYvuvEELml64s5XwPQpTayXJss=
 github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20240814002132-55e711397a82 h1:F9U6iH+RqXo2ColXvGGByWDY0DdyAMnIgjpxQbWooiE=
 github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20240814002132-55e711397a82/go.mod h1:WJlZy0RYCtyBFeO1mr0Tlo02csrlCAQgzmp4+NVX14g=
-github.com/babylonlabs-io/finality-gadget v0.1.2-0.20241126083346-4ffe20d16406 h1:COhSKmzlne8cH1tJypn/ywGMCw2A6nbUAjQisHZN4wI=
-github.com/babylonlabs-io/finality-gadget v0.1.2-0.20241126083346-4ffe20d16406/go.mod h1:EmpCuYtfkRyeXL3wXxXf8j8wPyMbzwG8pHUQ7LXSnJo=
+github.com/babylonlabs-io/finality-gadget v0.1.2-0.20241202031631-3817ad7fb1d4 h1:O3B/KBlvqCT51BDShpLrcSFHqRjO21tjVy/f62BwxAw=
+github.com/babylonlabs-io/finality-gadget v0.1.2-0.20241202031631-3817ad7fb1d4/go.mod h1:EmpCuYtfkRyeXL3wXxXf8j8wPyMbzwG8pHUQ7LXSnJo=
 github.com/babylonlabs-io/optimism v1.9.2-0.20241105020448-32f912d130b8 h1:H4kDAZXvGDSvsN68btsqbFxDL3Qf7IcDCowmPQoSAA0=
 github.com/babylonlabs-io/optimism v1.9.2-0.20241105020448-32f912d130b8/go.mod h1:3zpfOHDL79QOXjOVE+HrL9F4vCG1DBOfUOZlGGg14CY=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
