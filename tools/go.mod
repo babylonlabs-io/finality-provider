@@ -227,12 +227,8 @@ require (
 replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
-	// fix for `make build` error: invalid CFI advance_loc expression
-	github.com/supranational/blst => github.com/supranational/blst v0.3.13
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	// avoid v1.66 that has a breaking change for protobuf. That change breaks the relayer.
 	// https://github.com/grpc/grpc-go/issues/7569
 	google.golang.org/grpc => google.golang.org/grpc v1.65.0
-	// fix for `go mod tidy` error: unknown revision v1.8.6
-	nhooyr.io/websocket => github.com/coder/websocket v1.8.7
 )
