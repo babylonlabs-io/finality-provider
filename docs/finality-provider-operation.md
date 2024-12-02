@@ -548,7 +548,7 @@ your finality provider's details:
 
 The response includes: 
 - `fp_addr`: Your Babylon account address of the finality provider
-- `eots_pk_hex`: Your unique BTC public key identifier
+- `eots_pk_hex`: Your unique EOTS public key identifier
 - `description`: Your finality provider's metadata 
 - `commission`: Your set commission rate 
 - `status`: Current status of the finality provider.
