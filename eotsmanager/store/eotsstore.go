@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/proto"
 	pm "google.golang.org/protobuf/proto"
@@ -138,7 +139,7 @@ func (s *EOTSStore) SaveSignRecord(
 	})
 }
 
-func (s *EOTSStore) GetSignRecord(height uint64) (*proto.SigningRecord, error) {
+func (s *EOTSStore) GetSignRecord(height uint64) (*proto.SigningRecord, bool, error) {
 	key := uint64ToBytes(height)
 	res := &proto.SigningRecord{}
 
@@ -157,10 +158,13 @@ func (s *EOTSStore) GetSignRecord(height uint64) (*proto.SigningRecord, error) {
 	}, func() {})
 
 	if err != nil {
-		return nil, err
+		if errors.Is(err, ErrSignRecordNotFound) {
+			return nil, false, nil
+		}
+		return nil, false, err
 	}
 
-	return res, nil
+	return res, true, nil
 }
 
 // Converts an uint64 value to a byte slice.

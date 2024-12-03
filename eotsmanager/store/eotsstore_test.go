@@ -19,6 +19,7 @@ import (
 func FuzzEOTSStore(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		homePath := t.TempDir()
@@ -65,10 +66,11 @@ func FuzzEOTSStore(f *testing.F) {
 	})
 }
 
-// FuzzSignStore tests save sing records
+// FuzzSignStore tests save sign records
 func FuzzSignStore(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		homePath := t.TempDir()
@@ -88,7 +90,7 @@ func FuzzSignStore(f *testing.F) {
 
 		expectedRecord := proto.SigningRecord{
 			BlockHash: testutil.GenRandomByteArray(r, 32),
-			PublicKey: testutil.GenRandomByteArray(r, 33),
+			PublicKey: testutil.GenRandomByteArray(r, 32),
 			Signature: testutil.GenRandomByteArray(r, 32),
 			Timestamp: time.Now().UnixMilli(),
 		}
@@ -112,14 +114,16 @@ func FuzzSignStore(f *testing.F) {
 		)
 		require.ErrorIs(t, err, store.ErrDuplicateSignRecord)
 
-		signRecordFromDB, err := vs.GetSignRecord(expectedHeight)
+		signRecordFromDB, found, err := vs.GetSignRecord(expectedHeight)
+		require.True(t, found)
 		require.NoError(t, err)
 		require.Equal(t, expectedRecord.PublicKey, signRecordFromDB.PublicKey)
 		require.Equal(t, expectedRecord.BlockHash, signRecordFromDB.BlockHash)
 		require.Equal(t, expectedRecord.Signature, signRecordFromDB.Signature)
 
 		rndHeight := r.Uint64()
-		_, err = vs.GetSignRecord(rndHeight)
-		require.ErrorIs(t, err, store.ErrSignRecordNotFound)
+		_, found, err = vs.GetSignRecord(rndHeight)
+		require.NoError(t, err)
+		require.False(t, found)
 	})
 }

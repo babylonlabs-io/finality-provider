@@ -1,12 +1,13 @@
 package eotsmanager
 
 import (
+	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 	"strings"
 	"sync"
-
-	"github.com/babylonlabs-io/finality-provider/metrics"
 
 	"github.com/babylonlabs-io/babylon/crypto/eots"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -27,6 +28,10 @@ import (
 const (
 	secp256k1Type       = "secp256k1"
 	MnemonicEntropySize = 256
+)
+
+var (
+	ErrDoubleSign = errors.New("double sign")
 )
 
 var _ EOTSManager = &LocalEOTSManager{}
@@ -194,6 +199,20 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 }
 
 func (lm *LocalEOTSManager) SignEOTS(fpPk []byte, chainID []byte, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error) {
+	record, found, err := lm.es.GetSignRecord(height)
+	if err != nil {
+		return nil, fmt.Errorf("error getting sign record: %w", err)
+	} else if found && record != nil {
+		if bytes.Equal(msg, record.BlockHash) {
+			var s btcec.ModNScalar
+			s.SetByteSlice(record.Signature)
+
+			return &s, nil
+		}
+
+		return nil, ErrDoubleSign
+	}
+
 	privRand, _, err := lm.getRandomnessPair(fpPk, chainID, height, passphrase)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get private randomness: %w", err)
@@ -208,7 +227,17 @@ func (lm *LocalEOTSManager) SignEOTS(fpPk []byte, chainID []byte, msg []byte, he
 	lm.metrics.IncrementEotsFpTotalEotsSignCounter(hex.EncodeToString(fpPk))
 	lm.metrics.SetEotsFpLastEotsSignHeight(hex.EncodeToString(fpPk), float64(height))
 
-	return eots.Sign(privKey, privRand, msg)
+	signedBytes, err := eots.Sign(privKey, privRand, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	b := signedBytes.Bytes()
+	if err := lm.es.SaveSignRecord(height, msg, fpPk, b[:]); err != nil {
+		return nil, fmt.Errorf("failed to save signing record: %w", err)
+	}
+
+	return signedBytes, nil
 }
 
 func (lm *LocalEOTSManager) SignSchnorrSig(fpPk []byte, msg []byte, passphrase string) (*schnorr.Signature, error) {
