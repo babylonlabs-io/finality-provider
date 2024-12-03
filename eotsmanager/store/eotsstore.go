@@ -107,9 +107,9 @@ func (s *EOTSStore) GetEOTSKeyName(pk []byte) (string, error) {
 
 func (s *EOTSStore) SaveSignRecord(
 	height uint64,
-	BlockHash []byte,
-	PublicKey []byte,
-	Signature []byte,
+	blockHash []byte,
+	publicKey []byte,
+	signature []byte,
 ) error {
 	key := uint64ToBytes(height)
 
@@ -124,9 +124,9 @@ func (s *EOTSStore) SaveSignRecord(
 		}
 
 		signRecord := &proto.SigningRecord{
-			BlockHash: BlockHash,
-			PublicKey: PublicKey,
-			Signature: Signature,
+			BlockHash: blockHash,
+			PublicKey: publicKey,
+			Signature: signature,
 			Timestamp: time.Now().UnixMilli(),
 		}
 
