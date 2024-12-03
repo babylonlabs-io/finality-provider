@@ -19,7 +19,7 @@ type EOTSServerHandler struct {
 }
 
 func NewEOTSServerHandlerMultiFP(
-	t *testing.T, configs []*config.Config, eotsHomeDirs []string, logger *zap.Logger, shutdownInterceptor *signal.Interceptor,
+	t *testing.T, logger *zap.Logger, configs []*config.Config, eotsHomeDirs []string, shutdownInterceptor *signal.Interceptor,
 ) *EOTSServerHandler {
 	eotsServers := make([]*service.Server, 0, len(configs))
 	for i, cfg := range configs {
@@ -40,13 +40,12 @@ func NewEOTSServerHandlerMultiFP(
 	}
 }
 
-func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string) *EOTSServerHandler {
-	// TODO: no-op logger makes it hard to debug. replace w real logger.
+func NewEOTSServerHandler(t *testing.T, logger *zap.Logger, cfg *config.Config, eotsHomeDir string) *EOTSServerHandler {
 	// create shutdown interceptor
 	shutdownInterceptor, err := signal.Intercept()
 	require.NoError(t, err)
 	// this need refactor of NewEOTSServerHandler
-	return NewEOTSServerHandlerMultiFP(t, []*config.Config{cfg}, []string{eotsHomeDir}, zap.NewNop(), &shutdownInterceptor)
+	return NewEOTSServerHandlerMultiFP(t, logger, []*config.Config{cfg}, []string{eotsHomeDir}, &shutdownInterceptor)
 }
 
 func (eh *EOTSServerHandler) Start() {

@@ -94,7 +94,7 @@ func StartWasmdTestManager(t *testing.T) *WasmdTestManager {
 	// 4. prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
 	eotsCfg := eotsconfig.DefaultConfigWithHomePath(eotsHomeDir)
-	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh := e2eutils.NewEOTSServerHandler(t, logger, eotsCfg, eotsHomeDir)
 	eh.Start()
 	// wait for EOTS servers to start
 	// see https://github.com/babylonchain/finality-provider/pull/517
