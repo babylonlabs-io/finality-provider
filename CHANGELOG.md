@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 * [#175](https://github.com/babylonlabs-io/finality-provider/pull/175) adds: `eotsd version` command
 * [#179](https://github.com/babylonlabs-io/finality-provider/pull/179) Change `btc_pk` text to `eots_pk` in CLI
+* [#182](https://github.com/babylonlabs-io/finality-provider/pull/182) Remove fp manager
 
 ### Bug Fixes
 
