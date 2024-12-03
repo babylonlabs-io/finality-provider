@@ -2,10 +2,13 @@ package test_manager
 
 import (
 	"encoding/hex"
+	"fmt"
 	"math/rand"
+	"path/filepath"
 	"testing"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/btcstaking"
 	txformat "github.com/babylonlabs-io/babylon/btctxformatter"
 	asig "github.com/babylonlabs-io/babylon/crypto/schnorr-adaptor-signature"
@@ -15,17 +18,24 @@ import (
 	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	ckpttypes "github.com/babylonlabs-io/babylon/x/checkpointing/types"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
+	"github.com/babylonlabs-io/finality-provider/metrics"
+	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
+	"github.com/lightningnetwork/lnd/signal"
 	"github.com/stretchr/testify/require"
-
-	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
-	"github.com/babylonlabs-io/finality-provider/types"
+	"go.uber.org/zap"
 )
 
 type BaseTestManager struct {
@@ -532,4 +542,95 @@ func (tm *BaseTestManager) FinalizeUntilEpoch(t *testing.T, epoch uint64) {
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 
 	t.Logf("epoch %d is finalised", epoch)
+}
+
+func StartEotsManagers(
+	t *testing.T,
+	logger *zap.Logger,
+	testDir string,
+	babylonFpCfg *fpcfg.Config,
+	consumerFpCfg *fpcfg.Config,
+	shutdownInterceptor *signal.Interceptor,
+) (*e2eutils.EOTSServerHandler, []*eotsclient.EOTSManagerGRpcClient) {
+	fpCfgs := []*fpcfg.Config{babylonFpCfg, consumerFpCfg}
+	eotsClients := make([]*eotsclient.EOTSManagerGRpcClient, len(fpCfgs))
+	eotsHomeDirs := []string{filepath.Join(testDir, "babylon-eots-home"), filepath.Join(testDir, "consumer-eots-home")}
+	eotsConfigs := make([]*eotsconfig.Config, len(fpCfgs))
+	for i := 0; i < len(fpCfgs); i++ {
+		eotsCfg := eotsconfig.DefaultConfigWithHomePathAndPorts(
+			eotsHomeDirs[i],
+			eotsconfig.DefaultRPCPort+i,
+			metrics.DefaultEotsConfig().Port+i,
+		)
+		eotsConfigs[i] = eotsCfg
+	}
+
+	eh := e2eutils.NewEOTSServerHandlerMultiFP(t, logger, eotsConfigs, eotsHomeDirs, shutdownInterceptor)
+	eh.Start()
+
+	// create EOTS clients
+	for i := 0; i < len(fpCfgs); i++ {
+		// wait for EOTS servers to start
+		// see https://github.com/babylonchain/finality-provider/pull/517
+		var eotsCli *eotsclient.EOTSManagerGRpcClient
+		var err error
+		require.Eventually(t, func() bool {
+			eotsCli, err = eotsclient.NewEOTSManagerGRpcClient(fpCfgs[i].EOTSManagerAddress)
+			if err != nil {
+				t.Logf("Error creating EOTS client: %v", err)
+				return false
+			}
+			eotsClients[i] = eotsCli
+			return true
+		}, 5*time.Second, time.Second, "Failed to create EOTS client")
+	}
+	return eh, eotsClients
+}
+
+func CreateAndStartFpApp(
+	t *testing.T,
+	logger *zap.Logger,
+	cfg *fpcfg.Config,
+	cc api.ConsumerController,
+	eotsCli *client.EOTSManagerGRpcClient,
+) *service.FinalityProviderApp {
+	bc, err := bbncc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+	require.NoError(t, err)
+
+	fpdb, err := cfg.DatabaseConfig.GetDbBackend()
+	require.NoError(t, err)
+
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, fpdb, logger)
+	require.NoError(t, err)
+
+	err = fpApp.StartWithoutSyncFpStatus()
+	require.NoError(t, err)
+
+	return fpApp
+}
+
+func CreateAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProviderApp, chainId string) *bbntypes.BIP340PubKey {
+	fpCfg := fpApp.GetConfig()
+	keyName := fpCfg.BabylonConfig.Key
+	moniker := fmt.Sprintf("%s-%s", chainId, e2eutils.MonikerPrefix)
+	commission := sdkmath.LegacyZeroDec()
+	desc := e2eutils.NewDescription(moniker)
+
+	res, err := fpApp.CreateFinalityProvider(
+		keyName,
+		chainId,
+		e2eutils.Passphrase,
+		e2eutils.HdPath,
+		nil,
+		desc,
+		&commission,
+	)
+	require.NoError(t, err)
+
+	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
+	require.NoError(t, err)
+
+	_, err = fpApp.RegisterFinalityProvider(fpPk.MarshalHex())
+	require.NoError(t, err)
+	return fpPk
 }
