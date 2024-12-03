@@ -201,7 +201,7 @@ func StartManagerWithFinalityProvider(t *testing.T) (*TestManager, *service.Fina
 	// needs to update key in config to be able to register and sign the creation of the finality provider with the
 	// same address.
 	cfg.BabylonConfig.Key = testFpName
-	fpBbnKeyInfo, err := service.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, cfg.BabylonConfig.Key, cfg.BabylonConfig.KeyringBackend, passphrase, hdPath, "")
+	fpBbnKeyInfo, err := testutil.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, cfg.BabylonConfig.Key, cfg.BabylonConfig.KeyringBackend, passphrase, hdPath, "")
 	require.NoError(t, err)
 
 	cc, err := clientcontroller.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, zap.NewNop())
@@ -226,7 +226,7 @@ func StartManagerWithFinalityProvider(t *testing.T) (*TestManager, *service.Fina
 
 	_, err = app.RegisterFinalityProvider(fpPk.MarshalHex())
 	require.NoError(t, err)
-	err = app.StartHandlingFinalityProvider(fpPk, passphrase)
+	err = app.StartFinalityProvider(fpPk, passphrase)
 	require.NoError(t, err)
 	fpIns, err := app.GetFinalityProviderInstance()
 	require.NoError(t, err)

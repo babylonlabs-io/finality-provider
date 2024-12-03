@@ -12,6 +12,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
@@ -110,7 +111,7 @@ func GenStoredFinalityProvider(r *rand.Rand, t *testing.T, app *service.Finality
 	chainID := GenRandomHexStr(r, 4)
 
 	cfg := app.GetConfig()
-	_, err := service.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, keyName, keyring.BackendTest, passphrase, hdPath, "")
+	_, err := CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, keyName, keyring.BackendTest, passphrase, hdPath, "")
 	require.NoError(t, err)
 
 	res, err := app.CreateFinalityProvider(keyName, chainID, passphrase, hdPath, eotsPk, RandomDescription(r), ZeroCommissionRate())
@@ -122,6 +123,26 @@ func GenStoredFinalityProvider(r *rand.Rand, t *testing.T, app *service.Finality
 	require.NoError(t, err)
 
 	return storedFp
+}
+
+func CreateChainKey(keyringDir, chainID, keyName, backend, passphrase, hdPath, mnemonic string) (*types.ChainKeyInfo, error) {
+	sdkCtx, err := fpkr.CreateClientCtx(
+		keyringDir, chainID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	krController, err := fpkr.NewChainKeyringController(
+		sdkCtx,
+		keyName,
+		backend,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return krController.CreateChainKey(passphrase, hdPath, mnemonic)
 }
 
 func GenSdkContext(r *rand.Rand, t *testing.T) client.Context {
