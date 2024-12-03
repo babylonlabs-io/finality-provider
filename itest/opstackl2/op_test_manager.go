@@ -54,6 +54,7 @@ type OpL2ConsumerTestManager struct {
 	EOTSServerHandler    *e2eutils.EOTSServerHandler
 	BabylonFpApp         *service.FinalityProviderApp
 	ConsumerFpApp        *service.FinalityProviderApp
+	ConsumerEOTSClient   *client.EOTSManagerGRpcClient
 }
 
 // Config is the config of the OP finality gadget cw contract
@@ -143,6 +144,7 @@ func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 		EOTSServerHandler:    eotsHandler,
 		BabylonFpApp:         babylonFpApp,
 		ConsumerFpApp:        consumerFpApp,
+		ConsumerEOTSClient:   EOTSClients[1],
 	}
 
 	return ctm
@@ -374,7 +376,7 @@ func createAndStartFpApp(
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, fpdb, logger)
 	require.NoError(t, err)
 
-	err = fpApp.Start()
+	err = fpApp.StartWithoutSyncFpStatus()
 	require.NoError(t, err)
 
 	return fpApp
@@ -428,6 +430,22 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime, "Failed to wait for consumer FP registration")
 
 	return []*bbntypes.BIP340PubKey{babylonFpPk, consumerFpPk}
+}
+
+func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
+	t *testing.T,
+	consumerFpPk *bbntypes.BIP340PubKey,
+) *service.FinalityProviderInstance {
+	fpCfg := ctm.ConsumerFpApp.GetConfig()
+	fpStore := ctm.ConsumerFpApp.GetFinalityProviderStore()
+	pubRandStore := ctm.ConsumerFpApp.GetPubRandProofStore()
+	bc := ctm.BabylonFpApp.GetBabylonController()
+	logger := ctm.ConsumerFpApp.Logger()
+	fpInstance, err := service.TestNewUnregisteredFinalityProviderInstance(
+		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.OpConsumerController, ctm.ConsumerEOTSClient,
+		metrics.NewFpMetrics(), "", make(chan<- *service.CriticalError), logger)
+	require.NoError(t, err)
+	return fpInstance
 }
 
 func (ctm *OpL2ConsumerTestManager) delegateBTCAndWaitForActivation(t *testing.T, babylonFpPk *bbntypes.BIP340PubKey, consumerFpPk *bbntypes.BIP340PubKey) {
