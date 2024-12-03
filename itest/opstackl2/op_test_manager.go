@@ -11,16 +11,12 @@ import (
 	"testing"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	bbncfg "github.com/babylonlabs-io/babylon/client/config"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	opcc "github.com/babylonlabs-io/finality-provider/clientcontroller/opstackl2"
 	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
-	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
@@ -113,14 +109,14 @@ func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 	require.NoError(t, err)
 
 	// create EOTS handler and EOTS gRPC clients for Babylon and consumer
-	eotsHandler, EOTSClients := startEotsManagers(t, logger, testDir, babylonFpCfg, consumerFpCfg, &shutdownInterceptor)
+	eotsHandler, EOTSClients := base_test_manager.StartEotsManagers(t, logger, testDir, babylonFpCfg, consumerFpCfg, &shutdownInterceptor)
 
 	// create Babylon consumer controller
 	babylonConsumerController, err := bbncc.NewBabylonConsumerController(babylonFpCfg.BabylonConfig, &babylonFpCfg.BTCNetParams, logger)
 	require.NoError(t, err)
 
 	// create and start Babylon FP app
-	babylonFpApp := createAndStartFpApp(t, logger, babylonFpCfg, babylonConsumerController, EOTSClients[0])
+	babylonFpApp := base_test_manager.CreateAndStartFpApp(t, logger, babylonFpCfg, babylonConsumerController, EOTSClients[0])
 	t.Log(log.Prefix("Started Babylon FP App"))
 
 	// create op consumer controller
@@ -128,7 +124,7 @@ func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 	require.NoError(t, err)
 
 	// create and start consumer FP app
-	consumerFpApp := createAndStartFpApp(t, logger, consumerFpCfg, opConsumerController, EOTSClients[1])
+	consumerFpApp := base_test_manager.CreateAndStartFpApp(t, logger, consumerFpCfg, opConsumerController, EOTSClients[1])
 	t.Log(log.Prefix("Started Consumer FP App"))
 
 	ctm := &OpL2ConsumerTestManager{
@@ -315,100 +311,9 @@ func deployCwContract(t *testing.T, cwClient *cwclient.Client) string {
 	return listContractsResponse.Contracts[0]
 }
 
-func startEotsManagers(
-	t *testing.T,
-	logger *zap.Logger,
-	testDir string,
-	babylonFpCfg *fpcfg.Config,
-	consumerFpCfg *fpcfg.Config,
-	shutdownInterceptor *signal.Interceptor,
-) (*e2eutils.EOTSServerHandler, []*eotsclient.EOTSManagerGRpcClient) {
-	fpCfgs := []*fpcfg.Config{babylonFpCfg, consumerFpCfg}
-	eotsClients := make([]*eotsclient.EOTSManagerGRpcClient, len(fpCfgs))
-	eotsHomeDirs := []string{filepath.Join(testDir, "babylon-eots-home"), filepath.Join(testDir, "consumer-eots-home")}
-	eotsConfigs := make([]*eotsconfig.Config, len(fpCfgs))
-	for i := 0; i < len(fpCfgs); i++ {
-		eotsCfg := eotsconfig.DefaultConfigWithHomePathAndPorts(
-			eotsHomeDirs[i],
-			eotsconfig.DefaultRPCPort+i,
-			metrics.DefaultEotsConfig().Port+i,
-		)
-		eotsConfigs[i] = eotsCfg
-	}
-
-	eh := e2eutils.NewEOTSServerHandlerMultiFP(t, logger, eotsConfigs, eotsHomeDirs, shutdownInterceptor)
-	eh.Start()
-
-	// create EOTS clients
-	for i := 0; i < len(fpCfgs); i++ {
-		// wait for EOTS servers to start
-		// see https://github.com/babylonchain/finality-provider/pull/517
-		var eotsCli *eotsclient.EOTSManagerGRpcClient
-		var err error
-		require.Eventually(t, func() bool {
-			eotsCli, err = eotsclient.NewEOTSManagerGRpcClient(fpCfgs[i].EOTSManagerAddress)
-			if err != nil {
-				t.Logf("Error creating EOTS client: %v", err)
-				return false
-			}
-			eotsClients[i] = eotsCli
-			return true
-		}, 5*time.Second, time.Second, "Failed to create EOTS client")
-	}
-	return eh, eotsClients
-}
-
-func createAndStartFpApp(
-	t *testing.T,
-	logger *zap.Logger,
-	cfg *fpcfg.Config,
-	cc api.ConsumerController,
-	eotsCli *client.EOTSManagerGRpcClient,
-) *service.FinalityProviderApp {
-	bc, err := bbncc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
-	require.NoError(t, err)
-
-	fpdb, err := cfg.DatabaseConfig.GetDbBackend()
-	require.NoError(t, err)
-
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, fpdb, logger)
-	require.NoError(t, err)
-
-	err = fpApp.Start()
-	require.NoError(t, err)
-
-	return fpApp
-}
-
-func createAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProviderApp, chainId string) *bbntypes.BIP340PubKey {
-	fpCfg := fpApp.GetConfig()
-	keyName := fpCfg.BabylonConfig.Key
-	moniker := fmt.Sprintf("%s-%s", chainId, e2eutils.MonikerPrefix)
-	commission := sdkmath.LegacyZeroDec()
-	desc := e2eutils.NewDescription(moniker)
-
-	res, err := fpApp.CreateFinalityProvider(
-		keyName,
-		chainId,
-		e2eutils.Passphrase,
-		e2eutils.HdPath,
-		nil,
-		desc,
-		&commission,
-	)
-	require.NoError(t, err)
-
-	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
-	require.NoError(t, err)
-
-	_, err = fpApp.RegisterFinalityProvider(fpPk.MarshalHex())
-	require.NoError(t, err)
-	return fpPk
-}
-
 func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*bbntypes.BIP340PubKey {
 	// create and register Babylon FP
-	babylonFpPk := createAndRegisterFinalityProvider(t, ctm.BabylonFpApp, e2eutils.ChainID)
+	babylonFpPk := base_test_manager.CreateAndRegisterFinalityProvider(t, ctm.BabylonFpApp, e2eutils.ChainID)
 	t.Logf(log.Prefix("Registered Finality Provider %s for %s"), babylonFpPk.MarshalHex(), e2eutils.ChainID)
 
 	// wait for Babylon FP registration
@@ -418,7 +323,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime, "Failed to wait for Babylon FP registration")
 
 	// create and register consumer FP
-	consumerFpPk := createAndRegisterFinalityProvider(t, ctm.ConsumerFpApp, opConsumerChainId)
+	consumerFpPk := base_test_manager.CreateAndRegisterFinalityProvider(t, ctm.ConsumerFpApp, opConsumerChainId)
 	t.Logf(log.Prefix("Registered Finality Provider %s for %s"), consumerFpPk.MarshalHex(), opConsumerChainId)
 
 	// wait for consumer FP registration
