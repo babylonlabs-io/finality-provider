@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -514,13 +513,6 @@ func (app *FinalityProviderApp) loadChainKeyring(
 	return kr, chainSk, nil
 }
 
-// UpdateClientController sets a new client controller in the App.
-// Useful for testing with multiples PKs with different keys, it needs
-// to update who is the signer
-func (app *FinalityProviderApp) UpdateClientController(cc clientcontroller.ClientController) {
-	app.cc = cc
-}
-
 func (app *FinalityProviderApp) startFinalityProviderInstance(
 	pk *bbntypes.BIP340PubKey,
 	passphrase string,
@@ -567,40 +559,6 @@ func (app *FinalityProviderApp) removeFinalityProviderInstance() error {
 	app.fpIns = nil
 
 	return nil
-}
-
-func (app *FinalityProviderApp) monitorCriticalErr() {
-	defer app.wg.Done()
-
-	var criticalErr *CriticalError
-
-	for {
-		select {
-		case criticalErr = <-app.criticalErrChan:
-			fpi, err := app.GetFinalityProviderInstance()
-			if err != nil {
-				app.logger.Debug("the finality-provider instance is already shutdown",
-					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
-				continue
-			}
-			if errors.Is(criticalErr.err, ErrFinalityProviderSlashed) {
-				app.setFinalityProviderSlashed(fpi)
-				app.logger.Debug("the finality-provider has been slashed",
-					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
-				continue
-			}
-			if errors.Is(criticalErr.err, ErrFinalityProviderJailed) {
-				app.setFinalityProviderJailed(fpi)
-				app.logger.Debug("the finality-provider has been jailed",
-					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
-				continue
-			}
-			app.logger.Fatal(instanceTerminatingMsg,
-				zap.String("pk", criticalErr.fpBtcPk.MarshalHex()), zap.Error(criticalErr.err))
-		case <-app.quit:
-			return
-		}
-	}
 }
 
 func (app *FinalityProviderApp) setFinalityProviderSlashed(fpi *FinalityProviderInstance) {

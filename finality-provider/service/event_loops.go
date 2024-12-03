@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"time"
 
 	"go.uber.org/zap"
@@ -141,6 +142,40 @@ func (app *FinalityProviderApp) monitorStatusUpdate() {
 					zap.String("old_status", oldStatus.String()),
 				)
 			}
+		case <-app.quit:
+			return
+		}
+	}
+}
+
+func (app *FinalityProviderApp) monitorCriticalErr() {
+	defer app.wg.Done()
+
+	var criticalErr *CriticalError
+
+	for {
+		select {
+		case criticalErr = <-app.criticalErrChan:
+			fpi, err := app.GetFinalityProviderInstance()
+			if err != nil {
+				app.logger.Debug("the finality-provider instance is already shutdown",
+					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
+				continue
+			}
+			if errors.Is(criticalErr.err, ErrFinalityProviderSlashed) {
+				app.setFinalityProviderSlashed(fpi)
+				app.logger.Debug("the finality-provider has been slashed",
+					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
+				continue
+			}
+			if errors.Is(criticalErr.err, ErrFinalityProviderJailed) {
+				app.setFinalityProviderJailed(fpi)
+				app.logger.Debug("the finality-provider has been jailed",
+					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
+				continue
+			}
+			app.logger.Fatal(instanceTerminatingMsg,
+				zap.String("pk", criticalErr.fpBtcPk.MarshalHex()), zap.Error(criticalErr.err))
 		case <-app.quit:
 			return
 		}
