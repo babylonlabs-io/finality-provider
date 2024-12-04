@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#182](https://github.com/babylonlabs-io/finality-provider/pull/182) Remove fp manager
 * [#184](https://github.com/babylonlabs-io/finality-provider/pull/184) eots manager sign record store
 * [#190](https://github.com/babylonlabs-io/finality-provider/pull/190) Benchmark pub rand
+* [#193](https://github.com/babylonlabs-io/finality-provider/pull/193) adds unsafeSignEOTS for e2e tests
 
 ### Bug Fixes
 
