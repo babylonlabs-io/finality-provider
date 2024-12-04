@@ -37,6 +37,8 @@ func TestPubRandCommitment(t *testing.T) {
 	require.NotNil(t, pubRand)
 
 	// check the end height of the pub rand
+	// endHeight = startHeight + numberPubRand - 1
+	// startHeight is 1 in this case, so EndHeight should equal NumPubRand
 	consumerCfg := ctm.ConsumerFpApp.GetConfig()
 	require.Equal(t, uint64(consumerCfg.NumPubRand), pubRand.EndHeight())
 }
