@@ -202,6 +202,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 		return nil, fmt.Errorf("the number of blocks %v should match the number of finality signatures %v", len(blocks), len(sigs))
 	}
 	msgs := make([]sdk.Msg, 0, len(blocks))
+	fpPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
 	for i, block := range blocks {
 		cmtProof := cmtcrypto.Proof{}
 		if err := cmtProof.Unmarshal(proofList[i]); err != nil {
@@ -210,7 +211,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 
 		msg := SubmitFinalitySignatureMsg{
 			SubmitFinalitySignature: SubmitFinalitySignatureMsgParams{
-				FpPubkeyHex: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex(),
+				FpPubkeyHex: fpPkHex,
 				Height:      block.Height,
 				PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(pubRandList[i]).MustMarshal(),
 				Proof:       ConvertProof(cmtProof),
@@ -236,6 +237,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 	}
 	cc.logger.Debug(
 		"Successfully submitted finality signatures in a batch",
+		zap.String("fp_pk_hex", fpPkHex),
 		zap.Uint64("start_height", blocks[0].Height),
 		zap.Uint64("end_height", blocks[len(blocks)-1].Height),
 	)
