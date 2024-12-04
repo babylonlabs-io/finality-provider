@@ -22,7 +22,7 @@ func PrepareMockedClientController(t *testing.T, r *rand.Rand, startHeight, curr
 	ctl := gomock.NewController(t)
 	mockClientController := mocks.NewMockClientController(ctl)
 
-	for i := startHeight + 1; i <= currentHeight; i++ {
+	for i := startHeight; i <= currentHeight; i++ {
 		resBlock := &types.BlockInfo{
 			Height: currentHeight,
 			Hash:   GenRandomByteArray(r, 32),

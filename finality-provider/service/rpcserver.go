@@ -128,7 +128,7 @@ func (r *rpcServer) RegisterFinalityProvider(_ context.Context, req *proto.Regis
 	}
 
 	// the finality-provider instance should be started right after registration
-	if err := r.app.StartHandlingFinalityProvider(txRes.btcPubKey, req.Passphrase); err != nil {
+	if err := r.app.StartFinalityProvider(txRes.btcPubKey, req.Passphrase); err != nil {
 		return nil, fmt.Errorf("failed to start the registered finality-provider %s: %w", txRes.bbnAddress.String(), err)
 	}
 
@@ -223,7 +223,7 @@ func (r *rpcServer) UnjailFinalityProvider(_ context.Context, req *proto.UnjailF
 	}
 
 	// todo: keep passphrase as empty for now
-	if err := r.app.StartHandlingFinalityProvider(fpPk, ""); err != nil {
+	if err := r.app.StartFinalityProvider(fpPk, ""); err != nil {
 		return nil, fmt.Errorf("failed to start the finality provider instance after unjailing: %w", err)
 	}
 

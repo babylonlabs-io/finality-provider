@@ -130,9 +130,9 @@ func (fp *FinalityProviderInstance) Start() error {
 
 	fp.poller = poller
 	fp.quit = make(chan struct{})
-	fp.wg.Add(1)
+
+	fp.wg.Add(2)
 	go fp.finalitySigSubmissionLoop()
-	fp.wg.Add(1)
 	go fp.randomnessCommitmentLoop()
 
 	return nil
