@@ -181,6 +181,7 @@ func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc cli
 		fpCfg.BabylonConfig.KeyringBackend,
 		input,
 	)
+	require.NoError(t, err)
 	kc, err := fpkr.NewChainKeyringControllerWithKeyring(kr, keyName, input)
 	require.NoError(t, err)
 	keyInfo, err := kc.CreateChainKey("", "", "")

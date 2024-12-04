@@ -123,13 +123,11 @@ func (s *FinalityProviderStore) UpdateFpStatusFromVotingPower(
 		return proto.FinalityProviderStatus_ACTIVE, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_ACTIVE)
 	}
 
-	// voting power == 0 then set status depending on previous status
-	//nolint:exhaustive
-	switch fp.Status {
-	case proto.FinalityProviderStatus_ACTIVE:
+	if fp.Status == proto.FinalityProviderStatus_ACTIVE {
 		// previous status is ACTIVE then set to INACTIVE
 		return proto.FinalityProviderStatus_INACTIVE, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_INACTIVE)
 	}
+
 	return fp.Status, nil
 }
 

@@ -280,10 +280,7 @@ func FuzzStatusUpdate(f *testing.F) {
 		var err error
 		require.Eventually(t, func() bool {
 			fpIns, err = app.GetFinalityProviderInstance()
-			if err != nil {
-				return false
-			}
-			return true
+			return err == nil
 		}, time.Second*5, time.Millisecond*200, "should eventually be registered or active")
 
 		if votingPower > 0 {
@@ -339,6 +336,7 @@ func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg
 		cfg.BabylonConfig.KeyringBackend,
 		input,
 	)
+	require.NoError(t, err)
 	kc, err := keyring.NewChainKeyringControllerWithKeyring(kr, keyName, input)
 	require.NoError(t, err)
 	btcPkBytes, err := em.CreateKey(keyName, passphrase, hdPath)
