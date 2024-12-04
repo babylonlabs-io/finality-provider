@@ -332,6 +332,24 @@ func (app *FinalityProviderApp) Start() error {
 	return startErr
 }
 
+// StartWithoutSyncFpStatus starts only the finality-provider daemon without any finality-provider instances
+// and without syncing the finality-provider status loop for testing purpose
+// b/c this loop detects FP status and then automatically starts the FP instance when it is ACTIVE
+// Note: this is only for testing purposes
+func (app *FinalityProviderApp) StartWithoutSyncFpStatus() error {
+	var startErr error
+	app.startOnce.Do(func() {
+		app.logger.Info("Starting FinalityProviderApp")
+
+		app.wg.Add(3)
+		go app.eventLoop()
+		go app.registrationLoop()
+		go app.metricsUpdateLoop()
+	})
+
+	return startErr
+}
+
 func (app *FinalityProviderApp) Stop() error {
 	var stopErr error
 	app.stopOnce.Do(func() {

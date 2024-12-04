@@ -603,7 +603,7 @@ func CreateAndStartFpApp(
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, fpdb, logger)
 	require.NoError(t, err)
 
-	err = fpApp.Start()
+	err = fpApp.StartWithoutSyncFpStatus()
 	require.NoError(t, err)
 
 	return fpApp

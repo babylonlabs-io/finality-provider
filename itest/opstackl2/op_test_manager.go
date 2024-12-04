@@ -17,6 +17,7 @@ import (
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	opcc "github.com/babylonlabs-io/finality-provider/clientcontroller/opstackl2"
 	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
@@ -50,6 +51,7 @@ type OpL2ConsumerTestManager struct {
 	EOTSServerHandler    *e2eutils.EOTSServerHandler
 	BabylonFpApp         *service.FinalityProviderApp
 	ConsumerFpApp        *service.FinalityProviderApp
+	ConsumerEOTSClient   *client.EOTSManagerGRpcClient
 }
 
 // Config is the config of the OP finality gadget cw contract
@@ -139,6 +141,7 @@ func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 		EOTSServerHandler:    eotsHandler,
 		BabylonFpApp:         babylonFpApp,
 		ConsumerFpApp:        consumerFpApp,
+		ConsumerEOTSClient:   EOTSClients[1],
 	}
 
 	return ctm
@@ -335,6 +338,22 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	return []*bbntypes.BIP340PubKey{babylonFpPk, consumerFpPk}
 }
 
+func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
+	t *testing.T,
+	consumerFpPk *bbntypes.BIP340PubKey,
+) *service.FinalityProviderInstance {
+	fpCfg := ctm.ConsumerFpApp.GetConfig()
+	fpStore := ctm.ConsumerFpApp.GetFinalityProviderStore()
+	pubRandStore := ctm.ConsumerFpApp.GetPubRandProofStore()
+	bc := ctm.BabylonFpApp.GetBabylonController()
+	logger := ctm.ConsumerFpApp.Logger()
+	fpInstance, err := service.TestNewUnregisteredFinalityProviderInstance(
+		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.OpConsumerController, ctm.ConsumerEOTSClient,
+		metrics.NewFpMetrics(), "", make(chan<- *service.CriticalError), logger)
+	require.NoError(t, err)
+	return fpInstance
+}
+
 func (ctm *OpL2ConsumerTestManager) delegateBTCAndWaitForActivation(t *testing.T, babylonFpPk *bbntypes.BIP340PubKey, consumerFpPk *bbntypes.BIP340PubKey) {
 	// send a BTC delegation
 	ctm.InsertBTCDelegation(t, []*btcec.PublicKey{babylonFpPk.MustToBTCPK(), consumerFpPk.MustToBTCPK()},
@@ -355,9 +374,13 @@ func (ctm *OpL2ConsumerTestManager) delegateBTCAndWaitForActivation(t *testing.T
 func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
 	t.Log("Stopping test manager")
 	var err error
+	err = ctm.BabylonFpApp.Stop()
+	require.NoError(t, err)
+	err = ctm.ConsumerFpApp.Stop()
+	require.NoError(t, err)
 	err = ctm.BabylonHandler.Stop()
 	require.NoError(t, err)
-
+	ctm.EOTSServerHandler.Stop()
 	err = os.RemoveAll(ctm.BaseDir)
 	require.NoError(t, err)
 }
