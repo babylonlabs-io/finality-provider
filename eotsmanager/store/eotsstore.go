@@ -139,9 +139,9 @@ func (s *EOTSStore) SaveSignRecord(
 	})
 }
 
-func (s *EOTSStore) GetSignRecord(height uint64) (*proto.SigningRecord, bool, error) {
+func (s *EOTSStore) GetSignRecord(height uint64) (*SigningRecord, bool, error) {
 	key := uint64ToBytes(height)
-	res := &proto.SigningRecord{}
+	protoRes := &proto.SigningRecord{}
 
 	err := s.db.View(func(tx kvdb.RTx) error {
 		bucket := tx.ReadBucket(signRecordBucketName)
@@ -154,7 +154,7 @@ func (s *EOTSStore) GetSignRecord(height uint64) (*proto.SigningRecord, bool, er
 			return ErrSignRecordNotFound
 		}
 
-		return pm.Unmarshal(signRecordBytes, res)
+		return pm.Unmarshal(signRecordBytes, protoRes)
 	}, func() {})
 
 	if err != nil {
@@ -163,6 +163,9 @@ func (s *EOTSStore) GetSignRecord(height uint64) (*proto.SigningRecord, bool, er
 		}
 		return nil, false, err
 	}
+
+	res := &SigningRecord{}
+	res.FromProto(protoRes)
 
 	return res, true, nil
 }

@@ -134,6 +134,6 @@ func FuzzSignRecord(f *testing.F) {
 
 		// same height diff msg
 		_, err = lm.SignEOTS(fpPk, chainID, datagen.GenRandomByteArray(r, 32), startHeight, passphrase)
-		require.ErrorIs(t, err, eotsmanager.ErrDoubleSign)
+		require.ErrorIs(t, err, types.ErrDoubleSign)
 	})
 }

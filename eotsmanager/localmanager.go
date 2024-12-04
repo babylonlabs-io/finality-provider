@@ -3,7 +3,6 @@ package eotsmanager
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"strings"
@@ -28,10 +27,6 @@ import (
 const (
 	secp256k1Type       = "secp256k1"
 	MnemonicEntropySize = 256
-)
-
-var (
-	ErrDoubleSign = errors.New("double sign")
 )
 
 var _ EOTSManager = &LocalEOTSManager{}
@@ -202,7 +197,7 @@ func (lm *LocalEOTSManager) SignEOTS(fpPk []byte, chainID []byte, msg []byte, he
 	record, found, err := lm.es.GetSignRecord(height)
 	if err != nil {
 		return nil, fmt.Errorf("error getting sign record: %w", err)
-	} else if found && record != nil {
+	} else if found {
 		if bytes.Equal(msg, record.BlockHash) {
 			var s btcec.ModNScalar
 			s.SetByteSlice(record.Signature)
@@ -210,7 +205,7 @@ func (lm *LocalEOTSManager) SignEOTS(fpPk []byte, chainID []byte, msg []byte, he
 			return &s, nil
 		}
 
-		return nil, ErrDoubleSign
+		return nil, eotstypes.ErrDoubleSign
 	}
 
 	privRand, _, err := lm.getRandomnessPair(fpPk, chainID, height, passphrase)
