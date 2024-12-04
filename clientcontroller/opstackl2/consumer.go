@@ -181,41 +181,13 @@ func (cc *OPStackL2ConsumerController) SubmitFinalitySig(
 	proof []byte,
 	sig *btcec.ModNScalar,
 ) (*types.TxResponse, error) {
-	cmtProof := cmtcrypto.Proof{}
-	if err := cmtProof.Unmarshal(proof); err != nil {
-		return nil, err
-	}
-
-	msg := SubmitFinalitySignatureMsg{
-		SubmitFinalitySignature: SubmitFinalitySignatureMsgParams{
-			FpPubkeyHex: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex(),
-			Height:      block.Height,
-			PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(pubRand).MustMarshal(),
-			Proof:       ConvertProof(cmtProof),
-			BlockHash:   block.Hash,
-			Signature:   bbntypes.NewSchnorrEOTSSigFromModNScalar(sig).MustMarshal(),
-		},
-	}
-	payload, err := json.Marshal(msg)
-	if err != nil {
-		return nil, err
-	}
-	execMsg := &wasmtypes.MsgExecuteContract{
-		Sender:   cc.CwClient.MustGetAddr(),
-		Contract: cc.Cfg.OPFinalityGadgetAddress,
-		Msg:      payload,
-	}
-
-	res, err := cc.ReliablySendMsg(execMsg, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	cc.logger.Debug(
-		"Successfully submitted finality signature",
-		zap.Uint64("height", block.Height),
-		zap.String("block_hash", hex.EncodeToString(block.Hash)),
+	return cc.SubmitBatchFinalitySigs(
+		fpPk,
+		[]*types.BlockInfo{block},
+		[]*btcec.FieldVal{pubRand},
+		[][]byte{proof},
+		[]*btcec.ModNScalar{sig},
 	)
-	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
 // SubmitBatchFinalitySigs submits a batch of finality signatures
@@ -230,6 +202,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 		return nil, fmt.Errorf("the number of blocks %v should match the number of finality signatures %v", len(blocks), len(sigs))
 	}
 	msgs := make([]sdk.Msg, 0, len(blocks))
+	fpPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
 	for i, block := range blocks {
 		cmtProof := cmtcrypto.Proof{}
 		if err := cmtProof.Unmarshal(proofList[i]); err != nil {
@@ -238,7 +211,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 
 		msg := SubmitFinalitySignatureMsg{
 			SubmitFinalitySignature: SubmitFinalitySignatureMsgParams{
-				FpPubkeyHex: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex(),
+				FpPubkeyHex: fpPkHex,
 				Height:      block.Height,
 				PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(pubRandList[i]).MustMarshal(),
 				Proof:       ConvertProof(cmtProof),
@@ -264,6 +237,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 	}
 	cc.logger.Debug(
 		"Successfully submitted finality signatures in a batch",
+		zap.String("fp_pk_hex", fpPkHex),
 		zap.Uint64("start_height", blocks[0].Height),
 		zap.Uint64("end_height", blocks[len(blocks)-1].Height),
 	)

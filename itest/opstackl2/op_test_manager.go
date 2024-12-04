@@ -54,13 +54,10 @@ type OpL2ConsumerTestManager struct {
 	ConsumerEOTSClient   *client.EOTSManagerGRpcClient
 }
 
-// Config is the config of the OP finality gadget cw contract
-// It will be removed by the final PR
-type Config struct {
-	ConsumerId string `json:"consumer_id"`
-}
-
-// - start Babylon node and wait for it starts
+// StartOpL2ConsumerManager
+// - starts Babylon node and wait for it starts
+// - deploys finality gadget cw contract
+// - creates and starts Babylon and consumer FPs without any FP instances
 func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 	// Setup base dir and logger
 	testDir, err := e2eutils.BaseDir("op-fp-e2e-test")
@@ -369,6 +366,33 @@ func (ctm *OpL2ConsumerTestManager) delegateBTCAndWaitForActivation(t *testing.T
 
 	// check the BTC delegation is active
 	ctm.WaitForNActiveDels(t, 1)
+}
+
+func (ctm *OpL2ConsumerTestManager) queryCwContract(
+	t *testing.T,
+	queryMsg map[string]interface{},
+) *wasmtypes.QuerySmartContractStateResponse {
+	logger := ctm.ConsumerFpApp.Logger()
+
+	// create cosmwasm client
+	cwConfig := ctm.OpConsumerController.Cfg.ToCosmwasmConfig()
+	cwClient, err := opcc.NewCwClient(&cwConfig, logger)
+	require.NoError(t, err)
+
+	// marshal query message
+	queryMsgBytes, err := json.Marshal(queryMsg)
+	require.NoError(t, err)
+
+	var queryResponse *wasmtypes.QuerySmartContractStateResponse
+	require.Eventually(t, func() bool {
+		queryResponse, err = cwClient.QuerySmartContractState(
+			ctm.OpConsumerController.Cfg.OPFinalityGadgetAddress,
+			string(queryMsgBytes),
+		)
+		return err == nil
+	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
+
+	return queryResponse
 }
 
 func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
