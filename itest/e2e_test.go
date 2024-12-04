@@ -98,11 +98,14 @@ func TestDoubleSigning(t *testing.T) {
 		Height: finalizedBlocks[0].Height,
 		Hash:   datagen.GenRandomByteArray(r, 32),
 	}
-	_, extractedKey, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b)
-	require.NoError(t, err)
-	require.NotNil(t, extractedKey)
-	localKey := tm.GetFpPrivKey(t, fpIns.GetBtcPkBIP340().MustMarshal())
-	require.True(t, localKey.Key.Equals(&extractedKey.Key) || localKey.Key.Negate().Equals(&extractedKey.Key))
+	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b)
+	require.Error(t, err)
+
+	// todo(lazar): implement UnsafeSignEOTS, containing logic without double sign protection
+	//require.NoError(t, err)
+	//require.NotNil(t, extractedKey)
+	//localKey := tm.GetFpPrivKey(t, fpIns.GetBtcPkBIP340().MustMarshal())
+	//require.True(t, localKey.Key.Equals(&extractedKey.Key) || localKey.Key.Negate().Equals(&extractedKey.Key))
 
 	t.Logf("the equivocation attack is successful")
 }

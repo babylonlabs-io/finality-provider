@@ -1,7 +1,12 @@
 package store
 
 import (
+	"encoding/binary"
+	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/proto"
+	pm "google.golang.org/protobuf/proto"
+	"time"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -10,7 +15,8 @@ import (
 )
 
 var (
-	eotsBucketName = []byte("fpKeyNames")
+	eotsBucketName       = []byte("fpKeyNames")
+	signRecordBucketName = []byte("signRecord")
 )
 
 type EOTSStore struct {
@@ -29,6 +35,11 @@ func NewEOTSStore(db kvdb.Backend) (*EOTSStore, error) {
 func (s *EOTSStore) initBuckets() error {
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		_, err := tx.CreateTopLevelBucket(eotsBucketName)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.CreateTopLevelBucket(signRecordBucketName)
 		if err != nil {
 			return err
 		}
@@ -92,4 +103,76 @@ func (s *EOTSStore) GetEOTSKeyName(pk []byte) (string, error) {
 	}
 
 	return keyName, nil
+}
+
+func (s *EOTSStore) SaveSignRecord(
+	height uint64,
+	blockHash []byte,
+	publicKey []byte,
+	signature []byte,
+) error {
+	key := uint64ToBytes(height)
+
+	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+		bucket := tx.ReadWriteBucket(signRecordBucketName)
+		if bucket == nil {
+			return ErrCorruptedEOTSDb
+		}
+
+		if bucket.Get(key) != nil {
+			return ErrDuplicateSignRecord
+		}
+
+		signRecord := &proto.SigningRecord{
+			BlockHash: blockHash,
+			PublicKey: publicKey,
+			Signature: signature,
+			Timestamp: time.Now().UnixMilli(),
+		}
+
+		marshalled, err := pm.Marshal(signRecord)
+		if err != nil {
+			return err
+		}
+
+		return bucket.Put(key, marshalled)
+	})
+}
+
+func (s *EOTSStore) GetSignRecord(height uint64) (*SigningRecord, bool, error) {
+	key := uint64ToBytes(height)
+	protoRes := &proto.SigningRecord{}
+
+	err := s.db.View(func(tx kvdb.RTx) error {
+		bucket := tx.ReadBucket(signRecordBucketName)
+		if bucket == nil {
+			return ErrCorruptedEOTSDb
+		}
+
+		signRecordBytes := bucket.Get(key)
+		if signRecordBytes == nil {
+			return ErrSignRecordNotFound
+		}
+
+		return pm.Unmarshal(signRecordBytes, protoRes)
+	}, func() {})
+
+	if err != nil {
+		if errors.Is(err, ErrSignRecordNotFound) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+
+	res := &SigningRecord{}
+	res.FromProto(protoRes)
+
+	return res, true, nil
+}
+
+// Converts an uint64 value to a byte slice.
+func uint64ToBytes(v uint64) []byte {
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], v)
+	return buf[:]
 }
