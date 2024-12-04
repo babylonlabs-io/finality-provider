@@ -46,23 +46,9 @@ func (c *FinalityProviderServiceGRpcClient) GetInfo(ctx context.Context) (*proto
 	return res, nil
 }
 
-func (c *FinalityProviderServiceGRpcClient) RegisterFinalityProvider(
-	ctx context.Context,
-	fpPk *bbntypes.BIP340PubKey,
-	passphrase string,
-) (*proto.RegisterFinalityProviderResponse, error) {
-	req := &proto.RegisterFinalityProviderRequest{BtcPk: fpPk.MarshalHex(), Passphrase: passphrase}
-	res, err := c.client.RegisterFinalityProvider(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
 func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 	ctx context.Context,
-	keyName, chainID, eotsPkHex, passphrase, hdPath string,
+	keyName, chainID, eotsPkHex, passphrase string,
 	description types.Description,
 	commission *sdkmath.LegacyDec,
 ) (*proto.CreateFinalityProviderResponse, error) {
@@ -75,7 +61,6 @@ func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 		KeyName:     keyName,
 		ChainId:     chainID,
 		Passphrase:  passphrase,
-		HdPath:      hdPath,
 		Description: descBytes,
 		Commission:  commission.String(),
 		EotsPkHex:   eotsPkHex,

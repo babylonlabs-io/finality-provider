@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -18,8 +19,8 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -169,14 +170,32 @@ func startFinalityProviderAppWithRegisteredFp(t *testing.T, r *rand.Rand, cc cli
 	require.NoError(t, err)
 	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
 	require.NoError(t, err)
-	fp := testutil.GenStoredFinalityProvider(r, t, app, passphrase, hdPath, eotsPk)
 	pubRandProofStore := app.GetPubRandProofStore()
 	fpStore := app.GetFinalityProviderStore()
-	err = fpStore.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_REGISTERED)
+	keyName := datagen.GenRandomHexStr(r, 10)
+	chainID := datagen.GenRandomHexStr(r, 10)
+	input := strings.NewReader("")
+	kr, err := fpkr.CreateKeyring(
+		fpCfg.BabylonConfig.KeyDirectory,
+		fpCfg.BabylonConfig.ChainID,
+		fpCfg.BabylonConfig.KeyringBackend,
+		input,
+	)
+	kc, err := fpkr.NewChainKeyringControllerWithKeyring(kr, keyName, input)
 	require.NoError(t, err)
-	// TODO: use mock metrics
+	keyInfo, err := kc.CreateChainKey("", "", "")
+	require.NoError(t, err)
+	fpAddr := keyInfo.AccAddress
+	err = fpStore.CreateFinalityProvider(
+		fpAddr,
+		eotsPk.MustToBTCPK(),
+		testutil.RandomDescription(r),
+		testutil.ZeroCommissionRate(),
+		chainID,
+	)
+	require.NoError(t, err)
 	m := metrics.NewFpMetrics()
-	fpIns, err := service.NewFinalityProviderInstance(fp.GetBIP340BTCPK(), &fpCfg, fpStore, pubRandProofStore, cc, em, m, passphrase, make(chan *service.CriticalError), logger)
+	fpIns, err := service.NewFinalityProviderInstance(eotsPk, &fpCfg, fpStore, pubRandProofStore, cc, em, m, passphrase, make(chan *service.CriticalError), logger)
 	require.NoError(t, err)
 
 	cleanUp := func() {

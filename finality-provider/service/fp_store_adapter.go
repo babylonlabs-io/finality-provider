@@ -15,23 +15,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 )
 
-type createFinalityProviderResponse struct {
-	FpInfo *proto.FinalityProviderInfo
-}
-
-type createFinalityProviderRequest struct {
-	keyName         string
-	passPhrase      string
-	hdPath          string
-	chainID         string
-	eotsPk          *bbntypes.BIP340PubKey
-	description     *stakingtypes.Description
-	commission      *sdkmath.LegacyDec
-	errResponse     chan error
-	successResponse chan *createFinalityProviderResponse
-}
-
-type registerFinalityProviderRequest struct {
+type CreateFinalityProviderRequest struct {
 	fpAddr          sdk.AccAddress
 	btcPubKey       *bbntypes.BIP340PubKey
 	pop             *btcstakingtypes.ProofOfPossessionBTC
@@ -41,21 +25,13 @@ type registerFinalityProviderRequest struct {
 	successResponse chan *RegisterFinalityProviderResponse
 }
 
-type finalityProviderRegisteredEvent struct {
-	bbnAddress      sdk.AccAddress
-	btcPubKey       *bbntypes.BIP340PubKey
-	txHash          string
-	successResponse chan *RegisterFinalityProviderResponse
-}
-
 type RegisterFinalityProviderResponse struct {
-	bbnAddress sdk.AccAddress
-	btcPubKey  *bbntypes.BIP340PubKey
-	TxHash     string
+	txHash string
 }
 
 type CreateFinalityProviderResult struct {
 	FpInfo *proto.FinalityProviderInfo
+	TxHash string
 }
 
 type fpState struct {

@@ -17,8 +17,6 @@ type StoredFinalityProvider struct {
 	BtcPk           *btcec.PublicKey
 	Description     *stakingtypes.Description
 	Commission      *sdkmath.LegacyDec
-	Pop             *proto.ProofOfPossession
-	KeyName         string
 	ChainID         string
 	LastVotedHeight uint64
 	Status          proto.FinalityProviderStatus
@@ -41,14 +39,10 @@ func protoFpToStoredFinalityProvider(fp *proto.FinalityProvider) (*StoredFinalit
 	}
 
 	return &StoredFinalityProvider{
-		FPAddr:      fp.FpAddr,
-		BtcPk:       btcPk,
-		Description: &des,
-		Commission:  &commission,
-		Pop: &proto.ProofOfPossession{
-			BtcSig: fp.Pop.BtcSig,
-		},
-		KeyName:         fp.KeyName,
+		FPAddr:          fp.FpAddr,
+		BtcPk:           btcPk,
+		Description:     &des,
+		Commission:      &commission,
 		ChainID:         fp.ChainId,
 		LastVotedHeight: fp.LastVotedHeight,
 		Status:          fp.Status,
@@ -79,11 +73,10 @@ func (sfp *StoredFinalityProvider) ToFinalityProviderInfo() *proto.FinalityProvi
 // ShouldStart returns true if the finality provider should start his instance
 // based on the current status of the finality provider.
 //
-// It returns false if the status is either 'CREATED', 'JAILED' or 'SLASHED'.
-// It returs true for all the other status.
+// It returns false if the status is either 'REGISTERED', 'JAILED' or 'SLASHED'.
+// It returns true for all the other status.
 func (sfp *StoredFinalityProvider) ShouldStart() bool {
-	if sfp.Status == proto.FinalityProviderStatus_CREATED ||
-		sfp.Status == proto.FinalityProviderStatus_SLASHED ||
+	if sfp.Status == proto.FinalityProviderStatus_SLASHED ||
 		sfp.Status == proto.FinalityProviderStatus_JAILED {
 		return false
 	}

@@ -12,8 +12,8 @@ import (
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	sdkkeyring "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -27,7 +27,6 @@ import (
 	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/keyring"
 	"github.com/babylonlabs-io/finality-provider/testutil"
-	"github.com/babylonlabs-io/finality-provider/testutil/mocks"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/babylonlabs-io/finality-provider/util"
 )
@@ -39,7 +38,7 @@ const (
 	eventuallyPollTime    = 10 * time.Millisecond
 )
 
-func FuzzRegisterFinalityProvider(f *testing.F) {
+func FuzzCreateFinalityProvider(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
@@ -97,52 +96,29 @@ func FuzzRegisterFinalityProvider(f *testing.F) {
 		eotsPk, err = bbntypes.NewBIP340PubKey(eotsPkBz)
 		require.NoError(t, err)
 
-		// create a finality-provider object and save it to db
-		fp := testutil.GenStoredFinalityProvider(r, t, app, passphrase, hdPath, eotsPk)
-		require.Equal(t, eotsPk, bbntypes.NewBIP340PubKeyFromBTCPK(fp.BtcPk))
+		// generate keyring
+		keyName := testutil.GenRandomHexStr(r, 4)
+		chainID := testutil.GenRandomHexStr(r, 4)
 
-		btcSig := new(bbntypes.BIP340Signature)
-		err = btcSig.Unmarshal(fp.Pop.BtcSig)
+		cfg := app.GetConfig()
+		_, err = testutil.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, keyName, sdkkeyring.BackendTest, passphrase, hdPath, "")
 		require.NoError(t, err)
-		pop := &bstypes.ProofOfPossessionBTC{
-			BtcSig:     btcSig.MustMarshal(),
-			BtcSigType: bstypes.BTCSigType_BIP340,
-		}
-		popBytes, err := pop.Marshal()
-		require.NoError(t, err)
-		fpInfo, err := app.GetFinalityProviderInfo(fp.GetBIP340BTCPK())
-		require.NoError(t, err)
-		require.Equal(t, proto.FinalityProviderStatus_name[0], fpInfo.Status)
-		require.Equal(t, false, fpInfo.IsRunning)
-		fpListInfo, err := app.ListAllFinalityProvidersInfo()
-		require.NoError(t, err)
-		require.Equal(t, fpInfo.BtcPkHex, fpListInfo[0].BtcPkHex)
 
 		txHash := testutil.GenRandomHexStr(r, 32)
 		mockClientController.EXPECT().
 			RegisterFinalityProvider(
-				fp.BtcPk,
-				popBytes,
+				eotsPk.MustToBTCPK(),
+				gomock.Any(),
 				testutil.ZeroCommissionRate(),
 				gomock.Any(),
 			).Return(&types.TxResponse{TxHash: txHash}, nil).AnyTimes()
-
-		res, err := app.RegisterFinalityProvider(fp.GetBIP340BTCPK().MarshalHex())
+		res, err := app.CreateFinalityProvider(keyName, chainID, passphrase, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
 		require.NoError(t, err)
 		require.Equal(t, txHash, res.TxHash)
 
-		mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(nil, nil).AnyTimes()
-		err = app.StartFinalityProvider(fp.GetBIP340BTCPK(), passphrase)
+		fpInfo, err := app.GetFinalityProviderInfo(eotsPk)
 		require.NoError(t, err)
-
-		fpAfterReg, err := app.GetFinalityProviderInstance()
-		require.NoError(t, err)
-		require.Equal(t, proto.FinalityProviderStatus_REGISTERED, fpAfterReg.GetStoreFinalityProvider().Status)
-
-		fpInfo, err = app.GetFinalityProviderInfo(fp.GetBIP340BTCPK())
-		require.NoError(t, err)
-		require.Equal(t, proto.FinalityProviderStatus_name[1], fpInfo.Status)
-		require.Equal(t, true, fpInfo.IsRunning)
+		require.Equal(t, eotsPk.MarshalHex(), fpInfo.BtcPkHex)
 	})
 }
 
@@ -150,27 +126,6 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 14)
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
-
-		logger := zap.NewNop()
-
-		pathSuffix := datagen.GenRandomHexStr(r, 10)
-		// create an EOTS manager
-		eotsHomeDir := filepath.Join(t.TempDir(), "eots-home", pathSuffix)
-		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
-		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
-		require.NoError(t, err)
-		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
-		require.NoError(t, err)
-
-		// Create randomized config
-		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
-		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
-		fpCfg.SyncFpStatusInterval = time.Millisecond * 100
-		// no need for other intervals to run
-		fpCfg.StatusUpdateInterval = time.Minute * 10
-		fpCfg.SubmissionRetryInterval = time.Minute * 10
-		fpdb, err := fpCfg.DatabaseConfig.GetDBBackend()
-		require.NoError(t, err)
 
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
@@ -195,22 +150,20 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		}
 		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
 
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockClientController, em, fpdb, logger)
-		require.NoError(t, err)
+		// Create randomized config
+		pathSuffix := datagen.GenRandomHexStr(r, 10)
+		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
+		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
+		fpCfg.SyncFpStatusInterval = time.Millisecond * 100
+		// no need for other intervals to run
+		fpCfg.StatusUpdateInterval = time.Minute * 10
+		fpCfg.SubmissionRetryInterval = time.Minute * 10
 
-		err = app.Start()
-		require.NoError(t, err)
-
-		eotsKeyName := testutil.GenRandomHexStr(r, 4)
-		require.NoError(t, err)
-		eotsPkBz, err := em.CreateKey(eotsKeyName, passphrase, hdPath)
-		require.NoError(t, err)
-		eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
-		require.NoError(t, err)
-		fp := testutil.GenStoredFinalityProvider(r, t, app, "", hdPath, eotsPk)
+		// Create fp app
+		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockClientController)
+		defer cleanup()
 
 		require.Eventually(t, func() bool {
-			fpPk := fp.GetBIP340BTCPK()
 			fpInfo, err := app.GetFinalityProviderInfo(fpPk)
 			if err != nil {
 				return false
@@ -226,7 +179,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 			}
 
 			// TODO: verify why mocks are failing
-			btcPkEqual := fpInstance.GetBtcPk().IsEqual(fp.BtcPk)
+			btcPkEqual := fpInstance.GetBtcPk().IsEqual(fpPk.MustToBTCPK())
 			statusEqual := strings.EqualFold(fpInfo.Status, expectedStatus.String())
 			return statusEqual && btcPkEqual
 		}, time.Second*5, time.Millisecond*200, "should eventually be registered or active")
@@ -238,30 +191,18 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
 
-		logger := zap.NewNop()
-
-		pathSuffix := datagen.GenRandomHexStr(r, 10)
-		// create an EOTS manager
-		eotsHomeDir := filepath.Join(t.TempDir(), "eots-home", pathSuffix)
-		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
-		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
-		require.NoError(t, err)
-		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
-		require.NoError(t, err)
+		randomStartingHeight := uint64(r.Int63n(100) + 1)
+		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
+		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight, 0)
 
 		// Create randomized config
+		pathSuffix := datagen.GenRandomHexStr(r, 10)
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
 		// use shorter interval for the test to end faster
 		fpCfg.SyncFpStatusInterval = time.Millisecond * 10
 		fpCfg.StatusUpdateInterval = time.Millisecond * 10
 		fpCfg.SubmissionRetryInterval = time.Millisecond * 10
-		fpdb, err := fpCfg.DatabaseConfig.GetDBBackend()
-		require.NoError(t, err)
-
-		randomStartingHeight := uint64(r.Int63n(100) + 1)
-		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
-		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight, 0)
 
 		blkInfo := &types.BlockInfo{Height: currentHeight}
 
@@ -276,32 +217,16 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, false, nil).AnyTimes()
 		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
 
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockClientController, em, fpdb, logger)
-		require.NoError(t, err)
-
-		err = app.Start()
-		defer func() {
-			err := app.Stop()
-			require.NoError(t, err)
-		}()
-		require.NoError(t, err)
-
-		eotsKeyName := testutil.GenRandomHexStr(r, 4)
-		require.NoError(t, err)
-		eotsPkBz, err := em.CreateKey(eotsKeyName, passphrase, hdPath)
-		require.NoError(t, err)
-		eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
-		require.NoError(t, err)
-		fp := testutil.GenStoredFinalityProvider(r, t, app, "", hdPath, eotsPk)
-		err = app.GetFinalityProviderStore().SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_JAILED)
-		require.NoError(t, err)
+		// Create fp app
+		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockClientController)
+		defer cleanup()
 
 		expectedTxHash := datagen.GenRandomHexStr(r, 32)
-		mockClientController.EXPECT().UnjailFinalityProvider(fp.BtcPk).Return(&types.TxResponse{TxHash: expectedTxHash}, nil)
-		txHash, err := app.UnjailFinalityProvider(fp.GetBIP340BTCPK())
+		mockClientController.EXPECT().UnjailFinalityProvider(fpPk.MustToBTCPK()).Return(&types.TxResponse{TxHash: expectedTxHash}, nil)
+		txHash, err := app.UnjailFinalityProvider(fpPk)
 		require.NoError(t, err)
 		require.Equal(t, expectedTxHash, txHash)
-		fpInfo, err := app.GetFinalityProviderInfo(fp.GetBIP340BTCPK())
+		fpInfo, err := app.GetFinalityProviderInfo(fpPk)
 		require.NoError(t, err)
 		require.Equal(t, proto.FinalityProviderStatus_INACTIVE.String(), fpInfo.GetStatus())
 	})
@@ -312,29 +237,17 @@ func FuzzStatusUpdate(f *testing.F) {
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
 
-		ctl := gomock.NewController(t)
-		mockClientController := mocks.NewMockClientController(ctl)
-		fpApp, fpPk, cleanUp := newFinalityProviderManagerWithRegisteredFp(t, r, mockClientController)
-		defer cleanUp()
+		randomStartingHeight := uint64(r.Int63n(100) + 1)
+		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
+		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight, 0)
 
 		// setup mocks
-		currentHeight := uint64(r.Int63n(100) + 1)
-		currentBlockRes := &types.BlockInfo{
-			Height: currentHeight,
-			Hash:   datagen.GenRandomByteArray(r, 32),
-		}
-		mockClientController.EXPECT().QueryBestBlock().Return(currentBlockRes, nil).AnyTimes()
-		mockClientController.EXPECT().Close().Return(nil).AnyTimes()
-		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBestBlock().Return(currentBlockRes, nil).AnyTimes()
-		mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
-		mockClientController.EXPECT().QueryFinalityActivationBlockHeight().Return(uint64(0), nil).AnyTimes()
-		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
-		mockClientController.EXPECT().QueryBlock(gomock.Any()).Return(currentBlockRes, nil).AnyTimes()
-		mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(nil, nil).AnyTimes()
-
 		votingPower := uint64(r.Intn(2))
 		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), currentHeight).Return(votingPower, nil).AnyTimes()
+		mockClientController.EXPECT().Close().Return(nil).AnyTimes()
+		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
+		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
+		mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(nil, nil).AnyTimes()
 		mockClientController.EXPECT().SubmitFinalitySig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&types.TxResponse{TxHash: ""}, nil).AnyTimes()
 		var isSlashedOrJailed int
 		if votingPower == 0 {
@@ -350,13 +263,28 @@ func FuzzStatusUpdate(f *testing.F) {
 			}
 		}
 
-		err := fpApp.StartFinalityProvider(fpPk, passphrase)
-		require.NoError(t, err)
-		fpIns, err := fpApp.GetFinalityProviderInstance()
-		require.NoError(t, err)
-		// stop the finality-provider as we are testing static functionalities
-		err = fpIns.Stop()
-		require.NoError(t, err)
+		// Create randomized config
+		pathSuffix := datagen.GenRandomHexStr(r, 10)
+		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
+		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
+		// use shorter interval for the test to end faster
+		fpCfg.SyncFpStatusInterval = time.Millisecond * 10
+		fpCfg.StatusUpdateInterval = time.Second * 1
+		fpCfg.SubmissionRetryInterval = time.Millisecond * 10
+
+		// Create fp app
+		app, _, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockClientController)
+		defer cleanup()
+
+		var fpIns *service.FinalityProviderInstance
+		var err error
+		require.Eventually(t, func() bool {
+			fpIns, err = app.GetFinalityProviderInstance()
+			if err != nil {
+				return false
+			}
+			return true
+		}, time.Second*5, time.Millisecond*200, "should eventually be registered or active")
 
 		if votingPower > 0 {
 			waitForStatus(t, fpIns, proto.FinalityProviderStatus_ACTIVE)
@@ -380,7 +308,7 @@ func waitForStatus(t *testing.T, fpIns *service.FinalityProviderInstance, s prot
 		}, eventuallyWaitTimeOut, eventuallyPollTime)
 }
 
-func newFinalityProviderManagerWithRegisteredFp(t *testing.T, r *rand.Rand, cc clientcontroller.ClientController) (*service.FinalityProviderApp, *bbntypes.BIP340PubKey, func()) {
+func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg *config.Config, cc clientcontroller.ClientController) (*service.FinalityProviderApp, *bbntypes.BIP340PubKey, func()) {
 	logger := zap.NewNop()
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
@@ -391,31 +319,26 @@ func newFinalityProviderManagerWithRegisteredFp(t *testing.T, r *rand.Rand, cc c
 	require.NoError(t, err)
 
 	// create finality-provider app with randomized config
-	fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
-	fpCfg := config.DefaultConfigWithHome(fpHomeDir)
-	fpCfg.StatusUpdateInterval = 10 * time.Millisecond
 	input := strings.NewReader("")
-	kr, err := keyring.CreateKeyring(
-		fpCfg.BabylonConfig.KeyDirectory,
-		fpCfg.BabylonConfig.ChainID,
-		fpCfg.BabylonConfig.KeyringBackend,
-		input,
-	)
 	require.NoError(t, err)
-	err = util.MakeDirectory(config.DataDir(fpHomeDir))
+	err = util.MakeDirectory(config.DataDir(homePath))
 	require.NoError(t, err)
-	db, err := fpCfg.DatabaseConfig.GetDBBackend()
+	db, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 	fpStore, err := fpstore.NewFinalityProviderStore(db)
 	require.NoError(t, err)
-	app, err := service.NewFinalityProviderApp(&fpCfg, cc, em, db, logger)
-	require.NoError(t, err)
-	err = app.Start()
+	app, err := service.NewFinalityProviderApp(cfg, cc, em, db, logger)
 	require.NoError(t, err)
 
 	// create registered finality-provider
 	keyName := datagen.GenRandomHexStr(r, 10)
 	chainID := datagen.GenRandomHexStr(r, 10)
+	kr, err := keyring.CreateKeyring(
+		cfg.BabylonConfig.KeyDirectory,
+		cfg.BabylonConfig.ChainID,
+		cfg.BabylonConfig.KeyringBackend,
+		input,
+	)
 	kc, err := keyring.NewChainKeyringControllerWithKeyring(kr, keyName, input)
 	require.NoError(t, err)
 	btcPkBytes, err := em.CreateKey(keyName, passphrase, hdPath)
@@ -425,22 +348,16 @@ func newFinalityProviderManagerWithRegisteredFp(t *testing.T, r *rand.Rand, cc c
 	keyInfo, err := kc.CreateChainKey(passphrase, hdPath, "")
 	require.NoError(t, err)
 	fpAddr := keyInfo.AccAddress
-	fpRecord, err := em.KeyRecord(btcPk.MustMarshal(), passphrase)
-	require.NoError(t, err)
-	pop, err := kc.CreatePop(fpAddr, fpRecord.PrivKey)
-	require.NoError(t, err)
 
 	err = fpStore.CreateFinalityProvider(
 		fpAddr,
 		btcPk.MustToBTCPK(),
 		testutil.RandomDescription(r),
 		testutil.ZeroCommissionRate(),
-		keyName,
 		chainID,
-		pop.BtcSig,
 	)
 	require.NoError(t, err)
-	err = fpStore.SetFpStatus(btcPk.MustToBTCPK(), proto.FinalityProviderStatus_REGISTERED)
+	err = app.Start()
 	require.NoError(t, err)
 
 	cleanUp := func() {
@@ -452,7 +369,7 @@ func newFinalityProviderManagerWithRegisteredFp(t *testing.T, r *rand.Rand, cc c
 		require.NoError(t, err)
 		err = os.RemoveAll(eotsHomeDir)
 		require.NoError(t, err)
-		err = os.RemoveAll(fpHomeDir)
+		err = os.RemoveAll(homePath)
 		require.NoError(t, err)
 	}
 
