@@ -32,10 +32,9 @@ gain an overall understanding of the finality provider.
    4. [Starting the Finality Provider Daemon](#44-starting-the-finality-provider-daemon)
 5. [Finality Provider Operation](#5-finality-provider-operations)
    1. [Create Finality Provider](#51-create-finality-provider)
-   2. [Register Finality Provider](#52-register-finality-provider)
-   3. [Withdrawing Rewards](#53-withdrawing-rewards)
-   4. [Jailing and Unjailing](#54-jailing-and-unjailing)
-   5. [Slashing](#55-slashing)
+   2. [Withdrawing Rewards](#52-withdrawing-rewards)
+   3. [Jailing and Unjailing](#53-jailing-and-unjailing)
+   4. [Slashing](#54-slashing)
 
 ## 1. A note about Phase-1 Finality Providers
 
@@ -479,14 +478,14 @@ RPC will have access to all the EOTS keys held within it
 
 For example, after registering a finality provider, you can start its daemon by 
 providing the EOTS public key `fpd start --eots-pk <hex-string-of-eots-public-key>`
-```
 
 ## 5. Finality Provider Operations
 
 ### 5.1 Create Finality Provider
 
-The `create-finality-provider` command initializes a new finality provider
-instance locally. 
+The `create-finality-provider` command initializes a new finality provider,
+submits `MsgCreateFinalityProvider` to register it on the Babylon chain, and
+saves the finality provider information in the database. 
 
 ``` shell
 fpd create-finality-provider \ 
@@ -531,9 +530,11 @@ your finality provider's details:
 
 ``` json
 {
-    "fp_addr": "bbn1ht2nxa6hlyl89m8xpdde9xsj40n0sxd2f9shsq", 
-    "eots_pk_hex":
-    "cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41",
+    "finality_provider":
+    {
+      "fp_addr": "bbn1ht2nxa6hlyl89m8xpdde9xsj40n0sxd2f9shsq", 
+      "eots_pk_hex":
+      "cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41",
       "description": 
       {
         "moniker": "MyFinalityProvider", 
@@ -542,7 +543,9 @@ your finality provider's details:
         "details": "finality provider for the Babylon network"
       }, 
       "commission": "0.050000000000000000", 
-      "status": "CREATED"
+      "status": "REGISTERED"
+    }
+    "tx_hash": "C08377CF289DF0DC5FA462E6409ADCB65A3492C22A112C58EA449F4DC544A3B1"
 } 
 ```
 
@@ -552,11 +555,13 @@ The response includes:
 - `description`: Your finality provider's metadata 
 - `commission`: Your set commission rate 
 - `status`: Current status of the finality provider.
+- `tx_hash`: Babylon transaction hash of the finality provider creation
+  transaction, which you can use to verify the success of the transaction
+  on the Babylon chain.
 
 Below you can see a list of the statuses that a finality provider can transition
 to:
-- `CREATED`: defines a finality provider that is awaiting registration
-- `REGISTERED`: defines a finality provider that has been registered
+- `REGISTERED`: defines a finality provider that has been created and registered
   to the consumer chain but has no delegated stake
 - `ACTIVE`: defines a finality provider that is delegated to vote
 - `INACTIVE`: defines a finality provider whose delegations are reduced to 
@@ -569,56 +574,20 @@ to:
 For more information on statuses please refer to diagram in the core documentation 
 [fp-core](fp-core.md).
 
-### 5.2. Register Finality Provider
-
-The `register-finality-provider` command registers your finality provider on the
-Babylon chain. This command requires you to specify:
-
-1. The EOTS public key of the finality provider you wish to register
-2. The Babylon account associated with your finality provider
-   (the one specified in the creation) having sufficient funds 
-   to pay for the transaction fee.
-3. A running fpd daemon
-
-``` shell
-fpd register-finality-provider \
-  <fp-eots-pk-hex> \
-  --daemon-address <rpc-address> \ 
-  --home <path>
-```
-
-Parameters:
-- `<fp-eots-pk-hex>`: The EOTS public key of the finality provider you want to 
-register (e.g., `cf0f03b9ee2d4a0f27240e2d8b8c8ef609e24358b2eb3cfd89ae4e4f472e1a41`)
-- `--daemon-address`: RPC address of the finality provider daemon
-  (default: `127.0.0.1:12581`)
-- `--home`: Path to your finality provider daemon home directory (e.g., `~/.fpdHome`)
-
-If successful, the command will return a transaction hash:
-
-``` shell
-{ "tx_hash":
-"C08377CF289DF0DC5FA462E6409ADCB65A3492C22A112C58EA449F4DC544A3B1" } 
-```
-
-You can verify the transaction was successful by looking up this transaction 
-hash on the Babylon chain.
-
-
 <!-- vitsalis: TODO: How about listing the finality providers using the CLI to
 demonstrate that the finality provider has the status `REGISTERED`?
 That would be a native way to verify the installation, without having to
 touch Babylon. Natural way to introduce the `CREATED` status.
 -->
 
-### 5.3. Withdrawing Rewards
+### 5.2. Withdrawing Rewards
 
 As a participant in the Finality Provider Program, you will earn rewards that 
 can be withdrawn. The functionality for withdrawing rewards is currently under 
 development and will be available soon. Further updates will be provided once 
 this feature is implemented.
 
-### 5.4. Jailing and Unjailing
+### 5.3. Jailing and Unjailing
 
 A finality provider can be jailed for the following reasons:
 1. Missing Votes
@@ -655,7 +624,7 @@ Parameters:
 
 > ⚠️ Before unjailing, ensure you've fixed the underlying issue that caused jailing
 
-### 5.5. Slashing
+### 5.4. Slashing
 
 **Slashing occurs** when a finality provider **double signs**, meaning that the
 finality provider signs conflicting blocks at the same height. This results in

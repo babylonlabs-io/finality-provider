@@ -176,7 +176,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return fmt.Errorf("eots-pk cannot be empty")
 	}
 
-	info, err := client.CreateFinalityProvider(
+	res, err := client.CreateFinalityProvider(
 		context.Background(),
 		keyName,
 		chainID,
@@ -189,7 +189,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return err
 	}
 
-	printRespJSON(info.FinalityProvider)
+	printRespJSON(res)
 	return nil
 }
 
