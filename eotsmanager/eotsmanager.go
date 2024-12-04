@@ -31,6 +31,9 @@ type EOTSManager interface {
 	// or passPhrase is incorrect
 	SignEOTS(uid []byte, chainID []byte, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error)
 
+	// UnsafeSignEOTS should only be used in e2e tests for demonstration purposes. Use SignEOTS for real operations
+	UnsafeSignEOTS(uid []byte, chainID []byte, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error)
+
 	// SignSchnorrSig signs a Schnorr signature using the private key of the finality provider
 	// It fails if the finality provider does not exist or the message size is not 32 bytes
 	// or passPhrase is incorrect

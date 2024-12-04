@@ -98,6 +98,19 @@ func (r *rpcServer) SignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 	return &proto.SignEOTSResponse{Sig: sigBytes[:]}, nil
 }
 
+// UnsafeSignEOTS only used for testing purposes. Doesn't offer slashing protection!
+func (r *rpcServer) UnsafeSignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
+	*proto.SignEOTSResponse, error) {
+	sig, err := r.em.UnsafeSignEOTS(req.Uid, req.ChainId, req.Msg, req.Height, req.Passphrase)
+	if err != nil {
+		return nil, err
+	}
+
+	sigBytes := sig.Bytes()
+
+	return &proto.SignEOTSResponse{Sig: sigBytes[:]}, nil
+}
+
 // SignSchnorrSig signs a Schnorr sig with the EOTS private key
 func (r *rpcServer) SignSchnorrSig(_ context.Context, req *proto.SignSchnorrSigRequest) (
 	*proto.SignSchnorrSigResponse, error) {

@@ -695,8 +695,18 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 		return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %w", err)
 	}
 
+	unsafeSign := func(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
+		msgToSign := getMsgToSignForVote(b.Height, b.Hash)
+		sig, err := fp.em.UnsafeSignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height, fp.passphrase)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign EOTS: %w", err)
+		}
+
+		return bbntypes.NewSchnorrEOTSSigFromModNScalar(sig), nil
+	}
+
 	// sign block
-	eotsSig, err := fp.signFinalitySig(b)
+	eotsSig, err := unsafeSign(b)
 	if err != nil {
 		return nil, nil, err
 	}
