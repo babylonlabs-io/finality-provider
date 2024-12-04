@@ -12,9 +12,7 @@ import (
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 
-	"github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
@@ -164,12 +162,6 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	tm, fpIns := StartManagerWithFinalityProvider(t)
 	defer tm.Stop(t)
 
-	cfg := tm.Fpa.GetConfig()
-	cfg.BabylonConfig.Key = testFpName
-	cc, err := clientcontroller.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, zap.NewNop())
-	require.NoError(t, err)
-	tm.Fpa.UpdateClientController(cc)
-
 	cmd := daemon.CommandEditFinalityDescription()
 
 	const (
@@ -203,7 +195,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	cmd.SetArgs(args)
 
 	// Run the command
-	err = cmd.Execute()
+	err := cmd.Execute()
 	require.NoError(t, err)
 
 	gotFp, err := tm.BBNClient.QueryFinalityProvider(fpIns.GetBtcPk())

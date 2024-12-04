@@ -36,8 +36,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/babylonlabs-io/finality-provider/clientcontroller"
-
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
@@ -47,11 +45,10 @@ import (
 )
 
 var (
-	eventuallyWaitTimeOut = 1 * time.Minute
+	eventuallyWaitTimeOut = 5 * time.Minute
 	eventuallyPollTime    = 500 * time.Millisecond
 	btcNetworkParams      = &chaincfg.SimNetParams
 
-	testFpName   = "test-fp"
 	testMoniker  = "test-moniker"
 	testChainID  = "chain-test"
 	passphrase   = "testpass"
@@ -193,40 +190,23 @@ func StartManagerWithFinalityProvider(t *testing.T) (*TestManager, *service.Fina
 	tm := StartManager(t)
 	app := tm.Fpa
 	cfg := app.GetConfig()
-	oldKey := cfg.BabylonConfig.Key
 
 	commission := sdkmath.LegacyZeroDec()
 	desc := newDescription(testMoniker)
 
-	// needs to update key in config to be able to register and sign the creation of the finality provider with the
-	// same address.
-	cfg.BabylonConfig.Key = testFpName
-	fpBbnKeyInfo, err := service.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, cfg.BabylonConfig.Key, cfg.BabylonConfig.KeyringBackend, passphrase, hdPath, "")
-	require.NoError(t, err)
-
-	cc, err := clientcontroller.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, zap.NewNop())
-
-	require.NoError(t, err)
-	app.UpdateClientController(cc)
-
-	// add some funds for new fp pay for fees '-'
-	_, _, err = tm.manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), "1000000ubbn", "node0")
-	require.NoError(t, err)
-
 	eotsKeyName := "eots-key"
-	require.NoError(t, err)
 	eotsPkBz, err := tm.EOTSClient.CreateKey(eotsKeyName, passphrase, hdPath)
 	require.NoError(t, err)
 	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
 	require.NoError(t, err)
-	res, err := app.CreateFinalityProvider(testFpName, testChainID, passphrase, hdPath, eotsPk, desc, &commission)
+	res, err := app.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, passphrase, hdPath, eotsPk, desc, &commission)
 	require.NoError(t, err)
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
 	require.NoError(t, err)
 
 	_, err = app.RegisterFinalityProvider(fpPk.MarshalHex())
 	require.NoError(t, err)
-	err = app.StartHandlingFinalityProvider(fpPk, passphrase)
+	err = app.StartFinalityProvider(fpPk, passphrase)
 	require.NoError(t, err)
 	fpIns, err := app.GetFinalityProviderInstance()
 	require.NoError(t, err)
@@ -257,12 +237,6 @@ func StartManagerWithFinalityProvider(t *testing.T) (*TestManager, *service.Fina
 
 		return true
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
-
-	// goes back to old key in app
-	cfg.BabylonConfig.Key = oldKey
-	cc, err = clientcontroller.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, zap.NewNop())
-	require.NoError(t, err)
-	app.UpdateClientController(cc)
 
 	t.Logf("the test manager is running with a finality provider")
 
