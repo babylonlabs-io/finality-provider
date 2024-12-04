@@ -101,3 +101,39 @@ func TestFinalitySigSubmission(t *testing.T) {
 	require.Equal(t, 1, len(voters))
 	require.Equal(t, consumerFpPk.MarshalHex(), voters[0])
 }
+
+// TestFinalityProviderHasPower tests the consumer controller's function:
+// - QueryFinalityProviderHasPower
+func TestFinalityProviderHasPower(t *testing.T) {
+	ctm := StartOpL2ConsumerManager(t)
+	defer ctm.Stop(t)
+
+	// create and register Babylon FP and OP consumer FP
+	fps := ctm.setupBabylonAndConsumerFp(t)
+	consumerFpPk := fps[1]
+
+	// query the finality provider has power
+	hasPower, err := ctm.OpConsumerController.QueryFinalityProviderHasPower(consumerFpPk.MustToBTCPK(), 1)
+	require.NoError(t, err)
+	require.False(t, hasPower)
+
+	// send a BTC delegation and wait for activation
+	ctm.delegateBTCAndWaitForActivation(t, fps[0], consumerFpPk)
+
+	// query the finality provider has power again
+	// fp has 0 voting power b/c there is no public randomness at this height
+	hasPower, err = ctm.OpConsumerController.QueryFinalityProviderHasPower(consumerFpPk.MustToBTCPK(), 1)
+	require.NoError(t, err)
+	require.False(t, hasPower)
+
+	// commit pub rand with start height 1
+	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
+	_, err = consumerFpInstance.CommitPubRand(1)
+	require.NoError(t, err)
+
+	// query the finality provider has power again
+	// fp has voting power now
+	hasPower, err = ctm.OpConsumerController.QueryFinalityProviderHasPower(consumerFpPk.MustToBTCPK(), 1)
+	require.NoError(t, err)
+	require.True(t, hasPower)
+}
