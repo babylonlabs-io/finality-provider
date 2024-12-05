@@ -56,7 +56,7 @@ If you already have set up a key during Phase-1, please proceed to
 ## 2. Install Finality Provider Toolset 
 <!-- TODO: check add in the correct tag for the testnet --> 
 
-The finality provider toolset requires Golang 1.23](https://go.dev/dl)
+The finality provider toolset requires [Golang 1.23](https://go.dev/dl)
 to be installed.
 Please follow the installation instructions [here](https://go.dev/dl).
 You can verify the installation with the following command:
@@ -488,16 +488,15 @@ submits `MsgCreateFinalityProvider` to register it on the Babylon chain, and
 saves the finality provider information in the database. 
 
 ``` shell
-fpd create-finality-provider \ 
-  --daemon-address 127.0.0.1:12581 \ 
-  --chain-id bbn-test-5 \ 
+fpd create-finality-provider \
+  --chain-id bbn-test-5 \
   --eots-pk <eots-pk-hex> \
-  --commission 0.05 \ 
-  --key-name finality-provider \ 
-  --moniker "MyFinalityProvider" \ 
+  --commission 0.05 \
+  --key-name finality-provider \
+  --moniker "MyFinalityProvider" \
   --website "https://myfinalityprovider.com" \
-  --security-contact "security@myfinalityprovider.com" \ 
-  --details "finality provider for the Babylon network" \ 
+  --security-contact "security@myfinalityprovider.com" \
+  --details "finality provider for the Babylon network" \
   --home ./fpHome
 ```
 
@@ -574,11 +573,7 @@ to:
 For more information on statuses please refer to diagram in the core documentation 
 [fp-core](fp-core.md).
 
-<!-- vitsalis: TODO: How about listing the finality providers using the CLI to
-demonstrate that the finality provider has the status `REGISTERED`?
-That would be a native way to verify the installation, without having to
-touch Babylon. Natural way to introduce the `CREATED` status.
--->
+<!-- vitsalis: TODO: native way of showing the finality provider has the statuses -->
 
 ### 5.2. Withdrawing Rewards
 
@@ -589,18 +584,20 @@ this feature is implemented.
 
 ### 5.3. Jailing and Unjailing
 
-A finality provider can be jailed for the following reasons:
-1. Missing Votes
-   - Not submitting finality votes for a certain number of blocks
-   - Missing votes when the FP has positive voting power
+A finality provider can be jailed for missing votes when they have voting power. 
+However, it's important to understand that:
 
-2. Missing Public Randomness
-   - Not committing public randomness for blocks
-   - Required before voting can occur
+1. A finality provider must commit public randomness for a block before they can 
+have voting power for that block
+2. If a finality provider fails to commit public randomness for a block, they 
+will have zero voting power for that block
+3. Having zero voting power means they cannot vote (and thus cannot miss votes) 
+for that block
+4. Therefore, missing public randomness commitments indirectly prevents voting 
+but does not directly cause jailing
 
-The specific parameters specifying the exact metrics that are taken
-into account for jailing and the period of unjailing
-is controlled by the Babylon chain governance.
+The specific metrics for jailing (e.g., number of missed votes) are defined by 
+the finality module [parameters](https://github.com/babylonlabs-io/babylon/blob/main/proto/babylon/finality/v1/params.proto).
 
 When jailed, the following happens to a finality provider:
 - Their voting power becomes `0`
@@ -608,10 +605,9 @@ When jailed, the following happens to a finality provider:
 - Delegator rewards stop
 
 To unjail a finality provider, you must complete the following steps:
-1. Fix the underlying issue that caused jailing
-2. Wait for the jailing period to pass (if it was due to downtime)
-3. Then send the unjail transaction to the 
-   Babylon chain using the following command.
+1. Fix the underlying issue that caused jailing (e.g., ensure your node is properly synced and voting)
+2. Wait for the jailing period to pass (defined by finality module parameters)
+3. Send the unjail transaction to the Babylon chain using the following command:
 
 ```shell
 fpd unjail-finality-provider <eots-pk> --daemon-address <rpc-address> --home <path>
