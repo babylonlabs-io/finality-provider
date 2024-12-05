@@ -56,7 +56,7 @@ If you already have set up a key during Phase-1, please proceed to
 ## 2. Install Finality Provider Toolset 
 <!-- TODO: check add in the correct tag for the testnet --> 
 
-The finality provider toolset requires Golang 1.23](https://go.dev/dl)
+The finality provider toolset requires [Golang 1.23](https://go.dev/dl)
 to be installed.
 Please follow the installation instructions [here](https://go.dev/dl).
 You can verify the installation with the following command:
@@ -488,16 +488,15 @@ submits `MsgCreateFinalityProvider` to register it on the Babylon chain, and
 saves the finality provider information in the database. 
 
 ``` shell
-fpd create-finality-provider \ 
-  --daemon-address 127.0.0.1:12581 \ 
-  --chain-id bbn-test-5 \ 
+fpd create-finality-provider \
+  --chain-id bbn-test-5 \
   --eots-pk <eots-pk-hex> \
-  --commission 0.05 \ 
-  --key-name finality-provider \ 
-  --moniker "MyFinalityProvider" \ 
+  --commission 0.05 \
+  --key-name finality-provider \
+  --moniker "MyFinalityProvider" \
   --website "https://myfinalityprovider.com" \
-  --security-contact "security@myfinalityprovider.com" \ 
-  --details "finality provider for the Babylon network" \ 
+  --security-contact "security@myfinalityprovider.com" \
+  --details "finality provider for the Babylon network" \
   --home ./fpHome
 ```
 
@@ -574,11 +573,7 @@ to:
 For more information on statuses please refer to diagram in the core documentation 
 [fp-core](fp-core.md).
 
-<!-- vitsalis: TODO: How about listing the finality providers using the CLI to
-demonstrate that the finality provider has the status `REGISTERED`?
-That would be a native way to verify the installation, without having to
-touch Babylon. Natural way to introduce the `CREATED` status.
--->
+<!-- vitsalis: TODO: native way of showing the finality provider has the statuses -->
 
 ### 5.2. Withdrawing Rewards
 
@@ -589,29 +584,15 @@ this feature is implemented.
 
 ### 5.3. Jailing and Unjailing
 
-A finality provider can be jailed for the following reasons:
-1. Missing Votes
-   - Not submitting finality votes for a certain number of blocks
-   - Missing votes when the FP has positive voting power
-
-2. Missing Public Randomness
-   - Not committing public randomness for blocks
-   - Required before voting can occur
-
-The specific parameters specifying the exact metrics that are taken
-into account for jailing and the period of unjailing
-is controlled by the Babylon chain governance.
-
 When jailed, the following happens to a finality provider:
 - Their voting power becomes `0`
 - Status is set to `JAILED`
 - Delegator rewards stop
 
 To unjail a finality provider, you must complete the following steps:
-1. Fix the underlying issue that caused jailing
-2. Wait for the jailing period to pass (if it was due to downtime)
-3. Then send the unjail transaction to the 
-   Babylon chain using the following command.
+1. Fix the underlying issue that caused jailing (e.g., ensure your node is properly synced and voting)
+2. Wait for the jailing period to pass (defined by finality module parameters)
+3. Send the unjail transaction to the Babylon chain using the following command:
 
 ```shell
 fpd unjail-finality-provider <eots-pk> --daemon-address <rpc-address> --home <path>
