@@ -6,25 +6,19 @@ import (
 	"testing"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/crypto/eots"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	bbn "github.com/babylonlabs-io/babylon/types"
+	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/stretchr/testify/require"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 
-	sdkmath "cosmossdk.io/math"
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bbn "github.com/babylonlabs-io/babylon/types"
-	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/stretchr/testify/require"
-
 	"github.com/babylonlabs-io/finality-provider/codec"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
@@ -61,29 +55,19 @@ func GenPublicRand(r *rand.Rand, t *testing.T) *bbn.SchnorrPubRand {
 
 func GenRandomFinalityProvider(r *rand.Rand, t *testing.T) *store.StoredFinalityProvider {
 	// generate BTC key pair
-	btcSK, btcPK, err := datagen.GenRandomBTCKeyPair(r)
+	_, btcPK, err := datagen.GenRandomBTCKeyPair(r)
 	require.NoError(t, err)
 	bip340PK := bbn.NewBIP340PubKeyFromBTCPK(btcPK)
 
 	fpAddr, err := sdk.AccAddressFromBech32(datagen.GenRandomAccount().Address)
 	require.NoError(t, err)
 
-	// generate and verify PoP, correct case
-	pop, err := bstypes.NewPoPBTC(fpAddr, btcSK)
-	require.NoError(t, err)
-	err = pop.Verify(fpAddr, bip340PK, &chaincfg.SimNetParams)
-	require.NoError(t, err)
-
 	return &store.StoredFinalityProvider{
 		FPAddr:      fpAddr.String(),
-		KeyName:     GenRandomHexStr(r, 4),
 		ChainID:     "chain-test",
 		BtcPk:       bip340PK.MustToBTCPK(),
 		Description: RandomDescription(r),
 		Commission:  ZeroCommissionRate(),
-		Pop: &proto.ProofOfPossession{
-			BtcSig: pop.BtcSig,
-		},
 	}
 }
 
@@ -102,27 +86,6 @@ func GenBlocks(r *rand.Rand, startHeight, endHeight uint64) []*types.BlockInfo {
 	}
 
 	return blocks
-}
-
-// GenStoredFinalityProvider generates a random finality-provider from the keyring and store it in DB
-func GenStoredFinalityProvider(r *rand.Rand, t *testing.T, app *service.FinalityProviderApp, passphrase, hdPath string, eotsPk *bbn.BIP340PubKey) *store.StoredFinalityProvider {
-	// generate keyring
-	keyName := GenRandomHexStr(r, 4)
-	chainID := GenRandomHexStr(r, 4)
-
-	cfg := app.GetConfig()
-	_, err := CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, keyName, keyring.BackendTest, passphrase, hdPath, "")
-	require.NoError(t, err)
-
-	res, err := app.CreateFinalityProvider(keyName, chainID, passphrase, hdPath, eotsPk, RandomDescription(r), ZeroCommissionRate())
-	require.NoError(t, err)
-
-	btcPk, err := bbn.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
-	require.NoError(t, err)
-	storedFp, err := app.GetFinalityProviderStore().GetFinalityProvider(btcPk.MustToBTCPK())
-	require.NoError(t, err)
-
-	return storedFp
 }
 
 func CreateChainKey(keyringDir, chainID, keyName, backend, passphrase, hdPath, mnemonic string) (*types.ChainKeyInfo, error) {

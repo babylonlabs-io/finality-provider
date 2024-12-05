@@ -3,60 +3,13 @@ package service
 import (
 	"sync"
 
-	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 )
-
-type createFinalityProviderResponse struct {
-	FpInfo *proto.FinalityProviderInfo
-}
-
-type createFinalityProviderRequest struct {
-	keyName         string
-	passPhrase      string
-	hdPath          string
-	chainID         string
-	eotsPk          *bbntypes.BIP340PubKey
-	description     *stakingtypes.Description
-	commission      *sdkmath.LegacyDec
-	errResponse     chan error
-	successResponse chan *createFinalityProviderResponse
-}
-
-type registerFinalityProviderRequest struct {
-	fpAddr          sdk.AccAddress
-	btcPubKey       *bbntypes.BIP340PubKey
-	pop             *btcstakingtypes.ProofOfPossessionBTC
-	description     *stakingtypes.Description
-	commission      *sdkmath.LegacyDec
-	errResponse     chan error
-	successResponse chan *RegisterFinalityProviderResponse
-}
-
-type finalityProviderRegisteredEvent struct {
-	bbnAddress      sdk.AccAddress
-	btcPubKey       *bbntypes.BIP340PubKey
-	txHash          string
-	successResponse chan *RegisterFinalityProviderResponse
-}
-
-type RegisterFinalityProviderResponse struct {
-	bbnAddress sdk.AccAddress
-	btcPubKey  *bbntypes.BIP340PubKey
-	TxHash     string
-}
-
-type CreateFinalityProviderResult struct {
-	FpInfo *proto.FinalityProviderInfo
-}
 
 type fpState struct {
 	mu sync.Mutex

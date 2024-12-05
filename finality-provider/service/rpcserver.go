@@ -104,7 +104,6 @@ func (r *rpcServer) CreateFinalityProvider(
 		req.KeyName,
 		req.ChainId,
 		req.Passphrase,
-		req.HdPath,
 		eotsPk,
 		&description,
 		&commissionRate,
@@ -116,23 +115,8 @@ func (r *rpcServer) CreateFinalityProvider(
 
 	return &proto.CreateFinalityProviderResponse{
 		FinalityProvider: result.FpInfo,
+		TxHash:           result.TxHash,
 	}, nil
-}
-
-// RegisterFinalityProvider sends a transactions to Babylon to register a BTC finality-provider
-func (r *rpcServer) RegisterFinalityProvider(_ context.Context, req *proto.RegisterFinalityProviderRequest) (
-	*proto.RegisterFinalityProviderResponse, error) {
-	txRes, err := r.app.RegisterFinalityProvider(req.BtcPk)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register the finality-provider to Babylon: %w", err)
-	}
-
-	// the finality-provider instance should be started right after registration
-	if err := r.app.StartFinalityProvider(txRes.btcPubKey, req.Passphrase); err != nil {
-		return nil, fmt.Errorf("failed to start the registered finality-provider %s: %w", txRes.bbnAddress.String(), err)
-	}
-
-	return &proto.RegisterFinalityProviderResponse{TxHash: txRes.TxHash}, nil
 }
 
 // AddFinalitySignature adds a manually constructed finality signature to Babylon
@@ -217,7 +201,7 @@ func (r *rpcServer) UnjailFinalityProvider(_ context.Context, req *proto.UnjailF
 		return nil, err
 	}
 
-	txHash, err := r.app.UnjailFinalityProvider(fpPk)
+	res, err := r.app.UnjailFinalityProvider(fpPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unjail the finality-provider: %w", err)
 	}
@@ -227,7 +211,7 @@ func (r *rpcServer) UnjailFinalityProvider(_ context.Context, req *proto.UnjailF
 		return nil, fmt.Errorf("failed to start the finality provider instance after unjailing: %w", err)
 	}
 
-	return &proto.UnjailFinalityProviderResponse{TxHash: txHash}, nil
+	return &proto.UnjailFinalityProviderResponse{TxHash: res.TxHash}, nil
 }
 
 // QueryFinalityProvider queries the information of the finality-provider

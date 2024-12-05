@@ -48,10 +48,9 @@ type FinalityProviderApp struct {
 
 	metrics *metrics.FpMetrics
 
-	createFinalityProviderRequestChan   chan *createFinalityProviderRequest
-	registerFinalityProviderRequestChan chan *registerFinalityProviderRequest
-	finalityProviderRegisteredEventChan chan *finalityProviderRegisteredEvent
-	criticalErrChan                     chan *CriticalError
+	createFinalityProviderRequestChan chan *CreateFinalityProviderRequest
+	unjailFinalityProviderRequestChan chan *UnjailFinalityProviderRequest
+	criticalErrChan                   chan *CriticalError
 }
 
 func NewFinalityProviderAppFromConfig(
@@ -105,21 +104,20 @@ func NewFinalityProviderApp(
 	fpMetrics := metrics.NewFpMetrics()
 
 	return &FinalityProviderApp{
-		cc:                                  cc,
-		fps:                                 fpStore,
-		pubRandStore:                        pubRandStore,
-		kr:                                  kr,
-		config:                              config,
-		logger:                              logger,
-		input:                               input,
-		fpIns:                               nil,
-		eotsManager:                         em,
-		metrics:                             fpMetrics,
-		quit:                                make(chan struct{}),
-		createFinalityProviderRequestChan:   make(chan *createFinalityProviderRequest),
-		registerFinalityProviderRequestChan: make(chan *registerFinalityProviderRequest),
-		finalityProviderRegisteredEventChan: make(chan *finalityProviderRegisteredEvent),
-		criticalErrChan:                     make(chan *CriticalError),
+		cc:                                cc,
+		fps:                               fpStore,
+		pubRandStore:                      pubRandStore,
+		kr:                                kr,
+		config:                            config,
+		logger:                            logger,
+		input:                             input,
+		fpIns:                             nil,
+		eotsManager:                       em,
+		metrics:                           fpMetrics,
+		quit:                              make(chan struct{}),
+		unjailFinalityProviderRequestChan: make(chan *UnjailFinalityProviderRequest),
+		createFinalityProviderRequestChan: make(chan *CreateFinalityProviderRequest),
+		criticalErrChan:                   make(chan *CriticalError),
 	}, nil
 }
 
@@ -177,58 +175,6 @@ func (app *FinalityProviderApp) GetFinalityProviderInstance() (*FinalityProvider
 	}
 
 	return app.fpIns, nil
-}
-
-func (app *FinalityProviderApp) RegisterFinalityProvider(fpPkStr string) (*RegisterFinalityProviderResponse, error) {
-	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(fpPkStr)
-	if err != nil {
-		return nil, err
-	}
-
-	fp, err := app.fps.GetFinalityProvider(fpPk.MustToBTCPK())
-	if err != nil {
-		return nil, err
-	}
-
-	if fp.Status != proto.FinalityProviderStatus_CREATED {
-		return nil, fmt.Errorf("finality-provider is already registered")
-	}
-
-	btcSig, err := bbntypes.NewBIP340Signature(fp.Pop.BtcSig)
-	if err != nil {
-		return nil, err
-	}
-
-	pop := &bstypes.ProofOfPossessionBTC{
-		BtcSig:     btcSig.MustMarshal(),
-		BtcSigType: bstypes.BTCSigType_BIP340,
-	}
-
-	fpAddr, err := sdk.AccAddressFromBech32(fp.FPAddr)
-	if err != nil {
-		return nil, err
-	}
-
-	request := &registerFinalityProviderRequest{
-		fpAddr:          fpAddr,
-		btcPubKey:       bbntypes.NewBIP340PubKeyFromBTCPK(fp.BtcPk),
-		pop:             pop,
-		description:     fp.Description,
-		commission:      fp.Commission,
-		errResponse:     make(chan error, 1),
-		successResponse: make(chan *RegisterFinalityProviderResponse, 1),
-	}
-
-	app.registerFinalityProviderRequestChan <- request
-
-	select {
-	case err := <-request.errResponse:
-		return nil, err
-	case successResponse := <-request.successResponse:
-		return successResponse, nil
-	case <-app.quit:
-		return nil, fmt.Errorf("finality-provider app is shutting down")
-	}
 }
 
 // StartFinalityProvider starts a finality provider instance with the given EOTS public key
@@ -309,11 +255,11 @@ func (app *FinalityProviderApp) Start() error {
 
 		app.wg.Add(6)
 		go app.syncChainFpStatusLoop()
-		go app.eventLoop()
-		go app.registrationLoop()
 		go app.metricsUpdateLoop()
 		go app.monitorCriticalErr()
 		go app.monitorStatusUpdate()
+		go app.registrationLoop()
+		go app.unjailFpLoop()
 	})
 
 	return startErr
@@ -351,31 +297,79 @@ func (app *FinalityProviderApp) Stop() error {
 }
 
 func (app *FinalityProviderApp) CreateFinalityProvider(
-	keyName, chainID, passPhrase, hdPath string,
+	keyName, chainID, passPhrase string,
 	eotsPk *bbntypes.BIP340PubKey,
 	description *stakingtypes.Description,
 	commission *sdkmath.LegacyDec,
 ) (*CreateFinalityProviderResult, error) {
-	req := &createFinalityProviderRequest{
-		keyName:         keyName,
-		chainID:         chainID,
-		passPhrase:      passPhrase,
-		hdPath:          hdPath,
-		eotsPk:          eotsPk,
+	// 1. check if the chain key exists
+	kr, err := fpkr.NewChainKeyringControllerWithKeyring(app.kr, keyName, app.input)
+	if err != nil {
+		return nil, err
+	}
+
+	fpAddr, err := kr.Address(passPhrase)
+	if err != nil {
+		// the chain key does not exist, should create the chain key first
+		return nil, fmt.Errorf("the keyname %s does not exist, add the key first: %w", keyName, err)
+	}
+
+	// 2. create proof-of-possession
+	if eotsPk == nil {
+		return nil, fmt.Errorf("eots pk cannot be nil")
+	}
+	pop, err := app.CreatePop(fpAddr, eotsPk, passPhrase)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create proof-of-possession of the finality-provider: %w", err)
+	}
+
+	// TODO: query consumer chain to check if the fp is already registered
+	// if true, update db with the fp info from the consumer chain
+	// otherwise, proceed registration
+
+	// 3. register the finality provider on the consumer chain
+	request := &CreateFinalityProviderRequest{
+		fpAddr:          fpAddr,
+		btcPubKey:       eotsPk,
+		pop:             pop,
 		description:     description,
 		commission:      commission,
 		errResponse:     make(chan error, 1),
-		successResponse: make(chan *createFinalityProviderResponse, 1),
+		successResponse: make(chan *RegisterFinalityProviderResponse, 1),
 	}
 
-	app.createFinalityProviderRequestChan <- req
+	app.createFinalityProviderRequestChan <- request
 
 	select {
-	case err := <-req.errResponse:
+	case err := <-request.errResponse:
 		return nil, err
-	case successResponse := <-req.successResponse:
+	case successResponse := <-request.successResponse:
+		pkHex := eotsPk.MarshalHex()
+		btcPk := eotsPk.MustToBTCPK()
+		// save the fp info to db after successful registration
+		// this ensures the data saved in db is consistent with that on the consumer chain
+		// if the program crashes in the middle, the user can retry registration
+		// which will update db use the information from the consumer chain without
+		// submitting a registration again
+		if err := app.fps.CreateFinalityProvider(fpAddr, btcPk, description, commission, chainID); err != nil {
+			return nil, fmt.Errorf("failed to save finality-provider: %w", err)
+		}
+
+		app.metrics.RecordFpStatus(pkHex, proto.FinalityProviderStatus_REGISTERED)
+
+		app.logger.Info("successfully saved the finality-provider",
+			zap.String("eots_pk", pkHex),
+			zap.String("addr", fpAddr.String()),
+		)
+
+		storedFp, err := app.fps.GetFinalityProvider(btcPk)
+		if err != nil {
+			return nil, err
+		}
+
 		return &CreateFinalityProviderResult{
-			FpInfo: successResponse.FpInfo,
+			FpInfo: storedFp.ToFinalityProviderInfo(),
+			TxHash: successResponse.txHash,
 		}, nil
 	case <-app.quit:
 		return nil, fmt.Errorf("finality-provider app is shutting down")
@@ -383,80 +377,39 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 }
 
 // UnjailFinalityProvider sends a transaction to unjail a finality-provider
-func (app *FinalityProviderApp) UnjailFinalityProvider(fpPk *bbntypes.BIP340PubKey) (string, error) {
-	_, err := app.fps.GetFinalityProvider(fpPk.MustToBTCPK())
-	if err != nil {
-		return "", fmt.Errorf("failed to get finality provider from db: %w", err)
+func (app *FinalityProviderApp) UnjailFinalityProvider(fpPk *bbntypes.BIP340PubKey) (*UnjailFinalityProviderResponse, error) {
+	// send request to the loop to avoid blocking the main thread
+	request := &UnjailFinalityProviderRequest{
+		btcPubKey:       fpPk,
+		errResponse:     make(chan error, 1),
+		successResponse: make(chan *UnjailFinalityProviderResponse, 1),
 	}
 
-	// Send unjail transaction
-	res, err := app.cc.UnjailFinalityProvider(fpPk.MustToBTCPK())
-	if err != nil {
-		return "", fmt.Errorf("failed to send unjail transaction: %w", err)
-	}
+	app.unjailFinalityProviderRequestChan <- request
 
-	// Update finality-provider status in the local store
-	// set it to INACTIVE for now and it will be updated to
-	// ACTIVE if the fp has voting power
-	err = app.fps.SetFpStatus(fpPk.MustToBTCPK(), proto.FinalityProviderStatus_INACTIVE)
-	if err != nil {
-		return "", fmt.Errorf("failed to update finality-provider status after unjailing: %w", err)
-	}
-
-	app.metrics.RecordFpStatus(fpPk.MarshalHex(), proto.FinalityProviderStatus_INACTIVE)
-
-	app.logger.Info("successfully unjailed finality-provider",
-		zap.String("btc_pk", fpPk.MarshalHex()),
-		zap.String("txHash", res.TxHash),
-	)
-
-	return res.TxHash, nil
-}
-
-func (app *FinalityProviderApp) handleCreateFinalityProviderRequest(req *createFinalityProviderRequest) (*createFinalityProviderResponse, error) {
-	// 1. check if the chain key exists
-	kr, err := fpkr.NewChainKeyringControllerWithKeyring(app.kr, req.keyName, app.input)
-	if err != nil {
+	select {
+	case err := <-request.errResponse:
 		return nil, err
+	case successResponse := <-request.successResponse:
+		_, err := app.fps.GetFinalityProvider(fpPk.MustToBTCPK())
+		if err != nil {
+			return nil, fmt.Errorf("failed to get finality provider from db: %w", err)
+		}
+
+		// Update finality-provider status in the local store
+		// set it to INACTIVE for now and it will be updated to
+		// ACTIVE if the fp has voting power
+		err = app.fps.SetFpStatus(fpPk.MustToBTCPK(), proto.FinalityProviderStatus_INACTIVE)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update finality-provider status after unjailing: %w", err)
+		}
+
+		app.metrics.RecordFpStatus(fpPk.MarshalHex(), proto.FinalityProviderStatus_INACTIVE)
+
+		return successResponse, nil
+	case <-app.quit:
+		return nil, fmt.Errorf("finality-provider app is shutting down")
 	}
-
-	fpAddr, err := kr.Address(req.passPhrase)
-	if err != nil {
-		// the chain key does not exist, should create the chain key first
-		return nil, fmt.Errorf("the keyname %s does not exist, add the key first: %w", req.keyName, err)
-	}
-
-	// 2. create proof-of-possession
-	if req.eotsPk == nil {
-		return nil, fmt.Errorf("eots pk cannot be nil")
-	}
-	pop, err := app.CreatePop(fpAddr, req.eotsPk, req.passPhrase)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create proof-of-possession of the finality-provider: %w", err)
-	}
-
-	btcPk := req.eotsPk.MustToBTCPK()
-	if err := app.fps.CreateFinalityProvider(fpAddr, btcPk, req.description, req.commission, req.keyName, req.chainID, pop.BtcSig); err != nil {
-		return nil, fmt.Errorf("failed to save finality-provider: %w", err)
-	}
-
-	pkHex := req.eotsPk.MarshalHex()
-	app.metrics.RecordFpStatus(pkHex, proto.FinalityProviderStatus_CREATED)
-
-	app.logger.Info("successfully created a finality-provider",
-		zap.String("eots_pk", pkHex),
-		zap.String("addr", fpAddr.String()),
-		zap.String("key_name", req.keyName),
-	)
-
-	storedFp, err := app.fps.GetFinalityProvider(btcPk)
-	if err != nil {
-		return nil, err
-	}
-
-	return &createFinalityProviderResponse{
-		FpInfo: storedFp.ToFinalityProviderInfo(),
-	}, nil
 }
 
 func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntypes.BIP340PubKey, passphrase string) (*bstypes.ProofOfPossessionBTC, error) {

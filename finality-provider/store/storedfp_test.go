@@ -4,9 +4,10 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestShouldStart(t *testing.T) {
@@ -16,11 +17,6 @@ func TestShouldStart(t *testing.T) {
 		currFpStatus   proto.FinalityProviderStatus
 		expShouldStart bool
 	}{
-		{
-			"Created: Should NOT start",
-			proto.FinalityProviderStatus_CREATED,
-			false,
-		},
 		{
 			"Slashed: Should NOT start",
 			proto.FinalityProviderStatus_SLASHED,

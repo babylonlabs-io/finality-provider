@@ -2,51 +2,46 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 )
 
-// main event loop for the finality-provider app
-func (app *FinalityProviderApp) eventLoop() {
-	defer app.wg.Done()
+type CreateFinalityProviderRequest struct {
+	fpAddr          sdk.AccAddress
+	btcPubKey       *bbntypes.BIP340PubKey
+	pop             *btcstakingtypes.ProofOfPossessionBTC
+	description     *stakingtypes.Description
+	commission      *sdkmath.LegacyDec
+	errResponse     chan error
+	successResponse chan *RegisterFinalityProviderResponse
+}
 
-	for {
-		select {
-		case req := <-app.createFinalityProviderRequestChan:
-			res, err := app.handleCreateFinalityProviderRequest(req)
-			if err != nil {
-				req.errResponse <- err
-				continue
-			}
+type RegisterFinalityProviderResponse struct {
+	txHash string
+}
 
-			req.successResponse <- &createFinalityProviderResponse{FpInfo: res.FpInfo}
+type CreateFinalityProviderResult struct {
+	FpInfo *proto.FinalityProviderInfo
+	TxHash string
+}
 
-		case ev := <-app.finalityProviderRegisteredEventChan:
-			// change the status of the finality-provider to registered
-			err := app.fps.SetFpStatus(ev.btcPubKey.MustToBTCPK(), proto.FinalityProviderStatus_REGISTERED)
-			if err != nil {
-				app.logger.Fatal("failed to set finality-provider status to REGISTERED",
-					zap.String("pk", ev.btcPubKey.MarshalHex()),
-					zap.Error(err),
-				)
-			}
-			app.metrics.RecordFpStatus(ev.btcPubKey.MarshalHex(), proto.FinalityProviderStatus_REGISTERED)
+type UnjailFinalityProviderRequest struct {
+	btcPubKey       *bbntypes.BIP340PubKey
+	errResponse     chan error
+	successResponse chan *UnjailFinalityProviderResponse
+}
 
-			// return to the caller
-			ev.successResponse <- &RegisterFinalityProviderResponse{
-				bbnAddress: ev.bbnAddress,
-				btcPubKey:  ev.btcPubKey,
-				TxHash:     ev.txHash,
-			}
-
-		case <-app.quit:
-			app.logger.Debug("exiting main event loop")
-			return
-		}
-	}
+type UnjailFinalityProviderResponse struct {
+	TxHash string
 }
 
 // monitorStatusUpdate periodically check the status of the running finality provider and update
@@ -143,11 +138,13 @@ func (app *FinalityProviderApp) monitorStatusUpdate() {
 				)
 			}
 		case <-app.quit:
+			app.logger.Info("exiting monitor fp status update loop")
 			return
 		}
 	}
 }
 
+// event loop for critical errors
 func (app *FinalityProviderApp) monitorCriticalErr() {
 	defer app.wg.Done()
 
@@ -177,16 +174,18 @@ func (app *FinalityProviderApp) monitorCriticalErr() {
 			app.logger.Fatal(instanceTerminatingMsg,
 				zap.String("pk", criticalErr.fpBtcPk.MarshalHex()), zap.Error(criticalErr.err))
 		case <-app.quit:
+			app.logger.Info("exiting monitor critical error loop")
 			return
 		}
 	}
 }
 
+// event loop for handling fp registration
 func (app *FinalityProviderApp) registrationLoop() {
 	defer app.wg.Done()
 	for {
 		select {
-		case req := <-app.registerFinalityProviderRequestChan:
+		case req := <-app.createFinalityProviderRequestChan:
 			// we won't do any retries here to not block the loop for more important messages.
 			// Most probably it fails due so some user error so we just return the error to the user.
 			// TODO: need to start passing context here to be able to cancel the request in case of app quiting
@@ -225,28 +224,79 @@ func (app *FinalityProviderApp) registrationLoop() {
 				zap.String("txHash", res.TxHash),
 			)
 
-			app.finalityProviderRegisteredEventChan <- &finalityProviderRegisteredEvent{
-				btcPubKey:  req.btcPubKey,
-				bbnAddress: req.fpAddr,
-				txHash:     res.TxHash,
-				// pass the channel to the event so that we can send the response to the user which requested
-				// the registration
-				successResponse: req.successResponse,
+			app.metrics.RecordFpStatus(req.btcPubKey.MarshalHex(), proto.FinalityProviderStatus_REGISTERED)
+
+			req.successResponse <- &RegisterFinalityProviderResponse{
+				txHash: res.TxHash,
 			}
 		case <-app.quit:
-			app.logger.Debug("exiting registration loop")
+			app.logger.Info("exiting registration loop")
 			return
 		}
 	}
 }
 
+// event loop for unjailing fp
+func (app *FinalityProviderApp) unjailFpLoop() {
+	defer app.wg.Done()
+	for {
+		select {
+		case req := <-app.unjailFinalityProviderRequestChan:
+			pkHex := req.btcPubKey.MarshalHex()
+			isSlashed, isJailed, err := app.cc.QueryFinalityProviderSlashedOrJailed(req.btcPubKey.MustToBTCPK())
+			if err != nil {
+				req.errResponse <- fmt.Errorf("failed to query jailing status of the finality provider %s: %w", pkHex, err)
+				continue
+			}
+			if isSlashed {
+				req.errResponse <- fmt.Errorf("the finality provider %s is already slashed", pkHex)
+				continue
+			}
+			if !isJailed {
+				req.errResponse <- fmt.Errorf("the finality provider %s is not jailed", pkHex)
+				continue
+			}
+
+			res, err := app.cc.UnjailFinalityProvider(
+				req.btcPubKey.MustToBTCPK(),
+			)
+
+			if err != nil {
+				app.logger.Error(
+					"failed to unjail finality-provider",
+					zap.String("pk", req.btcPubKey.MarshalHex()),
+					zap.Error(err),
+				)
+				req.errResponse <- err
+				continue
+			}
+
+			app.logger.Info(
+				"successfully unjailed finality-provider on babylon",
+				zap.String("btc_pk", req.btcPubKey.MarshalHex()),
+				zap.String("txHash", res.TxHash),
+			)
+
+			req.successResponse <- &UnjailFinalityProviderResponse{
+				TxHash: res.TxHash,
+			}
+		case <-app.quit:
+			app.logger.Info("exiting unjailing fp loop")
+			return
+		}
+	}
+}
+
+// event loop for metrics update
 func (app *FinalityProviderApp) metricsUpdateLoop() {
 	defer app.wg.Done()
 
 	interval := app.config.Metrics.UpdateInterval
 	app.logger.Info("starting metrics update loop",
 		zap.Float64("interval seconds", interval.Seconds()))
+
 	updateTicker := time.NewTicker(interval)
+	defer updateTicker.Stop()
 
 	for {
 		select {
@@ -258,7 +308,6 @@ func (app *FinalityProviderApp) metricsUpdateLoop() {
 			}
 			app.metrics.UpdateFpMetrics(fps)
 		case <-app.quit:
-			updateTicker.Stop()
 			app.logger.Info("exiting metrics update loop")
 			return
 		}

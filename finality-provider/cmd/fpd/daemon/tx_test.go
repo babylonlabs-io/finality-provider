@@ -23,6 +23,7 @@ import (
 	bbn "github.com/babylonlabs-io/babylon/types"
 
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -115,7 +116,7 @@ func rootCmd(outputBuff *bytes.Buffer) *cobra.Command {
 	cmd.AddCommand(
 		daemon.CommandInit(), daemon.CommandStart(), daemon.CommandKeys(),
 		daemon.CommandGetDaemonInfo(), daemon.CommandCreateFP(), daemon.CommandLsFP(),
-		daemon.CommandInfoFP(), daemon.CommandRegisterFP(), daemon.CommandAddFinalitySig(),
+		daemon.CommandInfoFP(), daemon.CommandAddFinalitySig(),
 		daemon.CommandExportFP(), daemon.CommandTxs(),
 	)
 
