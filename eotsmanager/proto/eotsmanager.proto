@@ -23,6 +23,10 @@ service EOTSManager {
   rpc SignEOTS (SignEOTSRequest)
       returns (SignEOTSResponse);
 
+  // UnsafeSignEOTS used only for testing purpose. Use SignEOTS for real operations
+  rpc UnsafeSignEOTS (SignEOTSRequest)
+      returns (SignEOTSResponse);
+
   // SignSchnorrSig signs a Schnorr sig with the EOTS private key
   rpc SignSchnorrSig (SignSchnorrSigRequest)
       returns (SignSchnorrSigResponse);

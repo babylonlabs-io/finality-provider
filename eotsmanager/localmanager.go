@@ -205,6 +205,14 @@ func (lm *LocalEOTSManager) SignEOTS(fpPk []byte, chainID []byte, msg []byte, he
 			return &s, nil
 		}
 
+		lm.logger.Error(
+			"double sign error protection",
+			zap.String("fp", hex.EncodeToString(fpPk)),
+			zap.String("msg", hex.EncodeToString(msg)),
+			zap.Uint64("height", height),
+			zap.String("chainID", string(chainID)),
+		)
+
 		return nil, eotstypes.ErrDoubleSign
 	}
 
@@ -233,6 +241,25 @@ func (lm *LocalEOTSManager) SignEOTS(fpPk []byte, chainID []byte, msg []byte, he
 	}
 
 	return signedBytes, nil
+}
+
+// UnsafeSignEOTS should only be used in e2e test to demonstrate double sign
+func (lm *LocalEOTSManager) UnsafeSignEOTS(fpPk []byte, chainID []byte, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error) {
+	privRand, _, err := lm.getRandomnessPair(fpPk, chainID, height, passphrase)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get private randomness: %w", err)
+	}
+
+	privKey, err := lm.getEOTSPrivKey(fpPk, passphrase)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
+	}
+
+	// Update metrics
+	lm.metrics.IncrementEotsFpTotalEotsSignCounter(hex.EncodeToString(fpPk))
+	lm.metrics.SetEotsFpLastEotsSignHeight(hex.EncodeToString(fpPk), float64(height))
+
+	return eots.Sign(privKey, privRand, msg)
 }
 
 func (lm *LocalEOTSManager) SignSchnorrSig(fpPk []byte, msg []byte, passphrase string) (*schnorr.Signature, error) {

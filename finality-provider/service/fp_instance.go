@@ -681,7 +681,9 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 // TestSubmitFinalitySignatureAndExtractPrivKey is exposed for presentation/testing purpose to allow manual sending finality signature
 // this API is the same as SubmitBatchFinalitySignatures except that we don't constraint the voting height and update status
 // Note: this should not be used in the submission loop
-func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey(b *types.BlockInfo) (*types.TxResponse, *btcec.PrivateKey, error) {
+func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey(
+	b *types.BlockInfo, useSafeEOTSFunc bool,
+) (*types.TxResponse, *btcec.PrivateKey, error) {
 	// get public randomness
 	prList, err := fp.getPubRandList(b.Height, 1)
 	if err != nil {
@@ -695,8 +697,22 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 		return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %w", err)
 	}
 
+	eotsSignerFunc := func(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
+		msgToSign := getMsgToSignForVote(b.Height, b.Hash)
+		sig, err := fp.em.UnsafeSignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height, fp.passphrase)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign EOTS: %w", err)
+		}
+
+		return bbntypes.NewSchnorrEOTSSigFromModNScalar(sig), nil
+	}
+
+	if useSafeEOTSFunc {
+		eotsSignerFunc = fp.signFinalitySig
+	}
+
 	// sign block
-	eotsSig, err := fp.signFinalitySig(b)
+	eotsSig, err := eotsSignerFunc(b)
 	if err != nil {
 		return nil, nil, err
 	}

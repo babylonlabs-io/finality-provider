@@ -81,6 +81,8 @@ message AddFinalitySignatureRequest {
     uint64 height = 2;
     // app_hash is the AppHash of the chain block
     bytes app_hash = 3;
+    // check_double_sign use double sign protection when doing EOTS sign
+    bool check_double_sign = 4;
 }
 
 message AddFinalitySignatureResponse {
