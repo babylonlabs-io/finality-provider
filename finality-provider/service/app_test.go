@@ -214,7 +214,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		// set voting power to be positive so that the fp should eventually become ACTIVE
 		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), gomock.Any()).Return(uint64(0), nil).AnyTimes()
 		mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
-		mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, false, nil).AnyTimes()
+		mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, true, nil).AnyTimes()
 		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
 
 		// Create fp app
@@ -223,9 +223,9 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 
 		expectedTxHash := datagen.GenRandomHexStr(r, 32)
 		mockClientController.EXPECT().UnjailFinalityProvider(fpPk.MustToBTCPK()).Return(&types.TxResponse{TxHash: expectedTxHash}, nil)
-		txHash, err := app.UnjailFinalityProvider(fpPk)
+		res, err := app.UnjailFinalityProvider(fpPk)
 		require.NoError(t, err)
-		require.Equal(t, expectedTxHash, txHash)
+		require.Equal(t, expectedTxHash, res.TxHash)
 		fpInfo, err := app.GetFinalityProviderInfo(fpPk)
 		require.NoError(t, err)
 		require.Equal(t, proto.FinalityProviderStatus_INACTIVE.String(), fpInfo.GetStatus())

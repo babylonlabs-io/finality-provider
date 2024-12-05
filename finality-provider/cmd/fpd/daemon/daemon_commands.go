@@ -359,6 +359,8 @@ func CommandAddFinalitySig() *cobra.Command {
 	}
 	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
 	cmd.Flags().String(appHashFlag, defaultAppHashStr, "The last commit hash of the chain block")
+	cmd.Flags().Bool(checkDoubleSignFlag, true, "If 'true', uses anti-slashing protection when doing EOTS sign")
+
 	return cmd
 }
 
@@ -383,6 +385,11 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", appHashFlag, err)
 	}
 
+	checkDoubleSign, err := flags.GetBool(checkDoubleSignFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", checkDoubleSignFlag, err)
+	}
+
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
 		return err
@@ -398,7 +405,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	res, err := client.AddFinalitySignature(context.Background(), fpPk.MarshalHex(), blkHeight, appHash)
+	res, err := client.AddFinalitySignature(context.Background(), fpPk.MarshalHex(), blkHeight, appHash, checkDoubleSign)
 	if err != nil {
 		return err
 	}

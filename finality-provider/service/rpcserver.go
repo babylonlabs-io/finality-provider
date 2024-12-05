@@ -156,7 +156,7 @@ func (r *rpcServer) AddFinalitySignature(_ context.Context, req *proto.AddFinali
 			Hash:   req.AppHash,
 		}
 
-		txRes, privKey, err := fpi.TestSubmitFinalitySignatureAndExtractPrivKey(b)
+		txRes, privKey, err := fpi.TestSubmitFinalitySignatureAndExtractPrivKey(b, req.CheckDoubleSign)
 		if err != nil {
 			return nil, err
 		}
@@ -201,7 +201,7 @@ func (r *rpcServer) UnjailFinalityProvider(_ context.Context, req *proto.UnjailF
 		return nil, err
 	}
 
-	txHash, err := r.app.UnjailFinalityProvider(fpPk)
+	res, err := r.app.UnjailFinalityProvider(fpPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unjail the finality-provider: %w", err)
 	}
@@ -211,7 +211,7 @@ func (r *rpcServer) UnjailFinalityProvider(_ context.Context, req *proto.UnjailF
 		return nil, fmt.Errorf("failed to start the finality provider instance after unjailing: %w", err)
 	}
 
-	return &proto.UnjailFinalityProviderResponse{TxHash: txHash}, nil
+	return &proto.UnjailFinalityProviderResponse{TxHash: res.TxHash}, nil
 }
 
 // QueryFinalityProvider queries the information of the finality-provider

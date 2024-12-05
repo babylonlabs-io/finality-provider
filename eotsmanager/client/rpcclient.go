@@ -118,6 +118,25 @@ func (c *EOTSManagerGRpcClient) SignEOTS(uid, chaiID, msg []byte, height uint64,
 	return &s, nil
 }
 
+func (c *EOTSManagerGRpcClient) UnsafeSignEOTS(uid, chaiID, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error) {
+	req := &proto.SignEOTSRequest{
+		Uid:        uid,
+		ChainId:    chaiID,
+		Msg:        msg,
+		Height:     height,
+		Passphrase: passphrase,
+	}
+	res, err := c.client.UnsafeSignEOTS(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	var s btcec.ModNScalar
+	s.SetByteSlice(res.Sig)
+
+	return &s, nil
+}
+
 func (c *EOTSManagerGRpcClient) SignSchnorrSig(uid, msg []byte, passphrase string) (*schnorr.Signature, error) {
 	req := &proto.SignSchnorrSigRequest{Uid: uid, Msg: msg, Passphrase: passphrase}
 	res, err := c.client.SignSchnorrSig(context.Background(), req)

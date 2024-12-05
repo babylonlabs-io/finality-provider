@@ -2,12 +2,47 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 )
+
+type CreateFinalityProviderRequest struct {
+	fpAddr          sdk.AccAddress
+	btcPubKey       *bbntypes.BIP340PubKey
+	pop             *btcstakingtypes.ProofOfPossessionBTC
+	description     *stakingtypes.Description
+	commission      *sdkmath.LegacyDec
+	errResponse     chan error
+	successResponse chan *RegisterFinalityProviderResponse
+}
+
+type RegisterFinalityProviderResponse struct {
+	txHash string
+}
+
+type CreateFinalityProviderResult struct {
+	FpInfo *proto.FinalityProviderInfo
+	TxHash string
+}
+
+type UnjailFinalityProviderRequest struct {
+	btcPubKey       *bbntypes.BIP340PubKey
+	errResponse     chan error
+	successResponse chan *UnjailFinalityProviderResponse
+}
+
+type UnjailFinalityProviderResponse struct {
+	TxHash string
+}
 
 // monitorStatusUpdate periodically check the status of the running finality provider and update
 // it accordingly. We update the status by querying the latest voting power and the slashed_height.
@@ -196,6 +231,57 @@ func (app *FinalityProviderApp) registrationLoop() {
 			}
 		case <-app.quit:
 			app.logger.Info("exiting registration loop")
+			return
+		}
+	}
+}
+
+// event loop for unjailing fp
+func (app *FinalityProviderApp) unjailFpLoop() {
+	defer app.wg.Done()
+	for {
+		select {
+		case req := <-app.unjailFinalityProviderRequestChan:
+			pkHex := req.btcPubKey.MarshalHex()
+			isSlashed, isJailed, err := app.cc.QueryFinalityProviderSlashedOrJailed(req.btcPubKey.MustToBTCPK())
+			if err != nil {
+				req.errResponse <- fmt.Errorf("failed to query jailing status of the finality provider %s: %w", pkHex, err)
+				continue
+			}
+			if isSlashed {
+				req.errResponse <- fmt.Errorf("the finality provider %s is already slashed", pkHex)
+				continue
+			}
+			if !isJailed {
+				req.errResponse <- fmt.Errorf("the finality provider %s is not jailed", pkHex)
+				continue
+			}
+
+			res, err := app.cc.UnjailFinalityProvider(
+				req.btcPubKey.MustToBTCPK(),
+			)
+
+			if err != nil {
+				app.logger.Error(
+					"failed to unjail finality-provider",
+					zap.String("pk", req.btcPubKey.MarshalHex()),
+					zap.Error(err),
+				)
+				req.errResponse <- err
+				continue
+			}
+
+			app.logger.Info(
+				"successfully unjailed finality-provider on babylon",
+				zap.String("btc_pk", req.btcPubKey.MarshalHex()),
+				zap.String("txHash", res.TxHash),
+			)
+
+			req.successResponse <- &UnjailFinalityProviderResponse{
+				TxHash: res.TxHash,
+			}
+		case <-app.quit:
+			app.logger.Info("exiting unjailing fp loop")
 			return
 		}
 	}
