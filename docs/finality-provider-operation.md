@@ -584,21 +584,6 @@ this feature is implemented.
 
 ### 5.3. Jailing and Unjailing
 
-A finality provider can be jailed for missing votes when they have voting power. 
-However, it's important to understand that:
-
-1. A finality provider must commit public randomness for a block before they can 
-have voting power for that block
-2. If a finality provider fails to commit public randomness for a block, they 
-will have zero voting power for that block
-3. Having zero voting power means they cannot vote (and thus cannot miss votes) 
-for that block
-4. Therefore, missing public randomness commitments indirectly prevents voting 
-but does not directly cause jailing
-
-The specific metrics for jailing (e.g., number of missed votes) are defined by 
-the finality module [parameters](https://github.com/babylonlabs-io/babylon/blob/main/proto/babylon/finality/v1/params.proto).
-
 When jailed, the following happens to a finality provider:
 - Their voting power becomes `0`
 - Status is set to `JAILED`
