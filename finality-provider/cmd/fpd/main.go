@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/version"
 	"os"
+
+	"github.com/babylonlabs-io/finality-provider/version"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -33,7 +34,7 @@ func main() {
 	cmd.AddCommand(
 		daemon.CommandInit(), daemon.CommandStart(), daemon.CommandKeys(),
 		daemon.CommandGetDaemonInfo(), daemon.CommandCreateFP(), daemon.CommandLsFP(),
-		daemon.CommandInfoFP(), daemon.CommandRegisterFP(), daemon.CommandAddFinalitySig(),
+		daemon.CommandInfoFP(), daemon.CommandAddFinalitySig(),
 		daemon.CommandExportFP(), daemon.CommandTxs(), daemon.CommandUnjailFP(),
 		daemon.CommandEditFinalityDescription(), version.CommandVersion("fpd"),
 		daemon.CommandCommitPubRand(),

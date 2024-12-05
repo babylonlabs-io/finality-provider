@@ -81,18 +81,17 @@ func CommandCreateFP() *cobra.Command {
 
 	f := cmd.Flags()
 	f.String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
-	f.String(keyNameFlag, "", "The unique name of the finality provider key")
+	f.String(keyNameFlag, "", "The unique key name of the finality provider's Babylon account")
 	f.String(sdkflags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 	f.String(chainIDFlag, "", "The identifier of the consumer chain")
 	f.String(passphraseFlag, "", "The pass phrase used to encrypt the keys")
-	f.String(hdPathFlag, "", "The hd path used to derive the private key")
 	f.String(commissionRateFlag, "0.05", "The commission rate for the finality provider, e.g., 0.05")
 	f.String(monikerFlag, "", "A human-readable name for the finality provider")
 	f.String(identityFlag, "", "An optional identity signature (ex. UPort or Keybase)")
 	f.String(websiteFlag, "", "An optional website link")
 	f.String(securityContactFlag, "", "An email for security contact")
 	f.String(detailsFlag, "", "Other optional details")
-	f.String(fpEotsPkFlag, "", "The hex string of the EOTS public key")
+	f.String(fpEotsPkFlag, "", "The hex string of the finality provider's EOTS public key")
 
 	// make flags required
 	if err := cmd.MarkFlagRequired(chainIDFlag); err != nil {
@@ -168,11 +167,6 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return fmt.Errorf("failed to read flag %s: %w", passphraseFlag, err)
 	}
 
-	hdPath, err := flags.GetString(hdPathFlag)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", hdPathFlag, err)
-	}
-
 	eotsPkHex, err := flags.GetString(fpEotsPkFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", fpEotsPkFlag, err)
@@ -182,13 +176,12 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return fmt.Errorf("eots-pk cannot be empty")
 	}
 
-	info, err := client.CreateFinalityProvider(
+	res, err := client.CreateFinalityProvider(
 		context.Background(),
 		keyName,
 		chainID,
 		eotsPkHex,
 		passphrase,
-		hdPath,
 		description,
 		&commissionRate,
 	)
@@ -196,7 +189,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return err
 	}
 
-	printRespJSON(info.FinalityProvider)
+	printRespJSON(res)
 	return nil
 }
 
@@ -349,58 +342,6 @@ func runCommandInfoFP(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	printRespJSON(resp)
-
-	return nil
-}
-
-// CommandRegisterFP returns the register-finality-provider command by connecting to the fpd daemon.
-func CommandRegisterFP() *cobra.Command {
-	var cmd = &cobra.Command{
-		Use:     "register-finality-provider [fp-eots-pk-hex]",
-		Aliases: []string{"rfp"},
-		Short:   "Register a created finality provider to Babylon.",
-		Example: fmt.Sprintf(`fpd register-finality-provider --daemon-address %s`, defaultFpdDaemonAddress),
-		Args:    cobra.ExactArgs(1),
-		RunE:    runCommandRegisterFP,
-	}
-	f := cmd.Flags()
-	f.String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
-	f.String(passphraseFlag, "", "The pass phrase used to encrypt the keys")
-	return cmd
-}
-
-func runCommandRegisterFP(cmd *cobra.Command, args []string) error {
-	fpPk, err := types.NewBIP340PubKeyFromHex(args[0])
-	if err != nil {
-		return err
-	}
-
-	flags := cmd.Flags()
-	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
-	}
-
-	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := cleanUp(); err != nil {
-			fmt.Printf("Failed to clean up grpc client: %v\n", err)
-		}
-	}()
-
-	passphrase, err := flags.GetString(passphraseFlag)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", passphraseFlag, err)
-	}
-
-	res, err := client.RegisterFinalityProvider(context.Background(), fpPk, passphrase)
-	if err != nil {
-		return err
-	}
-	printRespJSON(res)
 
 	return nil
 }

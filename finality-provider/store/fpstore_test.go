@@ -8,11 +8,12 @@ import (
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/stretchr/testify/require"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/testutil"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // FuzzFinalityProvidersStore tests save and list finality providers properly
@@ -47,9 +48,7 @@ func FuzzFinalityProvidersStore(f *testing.F) {
 			fp.BtcPk,
 			fp.Description,
 			fp.Commission,
-			fp.KeyName,
 			fp.ChainID,
-			fp.Pop.BtcSig,
 		)
 		require.NoError(t, err)
 
@@ -60,9 +59,7 @@ func FuzzFinalityProvidersStore(f *testing.F) {
 			fp.BtcPk,
 			fp.Description,
 			fp.Commission,
-			fp.KeyName,
 			fp.ChainID,
-			fp.Pop.BtcSig,
 		)
 		require.ErrorIs(t, err, fpstore.ErrDuplicateFinalityProvider)
 
@@ -94,13 +91,6 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 		expErr             error
 	}{
 		{
-			"zero vp: Created to Registered",
-			proto.FinalityProviderStatus_CREATED,
-			0,
-			proto.FinalityProviderStatus_REGISTERED,
-			nil,
-		},
-		{
 			"zero vp: Active to Inactive",
 			proto.FinalityProviderStatus_ACTIVE,
 			0,
@@ -129,13 +119,6 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 			nil,
 		},
 		{
-			"vp > 0: Created to Active",
-			proto.FinalityProviderStatus_CREATED,
-			1,
-			proto.FinalityProviderStatus_ACTIVE,
-			nil,
-		},
-		{
 			"vp > 0: Registered to Active",
 			proto.FinalityProviderStatus_REGISTERED,
 			1,
@@ -153,13 +136,6 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 			"err: fp not found and vp > 0",
 			proto.FinalityProviderStatus_INACTIVE,
 			1,
-			anyFpStatus,
-			fpstore.ErrFinalityProviderNotFound,
-		},
-		{
-			"err: fp not found and vp == 0 && created",
-			proto.FinalityProviderStatus_CREATED,
-			0,
 			anyFpStatus,
 			fpstore.ErrFinalityProviderNotFound,
 		},
@@ -199,9 +175,7 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 					fp.BtcPk,
 					fp.Description,
 					fp.Commission,
-					fp.KeyName,
 					fp.ChainID,
-					fp.Pop.BtcSig,
 				)
 				require.NoError(t, err)
 

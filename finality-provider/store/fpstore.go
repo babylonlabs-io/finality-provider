@@ -46,8 +46,7 @@ func (s *FinalityProviderStore) CreateFinalityProvider(
 	btcPk *btcec.PublicKey,
 	description *stakingtypes.Description,
 	commission *sdkmath.LegacyDec,
-	keyName, chainID string,
-	btcSig []byte,
+	chainID string,
 ) error {
 	desBytes, err := description.Marshal()
 	if err != nil {
@@ -58,12 +57,8 @@ func (s *FinalityProviderStore) CreateFinalityProvider(
 		BtcPk:       schnorr.SerializePubKey(btcPk),
 		Description: desBytes,
 		Commission:  commission.String(),
-		Pop: &proto.ProofOfPossession{
-			BtcSig: btcSig,
-		},
-		KeyName: keyName,
-		ChainId: chainID,
-		Status:  proto.FinalityProviderStatus_CREATED,
+		ChainId:     chainID,
+		Status:      proto.FinalityProviderStatus_REGISTERED,
 	}
 
 	return s.createFinalityProviderInternal(fp)
@@ -128,16 +123,11 @@ func (s *FinalityProviderStore) UpdateFpStatusFromVotingPower(
 		return proto.FinalityProviderStatus_ACTIVE, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_ACTIVE)
 	}
 
-	// voting power == 0 then set status depending on previous status
-	//nolint:exhaustive
-	switch fp.Status {
-	case proto.FinalityProviderStatus_CREATED:
-		// previous status is CREATED then set to REGISTERED
-		return proto.FinalityProviderStatus_REGISTERED, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_REGISTERED)
-	case proto.FinalityProviderStatus_ACTIVE:
+	if fp.Status == proto.FinalityProviderStatus_ACTIVE {
 		// previous status is ACTIVE then set to INACTIVE
 		return proto.FinalityProviderStatus_INACTIVE, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_INACTIVE)
 	}
+
 	return fp.Status, nil
 }
 

@@ -9,46 +9,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 )
 
-// main event loop for the finality-provider app
-func (app *FinalityProviderApp) eventLoop() {
-	defer app.wg.Done()
-
-	for {
-		select {
-		case req := <-app.createFinalityProviderRequestChan:
-			res, err := app.handleCreateFinalityProviderRequest(req)
-			if err != nil {
-				req.errResponse <- err
-				continue
-			}
-
-			req.successResponse <- &createFinalityProviderResponse{FpInfo: res.FpInfo}
-
-		case ev := <-app.finalityProviderRegisteredEventChan:
-			// change the status of the finality-provider to registered
-			err := app.fps.SetFpStatus(ev.btcPubKey.MustToBTCPK(), proto.FinalityProviderStatus_REGISTERED)
-			if err != nil {
-				app.logger.Fatal("failed to set finality-provider status to REGISTERED",
-					zap.String("pk", ev.btcPubKey.MarshalHex()),
-					zap.Error(err),
-				)
-			}
-			app.metrics.RecordFpStatus(ev.btcPubKey.MarshalHex(), proto.FinalityProviderStatus_REGISTERED)
-
-			// return to the caller
-			ev.successResponse <- &RegisterFinalityProviderResponse{
-				bbnAddress: ev.bbnAddress,
-				btcPubKey:  ev.btcPubKey,
-				TxHash:     ev.txHash,
-			}
-
-		case <-app.quit:
-			app.logger.Debug("exiting main event loop")
-			return
-		}
-	}
-}
-
 // monitorStatusUpdate periodically check the status of the running finality provider and update
 // it accordingly. We update the status by querying the latest voting power and the slashed_height.
 // In particular, we perform the following status transitions (REGISTERED, ACTIVE, INACTIVE, SLASHED):
@@ -143,11 +103,13 @@ func (app *FinalityProviderApp) monitorStatusUpdate() {
 				)
 			}
 		case <-app.quit:
+			app.logger.Info("exiting monitor fp status update loop")
 			return
 		}
 	}
 }
 
+// event loop for critical errors
 func (app *FinalityProviderApp) monitorCriticalErr() {
 	defer app.wg.Done()
 
@@ -177,16 +139,18 @@ func (app *FinalityProviderApp) monitorCriticalErr() {
 			app.logger.Fatal(instanceTerminatingMsg,
 				zap.String("pk", criticalErr.fpBtcPk.MarshalHex()), zap.Error(criticalErr.err))
 		case <-app.quit:
+			app.logger.Info("exiting monitor critical error loop")
 			return
 		}
 	}
 }
 
+// event loop for handling fp registration
 func (app *FinalityProviderApp) registrationLoop() {
 	defer app.wg.Done()
 	for {
 		select {
-		case req := <-app.registerFinalityProviderRequestChan:
+		case req := <-app.createFinalityProviderRequestChan:
 			// we won't do any retries here to not block the loop for more important messages.
 			// Most probably it fails due so some user error so we just return the error to the user.
 			// TODO: need to start passing context here to be able to cancel the request in case of app quiting
@@ -225,28 +189,28 @@ func (app *FinalityProviderApp) registrationLoop() {
 				zap.String("txHash", res.TxHash),
 			)
 
-			app.finalityProviderRegisteredEventChan <- &finalityProviderRegisteredEvent{
-				btcPubKey:  req.btcPubKey,
-				bbnAddress: req.fpAddr,
-				txHash:     res.TxHash,
-				// pass the channel to the event so that we can send the response to the user which requested
-				// the registration
-				successResponse: req.successResponse,
+			app.metrics.RecordFpStatus(req.btcPubKey.MarshalHex(), proto.FinalityProviderStatus_REGISTERED)
+
+			req.successResponse <- &RegisterFinalityProviderResponse{
+				txHash: res.TxHash,
 			}
 		case <-app.quit:
-			app.logger.Debug("exiting registration loop")
+			app.logger.Info("exiting registration loop")
 			return
 		}
 	}
 }
 
+// event loop for metrics update
 func (app *FinalityProviderApp) metricsUpdateLoop() {
 	defer app.wg.Done()
 
 	interval := app.config.Metrics.UpdateInterval
 	app.logger.Info("starting metrics update loop",
 		zap.Float64("interval seconds", interval.Seconds()))
+
 	updateTicker := time.NewTicker(interval)
+	defer updateTicker.Stop()
 
 	for {
 		select {
@@ -258,7 +222,6 @@ func (app *FinalityProviderApp) metricsUpdateLoop() {
 			}
 			app.metrics.UpdateFpMetrics(fps)
 		case <-app.quit:
-			updateTicker.Stop()
 			app.logger.Info("exiting metrics update loop")
 			return
 		}
