@@ -3,36 +3,13 @@ package service
 import (
 	"sync"
 
-	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 )
-
-type CreateFinalityProviderRequest struct {
-	fpAddr          sdk.AccAddress
-	btcPubKey       *bbntypes.BIP340PubKey
-	pop             *btcstakingtypes.ProofOfPossessionBTC
-	description     *stakingtypes.Description
-	commission      *sdkmath.LegacyDec
-	errResponse     chan error
-	successResponse chan *RegisterFinalityProviderResponse
-}
-
-type RegisterFinalityProviderResponse struct {
-	txHash string
-}
-
-type CreateFinalityProviderResult struct {
-	FpInfo *proto.FinalityProviderInfo
-	TxHash string
-}
 
 type fpState struct {
 	mu sync.Mutex

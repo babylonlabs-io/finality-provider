@@ -152,7 +152,7 @@ func (fp *FinalityProviderInstance) Stop() error {
 	close(fp.quit)
 	fp.wg.Wait()
 
-	fp.logger.Info("the finality-provider instance %s is successfully stopped", zap.String("pk", fp.GetBtcPkHex()))
+	fp.logger.Info("the finality-provider instance is successfully stopped", zap.String("pk", fp.GetBtcPkHex()))
 
 	return nil
 }
