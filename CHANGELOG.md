@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v0.13.0
+
 ### Improvements
 
 * [#175](https://github.com/babylonlabs-io/finality-provider/pull/175) adds: `eotsd version` command
@@ -47,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#190](https://github.com/babylonlabs-io/finality-provider/pull/190) Benchmark pub rand
 * [#193](https://github.com/babylonlabs-io/finality-provider/pull/193) adds unsafeSignEOTS for e2e tests
 * [#195](https://github.com/babylonlabs-io/finality-provider/pull/195) Not block unjailing
+* [#197](https://github.com/babylonlabs-io/finality-provider/pull/197) Bump Babylon to v0.18.0
 
 ### Bug Fixes
 
