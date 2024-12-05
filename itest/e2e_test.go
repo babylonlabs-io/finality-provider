@@ -1,6 +1,3 @@
-//go:build e2e
-// +build e2e
-
 package e2etest
 
 import (
@@ -85,7 +82,7 @@ func TestDoubleSigning(t *testing.T) {
 	finalizedBlocks := tm.WaitForNFinalizedBlocks(t, 1)
 
 	// test duplicate vote which should be ignored
-	res, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(finalizedBlocks[0])
+	res, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(finalizedBlocks[0], false)
 	require.NoError(t, err)
 	require.Nil(t, extractedKey)
 	require.Empty(t, res)
@@ -98,7 +95,13 @@ func TestDoubleSigning(t *testing.T) {
 		Height: finalizedBlocks[0].Height,
 		Hash:   datagen.GenRandomByteArray(r, 32),
 	}
-	_, extractedKey, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b)
+
+	// confirm we have double sign protection
+	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b, true)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "double sign")
+
+	_, extractedKey, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b, false)
 	require.NoError(t, err)
 	require.NotNil(t, extractedKey)
 	localKey := tm.GetFpPrivKey(t, fpIns.GetBtcPkBIP340().MustMarshal())

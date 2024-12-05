@@ -28,10 +28,13 @@ type EOTSManager interface {
 	// SignEOTS signs an EOTS using the private key of the finality provider and the corresponding
 	// secret randomness of the given chain at the given height
 	// It fails if the finality provider does not exist or there's no randomness committed to the given height
-	// or passPhrase is incorrect
+	// or passPhrase is incorrect. Has built-in anti-slashing mechanism to ensure signature
+	// for the same height will not be signed twice.
 	SignEOTS(uid []byte, chainID []byte, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error)
 
-	// UnsafeSignEOTS should only be used in e2e tests for demonstration purposes. Use SignEOTS for real operations
+	// UnsafeSignEOTS should only be used in e2e tests for demonstration purposes.
+	// Does not offer double sign protection.
+	// Use SignEOTS for real operations.
 	UnsafeSignEOTS(uid []byte, chainID []byte, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error)
 
 	// SignSchnorrSig signs a Schnorr signature using the private key of the finality provider

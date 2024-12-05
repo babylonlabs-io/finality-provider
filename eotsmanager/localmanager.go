@@ -205,6 +205,14 @@ func (lm *LocalEOTSManager) SignEOTS(fpPk []byte, chainID []byte, msg []byte, he
 			return &s, nil
 		}
 
+		lm.logger.Error(
+			"double sign error protection",
+			zap.String("fp", hex.EncodeToString(fpPk)),
+			zap.String("msg", hex.EncodeToString(msg)),
+			zap.Uint64("height", height),
+			zap.String("chainID", string(chainID)),
+		)
+
 		return nil, eotstypes.ErrDoubleSign
 	}
 
