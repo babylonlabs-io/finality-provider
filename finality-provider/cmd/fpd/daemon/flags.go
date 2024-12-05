@@ -11,6 +11,7 @@ const (
 	hdPathFlag           = "hd-path"
 	chainIDFlag          = "chain-id"
 	signedFlag           = "signed"
+	checkDoubleSignFlag  = "check-double-sign"
 
 	// flags for description
 	monikerFlag         = "moniker"
