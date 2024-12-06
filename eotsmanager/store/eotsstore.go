@@ -1,7 +1,6 @@
 package store
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"time"
@@ -170,11 +169,4 @@ func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*Signi
 	res.FromProto(protoRes)
 
 	return res, true, nil
-}
-
-// Converts an uint64 value to a byte slice.
-func uint64ToBytes(v uint64) []byte {
-	var buf [8]byte
-	binary.BigEndian.PutUint64(buf[:], v)
-	return buf[:]
 }
