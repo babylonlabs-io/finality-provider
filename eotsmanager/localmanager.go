@@ -195,17 +195,17 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 }
 
 func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error) {
-	record, found, err := lm.es.GetSignRecord(height)
+	record, found, err := lm.es.GetSignRecord(eotsPk, chainID, height)
 	if err != nil {
 		return nil, fmt.Errorf("error getting sign record: %w", err)
 	}
 
 	if found {
-		if bytes.Equal(msg, record.BlockHash) {
+		if bytes.Equal(msg, record.Msg) {
 			var s btcec.ModNScalar
 			s.SetByteSlice(record.Signature)
 
-			lm.logger.Error(
+			lm.logger.Warn(
 				"duplicate sign requested",
 				zap.String("eots_pk", hex.EncodeToString(eotsPk)),
 				zap.String("hash", hex.EncodeToString(msg)),
@@ -247,7 +247,7 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 	}
 
 	b := signedBytes.Bytes()
-	if err := lm.es.SaveSignRecord(height, msg, eotsPk, b[:]); err != nil {
+	if err := lm.es.SaveSignRecord(height, chainID, msg, eotsPk, b[:]); err != nil {
 		return nil, fmt.Errorf("failed to save signing record: %w", err)
 	}
 
