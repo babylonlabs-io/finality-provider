@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v0.13.1
+
 ### Bug Fixes
 
 * [#199](https://github.com/babylonlabs-io/finality-provider/pull/199) EOTS signing for multiple finality providers
