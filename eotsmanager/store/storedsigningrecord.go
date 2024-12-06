@@ -1,9 +1,6 @@
 package store
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/proto"
@@ -21,9 +18,16 @@ func (s *SigningRecord) FromProto(sr *proto.SigningRecord) {
 	s.Signature = sr.EotsSig
 }
 
-func getSignRecordKey(pk, chainID []byte, height uint64) []byte {
-	// calculate the randomn hash of the key concatenated with chainID and height
-	digest := hmac.New(sha256.New, pk)
-	digest.Write(append(sdk.Uint64ToBigEndian(height), chainID...))
-	return digest.Sum(nil)
+// the record key is (chainID || pk || height)
+func getSignRecordKey(chainID, pk []byte, height uint64) []byte {
+	// Convert height to bytes
+	heightBytes := sdk.Uint64ToBigEndian(height)
+
+	// Concatenate all components to create the key
+	key := make([]byte, 0, len(pk)+len(chainID)+len(heightBytes))
+	key = append(key, chainID...)
+	key = append(key, pk...)
+	key = append(key, heightBytes...)
+
+	return key
 }

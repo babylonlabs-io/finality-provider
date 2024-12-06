@@ -113,7 +113,7 @@ func (s *EOTSStore) SaveSignRecord(
 	publicKey []byte,
 	signature []byte,
 ) error {
-	key := getSignRecordKey(publicKey, chainID, height)
+	key := getSignRecordKey(chainID, publicKey, height)
 
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		bucket := tx.ReadWriteBucket(signRecordBucketName)
@@ -141,7 +141,7 @@ func (s *EOTSStore) SaveSignRecord(
 }
 
 func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*SigningRecord, bool, error) {
-	key := getSignRecordKey(eotsPk, chainID, height)
+	key := getSignRecordKey(chainID, eotsPk, height)
 	protoRes := &proto.SigningRecord{}
 
 	err := s.db.View(func(tx kvdb.RTx) error {
