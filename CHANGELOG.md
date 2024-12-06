@@ -40,6 +40,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Bug Fixes
 
 * [#199](https://github.com/babylonlabs-io/finality-provider/pull/199) EOTS signing for multiple finality providers
+* [#203](https://github.com/babylonlabs-io/finality-provider/pull/203) fpd cli: Withdraw rewards and set withdraw addr
+
 
 ## v0.13.0
 
