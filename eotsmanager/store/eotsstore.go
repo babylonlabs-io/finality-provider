@@ -1,12 +1,13 @@
 package store
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/proto"
-	pm "google.golang.org/protobuf/proto"
 	"time"
+
+	pm "google.golang.org/protobuf/proto"
+
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/proto"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -107,11 +108,12 @@ func (s *EOTSStore) GetEOTSKeyName(pk []byte) (string, error) {
 
 func (s *EOTSStore) SaveSignRecord(
 	height uint64,
-	blockHash []byte,
+	chainID []byte,
+	msg []byte,
 	publicKey []byte,
 	signature []byte,
 ) error {
-	key := uint64ToBytes(height)
+	key := getSignRecordKey(chainID, publicKey, height)
 
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		bucket := tx.ReadWriteBucket(signRecordBucketName)
@@ -124,9 +126,8 @@ func (s *EOTSStore) SaveSignRecord(
 		}
 
 		signRecord := &proto.SigningRecord{
-			BlockHash: blockHash,
-			PublicKey: publicKey,
-			Signature: signature,
+			Msg:       msg,
+			EotsSig:   signature,
 			Timestamp: time.Now().UnixMilli(),
 		}
 
@@ -139,8 +140,8 @@ func (s *EOTSStore) SaveSignRecord(
 	})
 }
 
-func (s *EOTSStore) GetSignRecord(height uint64) (*SigningRecord, bool, error) {
-	key := uint64ToBytes(height)
+func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*SigningRecord, bool, error) {
+	key := getSignRecordKey(chainID, eotsPk, height)
 	protoRes := &proto.SigningRecord{}
 
 	err := s.db.View(func(tx kvdb.RTx) error {
@@ -168,11 +169,4 @@ func (s *EOTSStore) GetSignRecord(height uint64) (*SigningRecord, bool, error) {
 	res.FromProto(protoRes)
 
 	return res, true, nil
-}
-
-// Converts an uint64 value to a byte slice.
-func uint64ToBytes(v uint64) []byte {
-	var buf [8]byte
-	binary.BigEndian.PutUint64(buf[:], v)
-	return buf[:]
 }

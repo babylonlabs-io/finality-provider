@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/metrics"
 	"strings"
 	"sync"
+
+	"github.com/babylonlabs-io/finality-provider/metrics"
 
 	"github.com/babylonlabs-io/babylon/crypto/eots"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -193,22 +194,32 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 	return prList, nil
 }
 
-func (lm *LocalEOTSManager) SignEOTS(fpPk []byte, chainID []byte, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error) {
-	record, found, err := lm.es.GetSignRecord(height)
+func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error) {
+	record, found, err := lm.es.GetSignRecord(eotsPk, chainID, height)
 	if err != nil {
 		return nil, fmt.Errorf("error getting sign record: %w", err)
-	} else if found {
-		if bytes.Equal(msg, record.BlockHash) {
+	}
+
+	if found {
+		if bytes.Equal(msg, record.Msg) {
 			var s btcec.ModNScalar
 			s.SetByteSlice(record.Signature)
+
+			lm.logger.Warn(
+				"duplicate sign requested",
+				zap.String("eots_pk", hex.EncodeToString(eotsPk)),
+				zap.String("hash", hex.EncodeToString(msg)),
+				zap.Uint64("height", height),
+				zap.String("chainID", string(chainID)),
+			)
 
 			return &s, nil
 		}
 
 		lm.logger.Error(
-			"double sign error protection",
-			zap.String("fp", hex.EncodeToString(fpPk)),
-			zap.String("msg", hex.EncodeToString(msg)),
+			"double sign requested",
+			zap.String("eots_pk", hex.EncodeToString(eotsPk)),
+			zap.String("hash", hex.EncodeToString(msg)),
 			zap.Uint64("height", height),
 			zap.String("chainID", string(chainID)),
 		)
@@ -216,27 +227,27 @@ func (lm *LocalEOTSManager) SignEOTS(fpPk []byte, chainID []byte, msg []byte, he
 		return nil, eotstypes.ErrDoubleSign
 	}
 
-	privRand, _, err := lm.getRandomnessPair(fpPk, chainID, height, passphrase)
+	privRand, _, err := lm.getRandomnessPair(eotsPk, chainID, height, passphrase)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get private randomness: %w", err)
 	}
 
-	privKey, err := lm.getEOTSPrivKey(fpPk, passphrase)
+	privKey, err := lm.getEOTSPrivKey(eotsPk, passphrase)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
 	}
 
 	// Update metrics
-	lm.metrics.IncrementEotsFpTotalEotsSignCounter(hex.EncodeToString(fpPk))
-	lm.metrics.SetEotsFpLastEotsSignHeight(hex.EncodeToString(fpPk), float64(height))
+	lm.metrics.IncrementEotsFpTotalEotsSignCounter(hex.EncodeToString(eotsPk))
+	lm.metrics.SetEotsFpLastEotsSignHeight(hex.EncodeToString(eotsPk), float64(height))
 
 	signedBytes, err := eots.Sign(privKey, privRand, msg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to sign eots")
 	}
 
 	b := signedBytes.Bytes()
-	if err := lm.es.SaveSignRecord(height, msg, fpPk, b[:]); err != nil {
+	if err := lm.es.SaveSignRecord(height, chainID, msg, eotsPk, b[:]); err != nil {
 		return nil, fmt.Errorf("failed to save signing record: %w", err)
 	}
 
