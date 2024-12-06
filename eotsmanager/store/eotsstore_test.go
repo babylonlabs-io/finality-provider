@@ -1,14 +1,13 @@
 package store_test
 
 import (
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/proto"
-	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-	"github.com/stretchr/testify/require"
 	"math/rand"
 	"os"
 	"testing"
-	"time"
+
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	"github.com/btcsuite/btcd/btcec/v2/schnorr"
+	"github.com/stretchr/testify/require"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
@@ -88,41 +87,40 @@ func FuzzSignStore(f *testing.F) {
 			require.NoError(t, err)
 		}()
 
-		expectedRecord := proto.SigningRecord{
-			BlockHash: testutil.GenRandomByteArray(r, 32),
-			PublicKey: testutil.GenRandomByteArray(r, 32),
-			Signature: testutil.GenRandomByteArray(r, 32),
-			Timestamp: time.Now().UnixMilli(),
-		}
 		expectedHeight := r.Uint64()
+		pk := testutil.GenRandomByteArray(r, 32)
+		msg := testutil.GenRandomByteArray(r, 32)
+		eotsSig := testutil.GenRandomByteArray(r, 32)
 
+		chainID := []byte("test-chain")
 		// save for the first time
 		err = vs.SaveSignRecord(
 			expectedHeight,
-			expectedRecord.BlockHash,
-			expectedRecord.PublicKey,
-			expectedRecord.Signature,
+			chainID,
+			msg,
+			pk,
+			eotsSig,
 		)
 		require.NoError(t, err)
 
 		// try to save the record at the same height
 		err = vs.SaveSignRecord(
 			expectedHeight,
-			expectedRecord.BlockHash,
-			expectedRecord.PublicKey,
-			expectedRecord.Signature,
+			chainID,
+			msg,
+			pk,
+			eotsSig,
 		)
 		require.ErrorIs(t, err, store.ErrDuplicateSignRecord)
 
-		signRecordFromDB, found, err := vs.GetSignRecord(expectedHeight)
+		signRecordFromDB, found, err := vs.GetSignRecord(pk, chainID, expectedHeight)
 		require.True(t, found)
 		require.NoError(t, err)
-		require.Equal(t, expectedRecord.PublicKey, signRecordFromDB.PublicKey)
-		require.Equal(t, expectedRecord.BlockHash, signRecordFromDB.BlockHash)
-		require.Equal(t, expectedRecord.Signature, signRecordFromDB.Signature)
+		require.Equal(t, msg, signRecordFromDB.Msg)
+		require.Equal(t, eotsSig, signRecordFromDB.Signature)
 
 		rndHeight := r.Uint64()
-		_, found, err = vs.GetSignRecord(rndHeight)
+		_, found, err = vs.GetSignRecord(pk, chainID, rndHeight)
 		require.NoError(t, err)
 		require.False(t, found)
 	})
