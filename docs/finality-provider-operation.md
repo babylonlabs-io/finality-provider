@@ -615,4 +615,34 @@ removal from the active set.
 > ⚠️ **Critical**: Slashing is irreversible and results in
 > permanent removal from the network.
 
-<!-- TODO: PROMETHEUS METRICS -->
+### 5.5 Prometheus
+
+The finality provider exposes Prometheus metrics for monitoring your 
+finality provider. The metrics endpoint is configurable in `fpd.conf`:
+
+#### Core Metrics
+
+1. **Status for Finality Providers**
+   - `fp_status`: Current status of a finality provider
+   - `babylon_tip_height`: The current tip height of the Babylon network
+   - `last_polled_height`: The most recent block height checked by the poller
+
+2. **Key Operations**
+   - `fp_seconds_since_last_vote`: Seconds since the last finality sig vote
+   - `fp_seconds_since_last_randomness`: Seconds since the last public 
+      randomness commitment
+   - `fp_total_failed_votes`: The total number of failed votes
+   - `fp_total_failed_randomness`: The total number of failed 
+      randomness commitments
+
+Each metric with `fp_` prefix includes the finality provider's BTC public key 
+hex as a label.
+
+> 💡 **Tip**: Monitor these metrics to detect issues before they lead to jailing:
+> - Large gaps in `fp_seconds_since_last_vote`
+> - Increasing `fp_total_failed_votes`
+
+For a complete list of available metrics, see:
+- Finality Provider metrics: [fp_collectors.go](../metrics/fp_collectors.go)
+- EOTS metrics: [eots_collectors.go](../metrics/eots_collectors.go)
+
