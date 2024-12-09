@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#207](https://github.com/babylonlabs-io/finality-provider/pull/207) create finality provider from JSON file
+
 ## v0.13.1
 
 ### Bug Fixes

@@ -12,6 +12,7 @@ const (
 	chainIDFlag          = "chain-id"
 	signedFlag           = "signed"
 	checkDoubleSignFlag  = "check-double-sign"
+	fromFile             = "from-file"
 
 	// flags for description
 	monikerFlag         = "moniker"
