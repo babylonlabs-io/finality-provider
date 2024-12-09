@@ -661,3 +661,7 @@ hex as a label.
 > - Large gaps in `fp_seconds_since_last_vote`
 > - Increasing `fp_total_failed_votes`
 
+For a complete list of available metrics, see:
+- Finality Provider metrics: [fp_collectors.go](../metrics/fp_collectors.go)
+- EOTS metrics: [eots_collectors.go](../metrics/eots_collectors.go)
+
