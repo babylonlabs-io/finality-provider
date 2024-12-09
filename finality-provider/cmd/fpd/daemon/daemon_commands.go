@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 
 	"cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/types"
@@ -74,9 +76,33 @@ func CommandCreateFP() *cobra.Command {
 		Short:   "Create a finality provider object and save it in database.",
 		Long: "Create a new finality provider object and store it in the finality provider database. " +
 			"It needs to have an operating EOTS manager available and running.",
-		Example: fmt.Sprintf(`fpd create-finality-provider --daemon-address %s ...`, defaultFpdDaemonAddress),
-		Args:    cobra.NoArgs,
-		RunE:    fpcmd.RunEWithClientCtx(runCommandCreateFP),
+		Example: strings.TrimSpace(
+			fmt.Sprintf(`
+Either by specifying all flags manually:
+
+$fpd create-finality-provider --daemon-address %s ...
+
+Or providing the path to finality-provider.json:
+$fpd create-finality-provider path/to/finality-provider.json
+
+Where finality-provider.json contains:
+
+{
+  "daemonAddress": "The RPC server address of fpd (e.g. 127.0.0.1:12581)",
+  "keyName": "The unique key name of the finality provider's Babylon account",
+  "chainID": "The identifier of the consumer chain",
+  "passphrase": "The pass phrase used to encrypt the keys",
+  "commissionRate": "The commission rate for the finality provider, e.g., 0.05"",
+  "moniker": ""A human-readable name for the finality provider",
+  "identity": "A optional identity signature",
+  "website": "Validator's (optional) website",
+  "securityContract": "Validator's (optional) security contact email",
+  "details": "Validator's (optional) details",
+  "eotsPK": "The hex string of the finality provider's EOTS public key"
+}
+`, defaultFpdDaemonAddress)),
+		Args: cobra.NoArgs,
+		RunE: fpcmd.RunEWithClientCtx(runCommandCreateFP),
 	}
 
 	f := cmd.Flags()
@@ -92,22 +118,29 @@ func CommandCreateFP() *cobra.Command {
 	f.String(securityContactFlag, "", "An email for security contact")
 	f.String(detailsFlag, "", "Other optional details")
 	f.String(fpEotsPkFlag, "", "The hex string of the finality provider's EOTS public key")
+	f.String(fromFile, "", "Path to a json file containing finality provider data")
 
-	// make flags required
-	if err := cmd.MarkFlagRequired(chainIDFlag); err != nil {
-		panic(err)
-	}
-	if err := cmd.MarkFlagRequired(keyNameFlag); err != nil {
-		panic(err)
-	}
-	if err := cmd.MarkFlagRequired(monikerFlag); err != nil {
-		panic(err)
-	}
-	if err := cmd.MarkFlagRequired(commissionRateFlag); err != nil {
-		panic(err)
-	}
-	if err := cmd.MarkFlagRequired(fpEotsPkFlag); err != nil {
-		panic(err)
+	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		fromFilePath, _ := cmd.Flags().GetString(fromFile)
+		if fromFilePath == "" {
+			// Mark flags as required only if --from-file is not provided
+			if err := cmd.MarkFlagRequired(chainIDFlag); err != nil {
+				return err
+			}
+			if err := cmd.MarkFlagRequired(keyNameFlag); err != nil {
+				return err
+			}
+			if err := cmd.MarkFlagRequired(monikerFlag); err != nil {
+				return err
+			}
+			if err := cmd.MarkFlagRequired(commissionRateFlag); err != nil {
+				return err
+			}
+			if err := cmd.MarkFlagRequired(fpEotsPkFlag); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
 	return cmd
@@ -115,35 +148,26 @@ func CommandCreateFP() *cobra.Command {
 
 func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	flags := cmd.Flags()
-	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
+
+	fpJsonPath, err := flags.GetString(fromFile)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", fromFile, err)
 	}
 
-	commissionRateStr, err := flags.GetString(commissionRateFlag)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", commissionRateFlag, err)
-	}
-	commissionRate, err := math.LegacyNewDecFromStr(commissionRateStr)
-	if err != nil {
-		return fmt.Errorf("invalid commission rate: %w", err)
-	}
-
-	description, err := getDescriptionFromFlags(flags)
-	if err != nil {
-		return fmt.Errorf("invalid description: %w", err)
-	}
-
-	keyName, err := loadKeyName(ctx.HomeDir, cmd)
-	if err != nil {
-		return fmt.Errorf("not able to load key name: %w", err)
+	var fp *parsedFinalityProvider
+	if fpJsonPath != "" {
+		fp, err = parseFinalityProviderJSON(fpJsonPath, ctx.HomeDir)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		fp, err = parseFinalityProviderFlags(cmd, ctx.HomeDir)
+		if err != nil {
+			panic(err)
+		}
 	}
 
-	if keyName == "" {
-		return fmt.Errorf("keyname cannot be empty")
-	}
-
-	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
+	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(fp.daemonAddress)
 	if err != nil {
 		return err
 	}
@@ -153,37 +177,14 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		}
 	}()
 
-	chainID, err := flags.GetString(chainIDFlag)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", chainIDFlag, err)
-	}
-
-	if chainID == "" {
-		return fmt.Errorf("chain-id cannot be empty")
-	}
-
-	passphrase, err := flags.GetString(passphraseFlag)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", passphraseFlag, err)
-	}
-
-	eotsPkHex, err := flags.GetString(fpEotsPkFlag)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpEotsPkFlag, err)
-	}
-
-	if eotsPkHex == "" {
-		return fmt.Errorf("eots-pk cannot be empty")
-	}
-
 	res, err := client.CreateFinalityProvider(
 		context.Background(),
-		keyName,
-		chainID,
-		eotsPkHex,
-		passphrase,
-		description,
-		&commissionRate,
+		fp.keyName,
+		fp.chainID,
+		fp.eotsPK,
+		fp.passphrase,
+		fp.description,
+		&fp.commissionRate,
 	)
 	if err != nil {
 		return err
@@ -515,4 +516,155 @@ func loadKeyName(homeDir string, cmd *cobra.Command) (string, error) {
 		return "", fmt.Errorf("the key in config is empty")
 	}
 	return keyName, nil
+}
+
+type parsedFinalityProvider struct {
+	keyName        string
+	chainID        string
+	eotsPK         string
+	passphrase     string
+	daemonAddress  string
+	description    stakingtypes.Description
+	commissionRate math.LegacyDec
+}
+
+func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProvider, error) {
+	type internalFpJSON struct {
+		KeyName          string `json:"keyName"`
+		ChainID          string `json:"chainID"`
+		Passphrase       string `json:"passphrase"`
+		CommissionRate   string `json:"commissionRate"`
+		Moniker          string `json:"moniker"`
+		Identity         string `json:"identity"`
+		Website          string `json:"website"`
+		SecurityContract string `json:"securityContract"`
+		Details          string `json:"details"`
+		EotsPK           string `json:"eotsPK"`
+		DaemonAddress    string `json:"daemonAddress"`
+	}
+
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var fp internalFpJSON
+	if err := json.Unmarshal(contents, &fp); err != nil {
+		return nil, err
+	}
+
+	if fp.DaemonAddress == "" {
+		return nil, fmt.Errorf("daemonAddress is required")
+	}
+
+	if fp.ChainID == "" {
+		return nil, fmt.Errorf("chainID is required")
+	}
+
+	if fp.KeyName == "" {
+		cfg, err := fpcfg.LoadConfig(homeDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load config from %s: %w", fpcfg.CfgFile(homeDir), err)
+		}
+		fp.KeyName = cfg.BabylonConfig.Key
+		if fp.KeyName == "" {
+			return nil, fmt.Errorf("the key is neither in config nor provided in the json file")
+		}
+	}
+
+	if fp.Moniker == "" {
+		return nil, fmt.Errorf("moniker is required")
+	}
+
+	if fp.CommissionRate == "" {
+		return nil, fmt.Errorf("commissionRate is required")
+	}
+
+	if fp.EotsPK == "" {
+		return nil, fmt.Errorf("eotsPK is required")
+	}
+
+	commissionRate, err := math.LegacyNewDecFromStr(fp.CommissionRate)
+	if err != nil {
+		return nil, fmt.Errorf("invalid commission rate: %w", err)
+	}
+
+	description, err := stakingtypes.NewDescription(fp.Moniker, fp.Identity, fp.Website, fp.SecurityContract, fp.Details).EnsureLength()
+	if err != nil {
+		return nil, err
+	}
+
+	return &parsedFinalityProvider{
+		keyName:        fp.KeyName,
+		chainID:        fp.ChainID,
+		eotsPK:         fp.EotsPK,
+		passphrase:     fp.Passphrase,
+		description:    description,
+		commissionRate: commissionRate,
+		daemonAddress:  fp.DaemonAddress,
+	}, nil
+}
+
+func parseFinalityProviderFlags(cmd *cobra.Command, homeDir string) (*parsedFinalityProvider, error) {
+	flags := cmd.Flags()
+	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+	}
+
+	commissionRateStr, err := flags.GetString(commissionRateFlag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read flag %s: %w", commissionRateFlag, err)
+	}
+	commissionRate, err := math.LegacyNewDecFromStr(commissionRateStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid commission rate: %w", err)
+	}
+
+	description, err := getDescriptionFromFlags(flags)
+	if err != nil {
+		return nil, fmt.Errorf("invalid description: %w", err)
+	}
+
+	keyName, err := loadKeyName(homeDir, cmd)
+	if err != nil {
+		return nil, fmt.Errorf("not able to load key name: %w", err)
+	}
+
+	if keyName == "" {
+		return nil, fmt.Errorf("keyname cannot be empty")
+	}
+
+	chainID, err := flags.GetString(chainIDFlag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read flag %s: %w", chainIDFlag, err)
+	}
+
+	if chainID == "" {
+		return nil, fmt.Errorf("chain-id cannot be empty")
+	}
+
+	passphrase, err := flags.GetString(passphraseFlag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read flag %s: %w", passphraseFlag, err)
+	}
+
+	eotsPkHex, err := flags.GetString(fpEotsPkFlag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read flag %s: %w", fpEotsPkFlag, err)
+	}
+
+	if eotsPkHex == "" {
+		return nil, fmt.Errorf("eots-pk cannot be empty")
+	}
+
+	return &parsedFinalityProvider{
+		keyName:        keyName,
+		chainID:        chainID,
+		eotsPK:         eotsPkHex,
+		passphrase:     passphrase,
+		description:    description,
+		commissionRate: commissionRate,
+		daemonAddress:  daemonAddress,
+	}, nil
 }
