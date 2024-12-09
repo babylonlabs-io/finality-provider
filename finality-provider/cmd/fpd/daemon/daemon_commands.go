@@ -120,7 +120,7 @@ Where finality-provider.json contains:
 	f.String(fpEotsPkFlag, "", "The hex string of the finality provider's EOTS public key")
 	f.String(fromFile, "", "Path to a json file containing finality provider data")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		fromFilePath, _ := cmd.Flags().GetString(fromFile)
 		if fromFilePath == "" {
 			// Mark flags as required only if --from-file is not provided
@@ -149,14 +149,14 @@ Where finality-provider.json contains:
 func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	flags := cmd.Flags()
 
-	fpJsonPath, err := flags.GetString(fromFile)
+	fpJSONPath, err := flags.GetString(fromFile)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", fromFile, err)
 	}
 
 	var fp *parsedFinalityProvider
-	if fpJsonPath != "" {
-		fp, err = parseFinalityProviderJSON(fpJsonPath, ctx.HomeDir)
+	if fpJSONPath != "" {
+		fp, err = parseFinalityProviderJSON(fpJSONPath, ctx.HomeDir)
 		if err != nil {
 			panic(err)
 		}
