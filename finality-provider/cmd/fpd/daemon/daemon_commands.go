@@ -543,6 +543,7 @@ func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProv
 		DaemonAddress    string `json:"daemonAddress"`
 	}
 
+	// #nosec G304 - The log file path is provided by the user and not externally
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
