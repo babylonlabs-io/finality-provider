@@ -35,7 +35,7 @@ func main() {
 		daemon.CommandInit(), daemon.CommandStart(), daemon.CommandKeys(),
 		daemon.CommandGetDaemonInfo(), daemon.CommandCreateFP(), daemon.CommandLsFP(),
 		daemon.CommandInfoFP(), daemon.CommandAddFinalitySig(),
-		daemon.CommandExportFP(), daemon.CommandTxs(), daemon.CommandUnjailFP(),
+		daemon.CommandTxs(), daemon.CommandUnjailFP(),
 		daemon.CommandEditFinalityDescription(), version.CommandVersion("fpd"),
 		daemon.CommandCommitPubRand(),
 	)

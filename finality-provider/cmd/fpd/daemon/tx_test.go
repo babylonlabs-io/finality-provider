@@ -117,7 +117,7 @@ func rootCmd(outputBuff *bytes.Buffer) *cobra.Command {
 		daemon.CommandInit(), daemon.CommandStart(), daemon.CommandKeys(),
 		daemon.CommandGetDaemonInfo(), daemon.CommandCreateFP(), daemon.CommandLsFP(),
 		daemon.CommandInfoFP(), daemon.CommandAddFinalitySig(),
-		daemon.CommandExportFP(), daemon.CommandTxs(),
+		daemon.CommandTxs(),
 	)
 
 	return cmd
