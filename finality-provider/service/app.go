@@ -12,7 +12,6 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/lightningnetwork/lnd/kvdb"
@@ -457,27 +456,6 @@ func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntyp
 	pop.BtcSig = bbntypes.NewBIP340SignatureFromBTCSig(sig).MustMarshal()
 
 	return pop, nil
-}
-
-// loadChainKeyring checks the keyring by loading or creating a chain key.
-func (app *FinalityProviderApp) loadChainKeyring(
-	keyName, passPhrase, hdPath string,
-) (*fpkr.ChainKeyringController, *secp256k1.PrivKey, error) {
-	kr, err := fpkr.NewChainKeyringControllerWithKeyring(app.kr, keyName, app.input)
-	if err != nil {
-		return nil, nil, err
-	}
-	chainSk, err := kr.GetChainPrivKey(passPhrase)
-	if err != nil {
-		// the chain key does not exist, should create the chain key first
-		keyInfo, err := kr.CreateChainKey(passPhrase, hdPath, "")
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create chain key %s: %w", keyName, err)
-		}
-		chainSk = &secp256k1.PrivKey{Key: keyInfo.PrivateKey.Serialize()}
-	}
-
-	return kr, chainSk, nil
 }
 
 func (app *FinalityProviderApp) startFinalityProviderInstance(

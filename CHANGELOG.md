@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 * [#207](https://github.com/babylonlabs-io/finality-provider/pull/207) create finality provider from JSON file
 * [#208](https://github.com/babylonlabs-io/finality-provider/pull/208) Remove sync fp status loop
+* [#211](https://github.com/babylonlabs-io/finality-provider/pull/211) Clean up unused cmd
 
 ## v0.13.1
 
