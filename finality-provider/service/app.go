@@ -191,60 +191,83 @@ func (app *FinalityProviderApp) StartFinalityProvider(fpPk *bbntypes.BIP340PubKe
 	return nil
 }
 
-// SyncFinalityProviderStatus syncs the status of the finality-providers with the chain.
-func (app *FinalityProviderApp) SyncFinalityProviderStatus() (bool, error) {
-	var fpInstanceRunning bool
-	latestBlock, err := app.cc.QueryBestBlock()
-	if err != nil {
-		return false, err
-	}
-
+// SyncAllFinalityProvidersStatus syncs the status of all the stored finality providers with the chain.
+// it should be called before a fp instance is started
+func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 	fps, err := app.fps.GetAllStoredFinalityProviders()
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	for _, fp := range fps {
-		vp, err := app.cc.QueryFinalityProviderVotingPower(fp.BtcPk, latestBlock.Height)
+		latestBlock, err := app.cc.QueryBestBlock()
 		if err != nil {
-			continue
+			return err
 		}
 
-		bip340PubKey := fp.GetBIP340BTCPK()
-		if app.IsFinalityProviderRunning(bip340PubKey) {
-			// there is a instance running, no need to keep syncing
-			fpInstanceRunning = true
-			// if it is already running, no need to update status
-			continue
+		pkHex := fp.GetBIP340BTCPK().MarshalHex()
+		power, err := app.cc.QueryFinalityProviderVotingPower(fp.BtcPk, latestBlock.Height)
+		if err != nil {
+			return fmt.Errorf("failed to query voting power for finality provider %s at height %d: %w",
+				fp.GetBIP340BTCPK().MarshalHex(), latestBlock.Height, err)
 		}
 
+		// power > 0 (slashed_height must > 0), set status to ACTIVE
 		oldStatus := fp.Status
-		newStatus, err := app.fps.UpdateFpStatusFromVotingPower(vp, fp)
-		if err != nil {
-			return false, err
-		}
-
-		if oldStatus != newStatus {
-			app.logger.Info(
-				"Update FP status",
-				zap.String("fp_addr", fp.FPAddr),
-				zap.String("old_status", oldStatus.String()),
-				zap.String("new_status", newStatus.String()),
-			)
-			fp.Status = newStatus
-		}
-
-		if !fp.ShouldStart() {
+		if power > 0 {
+			if oldStatus != proto.FinalityProviderStatus_ACTIVE {
+				fp.Status = proto.FinalityProviderStatus_ACTIVE
+				app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_ACTIVE)
+				app.logger.Debug(
+					"the finality-provider status is changed to ACTIVE",
+					zap.String("fp_btc_pk", pkHex),
+					zap.String("old_status", oldStatus.String()),
+					zap.Uint64("power", power),
+				)
+			}
 			continue
 		}
-
-		if err := app.StartFinalityProvider(bip340PubKey, ""); err != nil {
-			return false, err
+		slashed, jailed, err := app.cc.QueryFinalityProviderSlashedOrJailed(fp.BtcPk)
+		if err != nil {
+			return err
 		}
-		fpInstanceRunning = true
+		if slashed {
+			app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_SLASHED)
+
+			app.logger.Debug(
+				"the finality-provider status is changed to SLAHED",
+				zap.String("fp_btc_pk", pkHex),
+				zap.String("old_status", oldStatus.String()),
+			)
+
+			continue
+		}
+		if jailed {
+			app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_JAILED)
+
+			app.logger.Debug(
+				"the finality-provider status is changed to JAILED",
+				zap.String("fp_btc_pk", pkHex),
+				zap.String("old_status", oldStatus.String()),
+			)
+
+			continue
+		}
+		// power == 0 and slashed_height == 0, change to INACTIVE if the current status is ACTIVE
+		if oldStatus == proto.FinalityProviderStatus_ACTIVE {
+			app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_INACTIVE)
+
+			app.logger.Debug(
+				"the finality-provider status is changed to INACTIVE",
+				zap.String("fp_btc_pk", pkHex),
+				zap.String("old_status", oldStatus.String()),
+			)
+
+			continue
+		}
 	}
 
-	return fpInstanceRunning, nil
+	return nil
 }
 
 // Start starts only the finality-provider daemon without any finality-provider instances
@@ -253,8 +276,12 @@ func (app *FinalityProviderApp) Start() error {
 	app.startOnce.Do(func() {
 		app.logger.Info("Starting FinalityProviderApp")
 
-		app.wg.Add(6)
-		go app.syncChainFpStatusLoop()
+		startErr = app.SyncAllFinalityProvidersStatus()
+		if startErr != nil {
+			return
+		}
+
+		app.wg.Add(5)
 		go app.metricsUpdateLoop()
 		go app.monitorCriticalErr()
 		go app.monitorStatusUpdate()
