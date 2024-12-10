@@ -110,7 +110,7 @@ Where finality-provider.json contains:
 	f.String(sdkflags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 	f.String(chainIDFlag, "", "The identifier of the consumer chain")
 	f.String(passphraseFlag, "", "The pass phrase used to encrypt the keys")
-	f.String(commissionRateFlag, "0.05", "The commission rate for the finality provider, e.g., 0.05")
+	f.String(commissionRateFlag, "", "The commission rate for the finality provider, e.g., 0.05")
 	f.String(monikerFlag, "", "A human-readable name for the finality provider")
 	f.String(identityFlag, "", "An optional identity signature (ex. UPort or Keybase)")
 	f.String(websiteFlag, "", "An optional website link")
