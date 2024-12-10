@@ -123,7 +123,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 }
 
 func FuzzSyncFinalityProviderStatus(f *testing.F) {
-	testutil.AddRandomSeedsToFuzzer(f, 14)
+	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
 
@@ -149,12 +149,24 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 			mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), gomock.Any()).Return(uint64(2), nil).AnyTimes()
 		}
 		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
+		var isSlashedOrJailed int
+		if noVotingPowerTable {
+			// 0 means is slashed, 1 means is jailed, 2 means neither slashed nor jailed
+			isSlashedOrJailed = r.Intn(3)
+			switch isSlashedOrJailed {
+			case 0:
+				mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(true, false, nil).AnyTimes()
+			case 1:
+				mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, true, nil).AnyTimes()
+			case 2:
+				mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, false, nil).AnyTimes()
+			}
+		}
 
 		// Create randomized config
 		pathSuffix := datagen.GenRandomHexStr(r, 10)
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
-		fpCfg.SyncFpStatusInterval = time.Millisecond * 100
 		// no need for other intervals to run
 		fpCfg.StatusUpdateInterval = time.Minute * 10
 		fpCfg.SubmissionRetryInterval = time.Minute * 10
@@ -163,26 +175,22 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockClientController)
 		defer cleanup()
 
-		require.Eventually(t, func() bool {
-			fpInfo, err := app.GetFinalityProviderInfo(fpPk)
-			if err != nil {
-				return false
-			}
+		fpInfo, err := app.GetFinalityProviderInfo(fpPk)
+		require.NoError(t, err)
 
-			expectedStatus := proto.FinalityProviderStatus_ACTIVE
-			if noVotingPowerTable {
+		expectedStatus := proto.FinalityProviderStatus_ACTIVE
+		if noVotingPowerTable {
+			switch isSlashedOrJailed {
+			case 0:
+				expectedStatus = proto.FinalityProviderStatus_SLASHED
+			case 1:
+				expectedStatus = proto.FinalityProviderStatus_JAILED
+			case 2:
 				expectedStatus = proto.FinalityProviderStatus_REGISTERED
 			}
-			fpInstance, err := app.GetFinalityProviderInstance()
-			if err != nil {
-				return false
-			}
+		}
 
-			// TODO: verify why mocks are failing
-			btcPkEqual := fpInstance.GetBtcPk().IsEqual(fpPk.MustToBTCPK())
-			statusEqual := strings.EqualFold(fpInfo.Status, expectedStatus.String())
-			return statusEqual && btcPkEqual
-		}, time.Second*5, time.Millisecond*200, "should eventually be registered or active")
+		require.Equal(t, fpInfo.Status, expectedStatus.String())
 	})
 }
 
@@ -200,7 +208,6 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
 		// use shorter interval for the test to end faster
-		fpCfg.SyncFpStatusInterval = time.Millisecond * 10
 		fpCfg.StatusUpdateInterval = time.Millisecond * 10
 		fpCfg.SubmissionRetryInterval = time.Millisecond * 10
 
@@ -249,51 +256,29 @@ func FuzzStatusUpdate(f *testing.F) {
 		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
 		mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(nil, nil).AnyTimes()
 		mockClientController.EXPECT().SubmitFinalitySig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&types.TxResponse{TxHash: ""}, nil).AnyTimes()
-		var isSlashedOrJailed int
-		if votingPower == 0 {
-			// 0 means is slashed, 1 means is jailed, 2 means neither slashed nor jailed
-			isSlashedOrJailed = r.Intn(3)
-			switch isSlashedOrJailed {
-			case 0:
-				mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(true, false, nil).AnyTimes()
-			case 1:
-				mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, true, nil).AnyTimes()
-			case 2:
-				mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, false, nil).AnyTimes()
-			}
-		}
+		mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, false, nil).AnyTimes()
 
 		// Create randomized config
 		pathSuffix := datagen.GenRandomHexStr(r, 10)
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
 		// use shorter interval for the test to end faster
-		fpCfg.SyncFpStatusInterval = time.Millisecond * 10
-		fpCfg.StatusUpdateInterval = time.Second * 1
+		fpCfg.StatusUpdateInterval = time.Millisecond * 10
 		fpCfg.SubmissionRetryInterval = time.Millisecond * 10
 
 		// Create fp app
-		app, _, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockClientController)
+		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockClientController)
 		defer cleanup()
 
-		var fpIns *service.FinalityProviderInstance
-		var err error
-		require.Eventually(t, func() bool {
-			fpIns, err = app.GetFinalityProviderInstance()
-			return err == nil
-		}, time.Second*5, time.Millisecond*200, "should eventually be registered or active")
+		err := app.StartFinalityProvider(fpPk, passphrase)
+		require.NoError(t, err)
+		fpIns, err := app.GetFinalityProviderInstance()
+		require.NoError(t, err)
 
 		if votingPower > 0 {
 			waitForStatus(t, fpIns, proto.FinalityProviderStatus_ACTIVE)
-		} else {
-			switch {
-			case isSlashedOrJailed == 2 && fpIns.GetStatus() == proto.FinalityProviderStatus_ACTIVE:
-				waitForStatus(t, fpIns, proto.FinalityProviderStatus_INACTIVE)
-			case isSlashedOrJailed == 1:
-				waitForStatus(t, fpIns, proto.FinalityProviderStatus_JAILED)
-			case isSlashedOrJailed == 0:
-				waitForStatus(t, fpIns, proto.FinalityProviderStatus_SLASHED)
-			}
+		} else if fpIns.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
+			waitForStatus(t, fpIns, proto.FinalityProviderStatus_INACTIVE)
 		}
 	})
 }

@@ -32,7 +32,6 @@ const (
 	defaultStatusUpdateInterval        = 20 * time.Second
 	defaultRandomInterval              = 30 * time.Second
 	defaultSubmitRetryInterval         = 1 * time.Second
-	defaultSyncFpStatusInterval        = 30 * time.Second
 	defaultSignatureSubmissionInterval = 1 * time.Second
 	defaultMaxSubmissionRetries        = 20
 	defaultBitcoinNetwork              = "signet"
@@ -65,7 +64,6 @@ type Config struct {
 	StatusUpdateInterval        time.Duration `long:"statusupdateinterval" description:"The interval between each update of finality-provider status"`
 	RandomnessCommitInterval    time.Duration `long:"randomnesscommitinterval" description:"The interval between each attempt to commit public randomness"`
 	SubmissionRetryInterval     time.Duration `long:"submissionretryinterval" description:"The interval between each attempt to submit finality signature or public randomness after a failure"`
-	SyncFpStatusInterval        time.Duration `long:"syncfpstatusinterval" description:"The duration of time that it should sync FP status with the client blockchain"`
 	SignatureSubmissionInterval time.Duration `long:"signaturesubmissioninterval" description:"The interval between each finality signature(s) submission"`
 
 	BitcoinNetwork string `long:"bitcoinnetwork" description:"Bitcoin network to run on" choise:"mainnet" choice:"regtest" choice:"testnet" choice:"simnet" choice:"signet"`
@@ -108,7 +106,6 @@ func DefaultConfigWithHome(homePath string) Config {
 		EOTSManagerAddress:          defaultEOTSManagerAddress,
 		RPCListener:                 DefaultRPCListener,
 		Metrics:                     metrics.DefaultFpConfig(),
-		SyncFpStatusInterval:        defaultSyncFpStatusInterval,
 	}
 
 	if err := cfg.Validate(); err != nil {

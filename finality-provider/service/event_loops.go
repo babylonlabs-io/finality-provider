@@ -46,10 +46,9 @@ type UnjailFinalityProviderResponse struct {
 
 // monitorStatusUpdate periodically check the status of the running finality provider and update
 // it accordingly. We update the status by querying the latest voting power and the slashed_height.
-// In particular, we perform the following status transitions (REGISTERED, ACTIVE, INACTIVE, SLASHED):
-// 1. if power == 0 and slashed_height == 0, if status == ACTIVE, change to INACTIVE, otherwise remain the same
-// 2. if power == 0 and slashed_height > 0, set status to SLASHED and stop and remove the finality-provider instance
-// 3. if power > 0 (slashed_height must > 0), set status to ACTIVE
+// In particular, we perform the following status transitions (REGISTERED, ACTIVE, INACTIVE):
+// 1. if power == 0 and status == ACTIVE, change to INACTIVE
+// 2. if power > 0, change to ACTIVE
 // NOTE: once error occurs, we log and continue as the status update is not critical to the entire program
 func (app *FinalityProviderApp) monitorStatusUpdate() {
 	defer app.wg.Done()
@@ -97,35 +96,6 @@ func (app *FinalityProviderApp) monitorStatusUpdate() {
 						zap.Uint64("power", power),
 					)
 				}
-				continue
-			}
-			slashed, jailed, err := fpi.GetFinalityProviderSlashedOrJailedWithRetry()
-			if err != nil {
-				app.logger.Debug(
-					"failed to get the slashed or jailed status",
-					zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
-					zap.Error(err),
-				)
-				continue
-			}
-			// power == 0 and slashed == true, set status to SLASHED, stop, and remove the finality-provider instance
-			if slashed {
-				app.setFinalityProviderSlashed(fpi)
-				app.logger.Warn(
-					"the finality-provider is slashed",
-					zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
-					zap.String("old_status", oldStatus.String()),
-				)
-				continue
-			}
-			// power == 0 and jailed == true, set status to JAILED, stop, and remove the finality-provider instance
-			if jailed {
-				app.setFinalityProviderJailed(fpi)
-				app.logger.Warn(
-					"the finality-provider is jailed",
-					zap.String("fp_btc_pk", fpi.GetBtcPkHex()),
-					zap.String("old_status", oldStatus.String()),
-				)
 				continue
 			}
 			// power == 0 and slashed_height == 0, change to INACTIVE if the current status is ACTIVE
@@ -309,41 +279,6 @@ func (app *FinalityProviderApp) metricsUpdateLoop() {
 			app.metrics.UpdateFpMetrics(fps)
 		case <-app.quit:
 			app.logger.Info("exiting metrics update loop")
-			return
-		}
-	}
-}
-
-// syncChainFpStatusLoop keeps querying the chain for the finality
-// provider voting power and update the FP status accordingly.
-// If there is some voting power it sets to active, for zero voting power
-// it goes from: CREATED -> REGISTERED or ACTIVE -> INACTIVE.
-// if there is any node running or a new finality provider instance
-// is started, the loop stops.
-func (app *FinalityProviderApp) syncChainFpStatusLoop() {
-	defer app.wg.Done()
-
-	interval := app.config.SyncFpStatusInterval
-	app.logger.Info(
-		"starting sync FP status loop",
-		zap.Float64("interval seconds", interval.Seconds()),
-	)
-	syncFpStatusTicker := time.NewTicker(interval)
-	defer syncFpStatusTicker.Stop()
-
-	for {
-		select {
-		case <-syncFpStatusTicker.C:
-			fpInstanceStarted, err := app.SyncFinalityProviderStatus()
-			if err != nil {
-				app.logger.Error("failed to sync finality-provider status", zap.Error(err))
-			}
-			if fpInstanceStarted {
-				return
-			}
-
-		case <-app.quit:
-			app.logger.Info("exiting sync FP status loop")
 			return
 		}
 	}
