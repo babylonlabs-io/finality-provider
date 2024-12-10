@@ -107,6 +107,12 @@ func (s *FinalityProviderStore) SetFpStatus(btcPk *btcec.PublicKey, status proto
 	return s.setFinalityProviderState(btcPk, setFpStatus)
 }
 
+func (s *FinalityProviderStore) MustSetFpStatus(btcPk *btcec.PublicKey, status proto.FinalityProviderStatus) {
+	if err := s.SetFpStatus(btcPk, status); err != nil {
+		panic(err)
+	}
+}
+
 // UpdateFpStatusFromVotingPower based on the current voting power of the finality provider
 // updates the status, if it has some voting power, sets to active
 func (s *FinalityProviderStore) UpdateFpStatusFromVotingPower(
