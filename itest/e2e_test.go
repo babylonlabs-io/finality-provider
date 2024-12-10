@@ -1,10 +1,12 @@
-//go:build e2e
-// +build e2e
-
 package e2etest
 
 import (
+	"encoding/json"
+	"fmt"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
+	"log"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -239,4 +241,66 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	require.Equal(t, updateFpDesc.Details, oldDesc.Details)
 	require.Equal(t, updateFpDesc.SecurityContact, oldDesc.SecurityContact)
 	require.Equal(t, updatedFp.FinalityProvider.Commission, &rate)
+}
+
+func TestFinalityProviderCreateCmd(t *testing.T) {
+	tm, _ := StartManagerWithFinalityProvider(t)
+	defer tm.Stop(t)
+
+	cmd := daemon.CommandCreateFP()
+
+	eotsKeyName := "eots-key-2"
+	eotsPkBz, err := tm.EOTSClient.CreateKey(eotsKeyName, passphrase, hdPath)
+	require.NoError(t, err)
+	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
+	require.NoError(t, err)
+
+	data := struct {
+		KeyName          string `json:"keyName"`
+		ChainID          string `json:"chainID"`
+		Passphrase       string `json:"passphrase"`
+		CommissionRate   string `json:"commissionRate"`
+		Moniker          string `json:"moniker"`
+		Identity         string `json:"identity"`
+		Website          string `json:"website"`
+		SecurityContract string `json:"securityContract"`
+		Details          string `json:"details"`
+		EotsPK           string `json:"eotsPK"`
+	}{
+		KeyName:          tm.FpConfig.BabylonConfig.Key,
+		ChainID:          testChainID,
+		Passphrase:       passphrase,
+		CommissionRate:   "0.10",
+		Moniker:          "some moniker",
+		Identity:         "F123456789ABCDEF",
+		Website:          "https://fp.example.com",
+		SecurityContract: "https://fp.example.com/security",
+		Details:          "This is a highly secure and reliable fp.",
+		EotsPK:           eotsPk.MarshalHex(),
+	}
+
+	file, err := os.Create(fmt.Sprintf("%s/%s", t.TempDir(), "finality-provider.json"))
+	if err != nil {
+		log.Fatalf("Failed to create file: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Remove(file.Name())
+	})
+
+	if err := json.NewEncoder(file).Encode(data); err != nil {
+		log.Fatalf("Failed to write JSON to file: %v", err)
+	}
+
+	cmd.SetArgs([]string{
+		"--from-file=" + file.Name(),
+		"--daemon-address=" + tm.FpConfig.RPCListener,
+	})
+
+	// Run the command
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	fp, err := tm.BBNClient.QueryFinalityProvider(eotsPk.MustToBTCPK())
+	require.NoError(t, err)
+	require.NotNil(t, fp)
 }
