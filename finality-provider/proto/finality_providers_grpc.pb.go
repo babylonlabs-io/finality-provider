@@ -25,7 +25,6 @@ const (
 	FinalityProviders_UnjailFinalityProvider_FullMethodName    = "/proto.FinalityProviders/UnjailFinalityProvider"
 	FinalityProviders_QueryFinalityProvider_FullMethodName     = "/proto.FinalityProviders/QueryFinalityProvider"
 	FinalityProviders_QueryFinalityProviderList_FullMethodName = "/proto.FinalityProviders/QueryFinalityProviderList"
-	FinalityProviders_SignMessageFromChainKey_FullMethodName   = "/proto.FinalityProviders/SignMessageFromChainKey"
 	FinalityProviders_EditFinalityProvider_FullMethodName      = "/proto.FinalityProviders/EditFinalityProvider"
 )
 
@@ -47,8 +46,6 @@ type FinalityProvidersClient interface {
 	QueryFinalityProvider(ctx context.Context, in *QueryFinalityProviderRequest, opts ...grpc.CallOption) (*QueryFinalityProviderResponse, error)
 	// QueryFinalityProviderList queries a list of finality providers
 	QueryFinalityProviderList(ctx context.Context, in *QueryFinalityProviderListRequest, opts ...grpc.CallOption) (*QueryFinalityProviderListResponse, error)
-	// SignMessageFromChainKey signs a message from the chain keyring.
-	SignMessageFromChainKey(ctx context.Context, in *SignMessageFromChainKeyRequest, opts ...grpc.CallOption) (*SignMessageFromChainKeyResponse, error)
 	// EditFinalityProvider edits finality provider
 	EditFinalityProvider(ctx context.Context, in *EditFinalityProviderRequest, opts ...grpc.CallOption) (*EmptyResponse, error)
 }
@@ -115,15 +112,6 @@ func (c *finalityProvidersClient) QueryFinalityProviderList(ctx context.Context,
 	return out, nil
 }
 
-func (c *finalityProvidersClient) SignMessageFromChainKey(ctx context.Context, in *SignMessageFromChainKeyRequest, opts ...grpc.CallOption) (*SignMessageFromChainKeyResponse, error) {
-	out := new(SignMessageFromChainKeyResponse)
-	err := c.cc.Invoke(ctx, FinalityProviders_SignMessageFromChainKey_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *finalityProvidersClient) EditFinalityProvider(ctx context.Context, in *EditFinalityProviderRequest, opts ...grpc.CallOption) (*EmptyResponse, error) {
 	out := new(EmptyResponse)
 	err := c.cc.Invoke(ctx, FinalityProviders_EditFinalityProvider_FullMethodName, in, out, opts...)
@@ -151,8 +139,6 @@ type FinalityProvidersServer interface {
 	QueryFinalityProvider(context.Context, *QueryFinalityProviderRequest) (*QueryFinalityProviderResponse, error)
 	// QueryFinalityProviderList queries a list of finality providers
 	QueryFinalityProviderList(context.Context, *QueryFinalityProviderListRequest) (*QueryFinalityProviderListResponse, error)
-	// SignMessageFromChainKey signs a message from the chain keyring.
-	SignMessageFromChainKey(context.Context, *SignMessageFromChainKeyRequest) (*SignMessageFromChainKeyResponse, error)
 	// EditFinalityProvider edits finality provider
 	EditFinalityProvider(context.Context, *EditFinalityProviderRequest) (*EmptyResponse, error)
 	mustEmbedUnimplementedFinalityProvidersServer()
@@ -179,9 +165,6 @@ func (UnimplementedFinalityProvidersServer) QueryFinalityProvider(context.Contex
 }
 func (UnimplementedFinalityProvidersServer) QueryFinalityProviderList(context.Context, *QueryFinalityProviderListRequest) (*QueryFinalityProviderListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryFinalityProviderList not implemented")
-}
-func (UnimplementedFinalityProvidersServer) SignMessageFromChainKey(context.Context, *SignMessageFromChainKeyRequest) (*SignMessageFromChainKeyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SignMessageFromChainKey not implemented")
 }
 func (UnimplementedFinalityProvidersServer) EditFinalityProvider(context.Context, *EditFinalityProviderRequest) (*EmptyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EditFinalityProvider not implemented")
@@ -307,24 +290,6 @@ func _FinalityProviders_QueryFinalityProviderList_Handler(srv interface{}, ctx c
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FinalityProviders_SignMessageFromChainKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SignMessageFromChainKeyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(FinalityProvidersServer).SignMessageFromChainKey(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: FinalityProviders_SignMessageFromChainKey_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinalityProvidersServer).SignMessageFromChainKey(ctx, req.(*SignMessageFromChainKeyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _FinalityProviders_EditFinalityProvider_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(EditFinalityProviderRequest)
 	if err := dec(in); err != nil {
@@ -373,10 +338,6 @@ var FinalityProviders_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QueryFinalityProviderList",
 			Handler:    _FinalityProviders_QueryFinalityProviderList_Handler,
-		},
-		{
-			MethodName: "SignMessageFromChainKey",
-			Handler:    _FinalityProviders_SignMessageFromChainKey_Handler,
 		},
 		{
 			MethodName: "EditFinalityProvider",

@@ -33,10 +33,6 @@ service FinalityProviders {
     rpc QueryFinalityProviderList (QueryFinalityProviderListRequest)
         returns (QueryFinalityProviderListResponse);
 
-    // SignMessageFromChainKey signs a message from the chain keyring.
-    rpc SignMessageFromChainKey (SignMessageFromChainKeyRequest)
-        returns (SignMessageFromChainKeyResponse);
-
     // EditFinalityProvider edits finality provider
     rpc EditFinalityProvider (EditFinalityProviderRequest) returns (EmptyResponse);
 }

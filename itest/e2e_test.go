@@ -1,14 +1,18 @@
+//go:build e2e
+// +build e2e
+
 package e2etest
 
 import (
 	"encoding/json"
 	"fmt"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"log"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
+
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
