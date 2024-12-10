@@ -266,7 +266,6 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 		SecurityContract string `json:"securityContract"`
 		Details          string `json:"details"`
 		EotsPK           string `json:"eotsPK"`
-		DaemonAddress    string `json:"daemonAddress"`
 	}{
 		KeyName:          tm.FpConfig.BabylonConfig.Key,
 		ChainID:          testChainID,
@@ -278,7 +277,6 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 		SecurityContract: "https://fp.example.com/security",
 		Details:          "This is a highly secure and reliable fp.",
 		EotsPK:           eotsPk.MarshalHex(),
-		DaemonAddress:    tm.FpConfig.RPCListener,
 	}
 
 	file, err := os.Create(fmt.Sprintf("%s/%s", t.TempDir(), "finality-provider.json"))
@@ -295,6 +293,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 
 	cmd.SetArgs([]string{
 		"--from-file=" + file.Name(),
+		"--daemon-address=" + tm.FpConfig.RPCListener,
 	})
 
 	// Run the command

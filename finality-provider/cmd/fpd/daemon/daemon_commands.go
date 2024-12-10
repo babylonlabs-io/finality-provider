@@ -83,12 +83,11 @@ Either by specifying all flags manually:
 $fpd create-finality-provider --daemon-address %s ...
 
 Or providing the path to finality-provider.json:
-$fpd create-finality-provider path/to/finality-provider.json
+$fpd create-finality-provider --daemon-address %s --from-file /path/to/finality-provider.json
 
 Where finality-provider.json contains:
 
 {
-  "daemonAddress": "The RPC server address of fpd (e.g. 127.0.0.1:12581)",
   "keyName": "The unique key name of the finality provider's Babylon account",
   "chainID": "The identifier of the consumer chain",
   "passphrase": "The pass phrase used to encrypt the keys",
@@ -100,7 +99,7 @@ Where finality-provider.json contains:
   "details": "Validator's (optional) details",
   "eotsPK": "The hex string of the finality provider's EOTS public key"
 }
-`, defaultFpdDaemonAddress)),
+`, defaultFpdDaemonAddress, defaultFpdDaemonAddress)),
 		Args: cobra.NoArgs,
 		RunE: fpcmd.RunEWithClientCtx(runCommandCreateFP),
 	}
@@ -167,17 +166,12 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		}
 	}
 
-	// read flag regardless
 	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
 	}
 
-	if daemonAddress != "" {
-		fp.daemonAddress = daemonAddress
-	}
-
-	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(fp.daemonAddress)
+	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
 		return err
 	}
@@ -533,7 +527,6 @@ type parsedFinalityProvider struct {
 	chainID        string
 	eotsPK         string
 	passphrase     string
-	daemonAddress  string
 	description    stakingtypes.Description
 	commissionRate math.LegacyDec
 }
@@ -550,7 +543,6 @@ func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProv
 		SecurityContract string `json:"securityContract"`
 		Details          string `json:"details"`
 		EotsPK           string `json:"eotsPK"`
-		DaemonAddress    string `json:"daemonAddress"`
 	}
 
 	// #nosec G304 - The log file path is provided by the user and not externally
@@ -562,10 +554,6 @@ func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProv
 	var fp internalFpJSON
 	if err := json.Unmarshal(contents, &fp); err != nil {
 		return nil, err
-	}
-
-	if fp.DaemonAddress == "" {
-		return nil, fmt.Errorf("daemonAddress is required")
 	}
 
 	if fp.ChainID == "" {
@@ -612,16 +600,11 @@ func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProv
 		passphrase:     fp.Passphrase,
 		description:    description,
 		commissionRate: commissionRate,
-		daemonAddress:  fp.DaemonAddress,
 	}, nil
 }
 
 func parseFinalityProviderFlags(cmd *cobra.Command, homeDir string) (*parsedFinalityProvider, error) {
 	flags := cmd.Flags()
-	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
-	}
 
 	commissionRateStr, err := flags.GetString(commissionRateFlag)
 	if err != nil {
@@ -676,6 +659,5 @@ func parseFinalityProviderFlags(cmd *cobra.Command, homeDir string) (*parsedFina
 		passphrase:     passphrase,
 		description:    description,
 		commissionRate: commissionRate,
-		daemonAddress:  daemonAddress,
 	}, nil
 }
