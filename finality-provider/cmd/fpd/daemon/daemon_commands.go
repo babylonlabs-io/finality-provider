@@ -167,6 +167,16 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		}
 	}
 
+	// read flag regardless
+	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+	}
+
+	if daemonAddress != "" {
+		fp.daemonAddress = daemonAddress
+	}
+
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(fp.daemonAddress)
 	if err != nil {
 		return err
