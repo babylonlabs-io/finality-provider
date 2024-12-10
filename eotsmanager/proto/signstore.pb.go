@@ -21,7 +21,7 @@ const (
 )
 
 // SigningRecord represents a record of a signing operation.
-// it is keyed by (public_key || chain_id || height)
+// it is keyed by (chain_id || public_key || height)
 type SigningRecord struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

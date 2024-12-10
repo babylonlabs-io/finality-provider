@@ -459,19 +459,6 @@ func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntyp
 	return pop, nil
 }
 
-// SignRawMsg loads the keyring private key and signs a message.
-func (app *FinalityProviderApp) SignRawMsg(
-	keyName, passPhrase, hdPath string,
-	rawMsgToSign []byte,
-) ([]byte, error) {
-	_, chainSk, err := app.loadChainKeyring(keyName, passPhrase, hdPath)
-	if err != nil {
-		return nil, err
-	}
-
-	return chainSk.Sign(rawMsgToSign)
-}
-
 // loadChainKeyring checks the keyring by loading or creating a chain key.
 func (app *FinalityProviderApp) loadChainKeyring(
 	keyName, passPhrase, hdPath string,
