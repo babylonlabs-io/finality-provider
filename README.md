@@ -12,7 +12,7 @@ systems and consists of three core components:
 A Babylon network node that provides chain data and transaction 
 submission capabilities. While not mandatory, running your own node is 
 strongly recommended for security rather than relying on third-party RPC nodes. 
-See the [Setup Node Guide](https://github.com/babylonlabs-io/networks/tree/main/bbn-5/babylon-node) 
+See the [Setup Node Guide](https://github.com/babylonlabs-io/networks/blob/main/bbn-test-5/babylon-node/README.md) 
 for details.
 2. **Extractable One-Time Signature (EOTS) Manager**:
 A secure key management daemon that handles EOTS key operations, 
