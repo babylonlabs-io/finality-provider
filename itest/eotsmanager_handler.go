@@ -16,12 +16,16 @@ type EOTSServerHandler struct {
 	t           *testing.T
 	interceptor *signal.Interceptor
 	eotsServer  *service.Server
+	Cfg         *config.Config
 }
 
 func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string, shutdownInterceptor signal.Interceptor) *EOTSServerHandler {
 	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
-	logger := zap.NewNop()
+	loggerConfig := zap.NewDevelopmentConfig()
+	loggerConfig.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	logger, err := loggerConfig.Build()
+	require.NoError(t, err)
 	eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, cfg.KeyringBackend, dbBackend, logger)
 	require.NoError(t, err)
 
@@ -31,6 +35,7 @@ func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string, 
 		t:           t,
 		eotsServer:  eotsServer,
 		interceptor: &shutdownInterceptor,
+		Cfg:         cfg,
 	}
 }
 

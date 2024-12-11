@@ -1,6 +1,3 @@
-//go:build e2e
-// +build e2e
-
 package e2etest
 
 import (
@@ -13,6 +10,7 @@ import (
 	"time"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
@@ -32,29 +30,38 @@ var (
 // creation -> registration -> randomness commitment ->
 // activation with BTC delegation and Covenant sig ->
 // vote submission -> block finalization
+// The test runs 2 finality providers connecting to
+// a single EOTS manager
 func TestFinalityProviderLifeCycle(t *testing.T) {
-	tm, fpIns := StartManagerWithFinalityProvider(t)
+	n := 2
+	tm, fps := StartManagerWithFinalityProvider(t, n)
 	defer tm.Stop(t)
 
 	// check the public randomness is committed
-	tm.WaitForFpPubRandTimestamped(t, fpIns)
+	tm.WaitForFpPubRandTimestamped(t, fps[0])
 
 	// send a BTC delegation
-	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, stakingTime, stakingAmount)
+	for _, fp := range fps {
+		_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fp.GetBtcPk()}, stakingTime, stakingAmount)
+	}
 
 	// check the BTC delegation is pending
-	delsResp := tm.WaitForNPendingDels(t, 1)
-	del, err := ParseRespBTCDelToBTCDel(delsResp[0])
-	require.NoError(t, err)
-
-	// send covenant sigs
-	tm.InsertCovenantSigForDelegation(t, del)
+	delsResp := tm.WaitForNPendingDels(t, n)
+	var dels []*bstypes.BTCDelegation
+	for _, delResp := range delsResp {
+		del, err := ParseRespBTCDelToBTCDel(delResp)
+		require.NoError(t, err)
+		dels = append(dels, del)
+		// send covenant sigs
+		tm.InsertCovenantSigForDelegation(t, del)
+	}
 
 	// check the BTC delegation is active
-	_ = tm.WaitForNActiveDels(t, 1)
+	_ = tm.WaitForNActiveDels(t, n)
 
 	// check the last voted block is finalized
-	lastVotedHeight := tm.WaitForFpVoteCast(t, fpIns)
+	lastVotedHeight := tm.WaitForFpVoteCast(t, fps[0])
+
 	tm.CheckBlockFinalization(t, lastVotedHeight, 1)
 	t.Logf("the block at height %v is finalized", lastVotedHeight)
 }
@@ -63,8 +70,10 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 // sends a finality vote over a conflicting block
 // in this case, the BTC private key should be extracted by Babylon
 func TestDoubleSigning(t *testing.T) {
-	tm, fpIns := StartManagerWithFinalityProvider(t)
+	tm, fps := StartManagerWithFinalityProvider(t, 1)
 	defer tm.Stop(t)
+
+	fpIns := fps[0]
 
 	// check the public randomness is committed
 	tm.WaitForFpPubRandTimestamped(t, fpIns)
@@ -121,8 +130,10 @@ func TestDoubleSigning(t *testing.T) {
 
 // TestCatchingUp tests if a fp can catch up after restarted
 func TestCatchingUp(t *testing.T) {
-	tm, fpIns := StartManagerWithFinalityProvider(t)
+	tm, fps := StartManagerWithFinalityProvider(t, 1)
 	defer tm.Stop(t)
+
+	fpIns := fps[0]
 
 	// check the public randomness is committed
 	tm.WaitForFpPubRandTimestamped(t, fpIns)
@@ -168,8 +179,10 @@ func TestCatchingUp(t *testing.T) {
 }
 
 func TestFinalityProviderEditCmd(t *testing.T) {
-	tm, fpIns := StartManagerWithFinalityProvider(t)
+	tm, fps := StartManagerWithFinalityProvider(t, 1)
 	defer tm.Stop(t)
+
+	fpIns := fps[0]
 
 	cmd := daemon.CommandEditFinalityDescription()
 
@@ -192,7 +205,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 
 	args := []string{
 		fpIns.GetBtcPkHex(),
-		"--" + fpdDaemonAddressFlag, tm.FpConfig.RPCListener,
+		"--" + fpdDaemonAddressFlag, fpIns.GetConfig().RPCListener,
 		"--" + monikerFlag, moniker,
 		"--" + websiteFlag, website,
 		"--" + securityContactFlag, securityContact,
@@ -248,7 +261,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 }
 
 func TestFinalityProviderCreateCmd(t *testing.T) {
-	tm, _ := StartManagerWithFinalityProvider(t)
+	tm, _ := StartManagerWithFinalityProvider(t, 1)
 	defer tm.Stop(t)
 
 	cmd := daemon.CommandCreateFP()

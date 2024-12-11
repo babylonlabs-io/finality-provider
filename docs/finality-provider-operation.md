@@ -474,10 +474,12 @@ as a centralized key management system. When starting a finality provider instan
 you specify which EOTS key to use through the `--eots-pk` flag. This allows you 
 to run different finality provider instances using different keys from the same 
 EOTS Manager. Note that someone having access to your EOTS Manager
-RPC will have access to all the EOTS keys held within it
+RPC will have access to all the EOTS keys held within it.
 
 For example, after registering a finality provider, you can start its daemon by 
-providing the EOTS public key `fpd start --eots-pk <hex-string-of-eots-public-key>`
+providing the EOTS public key `fpd start --eots-pk <hex-string-of-eots-public-key>`.
+Note that a single finality provider daemon can only run with a single
+finality provider instance at a time.
 
 ## 5. Finality Provider Operations
 

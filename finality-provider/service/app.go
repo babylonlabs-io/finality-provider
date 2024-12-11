@@ -304,7 +304,7 @@ func (app *FinalityProviderApp) Stop() error {
 			app.logger.Info("stopping finality provider", zap.String("pk", pkHex))
 
 			if err := app.fpIns.Stop(); err != nil {
-				stopErr = err
+				stopErr = fmt.Errorf("failed to close the fp instance: %w", err)
 				return
 			}
 
@@ -313,7 +313,7 @@ func (app *FinalityProviderApp) Stop() error {
 
 		app.logger.Debug("Stopping EOTS manager")
 		if err := app.eotsManager.Close(); err != nil {
-			stopErr = err
+			stopErr = fmt.Errorf("failed to close the EOTS manager: %w", err)
 			return
 		}
 
@@ -473,6 +473,9 @@ func (app *FinalityProviderApp) startFinalityProviderInstance(
 		}
 
 		app.fpIns = fpIns
+	} else if !pk.Equals(app.fpIns.btcPk) {
+		return fmt.Errorf("the finality provider daemon is already bonded with the finality provider %s,"+
+			"please restart the daemon to switch to another instance", app.fpIns.btcPk.MarshalHex())
 	}
 
 	return app.fpIns.Start()
