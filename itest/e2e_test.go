@@ -1,3 +1,6 @@
+//go:build e2e
+// +build e2e
+
 package e2etest
 
 import (
@@ -236,7 +239,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	moniker = "test2-moniker"
 	args = []string{
 		fpIns.GetBtcPkHex(),
-		"--" + fpdDaemonAddressFlag, tm.FpConfig.RPCListener,
+		"--" + fpdDaemonAddressFlag, fpIns.GetConfig().RPCListener,
 		"--" + monikerFlag, moniker,
 	}
 
@@ -261,8 +264,10 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 }
 
 func TestFinalityProviderCreateCmd(t *testing.T) {
-	tm, _ := StartManagerWithFinalityProvider(t, 1)
+	tm, fps := StartManagerWithFinalityProvider(t, 1)
 	defer tm.Stop(t)
+
+	fpIns := fps[0]
 
 	cmd := daemon.CommandCreateFP()
 
@@ -284,7 +289,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 		Details          string `json:"details"`
 		EotsPK           string `json:"eotsPK"`
 	}{
-		KeyName:          tm.FpConfig.BabylonConfig.Key,
+		KeyName:          fpIns.GetConfig().BabylonConfig.Key,
 		ChainID:          testChainID,
 		Passphrase:       passphrase,
 		CommissionRate:   "0.10",
@@ -310,7 +315,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 
 	cmd.SetArgs([]string{
 		"--from-file=" + file.Name(),
-		"--daemon-address=" + tm.FpConfig.RPCListener,
+		"--daemon-address=" + fpIns.GetConfig().RPCListener,
 	})
 
 	// Run the command

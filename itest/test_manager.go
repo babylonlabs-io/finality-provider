@@ -203,8 +203,6 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T) *service.FinalityProvid
 		err = fpServer.RunUntilShutdown()
 		require.NoError(t, err)
 	}()
-	// wait for the service to start
-	time.Sleep(5 * time.Second)
 
 	tm.Fps = append(tm.Fps, fpApp)
 
@@ -262,7 +260,7 @@ func (tm *TestManager) Stop(t *testing.T) {
 	require.NoError(t, err)
 	err = os.RemoveAll(tm.baseDir)
 	require.NoError(t, err)
-	tm.EOTSServerHandler.Stop()
+	// tm.EOTSServerHandler.Stop()
 }
 
 func (tm *TestManager) WaitForFpPubRandTimestamped(t *testing.T, fpIns *service.FinalityProviderInstance) {
