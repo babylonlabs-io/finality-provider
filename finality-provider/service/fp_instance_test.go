@@ -249,6 +249,7 @@ func setupBenchmarkEnvironment(t *testing.T, seed int64, numPubRand uint32) (*ty
 
 	return startingBlock, fpIns, cleanUp
 }
+
 func BenchmarkCommitPubRand(b *testing.B) {
 	for _, numPubRand := range []uint32{10, 50, 100, 200, 500, 1000, 5000, 10000, 25000, 50000, 75000, 100000} {
 		b.Run(fmt.Sprintf("numPubRand=%d", numPubRand), func(b *testing.B) {
@@ -259,8 +260,9 @@ func BenchmarkCommitPubRand(b *testing.B) {
 			// exclude setup time
 			b.ResetTimer()
 
+			var totalTiming service.CommitPubRandTiming
 			for i := 0; i < b.N; i++ {
-				res, err := fpIns.CommitPubRand(startingBlock.Height)
+				res, timing, err := fpIns.HelperCommitPubRand(startingBlock.Height)
 				if err != nil {
 					b.Fatalf("unexpected error: %v", err)
 				}
@@ -268,7 +270,14 @@ func BenchmarkCommitPubRand(b *testing.B) {
 				if res == nil {
 					b.Fatalf("unexpected result")
 				}
+				// Accumulate timings for averaging
+				totalTiming.GetPubRandListTime += timing.GetPubRandListTime
+				totalTiming.AddPubRandProofListTime += timing.AddPubRandProofListTime
+				totalTiming.CommitPubRandListTime += timing.CommitPubRandListTime
 			}
+			b.ReportMetric(float64(totalTiming.GetPubRandListTime.Nanoseconds())/float64(b.N), "ns/GetPubRandList")
+			b.ReportMetric(float64(totalTiming.AddPubRandProofListTime.Nanoseconds())/float64(b.N), "ns/AddPubRandProofList")
+			b.ReportMetric(float64(totalTiming.CommitPubRandListTime.Nanoseconds())/float64(b.N), "ns/CommitPubRandList")
 		})
 	}
 }
