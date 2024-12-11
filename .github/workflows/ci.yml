@@ -63,4 +63,4 @@ jobs:
     uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.7.0
     secrets: inherit
     with:
-      publish: false
+      publish: true
