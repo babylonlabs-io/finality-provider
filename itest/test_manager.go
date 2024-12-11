@@ -6,12 +6,12 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/lightningnetwork/lnd/signal"
+	"github.com/ory/dockertest/v3"
 
 	"github.com/babylonlabs-io/finality-provider/itest/container"
 	"github.com/babylonlabs-io/finality-provider/testutil"
@@ -60,14 +60,16 @@ type TestManager struct {
 	Wg                sync.WaitGroup
 	EOTSServerHandler *EOTSServerHandler
 	FpConfig          *fpcfg.Config
-	EOTSConfig        *eotsconfig.Config
-	Fpa               *service.FinalityProviderApp
+	Fps               []*service.FinalityProviderApp
 	EOTSClient        *client.EOTSManagerGRpcClient
 	BBNClient         *fpcc.BabylonController
 	StakingParams     *types.StakingParams
 	CovenantPrivKeys  []*btcec.PrivateKey
 	baseDir           string
 	manager           *container.Manager
+	logger            *zap.Logger
+	interceptor       signal.Interceptor
+	babylond          *dockertest.Resource
 }
 
 type TestDelegationData struct {
@@ -92,7 +94,10 @@ func StartManager(t *testing.T) *TestManager {
 	testDir, err := tempDir(t, "fp-e2e-test-*")
 	require.NoError(t, err)
 
-	logger := zap.NewNop()
+	loggerConfig := zap.NewDevelopmentConfig()
+	loggerConfig.Level = zap.NewAtomicLevelAt(zap.ErrorLevel)
+	logger, err := loggerConfig.Build()
+	require.NoError(t, err)
 
 	// 1. generate covenant committee
 	covenantQuorum := 2
@@ -105,8 +110,8 @@ func StartManager(t *testing.T) *TestManager {
 	babylond, err := manager.RunBabylondResource(t, babylonDir, covenantQuorum, covenantPubKeys)
 	require.NoError(t, err)
 
-	fpHomeDir := filepath.Join(testDir, "fp-home")
 	keyDir := filepath.Join(babylonDir, "node0", "babylond")
+	fpHomeDir := filepath.Join(testDir, "fp-home")
 	cfg := defaultFpConfig(keyDir, fpHomeDir)
 	// update ports with the dynamically allocated ones from docker
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
@@ -117,16 +122,6 @@ func StartManager(t *testing.T) *TestManager {
 		bc, err = fpcc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
 		return err == nil
 	}, 5*time.Second, eventuallyPollTime)
-
-	var currentEpoch uint64
-	require.Eventually(t, func() bool {
-		currentEpoch, err = bc.QueryCurrentEpoch()
-		if err != nil {
-			return false
-		}
-		return currentEpoch > 0
-	}, eventuallyWaitTimeOut, eventuallyPollTime)
-	t.Logf("current epoch is %d", currentEpoch)
 
 	shutdownInterceptor, err := signal.Intercept()
 	require.NoError(t, err)
@@ -141,35 +136,83 @@ func StartManager(t *testing.T) *TestManager {
 	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener)
 	require.NoError(t, err)
 
-	// 4. prepare finality-provider
-	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
-	require.NoError(t, err)
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, eotsCli, fpdb, logger)
-	require.NoError(t, err)
-	err = fpApp.Start()
-	require.NoError(t, err)
-
-	fpServer := service.NewFinalityProviderServer(cfg, logger, fpApp, fpdb, shutdownInterceptor)
-	go func() {
-		err = fpServer.RunUntilShutdown()
-		require.NoError(t, err)
-	}()
-
 	tm := &TestManager{
 		EOTSServerHandler: eh,
 		FpConfig:          cfg,
-		EOTSConfig:        eotsCfg,
-		Fpa:               fpApp,
 		EOTSClient:        eotsCli,
 		BBNClient:         bc,
 		CovenantPrivKeys:  covenantPrivKeys,
 		baseDir:           testDir,
 		manager:           manager,
+		logger:            logger,
+		interceptor:       shutdownInterceptor,
+		babylond:          babylond,
 	}
 
 	tm.WaitForServicesStart(t)
 
 	return tm
+}
+
+func (tm *TestManager) AddFinalityProvider(t *testing.T) *service.FinalityProviderInstance {
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+
+	// create eots key
+	eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
+	eotsPkBz, err := tm.EOTSClient.CreateKey(eotsKeyName, passphrase, hdPath)
+	require.NoError(t, err)
+	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
+	require.NoError(t, err)
+
+	// create fp babylon key
+	fpKeyName := fmt.Sprintf("fp-key-%s", datagen.GenRandomHexStr(r, 4))
+	fpHomeDir := filepath.Join(tm.baseDir, fmt.Sprintf("fp-%s", datagen.GenRandomHexStr(r, 4)))
+	cfg := defaultFpConfig(tm.baseDir, fpHomeDir)
+	cfg.BabylonConfig.Key = fpKeyName
+	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", tm.babylond.GetPort("26657/tcp"))
+	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", tm.babylond.GetPort("9090/tcp"))
+	fpBbnKeyInfo, err := testutil.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, cfg.BabylonConfig.Key, cfg.BabylonConfig.KeyringBackend, passphrase, hdPath, "")
+	require.NoError(t, err)
+
+	// add some funds for new fp pay for fees '-'
+	_, _, err = tm.manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), "1000000ubbn", "node0")
+	require.NoError(t, err)
+
+	// create and start finality provider app
+	eotsCli, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.Cfg.RPCListener)
+	require.NoError(t, err)
+	cc, err := fpcc.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, tm.logger)
+	require.NoError(t, err)
+	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
+	require.NoError(t, err)
+	fpApp, err := service.NewFinalityProviderApp(cfg, cc, eotsCli, fpdb, tm.logger)
+	require.NoError(t, err)
+	err = fpApp.Start()
+	require.NoError(t, err)
+
+	// create and register the finality provider
+	commission := sdkmath.LegacyZeroDec()
+	desc := newDescription(testMoniker)
+	_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, passphrase, eotsPk, desc, &commission)
+	require.NoError(t, err)
+	err = fpApp.StartFinalityProvider(eotsPk, passphrase)
+	require.NoError(t, err)
+
+	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
+
+	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb, tm.interceptor)
+	go func() {
+		err = fpServer.RunUntilShutdown()
+		require.NoError(t, err)
+	}()
+
+	tm.Fps = append(tm.Fps, fpApp)
+
+	fpIns, err := fpApp.GetFinalityProviderInstance()
+	require.NoError(t, err)
+
+	return fpIns
 }
 
 func (tm *TestManager) WaitForServicesStart(t *testing.T) {
@@ -186,33 +229,16 @@ func (tm *TestManager) WaitForServicesStart(t *testing.T) {
 	t.Logf("Babylon node is started")
 }
 
-func StartManagerWithFinalityProvider(t *testing.T) (*TestManager, *service.FinalityProviderInstance) {
+func StartManagerWithFinalityProvider(t *testing.T, n int) (*TestManager, []*service.FinalityProviderInstance) {
 	tm := StartManager(t)
-	app := tm.Fpa
-	cfg := app.GetConfig()
 
-	commission := sdkmath.LegacyZeroDec()
-	desc := newDescription(testMoniker)
-
-	eotsKeyName := "eots-key"
-	eotsPkBz, err := tm.EOTSClient.CreateKey(eotsKeyName, passphrase, hdPath)
-	require.NoError(t, err)
-	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
-	require.NoError(t, err)
-	res, err := app.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, passphrase, eotsPk, desc, &commission)
-	require.NoError(t, err)
-	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
-	require.NoError(t, err)
-
-	err = app.StartFinalityProvider(fpPk, passphrase)
-	require.NoError(t, err)
-	fpIns, err := app.GetFinalityProviderInstance()
-	require.NoError(t, err)
-	require.True(t, fpIns.IsRunning())
-	require.NoError(t, err)
+	var runningFps []*service.FinalityProviderInstance
+	for i := 0; i < n; i++ {
+		fpIns := tm.AddFinalityProvider(t)
+		runningFps = append(runningFps, fpIns)
+	}
 
 	// check finality providers on Babylon side
-	var fpRes *bstypes.FinalityProviderResponse
 	require.Eventually(t, func() bool {
 		fps, err := tm.BBNClient.QueryFinalityProviders()
 		if err != nil {
@@ -220,35 +246,24 @@ func StartManagerWithFinalityProvider(t *testing.T) (*TestManager, *service.Fina
 			return false
 		}
 
-		if len(fps) != 1 {
-			return false
-		}
-
-		fpRes = fps[0]
-
-		if !strings.Contains(fpRes.Description.Moniker, testMoniker) {
-			return false
-		}
-		if !fpRes.Commission.Equal(sdkmath.LegacyZeroDec()) {
-			return false
-		}
-
-		return true
+		return len(fps) == n
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
-	t.Logf("the test manager is running with a finality provider")
+	t.Logf("the test manager is running with %d finality provider", n)
 
-	return tm, fpIns
+	return tm, runningFps
 }
 
 func (tm *TestManager) Stop(t *testing.T) {
-	err := tm.Fpa.Stop()
-	require.NoError(t, err)
-	err = tm.manager.ClearResources()
+	for _, fp := range tm.Fps {
+		err := fp.Stop()
+		require.NoError(t, err)
+	}
+	err := tm.manager.ClearResources()
 	require.NoError(t, err)
 	err = os.RemoveAll(tm.baseDir)
 	require.NoError(t, err)
-	tm.EOTSServerHandler.Stop()
+	tm.interceptor.RequestShutdown()
 }
 
 func (tm *TestManager) WaitForFpPubRandTimestamped(t *testing.T, fpIns *service.FinalityProviderInstance) {
@@ -390,15 +405,6 @@ func (tm *TestManager) WaitForNFinalizedBlocks(t *testing.T, n int) []*types.Blo
 	return blocks
 }
 
-func (tm *TestManager) WaitForFpShutDown(t *testing.T) {
-	require.Eventually(t, func() bool {
-		_, err := tm.Fpa.GetFinalityProviderInstance()
-		return err != nil
-	}, eventuallyWaitTimeOut, eventuallyPollTime)
-
-	t.Logf("the finality-provider instance is shutdown")
-}
-
 func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
 	blockBeforeStop, err := tm.BBNClient.QueryBestBlock()
 	require.NoError(t, err)
@@ -416,7 +422,6 @@ func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *
 
 	t.Log("restarting the finality-provider instance")
 
-	tm.FpConfig.PollerConfig.AutoChainScanningMode = true
 	err = fpIns.Start()
 	require.NoError(t, err)
 }

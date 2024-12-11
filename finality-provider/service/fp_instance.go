@@ -157,6 +157,10 @@ func (fp *FinalityProviderInstance) Stop() error {
 	return nil
 }
 
+func (fp *FinalityProviderInstance) GetConfig() *fpcfg.Config {
+	return fp.cfg
+}
+
 func (fp *FinalityProviderInstance) IsRunning() bool {
 	return fp.isStarted.Load()
 }
