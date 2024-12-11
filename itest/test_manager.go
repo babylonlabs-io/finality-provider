@@ -198,6 +198,9 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T) *service.FinalityProvid
 	err = fpApp.StartFinalityProvider(eotsPk, passphrase)
 	require.NoError(t, err)
 
+	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
+
 	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb, tm.interceptor)
 	go func() {
 		err = fpServer.RunUntilShutdown()
@@ -260,7 +263,7 @@ func (tm *TestManager) Stop(t *testing.T) {
 	require.NoError(t, err)
 	err = os.RemoveAll(tm.baseDir)
 	require.NoError(t, err)
-	// tm.EOTSServerHandler.Stop()
+	tm.interceptor.RequestShutdown()
 }
 
 func (tm *TestManager) WaitForFpPubRandTimestamped(t *testing.T, fpIns *service.FinalityProviderInstance) {
