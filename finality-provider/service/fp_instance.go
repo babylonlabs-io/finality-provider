@@ -403,58 +403,55 @@ func (fp *FinalityProviderInstance) retrySubmitSigsUntilFinalized(targetBlocks [
 	var failedCycles uint32
 	targetHeight := targetBlocks[len(targetBlocks)-1].Height
 
-	// we break the for loop if the block is finalized or the signature is successfully submitted
-	// error will be returned if maximum retries have been reached or the query to the consumer chain fails
+	// First iteration happens before the loop
 	for {
-		select {
-		case <-time.After(fp.cfg.SubmissionRetryInterval):
-			// error will be returned if max retries have been reached
-			var res *types.TxResponse
-			var err error
-			res, err = fp.SubmitBatchFinalitySignatures(targetBlocks)
-			if err != nil {
-				fp.logger.Debug(
-					"failed to submit finality signature to the consumer chain",
-					zap.String("pk", fp.GetBtcPkHex()),
-					zap.Uint32("current_failures", failedCycles),
-					zap.Uint64("target_start_height", targetBlocks[0].Height),
-					zap.Uint64("target_end_height", targetHeight),
-					zap.Error(err),
-				)
+		// Attempt submission immediately
+		res, err := fp.SubmitBatchFinalitySignatures(targetBlocks)
+		if err != nil {
+			fp.logger.Debug(
+				"failed to submit finality signature to the consumer chain",
+				zap.String("pk", fp.GetBtcPkHex()),
+				zap.Uint32("current_failures", failedCycles),
+				zap.Uint64("target_start_height", targetBlocks[0].Height),
+				zap.Uint64("target_end_height", targetHeight),
+				zap.Error(err),
+			)
 
-				if fpcc.IsUnrecoverable(err) {
-					return nil, err
-				}
-
-				if fpcc.IsExpected(err) {
-					return nil, nil
-				}
-
-				failedCycles++
-				if failedCycles > fp.cfg.MaxSubmissionRetries {
-					return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
-				}
-			} else {
-				// the signature has been successfully submitted
-				return res, nil
+			if fpcc.IsUnrecoverable(err) {
+				return nil, err
 			}
 
-			// periodically query the index block to be later checked whether it is Finalized
-			finalized, err := fp.consumerCon.QueryIsBlockFinalized(targetHeight)
-			if err != nil {
-				return nil, fmt.Errorf("failed to query block finalization at height %v: %w", targetHeight, err)
-			}
-			if finalized {
-				fp.logger.Debug(
-					"the block is already finalized, skip submission",
-					zap.String("pk", fp.GetBtcPkHex()),
-					zap.Uint64("target_height", targetHeight),
-				)
-				// TODO: returning nil here is to safely break the loop
-				//  the error still exists
+			if fpcc.IsExpected(err) {
 				return nil, nil
 			}
 
+			failedCycles++
+			if failedCycles > fp.cfg.MaxSubmissionRetries {
+				return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
+			}
+		} else {
+			// The signature has been successfully submitted
+			return res, nil
+		}
+
+		// Periodically query the index block to check whether it is finalized
+		finalized, err := fp.consumerCon.QueryIsBlockFinalized(targetHeight)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query block finalization at height %v: %w", targetHeight, err)
+		}
+		if finalized {
+			fp.logger.Debug(
+				"the block is already finalized, skip submission",
+				zap.String("pk", fp.GetBtcPkHex()),
+				zap.Uint64("target_height", targetHeight),
+			)
+			return nil, nil
+		}
+
+		// Wait for the retry interval
+		select {
+		case <-time.After(fp.cfg.SubmissionRetryInterval):
+			// Continue to next retry iteration
 		case <-fp.quit:
 			fp.logger.Debug("the finality-provider instance is closing", zap.String("pk", fp.GetBtcPkHex()))
 			return nil, ErrFinalityProviderShutDown
