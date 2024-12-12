@@ -28,3 +28,7 @@ func (st *pubRandState) getPubRandProof(pubRand *btcec.FieldVal) ([]byte, error)
 func (st *pubRandState) getPubRandProofList(pubRandList []*btcec.FieldVal) ([][]byte, error) {
 	return st.s.GetPubRandProofList(pubRandList)
 }
+
+func (st *pubRandState) removePubRandProofList(pubRandList []*btcec.FieldVal) error {
+	return st.s.RemovePubRandProofList(pubRandList)
+}

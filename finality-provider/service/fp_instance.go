@@ -679,6 +679,10 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 	highBlock := blocks[len(blocks)-1]
 	fp.MustUpdateStateAfterFinalitySigSubmission(highBlock.Height)
 
+	if err := fp.pubRandState.removePubRandProofList(prList); err != nil {
+		return nil, fmt.Errorf("failed to remove public randomness inclusion proof list: %w", err)
+	}
+
 	return res, nil
 }
 

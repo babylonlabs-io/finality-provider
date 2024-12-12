@@ -133,4 +133,25 @@ func (s *PubRandProofStore) GetPubRandProofList(pubRandList []*btcec.FieldVal) (
 	return proofBytesList, nil
 }
 
-// TODO: delete function?
+func (s *PubRandProofStore) RemovePubRandProofList(pubRandList []*btcec.FieldVal) error {
+	var pubRandBytesList [][]byte
+	for i := range pubRandList {
+		pubRandBytes := *pubRandList[i].Bytes()
+		pubRandBytesList = append(pubRandBytesList, pubRandBytes[:])
+	}
+
+	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+		bucket := tx.ReadWriteBucket(pubRandProofBucketName)
+		if bucket == nil {
+			return ErrCorruptedPubRandProofDB
+		}
+
+		for i := range pubRandBytesList {
+			if err := bucket.Delete(pubRandBytesList[i]); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
