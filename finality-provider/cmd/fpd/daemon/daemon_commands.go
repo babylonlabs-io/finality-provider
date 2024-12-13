@@ -500,7 +500,7 @@ func CommandUnsafeDeleteMerkleProof() *cobra.Command {
 	}
 	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
 	cmd.Flags().String(chainIDFlag, "", "The identifier of the consumer chain")
-	cmd.Flags().String(upToHeight, "", "Target height to delete proofs")
+	cmd.Flags().Uint64(upToHeight, 0, "Target height to delete proofs")
 
 	if err := cmd.MarkFlagRequired(chainIDFlag); err != nil {
 		panic(err)
@@ -535,14 +535,8 @@ func runCommandUnsafeDeleteMerkleProof(cmd *cobra.Command, args []string) error 
 		}
 	}()
 
-	chainID, err := cmd.Flags().GetString(chainIDFlag)
-	if err != nil {
-		panic(err)
-	}
-	targetHeight, err := cmd.Flags().GetUint64(upToHeight)
-	if err != nil {
-		panic(err)
-	}
+	chainID, _ := cmd.Flags().GetString(chainIDFlag)
+	targetHeight, _ := cmd.Flags().GetUint64(upToHeight)
 
 	if err := grpcClient.UnsafeRemoveMerkleProof(cmd.Context(), fpPk, chainID, targetHeight); err != nil {
 		return fmt.Errorf("failed to edit finality provider %v err %w", fpPk.MarshalHex(), err)

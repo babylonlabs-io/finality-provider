@@ -326,3 +326,30 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, fp)
 }
+
+func TestRemoveMerkleProofsCmd(t *testing.T) {
+	tm, fps := StartManagerWithFinalityProvider(t, 1)
+	defer tm.Stop(t)
+
+	fpIns := fps[0]
+
+	tm.WaitForFpPubRandTimestamped(t, fps[0])
+
+	cmd := daemon.CommandUnsafeDeleteMerkleProof()
+
+	cmd.SetArgs([]string{
+		fpIns.GetBtcPkHex(),
+		"--daemon-address=" + fpIns.GetConfig().RPCListener,
+		"--up-to-height=100",
+		"--chain-id=" + testChainID,
+	})
+
+	// Run the command
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	time.Sleep(5 * time.Second)
+}
