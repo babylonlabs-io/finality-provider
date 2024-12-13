@@ -13,6 +13,7 @@ const (
 	signedFlag           = "signed"
 	checkDoubleSignFlag  = "check-double-sign"
 	fromFile             = "from-file"
+	upToHeight           = "up-to-height"
 
 	// flags for description
 	monikerFlag         = "moniker"

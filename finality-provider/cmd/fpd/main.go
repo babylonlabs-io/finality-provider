@@ -37,7 +37,7 @@ func main() {
 		daemon.CommandInfoFP(), daemon.CommandAddFinalitySig(), daemon.CommandUnjailFP(),
 		daemon.CommandEditFinalityDescription(), daemon.CommandCommitPubRand(),
 		incentivecli.NewWithdrawRewardCmd(), incentivecli.NewSetWithdrawAddressCmd(),
-		version.CommandVersion("fpd"),
+		version.CommandVersion("fpd"), daemon.CommandUnsafeDeleteMerkleProof(),
 	)
 
 	if err := cmd.Execute(); err != nil {

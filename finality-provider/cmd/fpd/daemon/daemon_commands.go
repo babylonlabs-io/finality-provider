@@ -488,6 +488,69 @@ func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error 
 	return nil
 }
 
+// CommandUnsafeDeleteMerkleProof removes merkle proof
+func CommandUnsafeDeleteMerkleProof() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:     "unsafe-remove-merkle-proof [eots_pk]",
+		Aliases: []string{"rmp"},
+		Short:   "Removes merkle proofs up to the specified target height",
+		Example: fmt.Sprintf(`fpd unsafe-remove-merkle-proof [eots_pk] --daemon-address %s`, defaultFpdDaemonAddress),
+		Args:    cobra.ExactArgs(1),
+		RunE:    runCommandUnsafeDeleteMerkleProof,
+	}
+	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+	cmd.Flags().String(chainIDFlag, "", "The identifier of the consumer chain")
+	cmd.Flags().String(upToHeight, "", "Target height to delete proofs")
+
+	if err := cmd.MarkFlagRequired(chainIDFlag); err != nil {
+		panic(err)
+	}
+
+	if err := cmd.MarkFlagRequired(upToHeight); err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func runCommandUnsafeDeleteMerkleProof(cmd *cobra.Command, args []string) error {
+	fpPk, err := types.NewBIP340PubKeyFromHex(args[0])
+	if err != nil {
+		return err
+	}
+
+	flags := cmd.Flags()
+	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+	}
+
+	grpcClient, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := cleanUp(); err != nil {
+			fmt.Printf("Failed to clean up grpc client: %v\n", err)
+		}
+	}()
+
+	chainID, err := cmd.Flags().GetString(chainIDFlag)
+	if err != nil {
+		panic(err)
+	}
+	targetHeight, err := cmd.Flags().GetUint64(upToHeight)
+	if err != nil {
+		panic(err)
+	}
+
+	if err := grpcClient.UnsafeRemoveMerkleProof(cmd.Context(), fpPk, chainID, targetHeight); err != nil {
+		return fmt.Errorf("failed to edit finality provider %v err %w", fpPk.MarshalHex(), err)
+	}
+
+	return nil
+}
+
 func printRespJSON(resp interface{}) {
 	jsonBytes, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
