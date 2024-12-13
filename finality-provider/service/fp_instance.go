@@ -650,8 +650,8 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 	// get proof list
 	// TODO: how to recover upon having an error in getPubRandProofList?
 	proofBytesList, err := fp.pubRandState.getPubRandProofList(
-		fp.GetChainID(),
 		fp.btcPk.MustMarshal(),
+		fp.GetChainID(),
 		blocks[0].Height,
 		uint64(numPubRand),
 	)
@@ -702,7 +702,7 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 	pubRand := prList[0]
 
 	// get proof
-	proofBytes, err := fp.pubRandState.getPubRandProof(fp.GetChainID(), fp.btcPk.MustMarshal(), b.Height)
+	proofBytes, err := fp.pubRandState.getPubRandProof(fp.btcPk.MustMarshal(), fp.GetChainID(), b.Height)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %w", err)
 	}
