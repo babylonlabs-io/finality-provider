@@ -27,8 +27,3 @@ func (st *pubRandState) getPubRandProof(pk, chainID []byte, height uint64) ([]by
 func (st *pubRandState) getPubRandProofList(pk, chainID []byte, height uint64, numPubRand uint64) ([][]byte, error) {
 	return st.s.GetPubRandProofList(chainID, pk, height, numPubRand)
 }
-
-// removePubRandProofList - removes all proofs up to the target height
-func (st *pubRandState) removePubRandProofList(pk, chainID []byte, targetHeight uint64) error {
-	return st.s.RemovePubRandProofList(chainID, pk, targetHeight)
-}

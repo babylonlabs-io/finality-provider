@@ -1,11 +1,10 @@
-//go:build e2e
-// +build e2e
-
 package e2etest
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"log"
 	"math/rand"
 	"os"
@@ -334,7 +333,6 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 	fpIns := fps[0]
 
 	tm.WaitForFpPubRandTimestamped(t, fps[0])
-
 	cmd := daemon.CommandUnsafeDeleteMerkleProof()
 
 	cmd.SetArgs([]string{
@@ -344,12 +342,11 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 		"--chain-id=" + testChainID,
 	})
 
-	// Run the command
 	err := cmd.Execute()
 	require.NoError(t, err)
 
-	err = cmd.Execute()
-	require.NoError(t, err)
-
-	time.Sleep(5 * time.Second)
+	require.Eventually(t, func() bool {
+		_, err := fpIns.TestGetPubProof(99)
+		return errors.Is(err, store.ErrPubRandProofNotFound)
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
 }

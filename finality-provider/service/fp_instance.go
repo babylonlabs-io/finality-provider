@@ -527,7 +527,7 @@ func (fp *FinalityProviderInstance) commitPubRandPairs(startHeight uint64) (*typ
 	commitment, proofList := types.GetPubRandCommitAndProofs(pubRandList)
 
 	// store them to database
-	if err := fp.pubRandState.addPubRandProofList(fp.GetChainID(), fp.btcPk.MustMarshal(), startHeight, uint64(fp.cfg.NumPubRand), proofList); err != nil {
+	if err := fp.pubRandState.addPubRandProofList(fp.btcPk.MustMarshal(), fp.GetChainID(), startHeight, uint64(fp.cfg.NumPubRand), proofList); err != nil {
 		return nil, fmt.Errorf("failed to save public randomness to DB: %w", err)
 	}
 
@@ -1025,4 +1025,9 @@ func (fp *FinalityProviderInstance) GetFinalityProviderSlashedOrJailedWithRetry(
 	}
 
 	return slashed, jailed, nil
+}
+
+// TestGetPubProof only used for tests to get access to the store
+func (fp *FinalityProviderInstance) TestGetPubProof(height uint64) ([]byte, error) {
+	return fp.pubRandState.getPubRandProof(fp.btcPk.MustMarshal(), fp.GetChainID(), height)
 }
