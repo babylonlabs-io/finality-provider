@@ -2,7 +2,6 @@ package service
 
 import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
-	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cometbft/cometbft/crypto/merkle"
 )
 
@@ -29,6 +28,7 @@ func (st *pubRandState) getPubRandProofList(pk, chainID []byte, height uint64, n
 	return st.s.GetPubRandProofList(chainID, pk, height, numPubRand)
 }
 
-func (st *pubRandState) removePubRandProofList(pubRandList []*btcec.FieldVal) error {
-	return st.s.RemovePubRandProofList(pubRandList)
+// removePubRandProofList - removes all proofs up to the target height
+func (st *pubRandState) removePubRandProofList(pk, chainID []byte, targetHeight uint64) error {
+	return st.s.RemovePubRandProofList(chainID, pk, targetHeight)
 }

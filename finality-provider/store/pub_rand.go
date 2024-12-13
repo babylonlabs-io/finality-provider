@@ -1,10 +1,11 @@
 package store
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/btcsuite/btcwallet/walletdb"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cometbft/cometbft/crypto/merkle"
 	"github.com/lightningnetwork/lnd/kvdb"
 )
@@ -47,6 +48,15 @@ func getKey(chainID, pk []byte, height uint64) []byte {
 	key = append(key, heightBytes...)
 
 	return key
+}
+
+func getPrefixKey(chainID, pk []byte) []byte {
+	// Concatenate chainID and pk to form the prefix
+	prefix := make([]byte, 0, len(chainID)+len(pk))
+	prefix = append(prefix, chainID...)
+	prefix = append(prefix, pk...)
+
+	return prefix
 }
 
 func buildKeys(chainID, pk []byte, height uint64, num uint64) [][]byte {
@@ -161,25 +171,37 @@ func (s *PubRandProofStore) GetPubRandProofList(chainID []byte,
 	return proofBytesList, nil
 }
 
-func (s *PubRandProofStore) RemovePubRandProofList(pubRandList []*btcec.FieldVal) error {
-	var pubRandBytesList [][]byte
-	for i := range pubRandList {
-		pubRandBytes := *pubRandList[i].Bytes()
-		pubRandBytesList = append(pubRandBytesList, pubRandBytes[:])
-	}
+// RemovePubRandProofList removes all proofs up to the target height
+func (s *PubRandProofStore) RemovePubRandProofList(chainID []byte, pk []byte, targetHeight uint64) error {
+	prefix := getPrefixKey(chainID, pk)
 
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	err := s.db.Update(func(tx walletdb.ReadWriteTx) error {
 		bucket := tx.ReadWriteBucket(pubRandProofBucketName)
 		if bucket == nil {
-			return ErrCorruptedPubRandProofDB
+			return walletdb.ErrBucketNotFound
 		}
 
-		for i := range pubRandBytesList {
-			if err := bucket.Delete(pubRandBytesList[i]); err != nil {
+		cursor := bucket.ReadWriteCursor()
+
+		for k, _ := cursor.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = cursor.Next() {
+			heightBytes := k[len(k)-8:]
+			height := sdk.BigEndianToUint64(heightBytes)
+
+			// no need to keep iterating, keys are sorted in lexicographical order upon insert
+			if height > targetHeight {
+				break
+			}
+
+			if err := cursor.Delete(); err != nil {
 				return err
 			}
 		}
-
 		return nil
-	})
+	}, func() {})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
