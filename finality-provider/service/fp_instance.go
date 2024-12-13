@@ -641,8 +641,8 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 	}
 
 	// get public randomness list
-	// #nosec G115 -- performed the conversion check above
 	numPubRand := len(blocks)
+	// #nosec G115 -- performed the conversion check above
 	prList, err := fp.getPubRandList(blocks[0].Height, uint32(numPubRand))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get public randomness list: %w", err)
