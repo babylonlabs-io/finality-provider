@@ -527,7 +527,7 @@ func (fp *FinalityProviderInstance) commitPubRandPairs(startHeight uint64) (*typ
 	commitment, proofList := types.GetPubRandCommitAndProofs(pubRandList)
 
 	// store them to database
-	if err := fp.pubRandState.addPubRandProofList(pubRandList, proofList); err != nil {
+	if err := fp.pubRandState.addPubRandProofList(fp.GetChainID(), fp.btcPk.MustMarshal(), startHeight, uint64(fp.cfg.NumPubRand), proofList); err != nil {
 		return nil, fmt.Errorf("failed to save public randomness to DB: %w", err)
 	}
 
@@ -642,13 +642,19 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 
 	// get public randomness list
 	// #nosec G115 -- performed the conversion check above
-	prList, err := fp.getPubRandList(blocks[0].Height, uint32(len(blocks)))
+	numPubRand := len(blocks)
+	prList, err := fp.getPubRandList(blocks[0].Height, uint32(numPubRand))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get public randomness list: %w", err)
 	}
 	// get proof list
 	// TODO: how to recover upon having an error in getPubRandProofList?
-	proofBytesList, err := fp.pubRandState.getPubRandProofList(prList)
+	proofBytesList, err := fp.pubRandState.getPubRandProofList(
+		fp.GetChainID(),
+		fp.btcPk.MustMarshal(),
+		blocks[0].Height,
+		uint64(numPubRand),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w", err)
 	}
@@ -679,10 +685,6 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 	highBlock := blocks[len(blocks)-1]
 	fp.MustUpdateStateAfterFinalitySigSubmission(highBlock.Height)
 
-	if err := fp.pubRandState.removePubRandProofList(prList); err != nil {
-		return nil, fmt.Errorf("failed to remove public randomness inclusion proof list: %w", err)
-	}
-
 	return res, nil
 }
 
@@ -700,7 +702,7 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 	pubRand := prList[0]
 
 	// get proof
-	proofBytes, err := fp.pubRandState.getPubRandProof(pubRand)
+	proofBytes, err := fp.pubRandState.getPubRandProof(fp.GetChainID(), fp.btcPk.MustMarshal(), b.Height)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %w", err)
 	}
