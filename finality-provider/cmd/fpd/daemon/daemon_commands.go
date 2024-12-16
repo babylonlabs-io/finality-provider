@@ -488,19 +488,22 @@ func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error 
 	return nil
 }
 
-// CommandUnsafeDeleteMerkleProof removes merkle proof
-func CommandUnsafeDeleteMerkleProof() *cobra.Command {
+// CommandUnsafePruneMerkleProof prunes merkle proof
+func CommandUnsafePruneMerkleProof() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "unsafe-remove-merkle-proof [eots_pk]",
+		Use:     "unsafe-prune-merkle-proof [eots_pk]",
 		Aliases: []string{"rmp"},
-		Short:   "Removes merkle proofs up to the specified target height",
-		Example: fmt.Sprintf(`fpd unsafe-remove-merkle-proof [eots_pk] --daemon-address %s`, defaultFpdDaemonAddress),
+		Short:   "Prunes merkle proofs up to the specified target height",
+		Long: strings.TrimSpace(`This command will prune all merkle proof up to the target height. The 
+operator of this command should ensure that finality provider has voted, or doesn't have voting power up to the target height.'
+`),
+		Example: fmt.Sprintf(`fpd unsafe-prune-merkle-proof [eots_pk] --daemon-address %s`, defaultFpdDaemonAddress),
 		Args:    cobra.ExactArgs(1),
-		RunE:    runCommandUnsafeDeleteMerkleProof,
+		RunE:    runCommandUnsafePruneMerkleProof,
 	}
 	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
 	cmd.Flags().String(chainIDFlag, "", "The identifier of the consumer chain")
-	cmd.Flags().Uint64(upToHeight, 0, "Target height to delete proofs")
+	cmd.Flags().Uint64(upToHeight, 0, "Target height to prune merkle proofs")
 
 	if err := cmd.MarkFlagRequired(chainIDFlag); err != nil {
 		panic(err)
@@ -513,7 +516,7 @@ func CommandUnsafeDeleteMerkleProof() *cobra.Command {
 	return cmd
 }
 
-func runCommandUnsafeDeleteMerkleProof(cmd *cobra.Command, args []string) error {
+func runCommandUnsafePruneMerkleProof(cmd *cobra.Command, args []string) error {
 	fpPk, err := types.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
 		return err

@@ -333,7 +333,7 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 	fpIns := fps[0]
 
 	tm.WaitForFpPubRandTimestamped(t, fps[0])
-	cmd := daemon.CommandUnsafeDeleteMerkleProof()
+	cmd := daemon.CommandUnsafePruneMerkleProof()
 
 	cmd.SetArgs([]string{
 		fpIns.GetBtcPkHex(),
@@ -346,7 +346,9 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		_, err := fpIns.TestGetPubProof(99)
+		_, err := tm.Fps[0].GetPubRandProofStore().
+			GetPubRandProof(fpIns.GetChainID(), fpIns.GetBtcPkBIP340().MustMarshal(), 99)
+
 		return errors.Is(err, store.ErrPubRandProofNotFound)
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 }

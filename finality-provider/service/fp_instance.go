@@ -1026,8 +1026,3 @@ func (fp *FinalityProviderInstance) GetFinalityProviderSlashedOrJailedWithRetry(
 
 	return slashed, jailed, nil
 }
-
-// TestGetPubProof only used for tests to get access to the store
-func (fp *FinalityProviderInstance) TestGetPubProof(height uint64) ([]byte, error) {
-	return fp.pubRandState.getPubRandProof(fp.btcPk.MustMarshal(), fp.GetChainID(), height)
-}
