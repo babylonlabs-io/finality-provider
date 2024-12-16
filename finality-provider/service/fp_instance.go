@@ -420,8 +420,6 @@ func (fp *FinalityProviderInstance) retryCommitPubRandUntilBlockFinalized(target
 		// this part should not be retried here. We need to separate the function into
 		// 1) determining the starting height to commit, 2) generating pub rand and inclusion
 		//  proofs, and 3) committing public randomness.
-		// TODO: make 3) a part of `select` statement. The function terminates upon either the block
-		// is finalised or the pub rand is committed successfully
 		res, err := fp.CommitPubRand(targetBlock.Height)
 		if err != nil {
 			if clientcontroller.IsUnrecoverable(err) {
