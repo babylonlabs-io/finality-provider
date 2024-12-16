@@ -120,7 +120,7 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 		return nil, fmt.Errorf("failed to save key name mapping: %w", err)
 	}
 
-	cmd.Printf("Sucessfully wrote key name %s to mapping", keyName)
+	cmd.Printf("Successfully wrote key name %s to mapping", keyName)
 	return eotsPk, nil
 }
 
