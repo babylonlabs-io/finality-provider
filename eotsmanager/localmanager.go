@@ -172,10 +172,6 @@ func (lm *LocalEOTSManager) LoadBIP340PubKeyFromKeyName(keyName string) (*bbntyp
 	}
 }
 
-// TODO the current implementation is a PoC, which does not contain any anti-slasher mechanism
-//
-//	a simple anti-slasher mechanism could be that the manager remembers the tuple (fpPk, chainID, height) or
-//	the hash of each generated randomness and return error if the same randomness is requested twice
 func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte, startHeight uint64, num uint32, passphrase string) ([]*btcec.FieldVal, error) {
 	prList := make([]*btcec.FieldVal, 0, num)
 
@@ -323,7 +319,6 @@ func (lm *LocalEOTSManager) getRandomnessPair(fpPk []byte, chainID []byte, heigh
 	return privRand, pubRand, nil
 }
 
-// TODO: we ignore passPhrase in local implementation for now
 func (lm *LocalEOTSManager) KeyRecord(fpPk []byte, passphrase string) (*eotstypes.KeyRecord, error) {
 	name, err := lm.es.GetEOTSKeyName(fpPk)
 	if err != nil {

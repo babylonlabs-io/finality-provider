@@ -220,7 +220,6 @@ func (fp *FinalityProviderInstance) getAllBlocksFromChan() []*types.BlockInfo {
 	for {
 		select {
 		case b := <-fp.poller.GetBlockInfoChan():
-			// TODO: in cases of catching up, this could issue frequent RPC calls
 			shouldProcess, err := fp.shouldProcessBlock(b)
 			if err != nil {
 				if !errors.Is(err, ErrFinalityProviderShutDown) {
@@ -387,8 +386,8 @@ func (fp *FinalityProviderInstance) retrySubmitSigsUntilFinalized(targetBlocks [
 					zap.String("pk", fp.GetBtcPkHex()),
 					zap.Uint64("target_height", targetHeight),
 				)
-				// TODO: returning nil here is to safely break the loop
-				//  the error still exists
+				// returning nil here is to safely break the loop
+				// the error still exists
 				return nil, nil
 			}
 
@@ -421,8 +420,6 @@ func (fp *FinalityProviderInstance) retryCommitPubRandUntilBlockFinalized(target
 		// this part should not be retried here. We need to separate the function into
 		// 1) determining the starting height to commit, 2) generating pub rand and inclusion
 		//  proofs, and 3) committing public randomness.
-		// TODO: make 3) a part of `select` statement. The function terminates upon either the block
-		// is finalised or the pub rand is committed successfully
 		res, err := fp.CommitPubRand(targetBlock.Height)
 		if err != nil {
 			if clientcontroller.IsUnrecoverable(err) {
@@ -457,8 +454,8 @@ func (fp *FinalityProviderInstance) retryCommitPubRandUntilBlockFinalized(target
 					zap.String("pk", fp.GetBtcPkHex()),
 					zap.Uint64("target_height", targetBlock.Height),
 				)
-				// TODO: returning nil here is to safely break the loop
-				//  the error still exists
+				// returning nil here is to safely break the loop
+				// the error still exists
 				return nil, nil
 			}
 
@@ -608,8 +605,6 @@ func (fp *FinalityProviderInstance) TestCommitPubRandWithStartHeight(startHeight
 
 	fp.logger.Info("Start committing pubrand from block height", zap.Uint64("start_height", startHeight))
 
-	// TODO: instead of sending multiple txs, a better way is to bundle all the commit messages into
-	// one like we do for batch finality signatures. see discussion https://bit.ly/3OmbjkN
 	for startHeight <= targetBlockHeight {
 		_, err = fp.commitPubRandPairs(startHeight)
 		if err != nil {

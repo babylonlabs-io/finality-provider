@@ -206,11 +206,6 @@ func (r *rpcServer) UnjailFinalityProvider(_ context.Context, req *proto.UnjailF
 		return nil, fmt.Errorf("failed to unjail the finality-provider: %w", err)
 	}
 
-	// todo: keep passphrase as empty for now
-	if err := r.app.StartFinalityProvider(fpPk, ""); err != nil {
-		return nil, fmt.Errorf("failed to start the finality provider instance after unjailing: %w", err)
-	}
-
 	return &proto.UnjailFinalityProviderResponse{TxHash: res.TxHash}, nil
 }
 

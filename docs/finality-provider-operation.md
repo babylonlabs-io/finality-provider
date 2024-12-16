@@ -577,6 +577,12 @@ For more information on statuses please refer to diagram in the core documentati
 
 <!-- vitsalis: TODO: native way of showing the finality provider has the statuses -->
 
+After successful registration, you may start the finality provider instance
+by running:
+```shell
+fpd start --eots-pk <hex-string-of-eots-public-key>
+```
+
 ### 5.2. Withdrawing Rewards
 
 As a participant in the Finality Provider Program, you will earn rewards that 
@@ -606,6 +612,9 @@ Parameters:
 - `--home`: Path to your finality provider daemon home directory
 
 > ⚠️ Before unjailing, ensure you've fixed the underlying issue that caused jailing
+
+If unjailing is successful, you may start running the finality provider by
+`fpd start --eots-pk <hex-string-of-eots-public-key>`.
 
 ### 5.4. Slashing
 
