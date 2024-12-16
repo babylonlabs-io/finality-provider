@@ -591,7 +591,7 @@ func (app *FinalityProviderApp) updateFpFromResponse(btcPk *btcec.PublicKey, fp 
 
 	power, err := app.cc.QueryFinalityProviderVotingPower(btcPk, fp.Height)
 	if err != nil {
-		return fmt.Errorf("failed to query voting power for finality provider %s: %w",
+		return fmt.Errorf("failed to query voting power for finality provider %v: %w",
 			btcPk, err)
 	}
 
@@ -608,7 +608,7 @@ func (app *FinalityProviderApp) updateFpFromResponse(btcPk *btcec.PublicKey, fp 
 	}
 
 	if err := app.fps.SetFpStatus(btcPk, status); err != nil {
-		return fmt.Errorf("failed to update status for finality provider %s: %w", btcPk, err)
+		return fmt.Errorf("failed to update status for finality provider %v: %w", btcPk, err)
 	}
 
 	return nil
