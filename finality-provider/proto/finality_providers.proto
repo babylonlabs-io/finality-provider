@@ -110,12 +110,10 @@ message QueryFinalityProviderResponse {
 }
 
 message QueryFinalityProviderListRequest {
-    // TODO add pagination in case the list gets large
 }
 
 message QueryFinalityProviderListResponse {
     repeated FinalityProviderInfo finality_providers = 1;
-    // TODO add pagination in case the list gets large
 }
 
 // FinalityProvider defines current state of finality provider.

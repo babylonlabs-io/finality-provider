@@ -132,5 +132,3 @@ func (s *PubRandProofStore) GetPubRandProofList(pubRandList []*btcec.FieldVal) (
 
 	return proofBytesList, nil
 }
-
-// TODO: delete function?

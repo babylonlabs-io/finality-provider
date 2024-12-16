@@ -713,7 +713,7 @@ type QueryFinalityProviderListResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	FinalityProviders []*FinalityProviderInfo `protobuf:"bytes,1,rep,name=finality_providers,json=finalityProviders,proto3" json:"finality_providers,omitempty"` // TODO add pagination in case the list gets large
+	FinalityProviders []*FinalityProviderInfo `protobuf:"bytes,1,rep,name=finality_providers,json=finalityProviders,proto3" json:"finality_providers,omitempty"`
 }
 
 func (x *QueryFinalityProviderListResponse) Reset() {
