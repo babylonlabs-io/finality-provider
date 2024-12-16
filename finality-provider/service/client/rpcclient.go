@@ -141,3 +141,15 @@ func (c *FinalityProviderServiceGRpcClient) EditFinalityProvider(
 
 	return nil
 }
+
+// UnsafeRemoveMerkleProof - remove all proofs up to target height
+func (c *FinalityProviderServiceGRpcClient) UnsafeRemoveMerkleProof(
+	ctx context.Context, fpPk *bbntypes.BIP340PubKey, chainID string, targetHeight uint64) error {
+	req := &proto.RemoveMerkleProofRequest{BtcPkHex: fpPk.MarshalHex(), ChainId: chainID, TargetHeight: targetHeight}
+	_, err := c.client.UnsafeRemoveMerkleProof(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

@@ -264,6 +264,20 @@ func (r *rpcServer) QueryFinalityProviderList(_ context.Context, _ *proto.QueryF
 	return &proto.QueryFinalityProviderListResponse{FinalityProviders: fps}, nil
 }
 
+// UnsafeRemoveMerkleProof - removes proofs up to target height
+func (r *rpcServer) UnsafeRemoveMerkleProof(_ context.Context, req *proto.RemoveMerkleProofRequest) (*proto.EmptyResponse, error) {
+	fpPk, err := parseEotsPk(req.BtcPkHex)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := r.app.pubRandStore.RemovePubRandProofList([]byte(req.ChainId), fpPk.MustMarshal(), req.TargetHeight); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 func parseEotsPk(eotsPkHex string) (*bbntypes.BIP340PubKey, error) {
 	if eotsPkHex == "" {
 		return nil, fmt.Errorf("eots-pk cannot be empty")

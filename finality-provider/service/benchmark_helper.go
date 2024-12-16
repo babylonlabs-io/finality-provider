@@ -66,7 +66,7 @@ func (fp *FinalityProviderInstance) commitPubRandPairsWithTiming(startHeight uin
 
 	// Measure addPubRandProofList
 	addProofStart := time.Now()
-	if err := fp.pubRandState.addPubRandProofList(pubRandList, proofList); err != nil {
+	if err := fp.pubRandState.addPubRandProofList(fp.GetChainID(), fp.btcPk.MustMarshal(), startHeight, uint64(fp.cfg.NumPubRand), proofList); err != nil {
 		return nil, timing, fmt.Errorf("failed to save public randomness to DB: %w", err)
 	}
 	timing.AddPubRandProofListTime = time.Since(addProofStart)
