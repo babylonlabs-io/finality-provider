@@ -349,9 +349,30 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 		return nil, fmt.Errorf("failed to create proof-of-possession of the finality-provider: %w", err)
 	}
 
-	// TODO: query consumer chain to check if the fp is already registered
+	// Query the consumer chain to check if the fp is already registered
 	// if true, update db with the fp info from the consumer chain
 	// otherwise, proceed registration
+	resp, err := app.cc.QueryFinalityProvider(eotsPk.MustToBTCPK())
+	if err != nil {
+		if !strings.Contains(err.Error(), "the finality provider is not found") {
+			return nil, fmt.Errorf("err getting finality provider: %w", err)
+		}
+	}
+	if resp != nil {
+		if err := app.updateFpFromResponse(eotsPk.MustToBTCPK(), resp.FinalityProvider); err != nil {
+			return nil, err
+		}
+
+		// get updated fp from db
+		storedFp, err := app.fps.GetFinalityProvider(eotsPk.MustToBTCPK())
+		if err != nil {
+			return nil, err
+		}
+
+		return &CreateFinalityProviderResult{
+			FpInfo: storedFp.ToFinalityProviderInfo(),
+		}, nil
+	}
 
 	// 3. register the finality provider on the consumer chain
 	request := &CreateFinalityProviderRequest{
@@ -557,4 +578,38 @@ func (app *FinalityProviderApp) getFpPrivKey(fpPk []byte) (*btcec.PrivateKey, er
 	}
 
 	return record.PrivKey, nil
+}
+
+func (app *FinalityProviderApp) updateFpFromResponse(btcPk *btcec.PublicKey, fp *bstypes.FinalityProviderResponse) error {
+	if err := app.fps.SetFpDescription(btcPk, fp.Description, fp.Commission); err != nil {
+		return err
+	}
+
+	if err := app.fps.SetFpLastVotedHeight(btcPk, uint64(fp.HighestVotedHeight)); err != nil {
+		return err
+	}
+
+	power, err := app.cc.QueryFinalityProviderVotingPower(btcPk, fp.Height)
+	if err != nil {
+		return fmt.Errorf("failed to query voting power for finality provider %s: %w",
+			btcPk, err)
+	}
+
+	var status proto.FinalityProviderStatus
+	switch {
+	case power > 0:
+		status = proto.FinalityProviderStatus_ACTIVE
+	case fp.SlashedBtcHeight > 0:
+		status = proto.FinalityProviderStatus_SLASHED
+	case fp.Jailed:
+		status = proto.FinalityProviderStatus_JAILED
+	default:
+		status = proto.FinalityProviderStatus_INACTIVE
+	}
+
+	if err := app.fps.SetFpStatus(btcPk, status); err != nil {
+		return fmt.Errorf("failed to update status for finality provider %s: %w", btcPk, err)
+	}
+
+	return nil
 }
