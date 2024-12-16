@@ -64,6 +64,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
 		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(),
 			gomock.Any()).Return(uint64(0), nil).AnyTimes()
+		mockClientController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(nil, nil).AnyTimes()
 
 		// Create randomized config
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
