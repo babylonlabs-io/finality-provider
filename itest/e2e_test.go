@@ -1,11 +1,10 @@
-//go:build e2e
-// +build e2e
-
 package e2etest
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"log"
 	"math/rand"
 	"os"
@@ -325,4 +324,31 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 	fp, err := tm.BBNClient.QueryFinalityProvider(eotsPk.MustToBTCPK())
 	require.NoError(t, err)
 	require.NotNil(t, fp)
+}
+
+func TestRemoveMerkleProofsCmd(t *testing.T) {
+	tm, fps := StartManagerWithFinalityProvider(t, 1)
+	defer tm.Stop(t)
+
+	fpIns := fps[0]
+
+	tm.WaitForFpPubRandTimestamped(t, fps[0])
+	cmd := daemon.CommandUnsafePruneMerkleProof()
+
+	cmd.SetArgs([]string{
+		fpIns.GetBtcPkHex(),
+		"--daemon-address=" + fpIns.GetConfig().RPCListener,
+		"--up-to-height=100",
+		"--chain-id=" + testChainID,
+	})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		_, err := tm.Fps[0].GetPubRandProofStore().
+			GetPubRandProof(fpIns.GetChainID(), fpIns.GetBtcPkBIP340().MustMarshal(), 99)
+
+		return errors.Is(err, store.ErrPubRandProofNotFound)
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
 }

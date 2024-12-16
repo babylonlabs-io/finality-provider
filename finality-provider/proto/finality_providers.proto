@@ -35,6 +35,9 @@ service FinalityProviders {
 
     // EditFinalityProvider edits finality provider
     rpc EditFinalityProvider (EditFinalityProviderRequest) returns (EmptyResponse);
+
+    // UnsafeRemoveMerkleProof removes merkle proofs up to target height
+    rpc UnsafeRemoveMerkleProof (RemoveMerkleProofRequest) returns (EmptyResponse);
 }
 
 message GetInfoRequest {
@@ -243,6 +246,15 @@ message EditFinalityProviderRequest {
         (cosmos_proto.scalar)  = "cosmos.Dec",
         (gogoproto.customtype) = "cosmossdk.io/math.LegacyDec"
     ];
+}
+
+message RemoveMerkleProofRequest {
+    // btc_pk_hex is the hex string of the BTC secp256k1 PK of the finality provider encoded in BIP-340 spec
+    string btc_pk_hex = 1;
+    // chain_id is the identifier of the consumer chain
+    string chain_id = 2;
+    // target_height to to delete all proofs
+    uint64 target_height = 3;
 }
 
 // Define an empty response message

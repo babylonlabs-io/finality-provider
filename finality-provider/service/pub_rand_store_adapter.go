@@ -2,7 +2,6 @@ package service
 
 import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
-	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cometbft/cometbft/crypto/merkle"
 )
 
@@ -15,16 +14,16 @@ func newPubRandState(s *store.PubRandProofStore) *pubRandState {
 }
 
 func (st *pubRandState) addPubRandProofList(
-	pubRandList []*btcec.FieldVal,
+	pk, chainID []byte, height uint64, numPubRand uint64,
 	proofList []*merkle.Proof,
 ) error {
-	return st.s.AddPubRandProofList(pubRandList, proofList)
+	return st.s.AddPubRandProofList(chainID, pk, height, numPubRand, proofList)
 }
 
-func (st *pubRandState) getPubRandProof(pubRand *btcec.FieldVal) ([]byte, error) {
-	return st.s.GetPubRandProof(pubRand)
+func (st *pubRandState) getPubRandProof(pk, chainID []byte, height uint64) ([]byte, error) {
+	return st.s.GetPubRandProof(chainID, pk, height)
 }
 
-func (st *pubRandState) getPubRandProofList(pubRandList []*btcec.FieldVal) ([][]byte, error) {
-	return st.s.GetPubRandProofList(pubRandList)
+func (st *pubRandState) getPubRandProofList(pk, chainID []byte, height uint64, numPubRand uint64) ([][]byte, error) {
+	return st.s.GetPubRandProofList(chainID, pk, height, numPubRand)
 }

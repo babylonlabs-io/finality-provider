@@ -1,9 +1,11 @@
 package store
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/btcsuite/btcwallet/walletdb"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cometbft/cometbft/crypto/merkle"
 	"github.com/lightningnetwork/lnd/kvdb"
 )
@@ -34,20 +36,56 @@ func (s *PubRandProofStore) initBuckets() error {
 	})
 }
 
+// getKey key is (chainID || pk || height)
+func getKey(chainID, pk []byte, height uint64) []byte {
+	// Convert height to bytes
+	heightBytes := sdk.Uint64ToBigEndian(height)
+
+	// Concatenate all components to create the key
+	key := make([]byte, 0, len(pk)+len(chainID)+len(heightBytes))
+	key = append(key, chainID...)
+	key = append(key, pk...)
+	key = append(key, heightBytes...)
+
+	return key
+}
+
+func getPrefixKey(chainID, pk []byte) []byte {
+	// Concatenate chainID and pk to form the prefix
+	prefix := make([]byte, 0, len(chainID)+len(pk))
+	prefix = append(prefix, chainID...)
+	prefix = append(prefix, pk...)
+
+	return prefix
+}
+
+func buildKeys(chainID, pk []byte, height uint64, num uint64) [][]byte {
+	keys := make([][]byte, 0, num)
+
+	for i := uint64(0); i < num; i++ {
+		key := getKey(chainID, pk, height+i)
+		keys = append(keys, key)
+	}
+
+	return keys
+}
+
 func (s *PubRandProofStore) AddPubRandProofList(
-	pubRandList []*btcec.FieldVal,
+	chainID []byte,
+	pk []byte,
+	height uint64,
+	numPubRand uint64,
 	proofList []*merkle.Proof,
 ) error {
-	if len(pubRandList) != len(proofList) {
+	keys := buildKeys(chainID, pk, height, numPubRand)
+
+	if len(keys) != len(proofList) {
 		return fmt.Errorf("the number of public randomness is not same as the number of proofs")
 	}
 
-	pubRandBytesList := [][]byte{}
-	proofBytesList := [][]byte{}
-	for i := range pubRandList {
-		pubRandBytes := *pubRandList[i].Bytes()
-		pubRandBytesList = append(pubRandBytesList, pubRandBytes[:])
-		proofBytes, err := proofList[i].ToProto().Marshal()
+	var proofBytesList [][]byte
+	for _, proof := range proofList {
+		proofBytes, err := proof.ToProto().Marshal()
 		if err != nil {
 			return fmt.Errorf("invalid proof: %w", err)
 		}
@@ -60,13 +98,13 @@ func (s *PubRandProofStore) AddPubRandProofList(
 			return ErrCorruptedPubRandProofDB
 		}
 
-		for i := range pubRandBytesList {
+		for i, key := range keys {
 			// skip if already committed
-			if bucket.Get(pubRandBytesList[i]) != nil {
+			if bucket.Get(key) != nil {
 				continue
 			}
 			// set to DB
-			if err := bucket.Put(pubRandBytesList[i], proofBytesList[i]); err != nil {
+			if err := bucket.Put(key, proofBytesList[i]); err != nil {
 				return err
 			}
 		}
@@ -75,8 +113,8 @@ func (s *PubRandProofStore) AddPubRandProofList(
 	})
 }
 
-func (s *PubRandProofStore) GetPubRandProof(pubRand *btcec.FieldVal) ([]byte, error) {
-	pubRandBytes := *pubRand.Bytes()
+func (s *PubRandProofStore) GetPubRandProof(chainID []byte, pk []byte, height uint64) ([]byte, error) {
+	key := getKey(chainID, pk, height)
 	var proofBytes []byte
 
 	err := s.db.View(func(tx kvdb.RTx) error {
@@ -85,7 +123,7 @@ func (s *PubRandProofStore) GetPubRandProof(pubRand *btcec.FieldVal) ([]byte, er
 			return ErrCorruptedPubRandProofDB
 		}
 
-		proofBytes = bucket.Get(pubRandBytes[:])
+		proofBytes = bucket.Get(key)
 		if proofBytes == nil {
 			return ErrPubRandProofNotFound
 		}
@@ -100,14 +138,14 @@ func (s *PubRandProofStore) GetPubRandProof(pubRand *btcec.FieldVal) ([]byte, er
 	return proofBytes, nil
 }
 
-func (s *PubRandProofStore) GetPubRandProofList(pubRandList []*btcec.FieldVal) ([][]byte, error) {
-	pubRandBytesList := [][]byte{}
-	for i := range pubRandList {
-		pubRandBytes := *pubRandList[i].Bytes()
-		pubRandBytesList = append(pubRandBytesList, pubRandBytes[:])
-	}
+func (s *PubRandProofStore) GetPubRandProofList(chainID []byte,
+	pk []byte,
+	height uint64,
+	numPubRand uint64,
+) ([][]byte, error) {
+	keys := buildKeys(chainID, pk, height, numPubRand)
 
-	proofBytesList := [][]byte{}
+	var proofBytesList [][]byte
 
 	err := s.db.View(func(tx kvdb.RTx) error {
 		bucket := tx.ReadBucket(pubRandProofBucketName)
@@ -115,8 +153,8 @@ func (s *PubRandProofStore) GetPubRandProofList(pubRandList []*btcec.FieldVal) (
 			return ErrCorruptedPubRandProofDB
 		}
 
-		for i := range pubRandBytesList {
-			proofBytes := bucket.Get(pubRandBytesList[i])
+		for _, key := range keys {
+			proofBytes := bucket.Get(key)
 			if proofBytes == nil {
 				return ErrPubRandProofNotFound
 			}
@@ -133,4 +171,37 @@ func (s *PubRandProofStore) GetPubRandProofList(pubRandList []*btcec.FieldVal) (
 	return proofBytesList, nil
 }
 
-// TODO: delete function?
+// RemovePubRandProofList removes all proofs up to the target height
+func (s *PubRandProofStore) RemovePubRandProofList(chainID []byte, pk []byte, targetHeight uint64) error {
+	prefix := getPrefixKey(chainID, pk)
+
+	err := s.db.Update(func(tx walletdb.ReadWriteTx) error {
+		bucket := tx.ReadWriteBucket(pubRandProofBucketName)
+		if bucket == nil {
+			return walletdb.ErrBucketNotFound
+		}
+
+		cursor := bucket.ReadWriteCursor()
+
+		for k, _ := cursor.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = cursor.Next() {
+			heightBytes := k[len(k)-8:]
+			height := sdk.BigEndianToUint64(heightBytes)
+
+			// no need to keep iterating, keys are sorted in lexicographical order upon insert
+			if height > targetHeight {
+				break
+			}
+
+			if err := cursor.Delete(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}, func() {})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
