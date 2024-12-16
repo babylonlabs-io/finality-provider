@@ -16,7 +16,6 @@ import (
 )
 
 var (
-	// TODO: Maybe configurable?
 	RtyAttNum = uint(5)
 	RtyAtt    = retry.Attempts(RtyAttNum)
 	RtyDel    = retry.Delay(time.Millisecond * 400)
@@ -24,7 +23,6 @@ var (
 )
 
 const (
-	// TODO: Maybe configurable?
 	maxFailedCycles = 20
 )
 
@@ -110,9 +108,7 @@ func (cp *ChainPoller) IsRunning() bool {
 	return cp.isStarted.Load()
 }
 
-// Return read only channel for incoming blocks
-// TODO: Handle the case when there is more than one consumer. Currently with more than
-// one consumer blocks most probably will be received out of order to those consumers.
+// GetBlockInfoChan returns the read-only channel for incoming blocks
 func (cp *ChainPoller) GetBlockInfoChan() <-chan *types.BlockInfo {
 	return cp.blockInfoChan
 }
@@ -175,8 +171,6 @@ func (cp *ChainPoller) pollChain() {
 	for {
 		select {
 		case <-time.After(cp.cfg.PollInterval):
-			// TODO: Handlig of request cancellation, as otherwise shutdown will be blocked
-			// until request is finished
 			blockToRetrieve := cp.nextHeight
 			block, err := cp.blockWithRetry(blockToRetrieve)
 			if err != nil {
