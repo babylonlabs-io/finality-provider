@@ -45,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#214](https://github.com/babylonlabs-io/finality-provider/pull/214) Gradual benchmark
 * [#216](https://github.com/babylonlabs-io/finality-provider/pull/216) Add multiple fpd connecting to one eotsd in e2e tests
 * [#218](https://github.com/babylonlabs-io/finality-provider/pull/218) Prune used merkle proof
+* [#227](https://github.com/babylonlabs-io/finality-provider/pull/227) Fix FP submission loop
 
 ## v0.13.1
 
