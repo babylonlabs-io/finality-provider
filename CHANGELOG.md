@@ -47,6 +47,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#218](https://github.com/babylonlabs-io/finality-provider/pull/218) Prune used merkle proof
 * [#221](https://github.com/babylonlabs-io/finality-provider/pull/221) Cleanup TODOs
 * [#228](https://github.com/babylonlabs-io/finality-provider/pull/228) Save key name mapping in eotsd import commands
+* [#227](https://github.com/babylonlabs-io/finality-provider/pull/227) Fix FP submission loop
 
 ## v0.13.1
 
