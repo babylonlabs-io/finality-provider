@@ -46,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#216](https://github.com/babylonlabs-io/finality-provider/pull/216) Add multiple fpd connecting to one eotsd in e2e tests
 * [#218](https://github.com/babylonlabs-io/finality-provider/pull/218) Prune used merkle proof
 * [#221](https://github.com/babylonlabs-io/finality-provider/pull/221) Cleanup TODOs
+* [#228](https://github.com/babylonlabs-io/finality-provider/pull/228) Save key name mapping in eotsd import commands
 * [#227](https://github.com/babylonlabs-io/finality-provider/pull/227) Fix FP submission loop
 
 ## v0.13.1
@@ -119,7 +120,7 @@ finality vote submission
 
 * [#117](https://github.com/babylonlabs-io/finality-provider/pull/117) Spec of
 commit public randomness
-* [#130](https://github.com/babylonlabs-io/finality-provider/pull/130) Finality 
+* [#130](https://github.com/babylonlabs-io/finality-provider/pull/130) Finality
 Provider operation documentation
 
 ### Bug Fixes

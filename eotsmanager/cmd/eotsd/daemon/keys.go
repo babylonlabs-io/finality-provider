@@ -50,53 +50,84 @@ func NewKeysCmd() *cobra.Command {
 		}
 
 		cmd.SetOut(oldOut)
-		return saveKeyNameMapping(cmd, args)
+		keyName := args[0]
+		eotsPk, err := saveKeyNameMapping(cmd, keyName)
+		if err != nil {
+			return err
+		}
+
+		return printFromKey(cmd, keyName, eotsPk)
 	}
+
+	saveKeyOnPostRun(keysCmd, "import")
+	saveKeyOnPostRun(keysCmd, "import-hex")
 
 	return keysCmd
 }
 
-func saveKeyNameMapping(cmd *cobra.Command, args []string) error {
-	clientCtx, err := client.GetClientQueryContext(cmd)
-	if err != nil {
+func saveKeyOnPostRun(cmd *cobra.Command, commandName string) {
+	subCmd := util.GetSubCommand(cmd, commandName)
+	if subCmd == nil {
+		panic(fmt.Sprintf("failed to find keys %s command", commandName))
+	}
+
+	subCmd.PostRunE = func(cmd *cobra.Command, args []string) error {
+		keyName := args[0]
+		_, err := saveKeyNameMapping(cmd, keyName)
 		return err
 	}
-	keyName := args[0]
+}
+
+func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey, error) {
+	clientCtx, err := client.GetClientQueryContext(cmd)
+	if err != nil {
+		return nil, err
+	}
 
 	// Load configuration
 	cfg, err := config.LoadConfig(clientCtx.HomeDir)
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
 	// Setup logger
 	logger, err := log.NewRootLoggerWithFile(config.LogFile(clientCtx.HomeDir), cfg.LogLevel)
 	if err != nil {
-		return fmt.Errorf("failed to load the logger: %w", err)
+		return nil, fmt.Errorf("failed to load the logger: %w", err)
 	}
 
 	// Get database backend
 	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
 	if err != nil {
-		return fmt.Errorf("failed to create db backend: %w", err)
+		return nil, fmt.Errorf("failed to create db backend: %w", err)
 	}
 	defer dbBackend.Close()
 
 	// Create EOTS manager
 	eotsManager, err := eotsmanager.NewLocalEOTSManager(clientCtx.HomeDir, clientCtx.Keyring.Backend(), dbBackend, logger)
 	if err != nil {
-		return fmt.Errorf("failed to create EOTS manager: %w", err)
+		return nil, fmt.Errorf("failed to create EOTS manager: %w", err)
 	}
 
 	// Get the public key for the newly added key
 	eotsPk, err := eotsManager.LoadBIP340PubKeyFromKeyName(keyName)
 	if err != nil {
-		return fmt.Errorf("failed to get public key for key %s: %w", keyName, err)
+		return nil, fmt.Errorf("failed to get public key for key %s: %w", keyName, err)
 	}
 
 	// Save the public key to key name mapping
 	if err := eotsManager.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
-		return fmt.Errorf("failed to save key name mapping: %w", err)
+		return nil, fmt.Errorf("failed to save key name mapping: %w", err)
+	}
+
+	cmd.Printf("Successfully wrote key name %s to mapping", keyName)
+	return eotsPk, nil
+}
+
+func printFromKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey) error {
+	clientCtx, err := client.GetClientQueryContext(cmd)
+	if err != nil {
+		return err
 	}
 
 	k, err := clientCtx.Keyring.Key(keyName)
