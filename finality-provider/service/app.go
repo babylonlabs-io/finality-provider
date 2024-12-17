@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -359,7 +360,12 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 		}
 	}
 	if resp != nil {
-		if err := app.updateFpFromResponse(eotsPk.MustToBTCPK(), resp.FinalityProvider); err != nil {
+		app.logger.Info("finality-provider already registered on the consumer chain",
+			zap.String("eots_pk", resp.FinalityProvider.BtcPk.MarshalHex()),
+			zap.String("addr", resp.FinalityProvider.Addr),
+		)
+
+		if err := app.putFpFromResponse(resp.FinalityProvider, chainID); err != nil {
 			return nil, err
 		}
 
@@ -580,7 +586,31 @@ func (app *FinalityProviderApp) getFpPrivKey(fpPk []byte) (*btcec.PrivateKey, er
 	return record.PrivKey, nil
 }
 
-func (app *FinalityProviderApp) updateFpFromResponse(btcPk *btcec.PublicKey, fp *bstypes.FinalityProviderResponse) error {
+// putFpFromResponse creates or updates finality-provider in the local store
+func (app *FinalityProviderApp) putFpFromResponse(fp *bstypes.FinalityProviderResponse, chainID string) error {
+	btcPk := fp.BtcPk.MustToBTCPK()
+	_, err := app.fps.GetFinalityProvider(btcPk)
+	if err != nil {
+		if errors.Is(err, store.ErrFinalityProviderNotFound) {
+			addr, err := sdk.AccAddressFromBech32(fp.Addr)
+			if err != nil {
+				return fmt.Errorf("err converting fp addr: %w", err)
+			}
+			if err := app.fps.CreateFinalityProvider(addr, btcPk, fp.Description, fp.Commission, chainID); err != nil {
+				return fmt.Errorf("failed to save finality-provider: %w", err)
+			}
+
+			app.logger.Info("finality-provider successfully saved the local db",
+				zap.String("eots_pk", fp.BtcPk.MarshalHex()),
+				zap.String("addr", fp.Addr),
+			)
+
+			return nil
+		}
+
+		return err
+	}
+
 	if err := app.fps.SetFpDescription(btcPk, fp.Description, fp.Commission); err != nil {
 		return err
 	}
@@ -591,8 +621,8 @@ func (app *FinalityProviderApp) updateFpFromResponse(btcPk *btcec.PublicKey, fp 
 
 	power, err := app.cc.QueryFinalityProviderVotingPower(btcPk, fp.Height)
 	if err != nil {
-		return fmt.Errorf("failed to query voting power for finality provider %v: %w",
-			btcPk, err)
+		return fmt.Errorf("failed to query voting power for finality provider %s: %w",
+			fp.BtcPk.MarshalHex(), err)
 	}
 
 	var status proto.FinalityProviderStatus
@@ -608,8 +638,13 @@ func (app *FinalityProviderApp) updateFpFromResponse(btcPk *btcec.PublicKey, fp 
 	}
 
 	if err := app.fps.SetFpStatus(btcPk, status); err != nil {
-		return fmt.Errorf("failed to update status for finality provider %v: %w", btcPk, err)
+		return fmt.Errorf("failed to update status for finality provider %s: %w", fp.BtcPk.MarshalHex(), err)
 	}
+
+	app.logger.Info("finality-provider successfully updated the local db",
+		zap.String("eots_pk", fp.BtcPk.MarshalHex()),
+		zap.String("addr", fp.Addr),
+	)
 
 	return nil
 }
