@@ -158,6 +158,21 @@ func (mr *MockClientControllerMockRecorder) QueryFinalityActivationBlockHeight()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityActivationBlockHeight", reflect.TypeOf((*MockClientController)(nil).QueryFinalityActivationBlockHeight))
 }
 
+// QueryFinalityProvider mocks base method.
+func (m *MockClientController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*types.QueryFinalityProviderResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QueryFinalityProvider", fpPk)
+	ret0, _ := ret[0].(*types.QueryFinalityProviderResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// QueryFinalityProvider indicates an expected call of QueryFinalityProvider.
+func (mr *MockClientControllerMockRecorder) QueryFinalityProvider(fpPk interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProvider", reflect.TypeOf((*MockClientController)(nil).QueryFinalityProvider), fpPk)
+}
+
 // QueryFinalityProviderHighestVotedHeight mocks base method.
 func (m *MockClientController) QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error) {
 	m.ctrl.T.Helper()

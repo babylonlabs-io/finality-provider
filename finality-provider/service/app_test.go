@@ -3,6 +3,7 @@ package service_test
 import (
 	"errors"
 	"fmt"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -64,6 +65,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
 		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(),
 			gomock.Any()).Return(uint64(0), nil).AnyTimes()
+		mockClientController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(nil, nil).AnyTimes()
 
 		// Create randomized config
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
@@ -280,6 +282,96 @@ func FuzzStatusUpdate(f *testing.F) {
 		} else if fpIns.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
 			waitForStatus(t, fpIns, proto.FinalityProviderStatus_INACTIVE)
 		}
+	})
+}
+
+func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
+	testutil.AddRandomSeedsToFuzzer(f, 10)
+	f.Fuzz(func(t *testing.T, seed int64) {
+		r := rand.New(rand.NewSource(seed))
+
+		logger := zap.NewNop()
+		// create an EOTS manager
+		eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
+		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
+		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
+		require.NoError(t, err)
+		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
+		require.NoError(t, err)
+		defer func() {
+			dbBackend.Close()
+			err = os.RemoveAll(eotsHomeDir)
+			require.NoError(t, err)
+		}()
+
+		randomStartingHeight := uint64(r.Int63n(100) + 1)
+		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
+		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight, 0)
+		rndFp, err := datagen.GenRandomFinalityProvider(r)
+		require.NoError(t, err)
+
+		// Create randomized config
+		fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
+		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
+		fpCfg.PollerConfig.AutoChainScanningMode = false
+		fpCfg.PollerConfig.StaticChainScanningStartHeight = randomStartingHeight
+		fpdb, err := fpCfg.DatabaseConfig.GetDBBackend()
+		require.NoError(t, err)
+
+		app, err := service.NewFinalityProviderApp(&fpCfg, mockClientController, em, fpdb, logger)
+		require.NoError(t, err)
+
+		defer func() {
+			err = fpdb.Close()
+			require.NoError(t, err)
+			err = os.RemoveAll(fpHomeDir)
+			require.NoError(t, err)
+		}()
+
+		err = app.Start()
+		require.NoError(t, err)
+		defer func() {
+			err = app.Stop()
+			require.NoError(t, err)
+		}()
+
+		var eotsPk *bbntypes.BIP340PubKey
+		eotsKeyName := testutil.GenRandomHexStr(r, 4)
+		require.NoError(t, err)
+		eotsPkBz, err := em.CreateKey(eotsKeyName, passphrase, hdPath)
+		require.NoError(t, err)
+		eotsPk, err = bbntypes.NewBIP340PubKey(eotsPkBz)
+		require.NoError(t, err)
+
+		// generate keyring
+		keyName := testutil.GenRandomHexStr(r, 4)
+		chainID := testutil.GenRandomHexStr(r, 4)
+
+		cfg := app.GetConfig()
+		_, err = testutil.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, keyName, sdkkeyring.BackendTest, passphrase, hdPath, "")
+		require.NoError(t, err)
+
+		fpRes := &btcstakingtypes.QueryFinalityProviderResponse{FinalityProvider: &btcstakingtypes.FinalityProviderResponse{
+			Description:          rndFp.Description,
+			Commission:           rndFp.Commission,
+			Addr:                 rndFp.Addr,
+			BtcPk:                eotsPk,
+			Pop:                  rndFp.Pop,
+			SlashedBabylonHeight: rndFp.SlashedBabylonHeight,
+			SlashedBtcHeight:     rndFp.SlashedBtcHeight,
+			Jailed:               rndFp.Jailed,
+			HighestVotedHeight:   rndFp.HighestVotedHeight,
+		}}
+
+		mockClientController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(fpRes, nil).AnyTimes()
+
+		res, err := app.CreateFinalityProvider(keyName, chainID, passphrase, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
+		require.NoError(t, err)
+		require.Equal(t, res.FpInfo.BtcPkHex, eotsPk.MarshalHex())
+
+		fpInfo, err := app.GetFinalityProviderInfo(eotsPk)
+		require.NoError(t, err)
+		require.Equal(t, eotsPk.MarshalHex(), fpInfo.BtcPkHex)
 	})
 }
 

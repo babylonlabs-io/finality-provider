@@ -51,6 +51,9 @@ type ClientController interface {
 		The following methods are queries to the consumer chain
 	*/
 
+	// QueryFinalityProvider queries the finality provider by pk
+	QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error)
+
 	// QueryFinalityProviderVotingPower queries the voting power of the finality provider at a given height
 	QueryFinalityProviderVotingPower(fpPk *btcec.PublicKey, blockHeight uint64) (uint64, error)
 

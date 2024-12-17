@@ -48,6 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#221](https://github.com/babylonlabs-io/finality-provider/pull/221) Cleanup TODOs
 * [#228](https://github.com/babylonlabs-io/finality-provider/pull/228) Save key name mapping in eotsd import commands
 * [#227](https://github.com/babylonlabs-io/finality-provider/pull/227) Fix FP submission loop
+* [#226](https://github.com/babylonlabs-io/finality-provider/pull/226) Update local fp before register
 
 ## v0.13.1
 
@@ -120,7 +121,7 @@ finality vote submission
 
 * [#117](https://github.com/babylonlabs-io/finality-provider/pull/117) Spec of
 commit public randomness
-* [#130](https://github.com/babylonlabs-io/finality-provider/pull/130) Finality
+* [#130](https://github.com/babylonlabs-io/finality-provider/pull/130) Finality 
 Provider operation documentation
 
 ### Bug Fixes
