@@ -183,7 +183,7 @@ func (bc *BabylonController) SubmitFinalitySig(
 	fpPk *btcec.PublicKey,
 	block *types.BlockInfo,
 	pubRand *btcec.FieldVal,
-	proof []byte, // TODO: have a type for proof
+	proof []byte,
 	sig *btcec.ModNScalar,
 ) (*types.TxResponse, error) {
 	return bc.SubmitBatchFinalitySigs(

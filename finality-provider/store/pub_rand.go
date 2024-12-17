@@ -3,6 +3,7 @@ package store
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/btcsuite/btcwallet/walletdb"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
