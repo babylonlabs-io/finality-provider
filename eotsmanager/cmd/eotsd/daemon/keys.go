@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"io"
 
 	"github.com/babylonlabs-io/babylon/types"
@@ -122,6 +123,79 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 
 	cmd.Printf("Successfully wrote key name %s to mapping", keyName)
 	return eotsPk, nil
+}
+
+// CommandPrintAllKeys prints all EOTS keys
+func CommandPrintAllKeys() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:     "ls",
+		Aliases: []string{"ls"},
+		Short:   "Print all EOTS keys from database",
+		Example: `eotsd ls --home=/path/to/cfg`,
+		Args:    cobra.NoArgs,
+		RunE:    runCommandPrintAllKeys,
+	}
+
+	cmd.Flags().String(flags.FlagHome, config.DefaultEOTSDir, "The path to the eotsd home directory")
+
+	return cmd
+}
+
+func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
+	eotsKeys, err := getAllEOTSKeys(cmd)
+	if err != nil {
+		return err
+	}
+
+	for keyName, key := range eotsKeys {
+		pk, err := schnorr.ParsePubKey(key)
+		if err != nil {
+			return err
+		}
+		eotsPk := types.NewBIP340PubKeyFromBTCPK(pk)
+		cmd.Printf("Key Name: %s, EOTS PK: %s\n", keyName, eotsPk.MarshalHex())
+	}
+
+	return nil
+}
+
+func getAllEOTSKeys(cmd *cobra.Command) (map[string][]byte, error) {
+	homePath, err := getHomePath(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load configuration
+	cfg, err := config.LoadConfig(homePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Setup logger
+	logger, err := log.NewRootLoggerWithFile(config.LogFile(homePath), cfg.LogLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load the logger: %w", err)
+	}
+
+	// Get database backend
+	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create db backend: %w", err)
+	}
+	defer dbBackend.Close()
+
+	// Create EOTS manager
+	eotsManager, err := eotsmanager.NewLocalEOTSManager(homePath, cfg.KeyringBackend, dbBackend, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create EOTS manager: %w", err)
+	}
+
+	res, err := eotsManager.ListEOTSKeys()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get keys from db: %w", err)
+	}
+
+	return res, nil
 }
 
 func printFromKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey) error {

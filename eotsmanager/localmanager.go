@@ -369,3 +369,7 @@ func (lm *LocalEOTSManager) keyExists(name string) bool {
 	_, err := lm.kr.Key(name)
 	return err == nil
 }
+
+func (lm *LocalEOTSManager) ListEOTSKeys() (map[string][]byte, error) {
+	return lm.es.GetAllEOTSKeyNames()
+}
