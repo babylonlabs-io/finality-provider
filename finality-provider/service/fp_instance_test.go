@@ -13,7 +13,6 @@ import (
 	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
@@ -147,7 +146,7 @@ func startFinalityProviderAppWithRegisteredFp(
 	startingHeight uint64,
 	numPubRand uint32,
 ) (*service.FinalityProviderApp, *service.FinalityProviderInstance, func()) {
-	logger := zap.NewNop()
+	logger := testutil.GetTestLogger(t)
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)

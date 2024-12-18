@@ -373,7 +373,15 @@ func (fp *FinalityProviderInstance) hasVotingPower(b *types.BlockInfo) (bool, er
 			zap.Uint64("block_height", b.Height),
 		)
 
+		if fp.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
+			fp.MustSetStatus(proto.FinalityProviderStatus_INACTIVE)
+		}
+
 		return false, nil
+	}
+
+	if fp.GetStatus() == proto.FinalityProviderStatus_INACTIVE {
+		fp.MustSetStatus(proto.FinalityProviderStatus_ACTIVE)
 	}
 
 	return true, nil

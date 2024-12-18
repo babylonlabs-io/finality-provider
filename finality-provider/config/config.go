@@ -29,7 +29,6 @@ const (
 	defaultNumPubRandMax               = 100000
 	defaultMinRandHeightGap            = 35000
 	defaultBatchSubmissionSize         = 1000
-	defaultStatusUpdateInterval        = 20 * time.Second
 	defaultRandomInterval              = 30 * time.Second
 	defaultSubmitRetryInterval         = 1 * time.Second
 	defaultSignatureSubmissionInterval = 1 * time.Second
@@ -61,7 +60,6 @@ type Config struct {
 	MaxSubmissionRetries        uint32        `long:"maxsubmissionretries" description:"The maximum number of retries to submit finality signature or public randomness"`
 	EOTSManagerAddress          string        `long:"eotsmanageraddress" description:"The address of the remote EOTS manager; Empty if the EOTS manager is running locally"`
 	BatchSubmissionSize         uint32        `long:"batchsubmissionsize" description:"The size of a batch in one submission"`
-	StatusUpdateInterval        time.Duration `long:"statusupdateinterval" description:"The interval between each update of finality-provider status"`
 	RandomnessCommitInterval    time.Duration `long:"randomnesscommitinterval" description:"The interval between each attempt to commit public randomness"`
 	SubmissionRetryInterval     time.Duration `long:"submissionretryinterval" description:"The interval between each attempt to submit finality signature or public randomness after a failure"`
 	SignatureSubmissionInterval time.Duration `long:"signaturesubmissioninterval" description:"The interval between each finality signature(s) submission"`
@@ -96,7 +94,6 @@ func DefaultConfigWithHome(homePath string) Config {
 		NumPubRandMax:               defaultNumPubRandMax,
 		TimestampingDelayBlocks:     defaultMinRandHeightGap,
 		BatchSubmissionSize:         defaultBatchSubmissionSize,
-		StatusUpdateInterval:        defaultStatusUpdateInterval,
 		RandomnessCommitInterval:    defaultRandomInterval,
 		SubmissionRetryInterval:     defaultSubmitRetryInterval,
 		SignatureSubmissionInterval: defaultSignatureSubmissionInterval,

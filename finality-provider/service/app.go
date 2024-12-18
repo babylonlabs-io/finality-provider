@@ -277,10 +277,9 @@ func (app *FinalityProviderApp) Start() error {
 			return
 		}
 
-		app.wg.Add(5)
+		app.wg.Add(4)
 		go app.metricsUpdateLoop()
 		go app.monitorCriticalErr()
-		go app.monitorStatusUpdate()
 		go app.registrationLoop()
 		go app.unjailFpLoop()
 	})
