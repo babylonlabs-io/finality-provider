@@ -171,49 +171,52 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 	defer fp.wg.Done()
 
 	for {
-		// start submission in the first iteration
-		pollerBlocks := fp.getBatchBlocksFromChan()
-		if len(pollerBlocks) == 0 {
-			continue
-		}
-		targetHeight := pollerBlocks[len(pollerBlocks)-1].Height
-		fp.logger.Debug("the finality-provider received new block(s), start processing",
-			zap.String("pk", fp.GetBtcPkHex()),
-			zap.Uint64("start_height", pollerBlocks[0].Height),
-			zap.Uint64("end_height", targetHeight),
-		)
-
-		processedBlocks, err := fp.processBlocksToVote(pollerBlocks)
-		if err != nil {
-			fp.reportCriticalErr(err)
-			continue
-		}
-
-		res, err := fp.retrySubmitSigsUntilFinalized(processedBlocks)
-		if err != nil {
-			fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
-			if !errors.Is(err, ErrFinalityProviderShutDown) {
-				fp.reportCriticalErr(err)
-			}
-			continue
-		}
-		if res == nil {
-			// this can happen when a finality signature is not needed
-			// either if the block is already submitted or the signature
-			// is already submitted
-			continue
-		}
-		fp.logger.Info(
-			"successfully submitted the finality signature to the consumer chain",
-			zap.String("consumer_id", string(fp.GetChainID())),
-			zap.String("pk", fp.GetBtcPkHex()),
-			zap.Uint64("start_height", pollerBlocks[0].Height),
-			zap.Uint64("end_height", targetHeight),
-			zap.String("tx_hash", res.TxHash),
-		)
 		select {
 		case <-time.After(fp.cfg.SignatureSubmissionInterval):
-			continue
+			// start submission in the first iteration
+			pollerBlocks := fp.getBatchBlocksFromChan()
+			if len(pollerBlocks) == 0 {
+				continue
+			}
+			targetHeight := pollerBlocks[len(pollerBlocks)-1].Height
+			fp.logger.Debug("the finality-provider received new block(s), start processing",
+				zap.String("pk", fp.GetBtcPkHex()),
+				zap.Uint64("start_height", pollerBlocks[0].Height),
+				zap.Uint64("end_height", targetHeight),
+			)
+
+			processedBlocks, err := fp.processBlocksToVote(pollerBlocks)
+			if err != nil {
+				fp.reportCriticalErr(err)
+				continue
+			}
+
+			if len(processedBlocks) == 0 {
+				continue
+			}
+
+			res, err := fp.retrySubmitSigsUntilFinalized(processedBlocks)
+			if err != nil {
+				fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
+				if !errors.Is(err, ErrFinalityProviderShutDown) {
+					fp.reportCriticalErr(err)
+				}
+				continue
+			}
+			if res == nil {
+				// this can happen when a finality signature is not needed
+				// either if the block is already submitted or the signature
+				// is already submitted
+				continue
+			}
+			fp.logger.Info(
+				"successfully submitted the finality signature to the consumer chain",
+				zap.String("consumer_id", string(fp.GetChainID())),
+				zap.String("pk", fp.GetBtcPkHex()),
+				zap.Uint64("start_height", pollerBlocks[0].Height),
+				zap.Uint64("end_height", targetHeight),
+				zap.String("tx_hash", res.TxHash),
+			)
 		case <-fp.quit:
 			fp.logger.Info("the finality signature submission loop is closing")
 			return
@@ -295,33 +298,32 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop() {
 	defer fp.wg.Done()
 
 	for {
-		// start randomness commit in the first iteration
-		should, startHeight, err := fp.ShouldCommitRandomness()
-		if err != nil {
-			fp.reportCriticalErr(err)
-			continue
-		}
-		if !should {
-			continue
-		}
-
-		txRes, err := fp.CommitPubRand(startHeight)
-		if err != nil {
-			fp.metrics.IncrementFpTotalFailedRandomness(fp.GetBtcPkHex())
-			fp.reportCriticalErr(err)
-			continue
-		}
-		// txRes could be nil if no need to commit more randomness
-		if txRes != nil {
-			fp.logger.Info(
-				"successfully committed public randomness to the consumer chain",
-				zap.String("pk", fp.GetBtcPkHex()),
-				zap.String("tx_hash", txRes.TxHash),
-			)
-		}
 		select {
 		case <-time.After(fp.cfg.RandomnessCommitInterval):
-			continue
+			// start randomness commit in the first iteration
+			should, startHeight, err := fp.ShouldCommitRandomness()
+			if err != nil {
+				fp.reportCriticalErr(err)
+				continue
+			}
+			if !should {
+				continue
+			}
+
+			txRes, err := fp.CommitPubRand(startHeight)
+			if err != nil {
+				fp.metrics.IncrementFpTotalFailedRandomness(fp.GetBtcPkHex())
+				fp.reportCriticalErr(err)
+				continue
+			}
+			// txRes could be nil if no need to commit more randomness
+			if txRes != nil {
+				fp.logger.Info(
+					"successfully committed public randomness to the consumer chain",
+					zap.String("pk", fp.GetBtcPkHex()),
+					zap.String("tx_hash", txRes.TxHash),
+				)
+			}
 		case <-fp.quit:
 			fp.logger.Info("the randomness commitment loop is closing")
 			return
@@ -457,6 +459,7 @@ func (fp *FinalityProviderInstance) retrySubmitSigsUntilFinalized(targetBlocks [
 		select {
 		case <-time.After(fp.cfg.SubmissionRetryInterval):
 			// Continue to next retry iteration
+			continue
 		case <-fp.quit:
 			fp.logger.Debug("the finality-provider instance is closing", zap.String("pk", fp.GetBtcPkHex()))
 			return nil, ErrFinalityProviderShutDown

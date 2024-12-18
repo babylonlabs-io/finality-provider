@@ -199,14 +199,12 @@ func (app *FinalityProviderApp) metricsUpdateLoop() {
 	defer updateTicker.Stop()
 
 	for {
+		if app.fpIns != nil {
+			app.metrics.UpdateFpMetrics(app.fpIns.GetStoreFinalityProvider())
+		}
 		select {
 		case <-updateTicker.C:
-			fps, err := app.fps.GetAllStoredFinalityProviders()
-			if err != nil {
-				app.logger.Error("failed to get finality-providers from the store", zap.Error(err))
-				continue
-			}
-			app.metrics.UpdateFpMetrics(fps)
+			continue
 		case <-app.quit:
 			app.logger.Info("exiting metrics update loop")
 			return

@@ -255,8 +255,8 @@ func StartManagerWithFinalityProvider(t *testing.T, n int) (*TestManager, []*ser
 }
 
 func (tm *TestManager) Stop(t *testing.T) {
-	for _, fp := range tm.Fps {
-		err := fp.Stop()
+	for _, fpApp := range tm.Fps {
+		err := fpApp.Stop()
 		require.NoError(t, err)
 	}
 	err := tm.manager.ClearResources()
