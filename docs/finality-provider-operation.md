@@ -35,6 +35,8 @@ gain an overall understanding of the finality provider.
    2. [Withdrawing Rewards](#52-withdrawing-rewards)
    3. [Jailing and Unjailing](#53-jailing-and-unjailing)
    4. [Slashing](#54-slashing)
+   5. [Prometheus Metrics](#55-prometheus-metrics)
+   6. [Withdrawing Rewards](#56-withdrawing-rewards)
 
 ## 1. A note about Phase-1 Finality Providers
 
@@ -493,7 +495,7 @@ saves the finality provider information in the database.
 fpd create-finality-provider \
   --chain-id bbn-test-5 \
   --eots-pk <eots-pk-hex> \
-  --commission 0.05 \
+  --commission-rate 0.05 \
   --key-name finality-provider \
   --moniker "MyFinalityProvider" \
   --website "https://myfinalityprovider.com" \
@@ -598,7 +600,8 @@ When jailed, the following happens to a finality provider:
 - Delegator rewards stop
 
 To unjail a finality provider, you must complete the following steps:
-1. Fix the underlying issue that caused jailing (e.g., ensure your node is properly synced and voting)
+1. Fix the underlying issue that caused jailing (e.g., ensure your node is 
+   properly synced and voting)
 2. Wait for the jailing period to pass (defined by finality module parameters)
 3. Send the unjail transaction to the Babylon chain using the following command:
 
@@ -626,7 +629,7 @@ removal from the active set.
 > ⚠️ **Critical**: Slashing is irreversible and results in
 > permanent removal from the network.
 
-### 5.5 Prometheus
+### 5.5. Prometheus Metrics
 
 The finality provider exposes Prometheus metrics for monitoring your 
 finality provider. The metrics endpoint is configurable in `fpd.conf`:
@@ -657,3 +660,48 @@ For a complete list of available metrics, see:
 - Finality Provider metrics: [fp_collectors.go](../metrics/fp_collectors.go)
 - EOTS metrics: [eots_collectors.go](../metrics/eots_collectors.go)
 
+### 5.6. Withdrawing Rewards
+
+When you are ready to withdraw your rewards, you have the option first to set
+the address to withdraw your rewards to.
+
+```shell
+fpd  set-withdraw-addr <new-address> --from <finality-provider-address> 
+--keyring-backend test --home <home-dir> --fees <fees>
+```
+
+Parameters:
+- `<new-address>`: The new address to withdraw rewards to.
+- `--from`: The finality provider's address.
+- `--keyring-backend`: The keyring backend to use.
+- `--home`: The home directory for the finality provider.
+- `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
+
+This command should ask you to 
+`confirm transaction before signing and broadcasting [y/N]:` and output the 
+transaction hash.
+
+Once you have set the address, you can withdraw your rewards by running the 
+following command:
+
+```shell
+fpd withdraw-reward <type> --from <finality-provider-address> 
+--keyring-backend test --home <home-dir> --fees <fees>
+```
+
+Parameters:
+- `<type>`: The type of reward to withdraw (one of `finality_provider`, 
+  `btc_delegation`)
+- `--from`: The finality provider's address.
+- `--keyring-backend`: The keyring backend to use.
+- `--home`: The home directory for the finality provider.
+- `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
+
+Again, this command should ask you to 
+`confirm transaction before signing and broadcasting [y/N]:` and output the 
+transaction hash.
+
+This will withdraw ALL accumulated rewards to the address you set in the 
+`set-withdraw-addr` command.
+
+Congratulations! You have successfully set up and operated a finality provider.
