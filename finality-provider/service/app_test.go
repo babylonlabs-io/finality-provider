@@ -3,13 +3,14 @@ package service_test
 import (
 	"errors"
 	"fmt"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -254,7 +255,7 @@ func FuzzStatusUpdate(f *testing.F) {
 		votingPower := uint64(r.Intn(2))
 		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), currentHeight).Return(votingPower, nil).AnyTimes()
 		mockClientController.EXPECT().Close().Return(nil).AnyTimes()
-		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
+		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return([]*types.BlockInfo{{Height: randomStartingHeight - 1}}, nil).AnyTimes()
 		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
 		mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(nil, nil).AnyTimes()
 		mockClientController.EXPECT().SubmitFinalitySig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&types.TxResponse{TxHash: ""}, nil).AnyTimes()
@@ -279,7 +280,7 @@ func FuzzStatusUpdate(f *testing.F) {
 
 		if votingPower > 0 {
 			waitForStatus(t, fpIns, proto.FinalityProviderStatus_ACTIVE)
-		} else if fpIns.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
+		} else {
 			waitForStatus(t, fpIns, proto.FinalityProviderStatus_INACTIVE)
 		}
 	})

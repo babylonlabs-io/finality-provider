@@ -253,18 +253,14 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 
 			continue
 		}
-		// power == 0 and slashed_height == 0, change to INACTIVE if the current status is ACTIVE
-		if oldStatus == proto.FinalityProviderStatus_ACTIVE {
-			app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_INACTIVE)
 
-			app.logger.Debug(
-				"the finality-provider status is changed to INACTIVE",
-				zap.String("fp_btc_pk", pkHex),
-				zap.String("old_status", oldStatus.String()),
-			)
+		app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_INACTIVE)
 
-			continue
-		}
+		app.logger.Debug(
+			"the finality-provider status is changed to INACTIVE",
+			zap.String("fp_btc_pk", pkHex),
+			zap.String("old_status", oldStatus.String()),
+		)
 	}
 
 	return nil

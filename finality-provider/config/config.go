@@ -57,7 +57,7 @@ type Config struct {
 	ChainType                   string        `long:"chaintype" description:"the type of the consumer chain" choice:"babylon"`
 	NumPubRand                  uint32        `long:"numPubRand" description:"The number of Schnorr public randomness for each commitment"`
 	NumPubRandMax               uint32        `long:"numpubrandmax" description:"The upper bound of the number of Schnorr public randomness for each commitment"`
-	MinRandHeightGap            uint32        `long:"minrandheightgap" description:"The minimum gap between the last committed rand height and the current Babylon block height"`
+	TimestampingDelayBlocks     uint32        `long:"timestampingdelayblocks" description:"The delay, measured in blocks, between a randomness commit submission and the randomness is BTC-timestamped"`
 	MaxSubmissionRetries        uint32        `long:"maxsubmissionretries" description:"The maximum number of retries to submit finality signature or public randomness"`
 	EOTSManagerAddress          string        `long:"eotsmanageraddress" description:"The address of the remote EOTS manager; Empty if the EOTS manager is running locally"`
 	BatchSubmissionSize         uint32        `long:"batchsubmissionsize" description:"The size of a batch in one submission"`
@@ -94,7 +94,7 @@ func DefaultConfigWithHome(homePath string) Config {
 		PollerConfig:                &pollerCfg,
 		NumPubRand:                  defaultNumPubRand,
 		NumPubRandMax:               defaultNumPubRandMax,
-		MinRandHeightGap:            defaultMinRandHeightGap,
+		TimestampingDelayBlocks:     defaultMinRandHeightGap,
 		BatchSubmissionSize:         defaultBatchSubmissionSize,
 		StatusUpdateInterval:        defaultStatusUpdateInterval,
 		RandomnessCommitInterval:    defaultRandomInterval,

@@ -807,7 +807,7 @@ func defaultFpConfig(keyringDir, homeDir string) *fpcfg.Config {
 
 	cfg.NumPubRand = 1000
 	cfg.NumPubRandMax = 1000
-	cfg.MinRandHeightGap = 500
+	cfg.TimestampingDelayBlocks = 500
 
 	cfg.BitcoinNetwork = "simnet"
 	cfg.BTCNetParams = chaincfg.SimNetParams
