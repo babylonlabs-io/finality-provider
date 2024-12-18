@@ -666,16 +666,17 @@ When you are ready to withdraw your rewards, you have the option first to set
 the address to withdraw your rewards to.
 
 ```shell
-fpd  set-withdraw-addr <new-address> --from <finality-provider-address> 
+fpd  set-withdraw-addr <new-address> --from <registered-bbn-address> 
 --keyring-backend test --home <home-dir> --fees <fees>
 ```
 
 Parameters:
 - `<new-address>`: The new address to withdraw rewards to.
-- `--from`: The finality provider's address.
+- `--from`: The finality provider's registered Babylon address.
 - `--keyring-backend`: The keyring backend to use.
 - `--home`: The home directory for the finality provider.
 - `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
+  These fees are paid from the account specified in `--from`.
 
 This command should ask you to 
 `confirm transaction before signing and broadcasting [y/N]:` and output the 
@@ -685,23 +686,25 @@ Once you have set the address, you can withdraw your rewards by running the
 following command:
 
 ```shell
-fpd withdraw-reward <type> --from <finality-provider-address> 
+fpd withdraw-reward <type> --from <registered-bbn-address> 
 --keyring-backend test --home <home-dir> --fees <fees>
 ```
 
 Parameters:
 - `<type>`: The type of reward to withdraw (one of `finality_provider`, 
   `btc_delegation`)
-- `--from`: The finality provider's address.
+- `--from`: The finality provider's registered Babylon address.
 - `--keyring-backend`: The keyring backend to use.
 - `--home`: The home directory for the finality provider.
 - `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
+  These fees are paid from the account specified in `--from`.
 
 Again, this command should ask you to 
 `confirm transaction before signing and broadcasting [y/N]:` and output the 
 transaction hash.
 
-This will withdraw ALL accumulated rewards to the address you set in the 
-`set-withdraw-addr` command.
+This will withdraw **ALL** accumulated rewards to the address you set in the 
+`set-withdraw-addr` command if you set one. If no withdrawal address was set, 
+the rewards will be withdrawn to your finality provider address.
 
 Congratulations! You have successfully set up and operated a finality provider.
