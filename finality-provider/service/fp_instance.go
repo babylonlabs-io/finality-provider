@@ -325,13 +325,14 @@ func (fp *FinalityProviderInstance) ShouldCommitRandomness() (bool, uint64, erro
 	tipHeightWithDelay := tipHeight + uint64(fp.cfg.TimestampingDelayBlocks)
 
 	var startHeight uint64
-	if lastCommittedHeight < tipHeightWithDelay {
+	switch {
+	case lastCommittedHeight < tipHeightWithDelay:
 		// the start height should consider the timestamping delay
 		// as it is only available to use after tip height + estimated timestamping delay
 		startHeight = tipHeightWithDelay
-	} else if lastCommittedHeight < tipHeightWithDelay+uint64(fp.cfg.NumPubRand) {
+	case lastCommittedHeight < tipHeightWithDelay+uint64(fp.cfg.NumPubRand):
 		startHeight = lastCommittedHeight + 1
-	} else {
+	default:
 		// the randomness is sufficient, no need to make another commit
 		fp.logger.Debug(
 			"the finality-provider has sufficient public randomness, skip committing more",

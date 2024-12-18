@@ -27,7 +27,7 @@ const (
 	defaultConfigFileName              = "fpd.conf"
 	defaultNumPubRand                  = 70000 // support running of 1 week with block production time as 10s
 	defaultNumPubRandMax               = 100000
-	defaultMinRandHeightGap            = 35000
+	defaultTimestampingDelayBlocks     = 6000 // 100 BTC blocks * 600s / 10s
 	defaultBatchSubmissionSize         = 1000
 	defaultRandomInterval              = 30 * time.Second
 	defaultSubmitRetryInterval         = 1 * time.Second
@@ -92,7 +92,7 @@ func DefaultConfigWithHome(homePath string) Config {
 		PollerConfig:                &pollerCfg,
 		NumPubRand:                  defaultNumPubRand,
 		NumPubRandMax:               defaultNumPubRandMax,
-		TimestampingDelayBlocks:     defaultMinRandHeightGap,
+		TimestampingDelayBlocks:     defaultTimestampingDelayBlocks,
 		BatchSubmissionSize:         defaultBatchSubmissionSize,
 		RandomnessCommitInterval:    defaultRandomInterval,
 		SubmissionRetryInterval:     defaultSubmitRetryInterval,

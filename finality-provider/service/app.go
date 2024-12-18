@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -26,7 +25,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 	"github.com/babylonlabs-io/finality-provider/metrics"
-	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 type FinalityProviderApp struct {
@@ -543,32 +541,6 @@ func (app *FinalityProviderApp) setFinalityProviderJailed(fpi *FinalityProviderI
 	if err := app.removeFinalityProviderInstance(); err != nil {
 		panic(fmt.Errorf("failed to terminate a jailed finality-provider %s: %w", fpi.GetBtcPkHex(), err))
 	}
-}
-
-func (app *FinalityProviderApp) getLatestBlockWithRetry() (*types.BlockInfo, error) {
-	var (
-		latestBlock *types.BlockInfo
-		err         error
-	)
-
-	if err := retry.Do(func() error {
-		latestBlock, err = app.cc.QueryBestBlock()
-		if err != nil {
-			return err
-		}
-		return nil
-	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
-		app.logger.Debug(
-			"failed to query the consumer chain for the latest block",
-			zap.Uint("attempt", n+1),
-			zap.Uint("max_attempts", RtyAttNum),
-			zap.Error(err),
-		)
-	})); err != nil {
-		return nil, err
-	}
-
-	return latestBlock, nil
 }
 
 // NOTE: this is not safe in production, so only used for testing purpose
