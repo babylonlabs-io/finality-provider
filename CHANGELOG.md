@@ -49,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#228](https://github.com/babylonlabs-io/finality-provider/pull/228) Save key name mapping in eotsd import commands
 * [#227](https://github.com/babylonlabs-io/finality-provider/pull/227) Fix FP submission loop
 * [#226](https://github.com/babylonlabs-io/finality-provider/pull/226) Update local fp before register
+* [#233](https://github.com/babylonlabs-io/finality-provider/pull/233) Refactor CommitPubRand
 
 ## v0.13.1
 
