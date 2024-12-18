@@ -172,7 +172,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 
 	for {
 		// start submission in the first iteration
-		pollerBlocks := fp.getAllBlocksFromChan()
+		pollerBlocks := fp.getBatchBlocksFromChan()
 		if len(pollerBlocks) == 0 {
 			continue
 		}
@@ -182,7 +182,14 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 			zap.Uint64("start_height", pollerBlocks[0].Height),
 			zap.Uint64("end_height", targetHeight),
 		)
-		res, err := fp.retrySubmitSigsUntilFinalized(pollerBlocks)
+
+		processedBlocks, err := fp.processBlocksToVote(pollerBlocks)
+		if err != nil {
+			fp.reportCriticalErr(err)
+			continue
+		}
+
+		res, err := fp.retrySubmitSigsUntilFinalized(processedBlocks)
 		if err != nil {
 			fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
 			if !errors.Is(err, ErrFinalityProviderShutDown) {
@@ -214,21 +221,64 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 	}
 }
 
-func (fp *FinalityProviderInstance) getAllBlocksFromChan() []*types.BlockInfo {
+// processBlocksToVote processes a batch a blocks and picks ones that need to vote
+// it also updates the fp instance status according to the block's voting power
+func (fp *FinalityProviderInstance) processBlocksToVote(blocks []*types.BlockInfo) ([]*types.BlockInfo, error) {
+	processedBlocks := make([]*types.BlockInfo, 0, len(blocks))
+
+	var power uint64
+	var err error
+	for _, b := range blocks {
+		blk := *b
+		if blk.Height <= fp.GetLastVotedHeight() {
+			fp.logger.Debug(
+				"the block height is lower than last processed height",
+				zap.String("pk", fp.GetBtcPkHex()),
+				zap.Uint64("block_height", blk.Height),
+				zap.Uint64("last_voted_height", fp.GetLastVotedHeight()),
+			)
+			continue
+		}
+
+		// check whether the finality provider has voting power
+		power, err = fp.GetVotingPowerWithRetry(blk.Height)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get voting power for height %d: %w", blk.Height, err)
+		}
+		if power == 0 {
+			fp.logger.Debug(
+				"the finality-provider does not have voting power",
+				zap.String("pk", fp.GetBtcPkHex()),
+				zap.Uint64("block_height", blk.Height),
+			)
+
+			// the finality provider does not have voting power
+			// and it will never will at this block, so continue
+			fp.metrics.IncrementFpTotalBlocksWithoutVotingPower(fp.GetBtcPkHex())
+			continue
+		}
+
+		processedBlocks = append(processedBlocks, &blk)
+	}
+
+	// update fp status according to the power for the last block
+	if power > 0 && fp.GetStatus() != proto.FinalityProviderStatus_ACTIVE {
+		fp.MustSetStatus(proto.FinalityProviderStatus_ACTIVE)
+	}
+
+	if power == 0 && fp.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
+		fp.MustSetStatus(proto.FinalityProviderStatus_INACTIVE)
+	}
+
+	return processedBlocks, nil
+}
+
+func (fp *FinalityProviderInstance) getBatchBlocksFromChan() []*types.BlockInfo {
 	var pollerBlocks []*types.BlockInfo
 	for {
 		select {
 		case b := <-fp.poller.GetBlockInfoChan():
-			shouldProcess, err := fp.shouldProcessBlock(b)
-			if err != nil {
-				if !errors.Is(err, ErrFinalityProviderShutDown) {
-					fp.reportCriticalErr(err)
-				}
-				break
-			}
-			if shouldProcess {
-				pollerBlocks = append(pollerBlocks, b)
-			}
+			pollerBlocks = append(pollerBlocks, b)
 			if len(pollerBlocks) == int(fp.cfg.BatchSubmissionSize) {
 				return pollerBlocks
 			}
@@ -239,32 +289,6 @@ func (fp *FinalityProviderInstance) getAllBlocksFromChan() []*types.BlockInfo {
 			return pollerBlocks
 		}
 	}
-}
-
-func (fp *FinalityProviderInstance) shouldProcessBlock(b *types.BlockInfo) (bool, error) {
-	if b.Height <= fp.GetLastVotedHeight() {
-		fp.logger.Debug(
-			"the block height is lower than last processed height",
-			zap.String("pk", fp.GetBtcPkHex()),
-			zap.Uint64("block_height", b.Height),
-			zap.Uint64("last_voted_height", fp.GetLastVotedHeight()),
-		)
-		return false, nil
-	}
-
-	// check whether the finality provider has voting power
-	hasVp, err := fp.hasVotingPower(b)
-	if err != nil {
-		return false, err
-	}
-	if !hasVp {
-		// the finality provider does not have voting power
-		// and it will never will at this block
-		fp.metrics.IncrementFpTotalBlocksWithoutVotingPower(fp.GetBtcPkHex())
-		return false, nil
-	}
-
-	return true, nil
 }
 
 func (fp *FinalityProviderInstance) randomnessCommitmentLoop() {
@@ -360,32 +384,6 @@ func (fp *FinalityProviderInstance) ShouldCommitRandomness() (bool, uint64, erro
 	startHeight = max(startHeight, activationBlkHeight)
 
 	return true, startHeight, nil
-}
-
-func (fp *FinalityProviderInstance) hasVotingPower(b *types.BlockInfo) (bool, error) {
-	power, err := fp.GetVotingPowerWithRetry(b.Height)
-	if err != nil {
-		return false, err
-	}
-	if power == 0 {
-		fp.logger.Debug(
-			"the finality-provider does not have voting power",
-			zap.String("pk", fp.GetBtcPkHex()),
-			zap.Uint64("block_height", b.Height),
-		)
-
-		if fp.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
-			fp.MustSetStatus(proto.FinalityProviderStatus_INACTIVE)
-		}
-
-		return false, nil
-	}
-
-	if fp.GetStatus() == proto.FinalityProviderStatus_INACTIVE {
-		fp.MustSetStatus(proto.FinalityProviderStatus_ACTIVE)
-	}
-
-	return true, nil
 }
 
 func (fp *FinalityProviderInstance) reportCriticalErr(err error) {
