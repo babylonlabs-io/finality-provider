@@ -81,9 +81,7 @@ func (s *Server) RunUntilShutdown() error {
 		return fmt.Errorf("failed to listen on %s: %w", listenAddr, err)
 	}
 	defer func() {
-		if err := lis.Close(); err != nil {
-			s.logger.Error(fmt.Sprintf("Failed to close network listener: %v", err))
-		}
+		_ = lis.Close()
 	}()
 
 	grpcServer := grpc.NewServer()

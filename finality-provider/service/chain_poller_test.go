@@ -8,7 +8,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
@@ -49,7 +48,7 @@ func FuzzChainPoller_Start(f *testing.F) {
 		m := metrics.NewFpMetrics()
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
 		pollerCfg.PollInterval = 10 * time.Millisecond
-		poller := service.NewChainPoller(zap.NewNop(), &pollerCfg, mockClientController, m)
+		poller := service.NewChainPoller(testutil.GetTestLogger(t), &pollerCfg, mockClientController, m)
 		err := poller.Start(startHeight)
 		require.NoError(t, err)
 		defer func() {
@@ -100,7 +99,7 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 		m := metrics.NewFpMetrics()
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
 		pollerCfg.PollInterval = 1 * time.Second
-		poller := service.NewChainPoller(zap.NewNop(), &pollerCfg, mockClientController, m)
+		poller := service.NewChainPoller(testutil.GetTestLogger(t), &pollerCfg, mockClientController, m)
 		// should expect error if the poller is not started
 		err := poller.SkipToHeight(skipHeight)
 		require.Error(t, err)

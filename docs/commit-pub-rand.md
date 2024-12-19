@@ -42,27 +42,35 @@ committed before finality votes can be sent. Otherwise, the finality provider
 looses voting power for this height.
 
 To this end, when a finality provider is started, it runs a loop to periodically
-check whether it needs to make a new commit. In particualar,
-the following statement is checked:
+check whether it needs to make a new commit and calculate the start height of
+the next commit. In particular:
 
 ```go
-if lastCommittedHeight < currentHeight + uint64(MinRandHeightGap)
+	tipHeightWithDelay := tipHeight + uint64(fp.cfg.TimestampingDelayBlocks)
+	var startHeight uint64
+	switch {
+	case lastCommittedHeight < tipHeightWithDelay:
+		// the start height should consider the timestamping delay
+		// as it is only available to use after tip height + estimated timestamping delay
+		startHeight = tipHeightWithDelay
+	case lastCommittedHeight < tipHeightWithDelay+uint64(fp.cfg.NumPubRand):
+		startHeight = lastCommittedHeight + 1
+	default:
+        // randomness is sufficient, do not need to make a commit
 ```
 
 where:
 
 - `lastCommittedHeight` is the end height (`startHeight + numRand - 1`)
 from the latest public randomness commit recorded on the consumer chain
-- `currentHeight` is the current height of the consumer chain
-- `MinRandHeightGap` is a configuration value, which measures when to make a
+- `tipHeight` is the current height of the consumer chain
+- `TimestampingDelayBlocks` is a configuration value, which measures when to make a
   new commit
+- `NumPubRand` is the number of randomness in a commit defined in the config.
 
-If the statement is true, a new commit should be made to ensure sufficient
-randomness is available for future blocks.
+### Determining TimestampingDelayBlocks
 
-### Determining MinRandHeightGap
-
-The value of `MinRandHeightGap` must account for BTC-timestamping
+The value of `TimestampingDelayBlocks` must account for BTC-timestamping
 delays, which is needed to activate the randomness for a specific height
 after the committed epoch is BTC-timestamped. Here's an example:
 
@@ -82,7 +90,7 @@ The BTC-timestamping protocol requires:
 
 Therefore,
 
-- `MinRandHeightGap` should be > 6,000 to ensure randomness is always available
+- `TimestampingDelayBlocks` should be around 6,000
 - Recommended production value: > 10,000 to provide additional safety margin
 
 ### Determining Start Height
@@ -125,7 +133,7 @@ reasons:
 
 Additionally, given that the end height of a commit equals to
 `startHeight + NumPubRand - 1`, we should ensure that the condition
-`lastCommittedHeight > currentHeight + uint64(MinRandHeightGap)` can hold for
+`lastCommittedHeight > tipHeight + uint64(TimestampingDelayBlocks)` can hold for
 a long period of time to avoid frequent commit of randomness.
 In real life, the value of `NumPubRand` should be much larger than
-`MinRandHeightGap`, e.g., `NumPubRand = 2 * MinRandHeightGap`.
+`TimestampingDelayBlocks`, e.g., `NumPubRand = 2 * TimestampingDelayBlocks`.

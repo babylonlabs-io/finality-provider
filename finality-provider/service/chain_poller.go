@@ -143,18 +143,18 @@ func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
 func (cp *ChainPoller) waitForActivation() {
 	// ensure that the startHeight is no lower than the activated height
 	for {
+		activatedHeight, err := cp.cc.QueryActivatedHeight()
+		if err != nil {
+			cp.logger.Debug("failed to query the consumer chain for the activated height", zap.Error(err))
+		} else {
+			if cp.nextHeight < activatedHeight {
+				cp.nextHeight = activatedHeight
+			}
+			return
+		}
 		select {
 		case <-time.After(cp.cfg.PollInterval):
-			activatedHeight, err := cp.cc.QueryActivatedHeight()
-			if err != nil {
-				cp.logger.Debug("failed to query the consumer chain for the activated height", zap.Error(err))
-			} else {
-				if cp.nextHeight < activatedHeight {
-					cp.nextHeight = activatedHeight
-				}
-				return
-			}
-
+			continue
 		case <-cp.quit:
 			return
 		}
@@ -169,37 +169,39 @@ func (cp *ChainPoller) pollChain() {
 	var failedCycles uint32
 
 	for {
+		// start polling in the first iteration
+		blockToRetrieve := cp.nextHeight
+		block, err := cp.blockWithRetry(blockToRetrieve)
+		if err != nil {
+			failedCycles++
+			cp.logger.Debug(
+				"failed to query the consumer chain for the block",
+				zap.Uint32("current_failures", failedCycles),
+				zap.Uint64("block_to_retrieve", blockToRetrieve),
+				zap.Error(err),
+			)
+		} else {
+			// no error and we got the header we wanted to get, bump the state and push
+			// notification about data
+			cp.nextHeight = blockToRetrieve + 1
+			failedCycles = 0
+			cp.metrics.RecordLastPolledHeight(block.Height)
+
+			cp.logger.Info("the poller retrieved the block from the consumer chain",
+				zap.Uint64("height", block.Height))
+
+			// push the data to the channel
+			// Note: if the consumer is too slow -- the buffer is full
+			// the channel will block, and we will stop retrieving data from the node
+			cp.blockInfoChan <- block
+		}
+
+		if failedCycles > maxFailedCycles {
+			cp.logger.Fatal("the poller has reached the max failed cycles, exiting")
+		}
 		select {
 		case <-time.After(cp.cfg.PollInterval):
-			blockToRetrieve := cp.nextHeight
-			block, err := cp.blockWithRetry(blockToRetrieve)
-			if err != nil {
-				failedCycles++
-				cp.logger.Debug(
-					"failed to query the consumer chain for the block",
-					zap.Uint32("current_failures", failedCycles),
-					zap.Uint64("block_to_retrieve", blockToRetrieve),
-					zap.Error(err),
-				)
-			} else {
-				// no error and we got the header we wanted to get, bump the state and push
-				// notification about data
-				cp.nextHeight = blockToRetrieve + 1
-				failedCycles = 0
-				cp.metrics.RecordLastPolledHeight(block.Height)
-
-				cp.logger.Info("the poller retrieved the block from the consumer chain",
-					zap.Uint64("height", block.Height))
-
-				// push the data to the channel
-				// Note: if the consumer is too slow -- the buffer is full
-				// the channel will block, and we will stop retrieving data from the node
-				cp.blockInfoChan <- block
-			}
-
-			if failedCycles > maxFailedCycles {
-				cp.logger.Fatal("the poller has reached the max failed cycles, exiting")
-			}
+			continue
 		case req := <-cp.skipHeightChan:
 			// no need to skip heights if the target height is not higher
 			// than the next height to retrieve

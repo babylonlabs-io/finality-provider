@@ -1,15 +1,19 @@
+//go:build e2e
+// +build e2e
+
 package e2etest
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"log"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"

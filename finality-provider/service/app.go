@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -26,7 +25,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 	"github.com/babylonlabs-io/finality-provider/metrics"
-	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 type FinalityProviderApp struct {
@@ -253,18 +251,14 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 
 			continue
 		}
-		// power == 0 and slashed_height == 0, change to INACTIVE if the current status is ACTIVE
-		if oldStatus == proto.FinalityProviderStatus_ACTIVE {
-			app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_INACTIVE)
 
-			app.logger.Debug(
-				"the finality-provider status is changed to INACTIVE",
-				zap.String("fp_btc_pk", pkHex),
-				zap.String("old_status", oldStatus.String()),
-			)
+		app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_INACTIVE)
 
-			continue
-		}
+		app.logger.Debug(
+			"the finality-provider status is changed to INACTIVE",
+			zap.String("fp_btc_pk", pkHex),
+			zap.String("old_status", oldStatus.String()),
+		)
 	}
 
 	return nil
@@ -281,10 +275,9 @@ func (app *FinalityProviderApp) Start() error {
 			return
 		}
 
-		app.wg.Add(5)
+		app.wg.Add(4)
 		go app.metricsUpdateLoop()
 		go app.monitorCriticalErr()
-		go app.monitorStatusUpdate()
 		go app.registrationLoop()
 		go app.unjailFpLoop()
 	})
@@ -548,32 +541,6 @@ func (app *FinalityProviderApp) setFinalityProviderJailed(fpi *FinalityProviderI
 	if err := app.removeFinalityProviderInstance(); err != nil {
 		panic(fmt.Errorf("failed to terminate a jailed finality-provider %s: %w", fpi.GetBtcPkHex(), err))
 	}
-}
-
-func (app *FinalityProviderApp) getLatestBlockWithRetry() (*types.BlockInfo, error) {
-	var (
-		latestBlock *types.BlockInfo
-		err         error
-	)
-
-	if err := retry.Do(func() error {
-		latestBlock, err = app.cc.QueryBestBlock()
-		if err != nil {
-			return err
-		}
-		return nil
-	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
-		app.logger.Debug(
-			"failed to query the consumer chain for the latest block",
-			zap.Uint("attempt", n+1),
-			zap.Uint("max_attempts", RtyAttNum),
-			zap.Error(err),
-		)
-	})); err != nil {
-		return nil, err
-	}
-
-	return latestBlock, nil
 }
 
 // NOTE: this is not safe in production, so only used for testing purpose

@@ -3,7 +3,6 @@ package service_test
 import (
 	"errors"
 	"fmt"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -11,13 +10,14 @@ import (
 	"testing"
 	"time"
 
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	sdkkeyring "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
@@ -44,7 +44,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
 
-		logger := zap.NewNop()
+		logger := testutil.GetTestLogger(t)
 		// create an EOTS manager
 		eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
@@ -170,7 +170,6 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
 		// no need for other intervals to run
-		fpCfg.StatusUpdateInterval = time.Minute * 10
 		fpCfg.SubmissionRetryInterval = time.Minute * 10
 
 		// Create fp app
@@ -188,7 +187,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 			case 1:
 				expectedStatus = proto.FinalityProviderStatus_JAILED
 			case 2:
-				expectedStatus = proto.FinalityProviderStatus_REGISTERED
+				expectedStatus = proto.FinalityProviderStatus_INACTIVE
 			}
 		}
 
@@ -210,7 +209,6 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
 		// use shorter interval for the test to end faster
-		fpCfg.StatusUpdateInterval = time.Millisecond * 10
 		fpCfg.SubmissionRetryInterval = time.Millisecond * 10
 
 		blkInfo := &types.BlockInfo{Height: currentHeight}
@@ -241,56 +239,12 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 	})
 }
 
-func FuzzStatusUpdate(f *testing.F) {
-	testutil.AddRandomSeedsToFuzzer(f, 10)
-	f.Fuzz(func(t *testing.T, seed int64) {
-		r := rand.New(rand.NewSource(seed))
-
-		randomStartingHeight := uint64(r.Int63n(100) + 1)
-		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
-		mockClientController := testutil.PrepareMockedClientController(t, r, randomStartingHeight, currentHeight, 0)
-
-		// setup mocks
-		votingPower := uint64(r.Intn(2))
-		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), currentHeight).Return(votingPower, nil).AnyTimes()
-		mockClientController.EXPECT().Close().Return(nil).AnyTimes()
-		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
-		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
-		mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(nil, nil).AnyTimes()
-		mockClientController.EXPECT().SubmitFinalitySig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&types.TxResponse{TxHash: ""}, nil).AnyTimes()
-		mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, false, nil).AnyTimes()
-
-		// Create randomized config
-		pathSuffix := datagen.GenRandomHexStr(r, 10)
-		fpHomeDir := filepath.Join(t.TempDir(), "fp-home", pathSuffix)
-		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
-		// use shorter interval for the test to end faster
-		fpCfg.StatusUpdateInterval = time.Millisecond * 10
-		fpCfg.SubmissionRetryInterval = time.Millisecond * 10
-
-		// Create fp app
-		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockClientController)
-		defer cleanup()
-
-		err := app.StartFinalityProvider(fpPk, passphrase)
-		require.NoError(t, err)
-		fpIns, err := app.GetFinalityProviderInstance()
-		require.NoError(t, err)
-
-		if votingPower > 0 {
-			waitForStatus(t, fpIns, proto.FinalityProviderStatus_ACTIVE)
-		} else if fpIns.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
-			waitForStatus(t, fpIns, proto.FinalityProviderStatus_INACTIVE)
-		}
-	})
-}
-
 func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
 		r := rand.New(rand.NewSource(seed))
 
-		logger := zap.NewNop()
+		logger := testutil.GetTestLogger(t)
 		// create an EOTS manager
 		eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
@@ -375,15 +329,8 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 	})
 }
 
-func waitForStatus(t *testing.T, fpIns *service.FinalityProviderInstance, s proto.FinalityProviderStatus) {
-	require.Eventually(t,
-		func() bool {
-			return fpIns.GetStatus() == s
-		}, eventuallyWaitTimeOut, eventuallyPollTime)
-}
-
 func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg *config.Config, cc clientcontroller.ClientController) (*service.FinalityProviderApp, *bbntypes.BIP340PubKey, func()) {
-	logger := zap.NewNop()
+	logger := testutil.GetTestLogger(t)
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)

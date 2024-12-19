@@ -2,9 +2,11 @@ package service
 
 import (
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/types"
-	"go.uber.org/zap"
 	"time"
+
+	"go.uber.org/zap"
+
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 // CommitPubRandTiming - helper struct used to capture times for benchmark
@@ -26,7 +28,7 @@ func (fp *FinalityProviderInstance) HelperCommitPubRand(tipHeight uint64) (*type
 	case lastCommittedHeight == uint64(0):
 		// the finality-provider has never submitted public rand before
 		startHeight = tipHeight + 1
-	case lastCommittedHeight < uint64(fp.cfg.MinRandHeightGap)+tipHeight:
+	case lastCommittedHeight < uint64(fp.cfg.TimestampingDelayBlocks)+tipHeight:
 		// (should not use subtraction because they are in the type of uint64)
 		// we are running out of the randomness
 		startHeight = lastCommittedHeight + 1
