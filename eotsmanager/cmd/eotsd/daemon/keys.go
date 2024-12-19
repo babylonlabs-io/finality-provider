@@ -128,10 +128,10 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 // CommandPrintAllKeys prints all EOTS keys
 func CommandPrintAllKeys() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "ls",
+		Use:     "list",
 		Aliases: []string{"ls"},
-		Short:   "Print all EOTS keys from database",
-		Example: `eotsd ls --home=/path/to/cfg`,
+		Short:   "Print all EOTS key names and public keys mapping from database.",
+		Example: `eotsd list --home=/path/to/cfg`,
 		Args:    cobra.NoArgs,
 		RunE:    runCommandPrintAllKeys,
 	}
