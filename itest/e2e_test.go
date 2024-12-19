@@ -1,10 +1,15 @@
 package e2etest
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
+	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	"github.com/btcsuite/btcd/btcec/v2/schnorr"
+	"github.com/jessevdk/go-flags"
 	"log"
 	"math/rand"
 	"os"
@@ -351,4 +356,48 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 
 		return errors.Is(err, store.ErrPubRandProofNotFound)
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
+}
+
+func TestPrintEotsCmd(t *testing.T) {
+	tm := StartManager(t)
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	defer tm.Stop(t)
+
+	expected := make(map[string]string)
+	for i := 0; i < r.Intn(10); i++ {
+		eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
+		ekey, err := tm.EOTSClient.CreateKey(eotsKeyName, passphrase, hdPath)
+		require.NoError(t, err)
+		pk, err := schnorr.ParsePubKey(ekey)
+		require.NoError(t, err)
+		expected[eotsKeyName] = bbntypes.NewBIP340PubKeyFromBTCPK(pk).MarshalHex()
+	}
+
+	tm.EOTSServerHandler.Stop()
+
+	cmd := eotscmd.CommandPrintAllKeys()
+
+	defaultConfig := eotscfg.DefaultConfigWithHomePath(tm.EOTSHomeDir)
+	fileParser := flags.NewParser(defaultConfig, flags.Default)
+	err := flags.NewIniParser(fileParser).WriteFile(eotscfg.CfgFile(tm.EOTSHomeDir), flags.IniIncludeDefaults)
+	require.NoError(t, err)
+
+	cmd.SetArgs([]string{
+		"--home=" + tm.EOTSHomeDir,
+	})
+
+	var outputBuffer bytes.Buffer
+	cmd.SetOut(&outputBuffer)
+	cmd.SetErr(&outputBuffer)
+
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	output := outputBuffer.String()
+	t.Logf("Captured output: %s", output)
+
+	for keyName, eotsPK := range expected {
+		require.Contains(t, output, keyName)
+		require.Contains(t, output, eotsPK)
+	}
 }

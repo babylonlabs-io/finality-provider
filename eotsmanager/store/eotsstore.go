@@ -106,6 +106,34 @@ func (s *EOTSStore) GetEOTSKeyName(pk []byte) (string, error) {
 	return keyName, nil
 }
 
+// GetAllEOTSKeyNames retrieves all keys and values.
+// Returns keyName -> btcPK
+func (s *EOTSStore) GetAllEOTSKeyNames() (map[string][]byte, error) {
+	result := make(map[string][]byte)
+
+	err := s.db.View(func(tx kvdb.RTx) error {
+		eotsBucket := tx.ReadBucket(eotsBucketName)
+		if eotsBucket == nil {
+			return ErrCorruptedEOTSDb
+		}
+
+		return eotsBucket.ForEach(func(k, v []byte) error {
+			if k == nil || v == nil {
+				return fmt.Errorf("encountered invalid key or value in bucket")
+			}
+			result[string(v)] = k
+
+			return nil
+		})
+	}, func() {})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (s *EOTSStore) SaveSignRecord(
 	height uint64,
 	chainID []byte,
