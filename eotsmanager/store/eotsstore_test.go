@@ -125,3 +125,54 @@ func FuzzSignStore(f *testing.F) {
 		require.False(t, found)
 	})
 }
+
+// FuzzListKeysEOTSStore tests getting all keys from store
+func FuzzListKeysEOTSStore(f *testing.F) {
+	testutil.AddRandomSeedsToFuzzer(f, 10)
+	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
+		r := rand.New(rand.NewSource(seed))
+
+		homePath := t.TempDir()
+		cfg := config.DefaultDBConfigWithHomePath(homePath)
+
+		dbBackend, err := cfg.GetDBBackend()
+		require.NoError(t, err)
+
+		vs, err := store.NewEOTSStore(dbBackend)
+		require.NoError(t, err)
+
+		defer func() {
+			dbBackend.Close()
+		}()
+
+		expected := make(map[string][]byte)
+		for i := 0; i < r.Intn(10); i++ {
+			expectedKeyName := testutil.GenRandomHexStr(r, 10)
+			_, btcPk, err := datagen.GenRandomBTCKeyPair(r)
+			require.NoError(t, err)
+			expected[expectedKeyName] = schnorr.SerializePubKey(btcPk)
+
+			err = vs.AddEOTSKeyName(
+				btcPk,
+				expectedKeyName,
+			)
+			require.NoError(t, err)
+		}
+
+		keys, err := vs.GetAllEOTSKeyNames()
+		require.NoError(t, err)
+
+		for keyName, btcPk := range expected {
+			gotBtcPk, ok := keys[keyName]
+			require.True(t, ok)
+
+			parsedGot, err := schnorr.ParsePubKey(gotBtcPk)
+			require.NoError(t, err)
+			parsedExpected, err := schnorr.ParsePubKey(btcPk)
+			require.NoError(t, err)
+
+			require.Equal(t, parsedExpected, parsedGot)
+		}
+	})
+}

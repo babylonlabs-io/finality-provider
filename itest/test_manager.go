@@ -59,6 +59,7 @@ var (
 type TestManager struct {
 	Wg                sync.WaitGroup
 	EOTSServerHandler *EOTSServerHandler
+	EOTSHomeDir       string
 	FpConfig          *fpcfg.Config
 	Fps               []*service.FinalityProviderApp
 	EOTSClient        *client.EOTSManagerGRpcClient
@@ -138,6 +139,7 @@ func StartManager(t *testing.T) *TestManager {
 
 	tm := &TestManager{
 		EOTSServerHandler: eh,
+		EOTSHomeDir:       eotsHomeDir,
 		FpConfig:          cfg,
 		EOTSClient:        eotsCli,
 		BBNClient:         bc,
