@@ -51,6 +51,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#226](https://github.com/babylonlabs-io/finality-provider/pull/226) Update local fp before register
 * [#233](https://github.com/babylonlabs-io/finality-provider/pull/233) Refactor CommitPubRand
 * [#234](https://github.com/babylonlabs-io/finality-provider/pull/234) eotsd ls command
+* [#238](https://github.com/babylonlabs-io/finality-provider/pull/238) bump babylon v1.0.0-rc.1
 
 ## v0.13.1
 
