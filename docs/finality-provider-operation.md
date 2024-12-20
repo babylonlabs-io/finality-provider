@@ -575,7 +575,7 @@ to:
 To check the status of a finality provider, you can use the following command:
 
 ```shell
-fpd finality-provider-info <eots-pk>
+fpd finality-provider-info <hex-string-of-eots-public-key>
 ```
 This will return the same response as the `create-finality-provider` 
 command but you will be able to check in real time the status of the 
