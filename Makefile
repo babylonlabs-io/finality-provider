@@ -58,7 +58,7 @@ build-docker:
 
 .PHONY: test
 test:
-	go test ./...
+	go test -v ./...
 
 test-e2e:
 	go test -mod=readonly -failfast -timeout=25m -v $(PACKAGES_E2E) -count=1 --tags=e2e

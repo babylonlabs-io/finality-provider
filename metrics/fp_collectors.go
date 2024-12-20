@@ -269,19 +269,17 @@ func (fm *FpMetrics) RecordFpRandomnessTime(fpBtcPkHex string) {
 	fm.previousRandomnessByFp[fpBtcPkHex] = &now
 }
 
-func (fm *FpMetrics) UpdateFpMetrics(fps []*store.StoredFinalityProvider) {
+func (fm *FpMetrics) UpdateFpMetrics(fp *store.StoredFinalityProvider) {
 	fm.mu.Lock()
 	defer fm.mu.Unlock()
 
-	for _, fp := range fps {
-		fm.RecordFpStatus(fp.GetBIP340BTCPK().MarshalHex(), fp.Status)
+	fm.RecordFpStatus(fp.GetBIP340BTCPK().MarshalHex(), fp.Status)
 
-		if lastVoteTime, ok := fm.previousVoteByFp[fp.GetBIP340BTCPK().MarshalHex()]; ok {
-			fm.RecordFpSecondsSinceLastVote(fp.GetBIP340BTCPK().MarshalHex(), time.Since(*lastVoteTime).Seconds())
-		}
+	if lastVoteTime, ok := fm.previousVoteByFp[fp.GetBIP340BTCPK().MarshalHex()]; ok {
+		fm.RecordFpSecondsSinceLastVote(fp.GetBIP340BTCPK().MarshalHex(), time.Since(*lastVoteTime).Seconds())
+	}
 
-		if lastRandomnessTime, ok := fm.previousRandomnessByFp[fp.GetBIP340BTCPK().MarshalHex()]; ok {
-			fm.RecordFpSecondsSinceLastRandomness(fp.GetBIP340BTCPK().MarshalHex(), time.Since(*lastRandomnessTime).Seconds())
-		}
+	if lastRandomnessTime, ok := fm.previousRandomnessByFp[fp.GetBIP340BTCPK().MarshalHex()]; ok {
+		fm.RecordFpSecondsSinceLastRandomness(fp.GetBIP340BTCPK().MarshalHex(), time.Since(*lastRandomnessTime).Seconds())
 	}
 }

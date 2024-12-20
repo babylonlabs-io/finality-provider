@@ -13,7 +13,6 @@ import (
 	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
@@ -42,7 +41,7 @@ func FuzzCommitPubRandList(f *testing.F) {
 
 		expectedTxHash := testutil.GenRandomHexStr(r, 32)
 		mockClientController.EXPECT().
-			CommitPubRandList(fpIns.GetBtcPk(), startingBlock.Height+1, gomock.Any(), gomock.Any(), gomock.Any()).
+			CommitPubRandList(fpIns.GetBtcPk(), startingBlock.Height, gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
 		mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(nil, nil).AnyTimes()
 		res, err := fpIns.CommitPubRand(startingBlock.Height)
@@ -65,7 +64,6 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		defer cleanUp()
 
 		// commit pub rand
-		mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(nil, nil).Times(1)
 		mockClientController.EXPECT().CommitPubRandList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 		_, err := fpIns.CommitPubRand(startingBlock.Height)
 		require.NoError(t, err)
@@ -148,7 +146,7 @@ func startFinalityProviderAppWithRegisteredFp(
 	startingHeight uint64,
 	numPubRand uint32,
 ) (*service.FinalityProviderApp, *service.FinalityProviderInstance, func()) {
-	logger := zap.NewNop()
+	logger := testutil.GetTestLogger(t)
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)

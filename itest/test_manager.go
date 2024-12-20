@@ -257,8 +257,8 @@ func StartManagerWithFinalityProvider(t *testing.T, n int) (*TestManager, []*ser
 }
 
 func (tm *TestManager) Stop(t *testing.T) {
-	for _, fp := range tm.Fps {
-		err := fp.Stop()
+	for _, fpApp := range tm.Fps {
+		err := fpApp.Stop()
 		require.NoError(t, err)
 	}
 	err := tm.manager.ClearResources()
@@ -809,7 +809,7 @@ func defaultFpConfig(keyringDir, homeDir string) *fpcfg.Config {
 
 	cfg.NumPubRand = 1000
 	cfg.NumPubRandMax = 1000
-	cfg.MinRandHeightGap = 500
+	cfg.TimestampingDelayBlocks = 0
 
 	cfg.BitcoinNetwork = "simnet"
 	cfg.BTCNetParams = chaincfg.SimNetParams
