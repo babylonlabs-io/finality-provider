@@ -572,10 +572,17 @@ to:
   the network for double signing (signing conflicting blocks at the same height). 
   This state is irreversible.
 
+To check the status of a finality provider, you can use the following command:
+
+```shell
+fpd finality-provider-info <eots-pk>
+```
+This will return the same response as the `create-finality-provider` 
+command but you will be able to check in real time the status of the 
+finality provider.
+
 For more information on statuses please refer to diagram in the core documentation 
 [fp-core](fp-core.md).
-
-<!-- vitsalis: TODO: native way of showing the finality provider has the statuses -->
 
 After successful registration, you may start the finality provider instance
 by running:
