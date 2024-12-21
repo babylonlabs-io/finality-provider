@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v0.14.0
+
 ### Improvements
 
 * [#207](https://github.com/babylonlabs-io/finality-provider/pull/207) create finality provider from JSON file
@@ -124,7 +126,7 @@ finality vote submission
 
 * [#117](https://github.com/babylonlabs-io/finality-provider/pull/117) Spec of
 commit public randomness
-* [#130](https://github.com/babylonlabs-io/finality-provider/pull/130) Finality 
+* [#130](https://github.com/babylonlabs-io/finality-provider/pull/130) Finality
 Provider operation documentation
 
 ### Bug Fixes
