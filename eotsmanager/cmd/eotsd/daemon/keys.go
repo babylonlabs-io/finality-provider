@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"io"
+
+	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
 	"github.com/babylonlabs-io/babylon/types"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
@@ -121,7 +122,6 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 		return nil, fmt.Errorf("failed to save key name mapping: %w", err)
 	}
 
-	cmd.Printf("Successfully wrote key name %s to mapping", keyName)
 	return eotsPk, nil
 }
 
