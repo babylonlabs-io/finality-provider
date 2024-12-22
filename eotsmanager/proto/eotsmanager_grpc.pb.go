@@ -26,6 +26,7 @@ const (
 	EOTSManager_SignEOTS_FullMethodName                 = "/proto.EOTSManager/SignEOTS"
 	EOTSManager_UnsafeSignEOTS_FullMethodName           = "/proto.EOTSManager/UnsafeSignEOTS"
 	EOTSManager_SignSchnorrSig_FullMethodName           = "/proto.EOTSManager/SignSchnorrSig"
+	EOTSManager_SaveEOTSKeyName_FullMethodName          = "/proto.EOTSManager/SaveEOTSKeyName"
 )
 
 // EOTSManagerClient is the client API for EOTSManager service.
@@ -45,6 +46,8 @@ type EOTSManagerClient interface {
 	UnsafeSignEOTS(ctx context.Context, in *SignEOTSRequest, opts ...grpc.CallOption) (*SignEOTSResponse, error)
 	// SignSchnorrSig signs a Schnorr sig with the EOTS private key
 	SignSchnorrSig(ctx context.Context, in *SignSchnorrSigRequest, opts ...grpc.CallOption) (*SignSchnorrSigResponse, error)
+	// SaveEOTSKeyName saves a new key name mapping for the EOTS public key
+	SaveEOTSKeyName(ctx context.Context, in *SaveEOTSKeyNameRequest, opts ...grpc.CallOption) (*SaveEOTSKeyNameResponse, error)
 }
 
 type eOTSManagerClient struct {
@@ -118,6 +121,15 @@ func (c *eOTSManagerClient) SignSchnorrSig(ctx context.Context, in *SignSchnorrS
 	return out, nil
 }
 
+func (c *eOTSManagerClient) SaveEOTSKeyName(ctx context.Context, in *SaveEOTSKeyNameRequest, opts ...grpc.CallOption) (*SaveEOTSKeyNameResponse, error) {
+	out := new(SaveEOTSKeyNameResponse)
+	err := c.cc.Invoke(ctx, EOTSManager_SaveEOTSKeyName_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EOTSManagerServer is the server API for EOTSManager service.
 // All implementations must embed UnimplementedEOTSManagerServer
 // for forward compatibility
@@ -135,6 +147,8 @@ type EOTSManagerServer interface {
 	UnsafeSignEOTS(context.Context, *SignEOTSRequest) (*SignEOTSResponse, error)
 	// SignSchnorrSig signs a Schnorr sig with the EOTS private key
 	SignSchnorrSig(context.Context, *SignSchnorrSigRequest) (*SignSchnorrSigResponse, error)
+	// SaveEOTSKeyName saves a new key name mapping for the EOTS public key
+	SaveEOTSKeyName(context.Context, *SaveEOTSKeyNameRequest) (*SaveEOTSKeyNameResponse, error)
 	mustEmbedUnimplementedEOTSManagerServer()
 }
 
@@ -162,6 +176,9 @@ func (UnimplementedEOTSManagerServer) UnsafeSignEOTS(context.Context, *SignEOTSR
 }
 func (UnimplementedEOTSManagerServer) SignSchnorrSig(context.Context, *SignSchnorrSigRequest) (*SignSchnorrSigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SignSchnorrSig not implemented")
+}
+func (UnimplementedEOTSManagerServer) SaveEOTSKeyName(context.Context, *SaveEOTSKeyNameRequest) (*SaveEOTSKeyNameResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveEOTSKeyName not implemented")
 }
 func (UnimplementedEOTSManagerServer) mustEmbedUnimplementedEOTSManagerServer() {}
 
@@ -302,6 +319,24 @@ func _EOTSManager_SignSchnorrSig_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EOTSManager_SaveEOTSKeyName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveEOTSKeyNameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EOTSManagerServer).SaveEOTSKeyName(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EOTSManager_SaveEOTSKeyName_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EOTSManagerServer).SaveEOTSKeyName(ctx, req.(*SaveEOTSKeyNameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // EOTSManager_ServiceDesc is the grpc.ServiceDesc for EOTSManager service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -336,6 +371,10 @@ var EOTSManager_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SignSchnorrSig",
 			Handler:    _EOTSManager_SignSchnorrSig_Handler,
+		},
+		{
+			MethodName: "SaveEOTSKeyName",
+			Handler:    _EOTSManager_SaveEOTSKeyName_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

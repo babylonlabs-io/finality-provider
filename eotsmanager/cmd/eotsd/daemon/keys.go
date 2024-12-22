@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
 	"github.com/babylonlabs-io/babylon/types"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/log"
 	"github.com/babylonlabs-io/finality-provider/util"
@@ -90,6 +92,26 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 	cfg, err := config.LoadConfig(clientCtx.HomeDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	client, err := eotsclient.NewEOTSManagerGRpcClient(cfg.RPCListener)
+	if err == nil {
+		// if it can connect to the server, it means the server is running
+		// so the db is in use and we should send to the client to save the new key mapping
+		kr, err := eotsmanager.InitKeyring(clientCtx.HomeDir, clientCtx.Keyring.Backend(), strings.NewReader(""))
+		if err != nil {
+			return nil, fmt.Errorf("failed to init keyring: %w", err)
+		}
+
+		eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(kr, keyName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get public key for key %s: %w", keyName, err)
+		}
+
+		if err := client.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
+			return nil, fmt.Errorf("failed to save key name mapping: %w", err)
+		}
+		return eotsPk, nil
 	}
 
 	// Setup logger

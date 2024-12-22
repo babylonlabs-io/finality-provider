@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"github.com/btcsuite/btcd/btcec/v2"
 	"google.golang.org/grpc"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
@@ -120,4 +121,17 @@ func (r *rpcServer) SignSchnorrSig(_ context.Context, req *proto.SignSchnorrSigR
 	}
 
 	return &proto.SignSchnorrSigResponse{Sig: sig.Serialize()}, nil
+}
+
+// SaveEOTSKeyName signs a Schnorr sig with the EOTS private key
+func (r *rpcServer) SaveEOTSKeyName(
+	_ context.Context,
+	req *proto.SaveEOTSKeyNameRequest,
+) (*proto.SaveEOTSKeyNameResponse, error) {
+	eotsPk, err := btcec.ParsePubKey(req.EotsPk)
+	if err != nil {
+		return nil, err
+	}
+
+	return &proto.SaveEOTSKeyNameResponse{}, r.em.SaveEOTSKeyName(eotsPk, req.KeyName)
 }
