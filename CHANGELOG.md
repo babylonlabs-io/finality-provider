@@ -37,7 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
-### Improvements
+### Bug Fixes
 
 * [#244](https://github.com/babylonlabs-io/finality-provider/pull/244) fix: save key name mapping
 verifies if there is a eots client running
