@@ -37,6 +37,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v0.13.2
+
+### Improvements
+
+* [#245](https://github.com/babylonlabs-io/finality-provider/pull/245) Bump Babylon to v1.0.0-rc.1
+
 ## v0.13.1
 
 ### Bug Fixes
