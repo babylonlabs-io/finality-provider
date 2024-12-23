@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
 	"github.com/babylonlabs-io/babylon/types"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/log"
 	"github.com/babylonlabs-io/finality-provider/util"
@@ -34,6 +36,8 @@ func NewKeysCmd() *cobra.Command {
 	if addCmd == nil {
 		panic("failed to find keys add command")
 	}
+
+	addCmd.Flags().String(rpcClientFlag, "", "The RPC address of a running eotsd to connect and save new key")
 
 	// Override the original RunE function to run almost the same as
 	// the sdk, but it allows empty hd path and allow to save the key
@@ -73,6 +77,8 @@ func saveKeyOnPostRun(cmd *cobra.Command, commandName string) {
 		panic(fmt.Sprintf("failed to find keys %s command", commandName))
 	}
 
+	subCmd.Flags().String(rpcClientFlag, "", "The RPC address of a running eotsd to connect and save new key")
+
 	subCmd.PostRunE = func(cmd *cobra.Command, args []string) error {
 		keyName := args[0]
 		_, err := saveKeyNameMapping(cmd, keyName)
@@ -90,6 +96,34 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 	cfg, err := config.LoadConfig(clientCtx.HomeDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	rpcListener, err := cmd.Flags().GetString(rpcClientFlag)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rpcListener) > 0 {
+		client, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener)
+		if err != nil {
+			return nil, err
+		}
+
+		kr, err := eotsmanager.InitKeyring(clientCtx.HomeDir, clientCtx.Keyring.Backend(), strings.NewReader(""))
+		if err != nil {
+			return nil, fmt.Errorf("failed to init keyring: %w", err)
+		}
+
+		eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(kr, keyName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get public key for key %s: %w", keyName, err)
+		}
+
+		if err := client.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
+			return nil, fmt.Errorf("failed to save key name mapping: %w", err)
+		}
+
+		return eotsPk, nil
 	}
 
 	// Setup logger
