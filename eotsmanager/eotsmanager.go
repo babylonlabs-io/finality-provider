@@ -42,5 +42,8 @@ type EOTSManager interface {
 	// or passPhrase is incorrect
 	SignSchnorrSig(uid []byte, msg []byte, passphrase string) (*schnorr.Signature, error)
 
+	// SaveEOTSKeyName saves a new key under the EOTS key name mapping
+	SaveEOTSKeyName(pk *btcec.PublicKey, keyName string) error
+
 	Close() error
 }
