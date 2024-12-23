@@ -83,6 +83,15 @@ func (c *EOTSManagerGRpcClient) CreateRandomnessPairList(uid, chainID []byte, st
 	return pubRandFieldValList, nil
 }
 
+func (c *EOTSManagerGRpcClient) SaveEOTSKeyName(pk *btcec.PublicKey, keyName string) error {
+	req := &proto.SaveEOTSKeyNameRequest{
+		KeyName: keyName,
+		EotsPk:  pk.SerializeUncompressed(),
+	}
+	_, err := c.client.SaveEOTSKeyName(context.Background(), req)
+	return err
+}
+
 func (c *EOTSManagerGRpcClient) KeyRecord(uid []byte, passphrase string) (*types.KeyRecord, error) {
 	req := &proto.KeyRecordRequest{Uid: uid, Passphrase: passphrase}
 

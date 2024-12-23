@@ -3,6 +3,7 @@ package daemon
 const (
 	forceFlag             = "force"
 	rpcListenerFlag       = "rpc-listener"
+	rpcClientFlag         = "rpc-client"
 	flagInteractive       = "interactive"
 	flagNoBackup          = "no-backup"
 	flagMultisig          = "multisig"
