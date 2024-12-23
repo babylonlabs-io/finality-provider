@@ -56,6 +56,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#193](https://github.com/babylonlabs-io/finality-provider/pull/193) adds unsafeSignEOTS for e2e tests
 * [#195](https://github.com/babylonlabs-io/finality-provider/pull/195) Not block unjailing
 * [#197](https://github.com/babylonlabs-io/finality-provider/pull/197) Bump Babylon to v0.18.0
+* [#245](https://github.com/babylonlabs-io/finality-provider/pull/245) Bump Babylon to v1.0.0-rc.1
 
 ### Bug Fixes
 
