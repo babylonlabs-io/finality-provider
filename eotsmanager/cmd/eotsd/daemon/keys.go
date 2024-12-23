@@ -37,6 +37,8 @@ func NewKeysCmd() *cobra.Command {
 		panic("failed to find keys add command")
 	}
 
+	addCmd.Flags().String(rpcClientFlag, "", "The RPC address of a running eotsd to connect and save new key")
+
 	// Override the original RunE function to run almost the same as
 	// the sdk, but it allows empty hd path and allow to save the key
 	// in the name mapping
@@ -75,6 +77,8 @@ func saveKeyOnPostRun(cmd *cobra.Command, commandName string) {
 		panic(fmt.Sprintf("failed to find keys %s command", commandName))
 	}
 
+	subCmd.Flags().String(rpcClientFlag, "", "The RPC address of a running eotsd to connect and save new key")
+
 	subCmd.PostRunE = func(cmd *cobra.Command, args []string) error {
 		keyName := args[0]
 		_, err := saveKeyNameMapping(cmd, keyName)
@@ -94,10 +98,17 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	client, err := eotsclient.NewEOTSManagerGRpcClient(cfg.RPCListener)
-	if err == nil {
-		// if it can connect to the server, it means the server is running
-		// so the db is in use and we should send to the client to save the new key mapping
+	rpcListener, err := cmd.Flags().GetString(rpcClientFlag)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rpcListener) > 0 {
+		client, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener)
+		if err != nil {
+			return nil, err
+		}
+
 		kr, err := eotsmanager.InitKeyring(clientCtx.HomeDir, clientCtx.Keyring.Backend(), strings.NewReader(""))
 		if err != nil {
 			return nil, fmt.Errorf("failed to init keyring: %w", err)
@@ -111,6 +122,7 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 		if err := client.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
 			return nil, fmt.Errorf("failed to save key name mapping: %w", err)
 		}
+
 		return eotsPk, nil
 	}
 
