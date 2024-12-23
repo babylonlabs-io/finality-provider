@@ -197,8 +197,6 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T) *service.FinalityProvid
 	desc := newDescription(testMoniker)
 	_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, passphrase, eotsPk, desc, &commission)
 	require.NoError(t, err)
-	err = fpApp.StartFinalityProvider(eotsPk, passphrase)
-	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
