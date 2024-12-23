@@ -50,7 +50,7 @@ func NewLocalEOTSManager(homeDir, keyringBackend string, dbbackend kvdb.Backend,
 		return nil, fmt.Errorf("failed to initialize store: %w", err)
 	}
 
-	kr, err := initKeyring(homeDir, keyringBackend, inputReader)
+	kr, err := InitKeyring(homeDir, keyringBackend, inputReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize keyring: %w", err)
 	}
@@ -66,7 +66,7 @@ func NewLocalEOTSManager(homeDir, keyringBackend string, dbbackend kvdb.Backend,
 	}, nil
 }
 
-func initKeyring(homeDir, keyringBackend string, inputReader *strings.Reader) (keyring.Keyring, error) {
+func InitKeyring(homeDir, keyringBackend string, inputReader *strings.Reader) (keyring.Keyring, error) {
 	return keyring.New(
 		"eots-manager",
 		keyringBackend,
@@ -149,7 +149,11 @@ func (lm *LocalEOTSManager) SaveEOTSKeyName(pk *btcec.PublicKey, keyName string)
 }
 
 func (lm *LocalEOTSManager) LoadBIP340PubKeyFromKeyName(keyName string) (*bbntypes.BIP340PubKey, error) {
-	info, err := lm.kr.Key(keyName)
+	return LoadBIP340PubKeyFromKeyName(lm.kr, keyName)
+}
+
+func LoadBIP340PubKeyFromKeyName(kr keyring.Keyring, keyName string) (*bbntypes.BIP340PubKey, error) {
+	info, err := kr.Key(keyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load keyring record for key %s: %w", keyName, err)
 	}
