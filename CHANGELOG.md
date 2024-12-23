@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug Fixes
+
+* [#246](https://github.com/babylonlabs-io/finality-provider/pull/246) fix: start fp after register
+
 ## v0.14.1
 
 ### Bug Fixes
