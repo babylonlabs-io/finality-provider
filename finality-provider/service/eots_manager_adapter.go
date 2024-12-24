@@ -38,6 +38,7 @@ func getHashToSignForCommitPubRand(startHeight uint64, numPubRand uint64, commit
 	if _, err := hasher.Write(commitment); err != nil {
 		return nil, err
 	}
+
 	return hasher.Sum(nil), nil
 }
 

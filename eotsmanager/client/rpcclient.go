@@ -89,6 +89,7 @@ func (c *EOTSManagerGRpcClient) SaveEOTSKeyName(pk *btcec.PublicKey, keyName str
 		EotsPk:  pk.SerializeUncompressed(),
 	}
 	_, err := c.client.SaveEOTSKeyName(context.Background(), req)
+
 	return err
 }
 

@@ -131,5 +131,6 @@ func DefaultConfigWithHomePath(homePath string) *Config {
 	if err := cfg.Validate(); err != nil {
 		panic(err)
 	}
+
 	return cfg
 }

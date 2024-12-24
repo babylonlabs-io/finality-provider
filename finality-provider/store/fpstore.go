@@ -102,6 +102,7 @@ func saveFinalityProvider(
 func (s *FinalityProviderStore) SetFpStatus(btcPk *btcec.PublicKey, status proto.FinalityProviderStatus) error {
 	setFpStatus := func(fp *proto.FinalityProvider) error {
 		fp.Status = status
+
 		return nil
 	}
 
@@ -157,6 +158,7 @@ func (s *FinalityProviderStore) setFinalityProviderState(
 	stateTransitionFn func(provider *proto.FinalityProvider) error,
 ) error {
 	pkBytes := schnorr.SerializePubKey(btcPk)
+
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		fpBucket := tx.ReadWriteBucket(finalityProviderBucketName)
 		if fpBucket == nil {
@@ -207,6 +209,7 @@ func (s *FinalityProviderStore) GetFinalityProvider(btcPk *btcec.PublicKey) (*St
 		}
 
 		storedFp = fpFromDB
+
 		return nil
 	}, func() {})
 

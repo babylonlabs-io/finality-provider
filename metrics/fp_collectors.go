@@ -155,6 +155,7 @@ func NewFpMetrics() *FpMetrics {
 		prometheus.MustRegister(fpMetricsInstance.fpTotalFailedVotes)
 		prometheus.MustRegister(fpMetricsInstance.fpTotalFailedRandomness)
 	})
+
 	return fpMetricsInstance
 }
 

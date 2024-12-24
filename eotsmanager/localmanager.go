@@ -170,6 +170,7 @@ func LoadBIP340PubKeyFromKeyName(kr keyring.Keyring, keyName string) (*bbntypes.
 			return nil, err
 		}
 		eotsPk = bbntypes.NewBIP340PubKeyFromBTCPK(pk)
+
 		return eotsPk, nil
 	default:
 		return nil, fmt.Errorf("unsupported key type in keyring")
@@ -286,6 +287,7 @@ func (lm *LocalEOTSManager) SignSchnorrSig(fpPk []byte, msg []byte, passphrase s
 func (lm *LocalEOTSManager) signSchnorrSigFromPrivKey(privKey *btcec.PrivateKey, fpPk []byte, msg []byte) (*schnorr.Signature, error) {
 	// Update metrics
 	lm.metrics.IncrementEotsFpTotalSchnorrSignCounter(hex.EncodeToString(fpPk))
+
 	return schnorr.Sign(privKey, msg)
 }
 
@@ -306,6 +308,7 @@ func (lm *LocalEOTSManager) SignSchnorrSigFromKeyname(keyName, passphrase string
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to schnorr sign: %w", err)
 	}
+
 	return signature, eotsPk, nil
 }
 
@@ -320,6 +323,7 @@ func (lm *LocalEOTSManager) getRandomnessPair(fpPk []byte, chainID []byte, heigh
 		return nil, nil, err
 	}
 	privRand, pubRand := randgenerator.GenerateRandomness(record.PrivKey.Serialize(), chainID, height)
+
 	return privRand, pubRand, nil
 }
 
@@ -363,6 +367,7 @@ func (lm *LocalEOTSManager) eotsPrivKeyFromKeyName(keyName string) (*btcec.Priva
 	switch v := privKeyCached.(type) {
 	case *secp256k1.PrivKey:
 		privKey, _ = btcec.PrivKeyFromBytes(v.Key)
+
 		return privKey, nil
 	default:
 		return nil, fmt.Errorf("unsupported key type in keyring")
@@ -371,6 +376,7 @@ func (lm *LocalEOTSManager) eotsPrivKeyFromKeyName(keyName string) (*btcec.Priva
 
 func (lm *LocalEOTSManager) keyExists(name string) bool {
 	_, err := lm.kr.Key(name)
+
 	return err == nil
 }
 

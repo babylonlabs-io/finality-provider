@@ -96,6 +96,7 @@ func (s *EOTSStore) GetEOTSKeyName(pk []byte) (string, error) {
 		}
 
 		keyName = string(keyNameBytes)
+
 		return nil
 	}, func() {})
 
@@ -190,6 +191,7 @@ func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*Signi
 		if errors.Is(err, ErrSignRecordNotFound) {
 			return nil, false, nil
 		}
+
 		return nil, false, err
 	}
 

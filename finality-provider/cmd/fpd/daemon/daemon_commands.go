@@ -141,6 +141,7 @@ Where finality-provider.json contains:
 				return err
 			}
 		}
+
 		return nil
 	}
 
@@ -197,6 +198,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 	}
 
 	printRespJSON(res)
+
 	return nil
 }
 
@@ -267,6 +269,7 @@ func getDescriptionFromFlags(f *pflag.FlagSet) (stakingtypes.Description, error)
 	}
 
 	description := stakingtypes.NewDescription(monikerStr, identityStr, websiteStr, securityContactStr, detailsStr)
+
 	return description.EnsureLength()
 }
 
@@ -281,6 +284,7 @@ func CommandLsFP() *cobra.Command {
 		RunE:    runCommandLsFP,
 	}
 	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+
 	return cmd
 }
 
@@ -320,6 +324,7 @@ func CommandInfoFP() *cobra.Command {
 		RunE:    runCommandInfoFP,
 	}
 	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+
 	return cmd
 }
 
@@ -554,6 +559,7 @@ func printRespJSON(resp interface{}) {
 	jsonBytes, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
 		fmt.Println("unable to decode response: ", err)
+
 		return
 	}
 
@@ -581,6 +587,7 @@ func loadKeyName(homeDir string, cmd *cobra.Command) (string, error) {
 	if keyName == "" {
 		return "", fmt.Errorf("the key in config is empty")
 	}
+
 	return keyName, nil
 }
 

@@ -78,6 +78,7 @@ func (app *FinalityProviderApp) monitorCriticalErr() {
 				zap.String("pk", criticalErr.fpBtcPk.MarshalHex()), zap.Error(criticalErr.err))
 		case <-app.quit:
 			app.logger.Info("exiting monitor critical error loop")
+
 			return
 		}
 	}
@@ -95,12 +96,14 @@ func (app *FinalityProviderApp) registrationLoop() {
 			popBytes, err := req.pop.Marshal()
 			if err != nil {
 				req.errResponse <- err
+
 				continue
 			}
 
 			desBytes, err := req.description.Marshal()
 			if err != nil {
 				req.errResponse <- err
+
 				continue
 			}
 			res, err := app.cc.RegisterFinalityProvider(
@@ -117,6 +120,7 @@ func (app *FinalityProviderApp) registrationLoop() {
 					zap.Error(err),
 				)
 				req.errResponse <- err
+
 				continue
 			}
 
@@ -134,6 +138,7 @@ func (app *FinalityProviderApp) registrationLoop() {
 			}
 		case <-app.quit:
 			app.logger.Info("exiting registration loop")
+
 			return
 		}
 	}
@@ -149,14 +154,17 @@ func (app *FinalityProviderApp) unjailFpLoop() {
 			isSlashed, isJailed, err := app.cc.QueryFinalityProviderSlashedOrJailed(req.btcPubKey.MustToBTCPK())
 			if err != nil {
 				req.errResponse <- fmt.Errorf("failed to query jailing status of the finality provider %s: %w", pkHex, err)
+
 				continue
 			}
 			if isSlashed {
 				req.errResponse <- fmt.Errorf("the finality provider %s is already slashed", pkHex)
+
 				continue
 			}
 			if !isJailed {
 				req.errResponse <- fmt.Errorf("the finality provider %s is not jailed", pkHex)
+
 				continue
 			}
 
@@ -171,6 +179,7 @@ func (app *FinalityProviderApp) unjailFpLoop() {
 					zap.Error(err),
 				)
 				req.errResponse <- err
+
 				continue
 			}
 
@@ -185,6 +194,7 @@ func (app *FinalityProviderApp) unjailFpLoop() {
 			}
 		case <-app.quit:
 			app.logger.Info("exiting unjailing fp loop")
+
 			return
 		}
 	}
@@ -210,6 +220,7 @@ func (app *FinalityProviderApp) metricsUpdateLoop() {
 			continue
 		case <-app.quit:
 			app.logger.Info("exiting metrics update loop")
+
 			return
 		}
 	}

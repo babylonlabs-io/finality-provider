@@ -82,6 +82,7 @@ func saveKeyOnPostRun(cmd *cobra.Command, commandName string) {
 	subCmd.PostRunE = func(cmd *cobra.Command, args []string) error {
 		keyName := args[0]
 		_, err := saveKeyNameMapping(cmd, keyName)
+
 		return err
 	}
 }
@@ -246,6 +247,7 @@ func printFromKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey
 	ctx := cmd.Context()
 	mnemonic := ctx.Value(mnemonicCtxKey).(string) //nolint: forcetypeassert
 	showMnemonic := ctx.Value(mnemonicShowCtxKey).(bool)
+
 	return printCreatePubKeyHex(cmd, k, eotsPk, showMnemonic, mnemonic, clientCtx.OutputFormat)
 }
 

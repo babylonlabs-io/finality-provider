@@ -28,6 +28,7 @@ func NewFinalityProviderServiceGRpcClient(remoteAddr string) (*FinalityProviderS
 		if conn == nil {
 			return nil
 		}
+
 		return conn.Close()
 	}
 

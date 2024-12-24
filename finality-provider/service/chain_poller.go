@@ -151,6 +151,7 @@ func (cp *ChainPoller) waitForActivation() {
 			if cp.nextHeight < activatedHeight {
 				cp.nextHeight = activatedHeight
 			}
+
 			return
 		}
 		select {

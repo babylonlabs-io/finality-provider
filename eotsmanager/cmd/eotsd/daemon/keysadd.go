@@ -40,6 +40,7 @@ func runAddCmdPrepare(cmd *cobra.Command, args []string) error {
 	}
 
 	buf := bufio.NewReader(clientCtx.Input)
+
 	return runAddCmd(clientCtx, cmd, args, buf)
 }
 
@@ -297,6 +298,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 	// used later for printing the values if needed
 	ctxWithValues := context.WithValue(cmd.Context(), mnemonicCtxKey, mnemonic)        //nolint: revive,staticcheck
 	cmd.SetContext(context.WithValue(ctxWithValues, mnemonicShowCtxKey, showMnemonic)) //nolint: revive,staticcheck
+
 	return nil
 }
 
@@ -308,6 +310,7 @@ func validateMultisigThreshold(k, nKeys int) error {
 		return fmt.Errorf(
 			"threshold k of n multisignature: %d < %d", nKeys, k)
 	}
+
 	return nil
 }
 
@@ -322,5 +325,6 @@ func readMnemonicFromFile(filePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return string(bz), nil
 }

@@ -224,6 +224,7 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 					zap.Uint64("power", power),
 				)
 			}
+
 			continue
 		}
 		slashed, jailed, err := app.cc.QueryFinalityProviderSlashedOrJailed(fp.BtcPk)
@@ -300,6 +301,7 @@ func (app *FinalityProviderApp) Stop() error {
 
 			if err := app.fpIns.Stop(); err != nil {
 				stopErr = fmt.Errorf("failed to close the fp instance: %w", err)
+
 				return
 			}
 
@@ -309,11 +311,13 @@ func (app *FinalityProviderApp) Stop() error {
 		app.logger.Debug("Stopping EOTS manager")
 		if err := app.eotsManager.Close(); err != nil {
 			stopErr = fmt.Errorf("failed to close the EOTS manager: %w", err)
+
 			return
 		}
 
 		app.logger.Debug("FinalityProviderApp successfully stopped")
 	})
+
 	return stopErr
 }
 

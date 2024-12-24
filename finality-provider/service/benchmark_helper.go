@@ -39,6 +39,7 @@ func (fp *FinalityProviderInstance) HelperCommitPubRand(tipHeight uint64) (*type
 			zap.Uint64("block_height", tipHeight),
 			zap.Uint64("last_committed_height", lastCommittedHeight),
 		)
+
 		return nil, nil, nil
 	}
 

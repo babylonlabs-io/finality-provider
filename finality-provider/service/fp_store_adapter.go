@@ -30,6 +30,7 @@ func newFpState(
 func (fps *fpState) getStoreFinalityProvider() *store.StoredFinalityProvider {
 	fps.mu.Lock()
 	defer fps.mu.Unlock()
+
 	return fps.fp
 }
 
@@ -37,6 +38,7 @@ func (fps *fpState) setStatus(s proto.FinalityProviderStatus) error {
 	fps.mu.Lock()
 	fps.fp.Status = s
 	fps.mu.Unlock()
+
 	return fps.s.SetFpStatus(fps.fp.BtcPk, s)
 }
 
@@ -44,6 +46,7 @@ func (fps *fpState) setLastVotedHeight(height uint64) error {
 	fps.mu.Lock()
 	fps.fp.LastVotedHeight = height
 	fps.mu.Unlock()
+
 	return fps.s.SetFpLastVotedHeight(fps.fp.BtcPk, height)
 }
 

@@ -24,6 +24,7 @@ func CommandInit() *cobra.Command {
 		RunE:    fpcmd.RunEWithClientCtx(runInitCmd),
 	}
 	cmd.Flags().Bool(forceFlag, false, "Override existing configuration")
+
 	return cmd
 }
 

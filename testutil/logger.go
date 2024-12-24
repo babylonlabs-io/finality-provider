@@ -13,5 +13,6 @@ func GetTestLogger(t *testing.T) *zap.Logger {
 	logger, err := loggerConfig.Build()
 
 	require.NoError(t, err)
+
 	return logger
 }
