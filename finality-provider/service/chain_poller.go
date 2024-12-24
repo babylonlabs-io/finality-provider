@@ -123,6 +123,7 @@ func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
 		if err != nil {
 			return err
 		}
+
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		cp.logger.Debug(
@@ -150,6 +151,7 @@ func (cp *ChainPoller) waitForActivation() {
 			if cp.nextHeight < activatedHeight {
 				cp.nextHeight = activatedHeight
 			}
+
 			return
 		}
 		select {
@@ -212,6 +214,7 @@ func (cp *ChainPoller) pollChain() {
 						"the target height %d is not higher than the next height %d to retrieve",
 						targetHeight, cp.nextHeight)}
 				req.resp <- resp
+
 				continue
 			}
 

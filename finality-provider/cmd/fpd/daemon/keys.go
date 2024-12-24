@@ -17,5 +17,6 @@ func CommandKeys() *cobra.Command {
 	}
 
 	keyAddCmd.Long += "\nIf this key is needed to run as the default for the finality-provider daemon, remind to update the fpd.conf"
+
 	return keysCmd
 }

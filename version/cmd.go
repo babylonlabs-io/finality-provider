@@ -33,5 +33,6 @@ func CommandVersion(binaryName string) *cobra.Command {
 			cmd.Printf(sb.String()) //nolint:govet // it's not an issue
 		},
 	}
+
 	return cmd
 }

@@ -33,6 +33,7 @@ func NewPubRandProofStore(db kvdb.Backend) (*PubRandProofStore, error) {
 func (s *PubRandProofStore) initBuckets() error {
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		_, err := tx.CreateTopLevelBucket(pubRandProofBucketName)
+
 		return err
 	})
 }
@@ -197,6 +198,7 @@ func (s *PubRandProofStore) RemovePubRandProofList(chainID []byte, pk []byte, ta
 				return err
 			}
 		}
+
 		return nil
 	}, func() {})
 

@@ -188,6 +188,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 			processedBlocks, err := fp.processBlocksToVote(pollerBlocks)
 			if err != nil {
 				fp.reportCriticalErr(err)
+
 				continue
 			}
 
@@ -201,6 +202,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 				if !errors.Is(err, ErrFinalityProviderShutDown) {
 					fp.reportCriticalErr(err)
 				}
+
 				continue
 			}
 			if res == nil {
@@ -219,6 +221,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 			)
 		case <-fp.quit:
 			fp.logger.Info("the finality signature submission loop is closing")
+
 			return
 		}
 	}
@@ -240,6 +243,7 @@ func (fp *FinalityProviderInstance) processBlocksToVote(blocks []*types.BlockInf
 				zap.Uint64("block_height", blk.Height),
 				zap.Uint64("last_voted_height", fp.GetLastVotedHeight()),
 			)
+
 			continue
 		}
 
@@ -258,6 +262,7 @@ func (fp *FinalityProviderInstance) processBlocksToVote(blocks []*types.BlockInf
 			// the finality provider does not have voting power
 			// and it will never will at this block, so continue
 			fp.metrics.IncrementFpTotalBlocksWithoutVotingPower(fp.GetBtcPkHex())
+
 			continue
 		}
 
@@ -287,6 +292,7 @@ func (fp *FinalityProviderInstance) getBatchBlocksFromChan() []*types.BlockInfo 
 			}
 		case <-fp.quit:
 			fp.logger.Info("the get all blocks loop is closing")
+
 			return nil
 		default:
 			return pollerBlocks
@@ -304,6 +310,7 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop() {
 			should, startHeight, err := fp.ShouldCommitRandomness()
 			if err != nil {
 				fp.reportCriticalErr(err)
+
 				continue
 			}
 			if !should {
@@ -314,6 +321,7 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop() {
 			if err != nil {
 				fp.metrics.IncrementFpTotalFailedRandomness(fp.GetBtcPkHex())
 				fp.reportCriticalErr(err)
+
 				continue
 			}
 			// txRes could be nil if no need to commit more randomness
@@ -326,6 +334,7 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop() {
 			}
 		case <-fp.quit:
 			fp.logger.Info("the randomness commitment loop is closing")
+
 			return
 		}
 	}
@@ -366,6 +375,7 @@ func (fp *FinalityProviderInstance) ShouldCommitRandomness() (bool, uint64, erro
 			zap.Uint64("tip_height", tipHeight),
 			zap.Uint64("last_committed_height", lastCommittedHeight),
 		)
+
 		return false, 0, nil
 	}
 
@@ -462,6 +472,7 @@ func (fp *FinalityProviderInstance) retrySubmitSigsUntilFinalized(targetBlocks [
 			continue
 		case <-fp.quit:
 			fp.logger.Debug("the finality-provider instance is closing", zap.String("pk", fp.GetBtcPkHex()))
+
 			return nil, ErrFinalityProviderShutDown
 		}
 	}
@@ -641,6 +652,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 		if strings.Contains(err.Error(), "slashed") {
 			return nil, ErrFinalityProviderSlashed
 		}
+
 		return nil, err
 	}
 
@@ -714,6 +726,7 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to extract private key: %s", err.Error())
 			}
+
 			break
 		}
 	}
@@ -748,6 +761,7 @@ func (fp *FinalityProviderInstance) DetermineStartHeight() (uint64, error) {
 		fp.logger.Info("using static chain scanning mode",
 			zap.String("pk", fp.GetBtcPkHex()),
 			zap.Uint64("start_height", fp.cfg.PollerConfig.StaticChainScanningStartHeight))
+
 		return fp.cfg.PollerConfig.StaticChainScanningStartHeight, nil
 	}
 
@@ -824,6 +838,7 @@ func (fp *FinalityProviderInstance) lastCommittedPublicRandWithRetry(count uint6
 			return err
 		}
 		response = resp
+
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		fp.logger.Debug(
@@ -835,6 +850,7 @@ func (fp *FinalityProviderInstance) lastCommittedPublicRandWithRetry(count uint6
 	})); err != nil {
 		return nil, err
 	}
+
 	return response, nil
 }
 
@@ -850,6 +866,7 @@ func (fp *FinalityProviderInstance) latestFinalizedHeightWithRetry() (uint64, er
 			return nil
 		}
 		height = blocks[0].Height
+
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		fp.logger.Debug(
@@ -873,6 +890,7 @@ func (fp *FinalityProviderInstance) highestVotedHeightWithRetry() (uint64, error
 			return err
 		}
 		height = h
+
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		fp.logger.Debug(
@@ -896,6 +914,7 @@ func (fp *FinalityProviderInstance) getFinalityActivationHeightWithRetry() (uint
 			return err
 		}
 		response = finalityActivationHeight
+
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		fp.logger.Debug(
@@ -907,6 +926,7 @@ func (fp *FinalityProviderInstance) getFinalityActivationHeightWithRetry() (uint
 	})); err != nil {
 		return 0, err
 	}
+
 	return response, nil
 }
 
@@ -921,6 +941,7 @@ func (fp *FinalityProviderInstance) getLatestBlockWithRetry() (*types.BlockInfo,
 		if err != nil {
 			return err
 		}
+
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		fp.logger.Debug(
@@ -948,6 +969,7 @@ func (fp *FinalityProviderInstance) GetVotingPowerWithRetry(height uint64) (uint
 		if err != nil {
 			return err
 		}
+
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		fp.logger.Debug(
@@ -975,6 +997,7 @@ func (fp *FinalityProviderInstance) GetFinalityProviderSlashedOrJailedWithRetry(
 		if err != nil {
 			return err
 		}
+
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		fp.logger.Debug(

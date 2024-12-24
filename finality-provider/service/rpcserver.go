@@ -70,6 +70,7 @@ func (r *rpcServer) Stop() error {
 func (r *rpcServer) RegisterWithGrpcServer(grpcServer *grpc.Server) error {
 	// Register the main RPC server.
 	proto.RegisterFinalityProvidersServer(grpcServer, r)
+
 	return nil
 }
 
@@ -133,6 +134,7 @@ func (r *rpcServer) AddFinalitySignature(_ context.Context, req *proto.AddFinali
 	select {
 	case <-r.app.quit:
 		r.app.logger.Info("exiting metrics update loop")
+
 		return res, nil
 	default:
 		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
@@ -148,6 +150,7 @@ func (r *rpcServer) AddFinalitySignature(_ context.Context, req *proto.AddFinali
 		if fpi.GetBtcPkHex() != req.BtcPk {
 			errMsg := fmt.Sprintf("the finality provider running does not match the request, got: %s, expected: %s",
 				req.BtcPk, fpi.GetBtcPkHex())
+
 			return nil, errors.New(errMsg)
 		}
 
@@ -169,6 +172,7 @@ func (r *rpcServer) AddFinalitySignature(_ context.Context, req *proto.AddFinali
 			localPrivKey, err := r.app.getFpPrivKey(fpPk.MustMarshal())
 			if err != nil {
 				r.app.logger.Error(fmt.Sprintf("err get priv key %s", err.Error()))
+
 				return nil, err
 			}
 
@@ -186,9 +190,11 @@ func (r *rpcServer) AddFinalitySignature(_ context.Context, req *proto.AddFinali
 						" extracted: %s, local: %s, local-negated: %s",
 					res.ExtractedSkHex, localSkHex, localSkNegateHex,
 				)
+
 				return nil, errors.New(msg)
 			}
 		}
+
 		return res, nil
 	}
 }

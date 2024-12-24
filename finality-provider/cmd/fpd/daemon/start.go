@@ -32,6 +32,7 @@ func CommandStart() *cobra.Command {
 	cmd.Flags().String(fpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
 	cmd.Flags().String(passphraseFlag, "", "The pass phrase used to decrypt the private key")
 	cmd.Flags().String(rpcListenerFlag, "", "The address that the RPC server listens to")
+
 	return cmd
 }
 
@@ -97,6 +98,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	}
 
 	fpServer := service.NewFinalityProviderServer(cfg, logger, fpApp, dbBackend, shutdownInterceptor)
+
 	return fpServer.RunUntilShutdown()
 }
 

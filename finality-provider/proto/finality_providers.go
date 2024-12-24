@@ -14,11 +14,13 @@ func (sfp *FinalityProvider) MustGetBTCPK() *btcec.PublicKey {
 	if err != nil {
 		panic(fmt.Errorf("failed to parse BTC PK: %w", err))
 	}
+
 	return btcPubKey
 }
 
 func (sfp *FinalityProvider) MustGetBIP340BTCPK() *bbn.BIP340PubKey {
 	btcPK := sfp.MustGetBTCPK()
+
 	return bbn.NewBIP340PubKeyFromBTCPK(btcPK)
 }
 
@@ -27,6 +29,7 @@ func NewFinalityProviderInfo(sfp *FinalityProvider) (*FinalityProviderInfo, erro
 	if err := des.Unmarshal(sfp.Description); err != nil {
 		return nil, err
 	}
+
 	return &FinalityProviderInfo{
 		FpAddr:   sfp.FpAddr,
 		BtcPkHex: sfp.MustGetBIP340BTCPK().MarshalHex(),

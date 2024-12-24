@@ -32,6 +32,7 @@ func newRPCServer(
 func (r *rpcServer) RegisterWithGrpcServer(grpcServer *grpc.Server) error {
 	// Register the main RPC server.
 	proto.RegisterEOTSManagerServer(grpcServer, r)
+
 	return nil
 }
 

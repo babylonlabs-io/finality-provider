@@ -32,6 +32,7 @@ WARNING: this can drain the finality provider's balance if the target height is 
 		RunE:    runCommandCommitPubRand,
 	}
 	cmd.Flags().Uint64("start-height", math.MaxUint64, "The block height to start committing pubrand from (optional)")
+
 	return cmd
 }
 
@@ -99,5 +100,6 @@ func runCommandCommitPubRand(cmd *cobra.Command, args []string) error {
 	if startHeight == math.MaxUint64 {
 		return fp.TestCommitPubRand(targetHeight)
 	}
+
 	return fp.TestCommitPubRandWithStartHeight(startHeight, targetHeight)
 }

@@ -75,6 +75,7 @@ func NewBabylonController(
 func (bc *BabylonController) mustGetTxSigner() string {
 	signer := bc.GetKeyAddress()
 	prefix := bc.cfg.AccountPrefix
+
 	return sdk.MustBech32ifyAddressBytes(prefix, signer)
 }
 
@@ -288,6 +289,7 @@ func (bc *BabylonController) QueryFinalityProviderVotingPower(fpPk *btcec.Public
 		// therefore, it should be treated as the fp having 0 voting power
 		if strings.Contains(err.Error(), finalitytypes.ErrVotingPowerTableNotUpdated.Error()) {
 			bc.logger.Info("the voting power table not updated yet")
+
 			return 0, nil
 		}
 
@@ -338,6 +340,7 @@ func (bc *BabylonController) QueryBlocks(startHeight, endHeight uint64, limit ui
 	if count > uint64(limit) {
 		count = uint64(limit)
 	}
+
 	return bc.queryLatestBlocks(sdk.Uint64ToBigEndian(startHeight), count, finalitytypes.QueriedBlockStatus_ANY, false)
 }
 
@@ -367,6 +370,7 @@ func (bc *BabylonController) queryLatestBlocks(startKey []byte, count uint64, st
 
 func getContextWithCancel(timeout time.Duration) (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+
 	return ctx, cancel
 }
 
@@ -558,6 +562,7 @@ func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
 		if reqValue != "" {
 			return reqValue
 		}
+
 		return defaultValue
 	}
 

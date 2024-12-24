@@ -25,16 +25,19 @@ import (
 func GenRandomByteArray(r *rand.Rand, length uint64) []byte {
 	newHeaderBytes := make([]byte, length)
 	r.Read(newHeaderBytes)
+
 	return newHeaderBytes
 }
 
 func GenRandomHexStr(r *rand.Rand, length uint64) string {
 	randBytes := GenRandomByteArray(r, length)
+
 	return hex.EncodeToString(randBytes)
 }
 
 func RandomDescription(r *rand.Rand) *stakingtypes.Description {
 	des := stakingtypes.NewDescription(GenRandomHexStr(r, 10), "", "", "", "")
+
 	return &des
 }
 
@@ -50,6 +53,7 @@ func AddRandomSeedsToFuzzer(f *testing.F, num uint) {
 func GenPublicRand(r *rand.Rand, t *testing.T) *bbn.SchnorrPubRand {
 	_, eotsPR, err := eots.RandGen(r)
 	require.NoError(t, err)
+
 	return bbn.NewSchnorrPubRandFromFieldVal(eotsPR)
 }
 
@@ -111,6 +115,7 @@ func CreateChainKey(keyringDir, chainID, keyName, backend, passphrase, hdPath, m
 func GenSdkContext(r *rand.Rand, t *testing.T) client.Context {
 	chainID := "testchain-" + GenRandomHexStr(r, 4)
 	dir := t.TempDir()
+
 	return client.Context{}.
 		WithChainID(chainID).
 		WithCodec(codec.MakeCodec()).

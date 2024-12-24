@@ -42,5 +42,6 @@ func Version() string {
 
 func RPC() string {
 	commit, ts := CommitInfo()
+
 	return fmt.Sprintf("version: %s, commit: %s, timestamp: %s ", version, commit, ts)
 }
