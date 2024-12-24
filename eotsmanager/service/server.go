@@ -68,7 +68,7 @@ func (s *Server) RunUntilShutdown(ctx context.Context) error {
 		} else {
 			s.logger.Info("Database closed")
 		}
-		metricsServer.Stop(context.Background())
+		metricsServer.Stop(ctx)
 		s.logger.Info("Metrics server stopped")
 	}()
 

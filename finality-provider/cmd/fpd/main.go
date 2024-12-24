@@ -48,6 +48,6 @@ func main() {
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Whoops. There was an error while executing your fpd CLI '%s'", err)
-		os.Exit(1)
+		os.Exit(1) //nolint:gocritic
 	}
 }
