@@ -43,6 +43,7 @@ var (
 // The test runs 2 finality providers connecting to
 // a single EOTS manager
 func TestFinalityProviderLifeCycle(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	n := 2
@@ -82,6 +83,7 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 // sends a finality vote over a conflicting block
 // in this case, the BTC private key should be extracted by Babylon
 func TestDoubleSigning(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
@@ -144,6 +146,7 @@ func TestDoubleSigning(t *testing.T) {
 
 // TestCatchingUp tests if a fp can catch up after restarted
 func TestCatchingUp(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
@@ -195,6 +198,7 @@ func TestCatchingUp(t *testing.T) {
 }
 
 func TestFinalityProviderEditCmd(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
@@ -279,6 +283,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 }
 
 func TestFinalityProviderCreateCmd(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
@@ -345,6 +350,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 }
 
 func TestRemoveMerkleProofsCmd(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
@@ -374,6 +380,7 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 }
 
 func TestPrintEotsCmd(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	tm := StartManager(t, ctx)
