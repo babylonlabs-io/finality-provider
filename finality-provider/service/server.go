@@ -96,7 +96,6 @@ func (s *Server) RunUntilShutdown(ctx context.Context) error {
 
 	// Wait for shutdown signal from either a graceful server stop or from
 	// the interrupt handler.
-	// <-s.interceptor.ShutdownChannel()
 	<-ctx.Done()
 
 	return nil
