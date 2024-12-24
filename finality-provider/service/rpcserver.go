@@ -70,6 +70,7 @@ func (r *rpcServer) Stop() error {
 func (r *rpcServer) RegisterWithGrpcServer(grpcServer *grpc.Server) error {
 	// Register the main RPC server.
 	proto.RegisterFinalityProvidersServer(grpcServer, r)
+
 	return nil
 }
 

@@ -37,6 +37,7 @@ func MakeDirectory(dir string) error {
 		}
 		return fmt.Errorf("failed to create dir %s: %w", dir, err)
 	}
+
 	return nil
 }
 
@@ -72,7 +73,9 @@ func GetSubCommand(cmd *cobra.Command, commandName string) *cobra.Command {
 		if !strings.EqualFold(c.Name(), commandName) {
 			continue
 		}
+
 		return c
 	}
+
 	return nil
 }

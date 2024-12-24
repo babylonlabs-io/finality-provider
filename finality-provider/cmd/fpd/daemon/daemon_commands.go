@@ -40,6 +40,7 @@ func CommandGetDaemonInfo() *cobra.Command {
 		RunE:    runCommandGetDaemonInfo,
 	}
 	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+
 	return cmd
 }
 
@@ -65,6 +66,7 @@ func runCommandGetDaemonInfo(cmd *cobra.Command, _ []string) error {
 	}
 
 	printRespJSON(info)
+
 	return nil
 }
 

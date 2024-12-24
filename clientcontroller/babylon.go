@@ -75,6 +75,7 @@ func NewBabylonController(
 func (bc *BabylonController) mustGetTxSigner() string {
 	signer := bc.GetKeyAddress()
 	prefix := bc.cfg.AccountPrefix
+
 	return sdk.MustBech32ifyAddressBytes(prefix, signer)
 }
 

@@ -37,6 +37,7 @@ func NewFinalityProviderStore(db kvdb.Backend) (*FinalityProviderStore, error) {
 func (s *FinalityProviderStore) initBuckets() error {
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		_, err := tx.CreateTopLevelBucket(finalityProviderBucketName)
+
 		return err
 	})
 }

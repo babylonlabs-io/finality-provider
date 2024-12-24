@@ -57,18 +57,21 @@ func (app *FinalityProviderApp) monitorCriticalErr() {
 			if err != nil {
 				app.logger.Debug("the finality-provider instance is already shutdown",
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
+
 				continue
 			}
 			if errors.Is(criticalErr.err, ErrFinalityProviderSlashed) {
 				app.setFinalityProviderSlashed(fpi)
 				app.logger.Debug("the finality-provider has been slashed",
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
+
 				continue
 			}
 			if errors.Is(criticalErr.err, ErrFinalityProviderJailed) {
 				app.setFinalityProviderJailed(fpi)
 				app.logger.Debug("the finality-provider has been jailed",
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
+
 				continue
 			}
 			app.logger.Fatal(instanceTerminatingMsg,

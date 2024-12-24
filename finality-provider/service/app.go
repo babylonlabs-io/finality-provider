@@ -69,6 +69,7 @@ func NewFinalityProviderAppFromConfig(
 	}
 
 	logger.Info("successfully connected to a remote EOTS manager", zap.String("address", cfg.EOTSManagerAddress))
+
 	return NewFinalityProviderApp(cfg, cc, em, db, logger)
 }
 
