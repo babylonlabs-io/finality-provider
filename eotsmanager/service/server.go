@@ -10,7 +10,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/metrics"
 
 	"github.com/lightningnetwork/lnd/kvdb"
-	"github.com/lightningnetwork/lnd/signal"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
@@ -27,28 +26,26 @@ type Server struct {
 	cfg    *config.Config
 	logger *zap.Logger
 
-	rpcServer   *rpcServer
-	db          kvdb.Backend
-	interceptor signal.Interceptor
+	rpcServer *rpcServer
+	db        kvdb.Backend
 
 	quit chan struct{}
 }
 
 // NewEOTSManagerServer creates a new server with the given config.
-func NewEOTSManagerServer(cfg *config.Config, l *zap.Logger, em eotsmanager.EOTSManager, db kvdb.Backend, sig signal.Interceptor) *Server {
+func NewEOTSManagerServer(cfg *config.Config, l *zap.Logger, em eotsmanager.EOTSManager, db kvdb.Backend) *Server {
 	return &Server{
-		cfg:         cfg,
-		logger:      l,
-		rpcServer:   newRPCServer(em),
-		db:          db,
-		interceptor: sig,
-		quit:        make(chan struct{}, 1),
+		cfg:       cfg,
+		logger:    l,
+		rpcServer: newRPCServer(em),
+		db:        db,
+		quit:      make(chan struct{}, 1),
 	}
 }
 
 // RunUntilShutdown runs the main EOTS manager server loop until a signal is
 // received to shut down the process.
-func (s *Server) RunUntilShutdown() error {
+func (s *Server) RunUntilShutdown(ctx context.Context) error {
 	if atomic.AddInt32(&s.started, 1) != 1 {
 		return nil
 	}
@@ -101,7 +98,8 @@ func (s *Server) RunUntilShutdown() error {
 
 	// Wait for shutdown signal from either a graceful server stop or from
 	// the interrupt handler.
-	<-s.interceptor.ShutdownChannel()
+	// <-s.interceptor.ShutdownChannel()
+	<-ctx.Done()
 
 	return nil
 }

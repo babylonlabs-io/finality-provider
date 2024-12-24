@@ -1,6 +1,7 @@
 package e2etest
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"math/rand"
@@ -10,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lightningnetwork/lnd/signal"
 	"github.com/ory/dockertest/v3"
 
 	"github.com/babylonlabs-io/finality-provider/itest/container"
@@ -69,7 +69,6 @@ type TestManager struct {
 	baseDir           string
 	manager           *container.Manager
 	logger            *zap.Logger
-	interceptor       signal.Interceptor
 	babylond          *dockertest.Resource
 }
 
@@ -89,7 +88,7 @@ type TestDelegationData struct {
 	StakingAmount    int64
 }
 
-func StartManager(t *testing.T) *TestManager {
+func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	manager, err := container.NewManager(t)
 	require.NoError(t, err)
 	testDir, err := tempDir(t, "fp-e2e-test-*")
@@ -124,15 +123,12 @@ func StartManager(t *testing.T) *TestManager {
 		return err == nil
 	}, 5*time.Second, eventuallyPollTime)
 
-	shutdownInterceptor, err := signal.Intercept()
-	require.NoError(t, err)
-
 	// 3. prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
 	eotsCfg := eotsconfig.DefaultConfigWithHomePath(eotsHomeDir)
 	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir, shutdownInterceptor)
-	eh.Start()
+	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh.Start(ctx)
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener)
 	require.NoError(t, err)
@@ -147,7 +143,6 @@ func StartManager(t *testing.T) *TestManager {
 		baseDir:           testDir,
 		manager:           manager,
 		logger:            logger,
-		interceptor:       shutdownInterceptor,
 		babylond:          babylond,
 	}
 
@@ -156,7 +151,7 @@ func StartManager(t *testing.T) *TestManager {
 	return tm
 }
 
-func (tm *TestManager) AddFinalityProvider(t *testing.T) *service.FinalityProviderInstance {
+func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *service.FinalityProviderInstance {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
 	// create eots key
@@ -181,7 +176,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T) *service.FinalityProvid
 	require.NoError(t, err)
 
 	// create and start finality provider app
-	eotsCli, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.Cfg.RPCListener)
+	eotsCli, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.cfg.RPCListener)
 	require.NoError(t, err)
 	cc, err := fpcc.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, tm.logger)
 	require.NoError(t, err)
@@ -201,9 +196,9 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T) *service.FinalityProvid
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb, tm.interceptor)
+	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb)
 	go func() {
-		err = fpServer.RunUntilShutdown()
+		err = fpServer.RunUntilShutdown(ctx)
 		require.NoError(t, err)
 	}()
 
@@ -229,12 +224,12 @@ func (tm *TestManager) WaitForServicesStart(t *testing.T) {
 	t.Logf("Babylon node is started")
 }
 
-func StartManagerWithFinalityProvider(t *testing.T, n int) (*TestManager, []*service.FinalityProviderInstance) {
-	tm := StartManager(t)
+func StartManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context) (*TestManager, []*service.FinalityProviderInstance) {
+	tm := StartManager(t, ctx)
 
 	var runningFps []*service.FinalityProviderInstance
 	for i := 0; i < n; i++ {
-		fpIns := tm.AddFinalityProvider(t)
+		fpIns := tm.AddFinalityProvider(t, ctx)
 		runningFps = append(runningFps, fpIns)
 	}
 
@@ -263,7 +258,6 @@ func (tm *TestManager) Stop(t *testing.T) {
 	require.NoError(t, err)
 	err = os.RemoveAll(tm.baseDir)
 	require.NoError(t, err)
-	tm.interceptor.RequestShutdown()
 }
 
 func (tm *TestManager) WaitForFpPubRandTimestamped(t *testing.T, fpIns *service.FinalityProviderInstance) {

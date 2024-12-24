@@ -8,7 +8,6 @@ import (
 	"github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcwallet/walletdb"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/lightningnetwork/lnd/signal"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
@@ -91,15 +90,9 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to start app: %w", err)
 	}
 
-	// Hook interceptor for os signals.
-	shutdownInterceptor, err := signal.Intercept()
-	if err != nil {
-		return err
-	}
+	fpServer := service.NewFinalityProviderServer(cfg, logger, fpApp, dbBackend)
 
-	fpServer := service.NewFinalityProviderServer(cfg, logger, fpApp, dbBackend, shutdownInterceptor)
-
-	return fpServer.RunUntilShutdown()
+	return fpServer.RunUntilShutdown(cmd.Context())
 }
 
 // loadApp initialize an finality provider app based on config and flags set.

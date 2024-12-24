@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 
 	"github.com/lightningnetwork/lnd/kvdb"
-	"github.com/lightningnetwork/lnd/signal"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
@@ -25,28 +24,26 @@ type Server struct {
 	cfg    *fpcfg.Config
 	logger *zap.Logger
 
-	rpcServer   *rpcServer
-	db          kvdb.Backend
-	interceptor signal.Interceptor
+	rpcServer *rpcServer
+	db        kvdb.Backend
 
 	quit chan struct{}
 }
 
-// NewFinalityproviderServer creates a new server with the given config.
-func NewFinalityProviderServer(cfg *fpcfg.Config, l *zap.Logger, fpa *FinalityProviderApp, db kvdb.Backend, sig signal.Interceptor) *Server {
+// NewFinalityProviderServer creates a new server with the given config.
+func NewFinalityProviderServer(cfg *fpcfg.Config, l *zap.Logger, fpa *FinalityProviderApp, db kvdb.Backend) *Server {
 	return &Server{
-		cfg:         cfg,
-		logger:      l,
-		rpcServer:   newRPCServer(fpa),
-		db:          db,
-		interceptor: sig,
-		quit:        make(chan struct{}, 1),
+		cfg:       cfg,
+		logger:    l,
+		rpcServer: newRPCServer(fpa),
+		db:        db,
+		quit:      make(chan struct{}, 1),
 	}
 }
 
 // RunUntilShutdown runs the main EOTS manager server loop until a signal is
 // received to shut down the process.
-func (s *Server) RunUntilShutdown() error {
+func (s *Server) RunUntilShutdown(ctx context.Context) error {
 	if atomic.AddInt32(&s.started, 1) != 1 {
 		return nil
 	}
@@ -99,7 +96,8 @@ func (s *Server) RunUntilShutdown() error {
 
 	// Wait for shutdown signal from either a graceful server stop or from
 	// the interrupt handler.
-	<-s.interceptor.ShutdownChannel()
+	// <-s.interceptor.ShutdownChannel()
+	<-ctx.Done()
 
 	return nil
 }

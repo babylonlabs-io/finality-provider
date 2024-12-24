@@ -5,7 +5,6 @@ import (
 	"net"
 
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/lightningnetwork/lnd/signal"
 	"github.com/spf13/cobra"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
@@ -66,13 +65,7 @@ func startFn(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to create EOTS manager: %w", err)
 	}
 
-	// Hook interceptor for os signals.
-	shutdownInterceptor, err := signal.Intercept()
-	if err != nil {
-		return fmt.Errorf("failed to set up shutdown interceptor: %w", err)
-	}
+	eotsServer := eotsservice.NewEOTSManagerServer(cfg, logger, eotsManager, dbBackend)
 
-	eotsServer := eotsservice.NewEOTSManagerServer(cfg, logger, eotsManager, dbBackend, shutdownInterceptor)
-
-	return eotsServer.RunUntilShutdown()
+	return eotsServer.RunUntilShutdown(cmd.Context())
 }

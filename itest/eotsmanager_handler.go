@@ -1,9 +1,9 @@
 package e2etest
 
 import (
+	"context"
 	"testing"
 
-	"github.com/lightningnetwork/lnd/signal"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -13,13 +13,12 @@ import (
 )
 
 type EOTSServerHandler struct {
-	t           *testing.T
-	interceptor *signal.Interceptor
-	eotsServer  *service.Server
-	Cfg         *config.Config
+	t          *testing.T
+	eotsServer *service.Server
+	cfg        *config.Config
 }
 
-func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string, shutdownInterceptor signal.Interceptor) *EOTSServerHandler {
+func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string) *EOTSServerHandler {
 	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 	loggerConfig := zap.NewDevelopmentConfig()
@@ -29,25 +28,20 @@ func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string, 
 	eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, cfg.KeyringBackend, dbBackend, logger)
 	require.NoError(t, err)
 
-	eotsServer := service.NewEOTSManagerServer(cfg, logger, eotsManager, dbBackend, shutdownInterceptor)
+	eotsServer := service.NewEOTSManagerServer(cfg, logger, eotsManager, dbBackend)
 
 	return &EOTSServerHandler{
-		t:           t,
-		eotsServer:  eotsServer,
-		interceptor: &shutdownInterceptor,
-		Cfg:         cfg,
+		t:          t,
+		eotsServer: eotsServer,
+		cfg:        cfg,
 	}
 }
 
-func (eh *EOTSServerHandler) Start() {
-	go eh.startServer()
+func (eh *EOTSServerHandler) Start(ctx context.Context) {
+	go eh.startServer(ctx)
 }
 
-func (eh *EOTSServerHandler) startServer() {
-	err := eh.eotsServer.RunUntilShutdown()
+func (eh *EOTSServerHandler) startServer(ctx context.Context) {
+	err := eh.eotsServer.RunUntilShutdown(ctx)
 	require.NoError(eh.t, err)
-}
-
-func (eh *EOTSServerHandler) Stop() {
-	eh.interceptor.RequestShutdown()
 }
