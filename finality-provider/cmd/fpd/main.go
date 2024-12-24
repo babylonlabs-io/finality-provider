@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	incentivecli "github.com/babylonlabs-io/babylon/x/incentive/client/cli"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -40,8 +43,11 @@ func main() {
 		version.CommandVersion("fpd"), daemon.CommandUnsafePruneMerkleProof(),
 	)
 
-	if err := cmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Whoops. There was an error while executing your fpd CLI '%s'", err)
-		os.Exit(1)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	if err := cmd.ExecuteContext(ctx); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Whoops. There was an error while executing your fpd CLI '%s'", err)
+		os.Exit(1) //nolint:gocritic
 	}
 }

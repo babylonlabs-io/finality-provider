@@ -24,11 +24,11 @@ func AllocateUniquePort(t *testing.T) int {
 	// Base port and spread range for port selection
 	const (
 		basePort  = 20000
-		portRange = 30000
+		portRange = 40000
 	)
 
-	// Try up to 10 times to find an available port
-	for i := 0; i < 10; i++ {
+	// Try up to 20 times to find an available port
+	for i := 0; i < 20; i++ {
 		port := randPort(basePort, portRange)
 
 		// Lock the mutex to check and modify the shared map

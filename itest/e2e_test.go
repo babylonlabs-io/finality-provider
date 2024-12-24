@@ -5,6 +5,7 @@ package e2etest
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -42,8 +43,11 @@ var (
 // The test runs 2 finality providers connecting to
 // a single EOTS manager
 func TestFinalityProviderLifeCycle(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	n := 2
-	tm, fps := StartManagerWithFinalityProvider(t, n)
+	tm, fps := StartManagerWithFinalityProvider(t, n, ctx)
 	defer tm.Stop(t)
 
 	// check the public randomness is committed
@@ -79,7 +83,10 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 // sends a finality vote over a conflicting block
 // in this case, the BTC private key should be extracted by Babylon
 func TestDoubleSigning(t *testing.T) {
-	tm, fps := StartManagerWithFinalityProvider(t, 1)
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer tm.Stop(t)
 
 	fpIns := fps[0]
@@ -139,7 +146,10 @@ func TestDoubleSigning(t *testing.T) {
 
 // TestCatchingUp tests if a fp can catch up after restarted
 func TestCatchingUp(t *testing.T) {
-	tm, fps := StartManagerWithFinalityProvider(t, 1)
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer tm.Stop(t)
 
 	fpIns := fps[0]
@@ -188,7 +198,10 @@ func TestCatchingUp(t *testing.T) {
 }
 
 func TestFinalityProviderEditCmd(t *testing.T) {
-	tm, fps := StartManagerWithFinalityProvider(t, 1)
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer tm.Stop(t)
 
 	fpIns := fps[0]
@@ -270,7 +283,10 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 }
 
 func TestFinalityProviderCreateCmd(t *testing.T) {
-	tm, fps := StartManagerWithFinalityProvider(t, 1)
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer tm.Stop(t)
 
 	fpIns := fps[0]
@@ -334,7 +350,10 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 }
 
 func TestRemoveMerkleProofsCmd(t *testing.T) {
-	tm, fps := StartManagerWithFinalityProvider(t, 1)
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer tm.Stop(t)
 
 	fpIns := fps[0]
@@ -361,7 +380,10 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 }
 
 func TestPrintEotsCmd(t *testing.T) {
-	tm := StartManager(t)
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	tm := StartManager(t, ctx)
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	defer tm.Stop(t)
 
@@ -375,7 +397,7 @@ func TestPrintEotsCmd(t *testing.T) {
 		expected[eotsKeyName] = bbntypes.NewBIP340PubKeyFromBTCPK(pk).MarshalHex()
 	}
 
-	tm.EOTSServerHandler.Stop()
+	cancel()
 
 	cmd := eotscmd.CommandPrintAllKeys()
 

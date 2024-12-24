@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Improvements
 
 * [#251](https://github.com/babylonlabs-io/finality-provider/pull/251) chore: nlreturn lint
+* [#252](https://github.com/babylonlabs-io/finality-provider/pull/252) feat: rm interceptors and use context
 
 ## v0.14.2
 
