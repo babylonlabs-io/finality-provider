@@ -70,13 +70,13 @@ go version
 ### 2.1. Clone the Finality Provider Repository
 
 Subsequently, clone the finality provider 
-[repository](https://github.com/babylonlabs-io/finality-provider) and navigate 
-to the `bbn-test-5` tag. 
-<!-- TODO: change to a specific version -->
+[repository](https://github.com/babylonlabs-io/finality-provider) and checkout
+to the tag you want to install.
 
 ```shell 
-git clone https://github.com/babylonchain/finality-provider.git
+git clone https://github.com/babylonlabs-io/finality-provider.git
 cd finality-provider
+# Use the valid tag for the network
 git checkout <tag>
 ```
 
