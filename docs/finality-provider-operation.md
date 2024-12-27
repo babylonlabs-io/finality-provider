@@ -74,8 +74,8 @@ Subsequently, clone the finality provider
 to the `bbn-test-5` tag. 
 <!-- TODO: change to a specific version -->
 
-```shell 
-git clone https://github.com/babylonchain/finality-provider.git
+```shell
+git clone https://github.com/babylonlabs-io/finality-provider.git
 cd finality-provider
 git checkout <tag>
 ```
