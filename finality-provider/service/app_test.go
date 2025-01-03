@@ -210,6 +210,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
 		// use shorter interval for the test to end faster
 		fpCfg.SubmissionRetryInterval = time.Millisecond * 10
+		fpCfg.SignatureSubmissionInterval = time.Millisecond * 10
 
 		blkInfo := &types.BlockInfo{Height: currentHeight}
 
@@ -230,12 +231,17 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 
 		expectedTxHash := datagen.GenRandomHexStr(r, 32)
 		mockClientController.EXPECT().UnjailFinalityProvider(fpPk.MustToBTCPK()).Return(&types.TxResponse{TxHash: expectedTxHash}, nil)
+		err := app.StartFinalityProvider(fpPk, "")
+		require.NoError(t, err)
+		fpIns, err := app.GetFinalityProviderInstance()
+		require.NoError(t, err)
+		require.True(t, fpIns.IsJailed())
 		res, err := app.UnjailFinalityProvider(fpPk)
 		require.NoError(t, err)
 		require.Equal(t, expectedTxHash, res.TxHash)
-		fpInfo, err := app.GetFinalityProviderInfo(fpPk)
-		require.NoError(t, err)
-		require.Equal(t, proto.FinalityProviderStatus_INACTIVE.String(), fpInfo.GetStatus())
+		require.Eventually(t, func() bool {
+			return !fpIns.IsJailed()
+		}, eventuallyWaitTimeOut, eventuallyPollTime)
 	})
 }
 
