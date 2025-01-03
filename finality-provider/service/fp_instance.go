@@ -769,10 +769,10 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 //   - Gets finalityActivationHeight from chain
 //   - Gets lastFinalizedHeight from chain
 //   - Gets lastVotedHeight from local state
-//   - If fp.GetLastVotedHeight() is 0, sets lastVotedHeight = lastFinalizedHeight
 //   - Gets highestVotedHeight from chain
-//   - Sets lastVotedHeight = max(lastVotedHeight, highestVotedHeight)
-//   - Returns max(finalityActivationHeight, lastVotedHeight + 1)
+//   - Sets startHeight = max(lastVotedHeight, highestVotedHeight, lastFinalizedHeight) + 1
+//   - Returns max(startHeight, finalityActivationHeight) to ensure startHeight is not
+//     lower than the finality activation height
 //
 // This ensures that:
 // 1. The FP will not vote for heights below the finality activation height
@@ -791,38 +791,32 @@ func (fp *FinalityProviderInstance) DetermineStartHeight() (uint64, error) {
 		return fp.cfg.PollerConfig.StaticChainScanningStartHeight, nil
 	}
 
-	lastFinalizedHeight, err := fp.latestFinalizedHeightWithRetry()
-	if err != nil {
-		return 0, fmt.Errorf("failed to get the last finalized height: %w", err)
-	}
-
-	// determine an effective lastVotedHeight
-	var lastVotedHeight uint64
-	if fp.GetLastVotedHeight() == 0 {
-		lastVotedHeight = lastFinalizedHeight
-	} else {
-		lastVotedHeight = fp.GetLastVotedHeight()
-	}
-
 	highestVotedHeight, err := fp.highestVotedHeightWithRetry()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get the highest voted height: %w", err)
 	}
 
-	// TODO: if highestVotedHeight > lastVotedHeight, using highestVotedHeight could lead
-	// to issues when there are missed blocks between the gap due to bugs.
-	// A proper solution is to check if the fp has voted for each block within the gap
-	lastVotedHeight = max(lastVotedHeight, highestVotedHeight)
+	lastFinalizedHeight, err := fp.latestFinalizedHeightWithRetry()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get the last finalized height: %w", err)
+	}
+
+	// determine start height to be the max height among local last voted height, highest voted height
+	// from Babylon, and the last finalized height
+	// NOTE: if highestVotedHeight is selected, it could lead issues when there are missed blocks between
+	// the gap due to bugs. A potential solution is to check if the fp has voted for each block within
+	// the gap. This issue is not critical if we can assume the votes are sent in the monotonically
+	// increasing order.
+	startHeight := max(fp.GetLastVotedHeight(), highestVotedHeight, lastFinalizedHeight) + 1
 
 	finalityActivationHeight, err := fp.getFinalityActivationHeightWithRetry()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get finality activation height: %w", err)
 	}
 
-	// determine the final starting height
-	startHeight := max(finalityActivationHeight, lastVotedHeight+1)
+	// ensure start height is not lower than the finality activation height
+	startHeight = max(startHeight, finalityActivationHeight)
 
-	// log how start height is determined
 	fp.logger.Info("determined poller starting height",
 		zap.String("pk", fp.GetBtcPkHex()),
 		zap.Uint64("start_height", startHeight),
