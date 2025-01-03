@@ -193,6 +193,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 				fp.logger.Warn("the finality-provider is jailed",
 					zap.String("pk", fp.GetBtcPkHex()),
 				)
+
 				continue
 			}
 
