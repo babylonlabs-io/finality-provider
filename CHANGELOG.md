@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#253](https://github.com/babylonlabs-io/finality-provider/issues/253) Refactor to start from the last finalized height
+
 ## v0.14.2
 
 ### Bug Fixes
