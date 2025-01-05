@@ -40,11 +40,14 @@ type PoPExport struct {
 	// Baby public key is the *secp256k1.PubKey marshal hex
 	BabyPublicKey string `json:"babyPublicKey"`
 
+	// Babylon key pair signs adr36
 	BabySignBtc string `json:"babySignBtc"`
+	// BIP340 ProofOfPossessionBTC as hex
 	BtcSignBaby string `json:"btcSignBaby"`
 
 	// Btc address is the same as the btc pub key
-	BtcAddress  string `json:"btcAddress"`
+	BtcAddress string `json:"btcAddress"`
+	// Babylon address ex.: bbn1f04czxeqprn0s9fe7kdzqyde2e6nqj63dllwsm
 	BabyAddress string `json:"babyAddress"`
 }
 
