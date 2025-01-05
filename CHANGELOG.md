@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
+* [#262](https://github.com/babylonlabs-io/finality-provider/pull/262) chore: add new command to export pop
 * [#251](https://github.com/babylonlabs-io/finality-provider/pull/251) chore: nlreturn lint
 * [#252](https://github.com/babylonlabs-io/finality-provider/pull/252) feat: rm interceptors and use context
 * [#253](https://github.com/babylonlabs-io/finality-provider/issues/253) Refactor to start from the last finalized height
