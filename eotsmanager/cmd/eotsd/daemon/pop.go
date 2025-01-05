@@ -33,9 +33,7 @@ func init() {
 	bbnparams.SetAddressPrefixes()
 }
 
-// PoPExport the data for exporting the PoP.
-// The PubKeyHex is the public key of the finality provider EOTS key to load
-// the private key and sign the AddressSiged.
+// PoPExport the data for exporting the PoP
 type PoPExport struct {
 	// Btc public key is the eots *bbntypes.BIP340PubKey marshal hex
 	BtcPublicKey string `json:"btcPublicKey"`
