@@ -223,8 +223,8 @@ func VerifyEotsSignBaby(eotsPk, babyAddr, eotsSigOverBabyAddr string) (valid boo
 	if err != nil {
 		return false, err
 	}
-
 	sha256Addr := tmhash.Sum([]byte(babyAddr))
+
 	return schnorrSig.Verify(sha256Addr, eotsPubKey.MustToBTCPK()), nil
 }
 

@@ -39,7 +39,7 @@ linters:
     - nilerr
     - nlreturn
     - noctx
-    - nonamedreturns
+    # - nonamedreturns named returns are good
     - nosprintfhostport
     - paralleltest
     - reassign

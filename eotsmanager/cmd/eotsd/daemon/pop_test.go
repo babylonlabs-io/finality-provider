@@ -18,6 +18,7 @@ var hardcodedPopToVerify daemon.PoPExport = daemon.PoPExport{
 }
 
 func TestPoPVerifyEotsSignBaby(t *testing.T) {
+	t.Parallel()
 	valid, err := daemon.VerifyEotsSignBaby(
 		hardcodedPopToVerify.EotsPublicKey,
 		hardcodedPopToVerify.BabyAddress,
@@ -28,6 +29,7 @@ func TestPoPVerifyEotsSignBaby(t *testing.T) {
 }
 
 func TestPoPVerifyBabySignEotsPk(t *testing.T) {
+	t.Parallel()
 	valid, err := daemon.VerifyBabySignEots(
 		hardcodedPopToVerify.BabyPublicKey,
 		hardcodedPopToVerify.BabyAddress,
