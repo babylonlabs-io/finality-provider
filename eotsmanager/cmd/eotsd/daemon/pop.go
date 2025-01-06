@@ -34,18 +34,16 @@ func init() {
 
 // PoPExport the data needed to prove ownership of the eots and baby key pairs.
 type PoPExport struct {
-	// Btc public key is the eots *bbntypes.BIP340PubKey marshal hex
-	BtcPublicKey string `json:"btcPublicKey"`
+	// Btc public key is the EOTS PK *bbntypes.BIP340PubKey marshal hex
+	EotsPublicKey string `json:"eotsPublicKey"`
 	// Baby public key is the *secp256k1.PubKey marshal hex
 	BabyPublicKey string `json:"babyPublicKey"`
 
 	// Babylon key pair signs EOTS public key as hex
-	BabySignBtc string `json:"babySignBtc"`
-	// Schnorr signature of EOTS private key over the Baby address
-	BtcSignBaby string `json:"btcSignBaby"`
+	BabySignEotsPk string `json:"babySignBtc"`
+	// Schnorr signature of EOTS private key over the SHA256(Baby address)
+	EotsSignBaby string `json:"btcSignBaby"`
 
-	// Btc address is the same as the btc pub key
-	BtcAddress string `json:"btcAddress"`
 	// Babylon address ex.: bbn1f04czxeqprn0s9fe7kdzqyde2e6nqj63dllwsm
 	BabyAddress string `json:"babyAddress"`
 }
@@ -162,7 +160,7 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 	}
 
 	hashOfMsgToSign := tmhash.Sum([]byte(bbnAddr.String()))
-	btcSigOverBabyAddr, btcPubKey, err := eotsSignMsg(eotsManager, eotsKeyName, eotsFpPubKeyStr, eotsPassphrase, hashOfMsgToSign)
+	schnorrSigOverBabyAddr, btcPubKey, err := eotsSignMsg(eotsManager, eotsKeyName, eotsFpPubKeyStr, eotsPassphrase, hashOfMsgToSign)
 	if err != nil {
 		return fmt.Errorf("failed to sign address %s: %w", bbnAddr.String(), err)
 	}
@@ -191,14 +189,13 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 	}
 
 	out := PoPExport{
-		BtcPublicKey:  eotsPkHex,
+		EotsPublicKey: eotsPkHex,
 		BabyPublicKey: base64.StdEncoding.EncodeToString(babyPubKey.Bytes()),
 
-		BtcAddress:  eotsPkHex,
 		BabyAddress: bbnAddr.String(),
 
-		BtcSignBaby: base64.StdEncoding.EncodeToString(btcSigOverBabyAddr.Serialize()),
-		BabySignBtc: base64.StdEncoding.EncodeToString(babySignBtc),
+		EotsSignBaby:   base64.StdEncoding.EncodeToString(schnorrSigOverBabyAddr.Serialize()),
+		BabySignEotsPk: base64.StdEncoding.EncodeToString(babySignBtc),
 	}
 
 	jsonString, err := json.MarshalIndent(out, "", "  ")
