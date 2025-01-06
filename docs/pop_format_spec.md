@@ -2,33 +2,47 @@
 
 ## Overview
 
-The Proof of Possession (PoP) mechanism verifies that the owner of an EOTS key
-pair also controls a BABY key pair. This validation requires five essential
-attributes, which are exposed by the `PoPExport` structure.
+The Proof of Possession (PoP) structured specification outlined in this
+document allows for the verification of the mutual ownership of a Babylon
+key pair and an EOTS key pair. In the following, we outline the five essential
+attributes exposed by the `PoPExport` structure and provide examples and
+validation procedures.
 
 ## Attributes
 
-The `PoPExport` structure is defined
-[here](https://github.com/babylonlabs-io/finality-provider/blob/cc07bcd4dc434f7095668724aad6865bffe425e0/eotsmanager/cmd/eotsd/daemon/pop.go#L36).
-It contains the following fields:
+The `PoPExport` structure is defined bellow:
 
-- `EotsPublicKey` – The EOTS public key of the finality provider, marshaled as
-a hexadecimal string. This value represents the public component of the EOTS
-key pair used in the signing process.
-- `BabyPublicKey` – The secp256k1 public key, marshaled as a base64 string.
-This key is extracted from the BABY keyring and uniquely identifies the BABY
-key pair.
-- `BabyAddress` – The BABY address, prefixed with `bbn`. It is derived from the
-`BabyPublicKey` and used as the primary identifier on the Babylon network.
-- `EotsSignBaby` – A Schnorr signature, created by signing the
-`sha256(BabyAddress)` with the private key corresponding to the EOTS public
-key. Encoded in base64, this ensures that the EOTS key can verify ownership
-of the BABY address.
-- `BabySignEotsPk` – A signature of the `EotsPublicKey`, created by the BABY
+```go
+// PoPExport the data needed to prove ownership of the eots and babylon key pairs.
+type PoPExport struct {
+  // Btc public key is the EOTS PK *bbntypes.BIP340PubKey marshal hex
+  EotsPublicKey string `json:"eotsPublicKey"`
+  // Babylon public key is the *secp256k1.PubKey marshal hex
+  BabyPublicKey string `json:"babyPublicKey"`
+
+  // Babylon key pair signs EOTS public key as hex
+  BabySignEotsPk string `json:"babySignEotsPk"`
+  // Schnorr signature of EOTS private key over the SHA256(Baby address)
+  EotsSignBaby string `json:"eotsSignBaby"`
+
+  // Babylon address ex.: bbn1f04czxeqprn0s9fe7kdzqyde2e6nqj63dllwsm
+  BabyAddress string `json:"babyAddress"`
+}
+```
+
+Detailed specification of each field:
+
+- `EotsPublicKey`: The EOTS public key of the finality provider in hexadecimal format.
+- `BabyPublicKey` – The Babylon secp256k1 public key in base64 format.
+- `BabyAddress` – The Babylon account address (`bbn` prefix). The address is
+derived from the `BabyPublicKey` and used as the primary identifier on the
+Babylon network.
+- `EotsSignBaby` – A Schnorr signature in base64 format, created by signing the
+`sha256(BabyAddress)` with the EOTS private key.
+- `BabySignEotsPk` – A signature of the `EotsPublicKey`, created by the Babylon
 private key. This signature follows the Cosmos
 [ADR-036](https://github.com/cosmos/cosmos-sdk/blob/main/docs/architecture/adr-036-arbitrary-signature.md)
-specification and is encoded in base64. It demonstrates that the BABY key pair
-acknowledges and signs the EOTS public key.
+specification and is encoded in base64.
 
 ## Example
 
