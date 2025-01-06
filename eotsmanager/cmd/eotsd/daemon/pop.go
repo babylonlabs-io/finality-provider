@@ -40,9 +40,9 @@ type PoPExport struct {
 	BabyPublicKey string `json:"babyPublicKey"`
 
 	// Babylon key pair signs EOTS public key as hex
-	BabySignEotsPk string `json:"babySignBtc"`
+	BabySignEotsPk string `json:"babySignEotsPk"`
 	// Schnorr signature of EOTS private key over the SHA256(Baby address)
-	EotsSignBaby string `json:"btcSignBaby"`
+	EotsSignBaby string `json:"eotsSignBaby"`
 
 	// Babylon address ex.: bbn1f04czxeqprn0s9fe7kdzqyde2e6nqj63dllwsm
 	BabyAddress string `json:"babyAddress"`
