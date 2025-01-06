@@ -164,6 +164,9 @@ func (fp *FinalityProviderInstance) IsRunning() bool {
 	return fp.isStarted.Load()
 }
 
+// IsJailed returns true if fp is JAILED
+// NOTE: it retrieves the the status from the db to
+// ensure status is up-to-date
 func (fp *FinalityProviderInstance) IsJailed() bool {
 	storedFp, err := fp.fpState.s.GetFinalityProvider(fp.GetBtcPk())
 	if err != nil {
