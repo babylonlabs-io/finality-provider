@@ -25,7 +25,7 @@ const (
 	defaultFinalityProviderKeyName     = "finality-provider"
 	DefaultRPCPort                     = 12581
 	defaultConfigFileName              = "fpd.conf"
-	defaultNumPubRand                  = 70000 // support running of 1 week with block production time as 10s
+	defaultNumPubRand                  = 10000 // support running of roughly 1 day with block production time as 10s
 	defaultNumPubRandMax               = 100000
 	defaultTimestampingDelayBlocks     = 6000 // 100 BTC blocks * 600s / 10s
 	defaultBatchSubmissionSize         = 1000
