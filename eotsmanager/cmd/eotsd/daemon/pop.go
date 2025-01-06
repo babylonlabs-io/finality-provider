@@ -131,16 +131,10 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	babyAccAddr, err := babyKeyRecord.GetAddress()
+	bbnAddr, err := babyKeyRecord.GetAddress()
 	if err != nil {
 		return err
 	}
-
-	bbnAddrBz, err := sdk.GetFromBech32(babyAccAddr.String(), "bbn")
-	if err != nil {
-		return err
-	}
-	bbnAddr := sdk.AccAddress(bbnAddrBz)
 
 	if len(eotsFpPubKeyStr) == 0 && len(eotsKeyName) == 0 {
 		return fmt.Errorf("at least one of the flags: %s, %s needs to be informed", keyNameFlag, eotsPkFlag)
