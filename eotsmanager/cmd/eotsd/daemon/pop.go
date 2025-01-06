@@ -161,7 +161,7 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to create EOTS manager: %w", err)
 	}
 
-	hashOfMsgToSign := tmhash.Sum(bbnAddr.Bytes())
+	hashOfMsgToSign := tmhash.Sum([]byte(bbnAddr.String()))
 	btcSigOverBabyAddr, btcPubKey, err := eotsSignMsg(eotsManager, eotsKeyName, eotsFpPubKeyStr, eotsPassphrase, hashOfMsgToSign)
 	if err != nil {
 		return fmt.Errorf("failed to sign address %s: %w", bbnAddr.String(), err)
