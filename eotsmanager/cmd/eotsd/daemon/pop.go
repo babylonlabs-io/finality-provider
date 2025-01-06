@@ -210,7 +210,7 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 
 func VerifyPopExport(pop PoPExport) (valid bool, err error) {
 	valid, err = VerifyEotsSignBaby(pop.EotsPublicKey, pop.BabyAddress, pop.EotsSignBaby)
-	if err != nil {
+	if err != nil || !valid {
 		return false, err
 	}
 
