@@ -16,7 +16,6 @@ import (
 
 	bbnparams "github.com/babylonlabs-io/babylon/app/params"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	btcstktypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/babylonlabs-io/finality-provider/codec"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
@@ -40,9 +39,9 @@ type PoPExport struct {
 	// Baby public key is the *secp256k1.PubKey marshal hex
 	BabyPublicKey string `json:"babyPublicKey"`
 
-	// Babylon key pair signs adr36
+	// Babylon key pair signs EOTS public key as hex (BtcAddress)
 	BabySignBtc string `json:"babySignBtc"`
-	// BIP340 ProofOfPossessionBTC as hex
+	// Schnorr signature of EOTS private key over the Baby address
 	BtcSignBaby string `json:"btcSignBaby"`
 
 	// Btc address is the same as the btc pub key
@@ -169,25 +168,9 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 	}
 
 	hashOfMsgToSign := tmhash.Sum(bbnAddr.Bytes())
-	btcSig, btcPubKey, err := eotsSignMsg(eotsManager, eotsKeyName, eotsFpPubKeyStr, eotsPassphrase, hashOfMsgToSign)
+	btcSigOverBabyAddr, btcPubKey, err := eotsSignMsg(eotsManager, eotsKeyName, eotsFpPubKeyStr, eotsPassphrase, hashOfMsgToSign)
 	if err != nil {
 		return fmt.Errorf("failed to sign address %s: %w", bbnAddr.String(), err)
-	}
-
-	bip340Sig := bbntypes.NewBIP340SignatureFromBTCSig(btcSig)
-	btcSigBz, err := bip340Sig.Marshal()
-	if err != nil {
-		return fmt.Errorf("failed to marshal BTC Sig: %w", err)
-	}
-
-	popBtcSignBaby := btcstktypes.ProofOfPossessionBTC{
-		BtcSigType: btcstktypes.BTCSigType_BIP340,
-		BtcSig:     btcSigBz,
-	}
-
-	popHexBtcSignBaby, err := popBtcSignBaby.ToHexStr()
-	if err != nil {
-		return fmt.Errorf("failed to marshal pop to hex: %w", err)
 	}
 
 	babyPubKey, err := babyPk(babyKeyRecord)
@@ -220,7 +203,7 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 		BtcAddress:  eotsPkHex,
 		BabyAddress: bbnAddr.String(),
 
-		BtcSignBaby: popHexBtcSignBaby,
+		BtcSignBaby: base64.StdEncoding.EncodeToString(btcSigOverBabyAddr.Serialize()),
 		BabySignBtc: base64.StdEncoding.EncodeToString(babySignBtc),
 	}
 
