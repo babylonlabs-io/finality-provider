@@ -39,7 +39,7 @@ type PoPExport struct {
 	// Baby public key is the *secp256k1.PubKey marshal hex
 	BabyPublicKey string `json:"babyPublicKey"`
 
-	// Babylon key pair signs EOTS public key as hex (BtcAddress)
+	// Babylon key pair signs EOTS public key as hex
 	BabySignBtc string `json:"babySignBtc"`
 	// Schnorr signature of EOTS private key over the Baby address
 	BtcSignBaby string `json:"btcSignBaby"`
