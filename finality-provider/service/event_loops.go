@@ -65,12 +65,6 @@ func (app *FinalityProviderApp) monitorCriticalErr() {
 					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
 				continue
 			}
-			if errors.Is(criticalErr.err, ErrFinalityProviderJailed) {
-				app.setFinalityProviderJailed(fpi)
-				app.logger.Debug("the finality-provider has been jailed",
-					zap.String("pk", criticalErr.fpBtcPk.MarshalHex()))
-				continue
-			}
 			app.logger.Fatal(instanceTerminatingMsg,
 				zap.String("pk", criticalErr.fpBtcPk.MarshalHex()), zap.Error(criticalErr.err))
 		case <-app.quit:
@@ -176,6 +170,11 @@ func (app *FinalityProviderApp) unjailFpLoop() {
 				zap.String("btc_pk", req.btcPubKey.MarshalHex()),
 				zap.String("txHash", res.TxHash),
 			)
+
+			// set the status to INACTIVE by default
+			// the status will be changed to ACTIVE
+			// if it has voting power for the next height
+			app.fps.MustSetFpStatus(req.btcPubKey.MustToBTCPK(), proto.FinalityProviderStatus_INACTIVE)
 
 			req.successResponse <- &UnjailFinalityProviderResponse{
 				TxHash: res.TxHash,
