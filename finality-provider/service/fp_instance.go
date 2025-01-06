@@ -68,8 +68,8 @@ func NewFinalityProviderInstance(
 		return nil, fmt.Errorf("failed to retrieve the finality provider %s from DB: %w", fpPk.MarshalHex(), err)
 	}
 
-	if !sfp.ShouldStart() {
-		return nil, fmt.Errorf("the finality provider instance cannot be initiated with status %s", sfp.Status.String())
+	if sfp.Status == proto.FinalityProviderStatus_SLASHED {
+		return nil, fmt.Errorf("the finality provider instance is already slashed")
 	}
 
 	return newFinalityProviderInstanceFromStore(sfp, cfg, s, prStore, cc, em, metrics, passphrase, errChan, logger)
@@ -109,7 +109,8 @@ func (fp *FinalityProviderInstance) Start() error {
 	}
 
 	if fp.IsJailed() {
-		return fmt.Errorf("%w: %s", ErrFinalityProviderJailed, fp.GetBtcPkHex())
+		fp.logger.Warn("the finality provider is jailed",
+			zap.String("pk", fp.GetBtcPkHex()))
 	}
 
 	startHeight, err := fp.DetermineStartHeight()
@@ -163,7 +164,19 @@ func (fp *FinalityProviderInstance) IsRunning() bool {
 	return fp.isStarted.Load()
 }
 
+// IsJailed returns true if fp is JAILED
+// NOTE: it retrieves the the status from the db to
+// ensure status is up-to-date
 func (fp *FinalityProviderInstance) IsJailed() bool {
+	storedFp, err := fp.fpState.s.GetFinalityProvider(fp.GetBtcPk())
+	if err != nil {
+		panic(fmt.Errorf("failed to retrieve the finality provider %s from db: %w", fp.GetBtcPkHex(), err))
+	}
+
+	if storedFp.Status != fp.GetStatus() {
+		fp.MustSetStatus(storedFp.Status)
+	}
+
 	return fp.GetStatus() == proto.FinalityProviderStatus_JAILED
 }
 
@@ -178,6 +191,15 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 			if len(pollerBlocks) == 0 {
 				continue
 			}
+
+			if fp.IsJailed() {
+				fp.logger.Warn("the finality-provider is jailed",
+					zap.String("pk", fp.GetBtcPkHex()),
+				)
+
+				continue
+			}
+
 			targetHeight := pollerBlocks[len(pollerBlocks)-1].Height
 			fp.logger.Debug("the finality-provider received new block(s), start processing",
 				zap.String("pk", fp.GetBtcPkHex()),
@@ -199,6 +221,13 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 			res, err := fp.retrySubmitSigsUntilFinalized(processedBlocks)
 			if err != nil {
 				fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
+				if errors.Is(err, ErrFinalityProviderJailed) {
+					fp.MustSetStatus(proto.FinalityProviderStatus_JAILED)
+					fp.logger.Debug("the finality-provider has been jailed",
+						zap.String("pk", fp.GetBtcPkHex()))
+
+					continue
+				}
 				if !errors.Is(err, ErrFinalityProviderShutDown) {
 					fp.reportCriticalErr(err)
 				}
