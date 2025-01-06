@@ -208,6 +208,52 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
+func VerifyEotsSignBaby(eotsPk, babyAddr, eotsSigOverBabyAddr string) (valid bool, err error) {
+	eotsPubKey, err := bbntypes.NewBIP340PubKeyFromHex(eotsPk)
+	if err != nil {
+		return false, err
+	}
+
+	schnorrSigBase64, err := base64.StdEncoding.DecodeString(eotsSigOverBabyAddr)
+	if err != nil {
+		return false, err
+	}
+
+	schnorrSig, err := schnorr.ParseSignature(schnorrSigBase64)
+	if err != nil {
+		return false, err
+	}
+
+	sha256Addr := tmhash.Sum([]byte(babyAddr))
+	return schnorrSig.Verify(sha256Addr, eotsPubKey.MustToBTCPK()), nil
+}
+
+func VerifyBabySignEots(babyPk, babyAddr, eotsPk, babySigOverEotsPk string) (valid bool, err error) {
+	babyPubKeyBz, err := base64.StdEncoding.DecodeString(babyPk)
+	if err != nil {
+		return false, err
+	}
+
+	babyPubKey := &secp256k1.PubKey{
+		Key: babyPubKeyBz,
+	}
+
+	babySignBtcDoc := NewCosmosSignDoc(babyAddr, eotsPk)
+	babySignBtcMarshaled, err := json.Marshal(babySignBtcDoc)
+	if err != nil {
+		return false, err
+	}
+
+	babySignEotsBz := sdk.MustSortJSON(babySignBtcMarshaled)
+
+	secp256SigBase64, err := base64.StdEncoding.DecodeString(babySigOverEotsPk)
+	if err != nil {
+		return false, err
+	}
+
+	return babyPubKey.VerifySignature(babySignEotsBz, secp256SigBase64), nil
+}
+
 func babyPk(babyRecord *keyring.Record) (*secp256k1.PubKey, error) {
 	pubKey, err := babyRecord.GetPubKey()
 	if err != nil {
