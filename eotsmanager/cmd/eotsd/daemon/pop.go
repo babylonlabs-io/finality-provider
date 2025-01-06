@@ -208,6 +208,20 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
+func VerifyPopExport(pop PoPExport) (valid bool, err error) {
+	valid, err = VerifyEotsSignBaby(pop.EotsPublicKey, pop.BabyAddress, pop.EotsSignBaby)
+	if err != nil {
+		return false, err
+	}
+
+	return VerifyBabySignEots(
+		pop.BabyPublicKey,
+		pop.BabyAddress,
+		pop.EotsPublicKey,
+		pop.BabySignEotsPk,
+	)
+}
+
 func VerifyEotsSignBaby(eotsPk, babyAddr, eotsSigOverBabyAddr string) (valid bool, err error) {
 	eotsPubKey, err := bbntypes.NewBIP340PubKeyFromHex(eotsPk)
 	if err != nil {

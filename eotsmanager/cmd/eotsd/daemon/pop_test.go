@@ -39,3 +39,10 @@ func TestPoPVerifyBabySignEotsPk(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, valid)
 }
+
+func TestPoPVerify(t *testing.T) {
+	t.Parallel()
+	valid, err := daemon.VerifyPopExport(hardcodedPopToVerify)
+	require.NoError(t, err)
+	require.True(t, valid)
+}
