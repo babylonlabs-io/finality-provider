@@ -33,7 +33,7 @@ func init() {
 	bbnparams.SetAddressPrefixes()
 }
 
-// PoPExport the data for exporting the PoP
+// PoPExport the data needed to prove ownership of the eots and baby key pairs.
 type PoPExport struct {
 	// Btc public key is the eots *bbntypes.BIP340PubKey marshal hex
 	BtcPublicKey string `json:"btcPublicKey"`
@@ -53,12 +53,13 @@ type PoPExport struct {
 
 func NewExportPopCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "pop-export [bbn-address]",
-		Short: "Exports the Proof of Possession by signing over the finality provider's Babylon address with the EOTS private key.",
-		Long: `Parse the address received as argument, hash it with
+		Use:   "pop-export",
+		Short: "Exports the Proof of Possession by signing over the BABY address with the EOTS private key and the EOTS public key with the BABY private key.",
+		Long: `Parse the address from the BABY keyring, loads the address hash it with
 		sha256 and sign based on the EOTS key associated with the key-name or eots-pk flag.
 		If the both flags are supplied, eots-pk takes priority. Use the generated signature
-		to build a Proof of Possession and export it.`,
+		to build a Proof of Possession. For the creation of the BABY signature over the eots pk,
+		it loads the BABY key pair and signs the eots-pk hex with adr036 and exports it.`,
 		RunE: exportPop,
 	}
 
