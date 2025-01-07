@@ -80,9 +80,13 @@ func startFn(ctx *cli.Context) error {
 }
 
 func getHomeFlag(ctx *cli.Context) (string, error) {
-	homePath, err := filepath.Abs(ctx.String(homeFlag))
+	return getCleanPath(ctx, homeFlag)
+}
+
+func getCleanPath(ctx *cli.Context, flag string) (string, error) {
+	absPath, err := filepath.Abs(ctx.String(flag))
 	if err != nil {
 		return "", err
 	}
-	return util.CleanAndExpandPath(homePath), nil
+	return util.CleanAndExpandPath(absPath), nil
 }
