@@ -37,13 +37,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
-### Improvements
-
 * [#251](https://github.com/babylonlabs-io/finality-provider/pull/251) Add nlreturn lint
 * [#252](https://github.com/babylonlabs-io/finality-provider/pull/252) Remove interceptors and use context
+* [#266](https://github.com/babylonlabs-io/finality-provider/pull/266) Change default config
+
+## v0.14.3
+
+### Improvements
+
 * [#253](https://github.com/babylonlabs-io/finality-provider/issues/253) Refactor to start from the last finalized height
 * [#260](https://github.com/babylonlabs-io/finality-provider/pull/260) Allow running of jailed fp
-* [#266](https://github.com/babylonlabs-io/finality-provider/pull/266) Change default config
 
 ## v0.14.2
 
