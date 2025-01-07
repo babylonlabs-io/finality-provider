@@ -11,8 +11,8 @@ lifecycle of running a finality provider, including:
 * Collecting rewards
 
 This is an operational guide intended for technical finality provider administrators.
-For conceptual understanding, see our [Technical Documentation](./docs/fp-core.md). 
-Please review the [high-level explainer](./README.md) before proceeding to 
+For conceptual understanding, see our [Technical Documentation](./fp-core.md). 
+Please review the [high-level explainer](../README.md) before proceeding to 
 gain an overall understanding of the finality provider. 
 
 ## Table of Contents
