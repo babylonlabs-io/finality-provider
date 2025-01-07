@@ -208,13 +208,13 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func VerifyPopExport(pop PoPExport) (valid bool, err error) {
-	valid, err = VerifyEotsSignBaby(pop.EotsPublicKey, pop.BabyAddress, pop.EotsSignBaby)
+func VerifyPopExport(pop PoPExport) (bool, error) {
+	valid, err := ValidEotsSignBaby(pop.EotsPublicKey, pop.BabyAddress, pop.EotsSignBaby)
 	if err != nil || !valid {
 		return false, err
 	}
 
-	return VerifyBabySignEots(
+	return ValidBabySignEots(
 		pop.BabyPublicKey,
 		pop.BabyAddress,
 		pop.EotsPublicKey,
@@ -222,7 +222,7 @@ func VerifyPopExport(pop PoPExport) (valid bool, err error) {
 	)
 }
 
-func VerifyEotsSignBaby(eotsPk, babyAddr, eotsSigOverBabyAddr string) (valid bool, err error) {
+func ValidEotsSignBaby(eotsPk, babyAddr, eotsSigOverBabyAddr string) (bool, error) {
 	eotsPubKey, err := bbntypes.NewBIP340PubKeyFromHex(eotsPk)
 	if err != nil {
 		return false, err
@@ -242,7 +242,7 @@ func VerifyEotsSignBaby(eotsPk, babyAddr, eotsSigOverBabyAddr string) (valid boo
 	return schnorrSig.Verify(sha256Addr, eotsPubKey.MustToBTCPK()), nil
 }
 
-func VerifyBabySignEots(babyPk, babyAddr, eotsPk, babySigOverEotsPk string) (valid bool, err error) {
+func ValidBabySignEots(babyPk, babyAddr, eotsPk, babySigOverEotsPk string) (bool, error) {
 	babyPubKeyBz, err := base64.StdEncoding.DecodeString(babyPk)
 	if err != nil {
 		return false, err

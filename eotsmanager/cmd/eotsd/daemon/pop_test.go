@@ -17,9 +17,9 @@ var hardcodedPopToVerify daemon.PoPExport = daemon.PoPExport{
 	BabyAddress: "bbn1f04czxeqprn0s9fe7kdzqyde2e6nqj63dllwsm",
 }
 
-func TestPoPVerifyEotsSignBaby(t *testing.T) {
+func TestPoPValidEotsSignBaby(t *testing.T) {
 	t.Parallel()
-	valid, err := daemon.VerifyEotsSignBaby(
+	valid, err := daemon.ValidEotsSignBaby(
 		hardcodedPopToVerify.EotsPublicKey,
 		hardcodedPopToVerify.BabyAddress,
 		hardcodedPopToVerify.EotsSignBaby,
@@ -28,9 +28,9 @@ func TestPoPVerifyEotsSignBaby(t *testing.T) {
 	require.True(t, valid)
 }
 
-func TestPoPVerifyBabySignEotsPk(t *testing.T) {
+func TestPoPValidBabySignEotsPk(t *testing.T) {
 	t.Parallel()
-	valid, err := daemon.VerifyBabySignEots(
+	valid, err := daemon.ValidBabySignEots(
 		hardcodedPopToVerify.BabyPublicKey,
 		hardcodedPopToVerify.BabyAddress,
 		hardcodedPopToVerify.EotsPublicKey,

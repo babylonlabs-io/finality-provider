@@ -67,10 +67,10 @@ which can be found [here](https://github.com/babylonlabs-io/finality-provider/bl
 by cross-verifying the provided signatures and public keys. This process
 consists of two core validation steps:
 
-- `VerifyEotsSignBaby` – This function checks the validity of the Schnorr
+- `ValidEotsSignBaby` – This function checks the validity of the Schnorr
 signature `(EotsSignBaby)` by verifying that the EOTS private key has correctly
 signed the SHA256 hash of the BABY address.
-- `VerifyBabySignEots` – This function confirms that the BABY private key has
+- `ValidBabySignEots` – This function confirms that the BABY private key has
 signed the EOTS public key `(EotsPublicKey)`, ensuring mutual validation
 between the key pairs.
 
