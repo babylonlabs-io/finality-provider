@@ -14,19 +14,21 @@ import (
 )
 
 func getHomePath(cmd *cobra.Command) (string, error) {
-	rawHomePath, err := cmd.Flags().GetString(sdkflags.FlagHome)
+	return getCleanPath(cmd, sdkflags.FlagHome)
+}
+
+func getCleanPath(cmd *cobra.Command, flag string) (string, error) {
+	rawPath, err := cmd.Flags().GetString(flag)
 	if err != nil {
 		return "", err
 	}
 
-	homePath, err := filepath.Abs(rawHomePath)
+	cleanPath, err := filepath.Abs(rawPath)
 	if err != nil {
 		return "", err
 	}
-	// Create home directory
-	homePath = util.CleanAndExpandPath(homePath)
 
-	return homePath, nil
+	return util.CleanAndExpandPath(cleanPath), nil
 }
 
 // PersistClientCtx persist some vars from the cmd or config to the client context.

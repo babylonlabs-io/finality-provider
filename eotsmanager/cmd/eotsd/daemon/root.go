@@ -26,6 +26,7 @@ func NewRootCmd() *cobra.Command {
 		NewStartCmd(),
 		version.CommandVersion("eotsd"),
 		CommandPrintAllKeys(),
+		NewExportPopCmd(),
 	)
 
 	return rootCmd
