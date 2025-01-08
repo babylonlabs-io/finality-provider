@@ -34,16 +34,20 @@ func FuzzChainPoller_Start(f *testing.F) {
 		mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
 
 		currentBlockRes := &types.BlockInfo{
-			Height: currentHeight,
+			Height: endHeight,
 		}
 		mockClientController.EXPECT().QueryBestBlock().Return(currentBlockRes, nil).AnyTimes()
 
+		var resBlocks []*types.BlockInfo
 		for i := startHeight; i <= endHeight; i++ {
 			resBlock := &types.BlockInfo{
 				Height: i,
 			}
-			mockClientController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
+
+			resBlocks = append(resBlocks, resBlock)
 		}
+
+		mockClientController.EXPECT().QueryBlocks(startHeight, endHeight, uint32(endHeight)).Return(resBlocks, nil).AnyTimes()
 
 		m := metrics.NewFpMetrics()
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
@@ -137,6 +141,7 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 				if info.Height == skipHeight {
 					skipped = true
 				} else {
+					t.Log(i, info.Height)
 					require.Equal(t, i, info.Height)
 				}
 			case <-time.After(10 * time.Second):
@@ -145,7 +150,7 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 		}
 
 		wg.Wait()
-
+		t.Log(skipHeight+1, poller.NextHeight())
 		require.Equal(t, skipHeight+1, poller.NextHeight())
 	})
 }

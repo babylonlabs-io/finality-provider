@@ -113,13 +113,43 @@ func (cp *ChainPoller) GetBlockInfoChan() <-chan *types.BlockInfo {
 	return cp.blockInfoChan
 }
 
-func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
+func (cp *ChainPoller) blocksWithRetry(start, end uint64, limit uint32) ([]*types.BlockInfo, error) {
 	var (
-		block *types.BlockInfo
+		block []*types.BlockInfo
 		err   error
 	)
 	if err := retry.Do(func() error {
-		block, err = cp.cc.QueryBlock(height)
+		block, err = cp.cc.QueryBlocks(start, end, limit)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
+		cp.logger.Debug(
+			"failed to query the consumer chain for block range",
+			zap.Uint("attempt", n+1),
+			zap.Uint("max_attempts", RtyAttNum),
+			zap.Uint64("start_height", start),
+			zap.Uint64("end_height", end),
+			zap.Uint32("limit", limit),
+			zap.Error(err),
+		)
+	})); err != nil {
+		return nil, err
+	}
+
+	return block, nil
+}
+
+func (cp *ChainPoller) getLatestBlockWithRetry() (*types.BlockInfo, error) {
+	var (
+		latestBlock *types.BlockInfo
+		err         error
+	)
+
+	if err := retry.Do(func() error {
+		latestBlock, err = cp.cc.QueryBestBlock()
 		if err != nil {
 			return err
 		}
@@ -130,14 +160,13 @@ func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
 			"failed to query the consumer chain for the latest block",
 			zap.Uint("attempt", n+1),
 			zap.Uint("max_attempts", RtyAttNum),
-			zap.Uint64("height", height),
 			zap.Error(err),
 		)
 	})); err != nil {
 		return nil, err
 	}
 
-	return block, nil
+	return latestBlock, nil
 }
 
 // waitForActivation waits until BTC staking is activated
@@ -171,31 +200,50 @@ func (cp *ChainPoller) pollChain() {
 	var failedCycles uint32
 
 	for {
-		// start polling in the first iteration
-		blockToRetrieve := cp.nextHeight
-		block, err := cp.blockWithRetry(blockToRetrieve)
+		latestBlock, err := cp.getLatestBlockWithRetry()
 		if err != nil {
 			failedCycles++
 			cp.logger.Debug(
-				"failed to query the consumer chain for the block",
+				"failed to query the consumer chain for the latest block",
 				zap.Uint32("current_failures", failedCycles),
-				zap.Uint64("block_to_retrieve", blockToRetrieve),
 				zap.Error(err),
 			)
 		} else {
-			// no error and we got the header we wanted to get, bump the state and push
-			// notification about data
-			cp.nextHeight = blockToRetrieve + 1
-			failedCycles = 0
-			cp.metrics.RecordLastPolledHeight(block.Height)
+			// start polling in the first iteration
+			blockToRetrieve := cp.nextHeight
 
-			cp.logger.Info("the poller retrieved the block from the consumer chain",
-				zap.Uint64("height", block.Height))
+			blocks, err := cp.blocksWithRetry(blockToRetrieve, latestBlock.Height, uint32(latestBlock.Height))
+			if err != nil {
+				failedCycles++
+				cp.logger.Debug(
+					"failed to query the consumer chain for the block range",
+					zap.Uint32("current_failures", failedCycles),
+					zap.Uint64("start_height", blockToRetrieve),
+					zap.Uint64("end_height", latestBlock.Height),
+					zap.Error(err),
+				)
+			} else {
+				// no error and we got the header we wanted to get, bump the state and push
+				// notification about data
+				cp.nextHeight = blockToRetrieve + 1
+				failedCycles = 0
+				if len(blocks) == 0 {
+					continue
+				}
+				lb := blocks[len(blocks)-1]
+				cp.metrics.RecordLastPolledHeight(lb.Height)
 
-			// push the data to the channel
-			// Note: if the consumer is too slow -- the buffer is full
-			// the channel will block, and we will stop retrieving data from the node
-			cp.blockInfoChan <- block
+				cp.logger.Info("the poller retrieved the blocks from the consumer chain",
+					zap.Uint64("start_height", blockToRetrieve),
+					zap.Uint64("end_height", lb.Height))
+
+				// push the data to the channel
+				// Note: if the consumer is too slow -- the buffer is full
+				// the channel will block, and we will stop retrieving data from the node
+				for _, block := range blocks {
+					cp.blockInfoChan <- block
+				}
+			}
 		}
 
 		if failedCycles > maxFailedCycles {
