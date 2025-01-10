@@ -504,8 +504,6 @@ fpd create-finality-provider \
   --home ./fpHome
 ```
 
-<!-- TODO: JSON file -->
-
 Required parameters: 
 - `--chain-id`: The Babylon chain ID (e.g., for the testnet, `bbn-test-5`) 
 - `--eots-pk`: The EOTS public key maintained by the connected EOTS manager
@@ -527,6 +525,31 @@ Optional parameters:
 - `--details`: Additional description of your finality provider 
 - `--daemon-address`: RPC address of the finality provider daemon
   (default: `127.0.0.1:12581`)
+
+
+Alternatively, you can create a finality provider by providing a JSON file 
+with the finality provider details, similar to the following:
+
+```json
+{
+  "keyName": "The unique key name of the finality provider's Babylon account",
+  "chainID": "The identifier of the consumer chain",
+  "passphrase": "The pass phrase used to encrypt the keys",
+  "commissionRate": "The commission rate for the finality provider, e.g., 0.05",
+  "moniker": "A human-readable name for the finality provider",
+  "identity": "A optional identity signature",
+  "website": "Validator's (optional) website",
+  "securityContract": "Validator's (optional) security contact email",
+  "details": "Validator's (optional) details",
+  "eotsPK": "The hex string of the finality provider's EOTS public key"
+}
+```
+
+To create a finality provider using the JSON file, you can use the following command:
+
+```shell
+fpd create-finality-provider --json-file <path-to-json-file>
+```
 
 Upon successful creation, the command will return a JSON response containing
 your finality provider's details:
@@ -673,7 +696,7 @@ When you are ready to withdraw your rewards, you have the option first to set
 the address to withdraw your rewards to.
 
 ```shell
-fpd  set-withdraw-addr <new-address> --from <registered-bbn-address> 
+fpd set-withdraw-addr <new-address> --from <registered-bbn-address> 
 --keyring-backend test --home <home-dir> --fees <fees>
 ```
 
