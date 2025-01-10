@@ -226,12 +226,13 @@ func (cp *ChainPoller) pollChain() {
 			} else {
 				// no error and we got the header we wanted to get, bump the state and push
 				// notification about data
-				lb := blocks[len(blocks)-1]
-				cp.nextHeight = lb.Height + 1
 				failedCycles = 0
 				if len(blocks) == 0 {
 					continue
 				}
+
+				lb := blocks[len(blocks)-1]
+				cp.nextHeight = lb.Height + 1
 
 				cp.metrics.RecordLastPolledHeight(lb.Height)
 
