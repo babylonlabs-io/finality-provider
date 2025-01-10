@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"math"
 	"math/rand"
 	"sync"
 	"testing"
@@ -89,15 +90,17 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 		mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
 
 		currentBlockRes := &types.BlockInfo{
-			Height: currentHeight,
+			Height: skipHeight,
 		}
 		mockClientController.EXPECT().QueryBestBlock().Return(currentBlockRes, nil).AnyTimes()
 
 		for i := startHeight; i <= skipHeight; i++ {
-			resBlock := &types.BlockInfo{
-				Height: i,
+			resBlocks := []*types.BlockInfo{
+				{
+					Height: i,
+				},
 			}
-			mockClientController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
+			mockClientController.EXPECT().QueryBlocks(i, skipHeight, uint32(math.MaxUint32)).Return(resBlocks, nil).AnyTimes()
 		}
 
 		m := metrics.NewFpMetrics()
@@ -141,7 +144,6 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 				if info.Height == skipHeight {
 					skipped = true
 				} else {
-					t.Log(i, info.Height)
 					require.Equal(t, i, info.Height)
 				}
 			case <-time.After(10 * time.Second):
@@ -150,7 +152,6 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 		}
 
 		wg.Wait()
-		t.Log(skipHeight+1, poller.NextHeight())
 		require.Equal(t, skipHeight+1, poller.NextHeight())
 	})
 }
