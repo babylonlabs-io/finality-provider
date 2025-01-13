@@ -151,6 +151,10 @@ func (cp *ChainPoller) blocksWithRetry(start, end uint64, limit uint32) ([]*type
 			return err
 		}
 
+		if len(block) == 0 {
+			return fmt.Errorf("no blocks found for range %d-%d", start, end)
+		}
+
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		cp.logger.Debug(
