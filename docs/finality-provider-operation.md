@@ -402,9 +402,8 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 
 > ⚠️ **Critical RPC Configuration**:
 > When configuring your finality provider to an RPC node, connect to a 
-> **single** node (either local or dedicated remote) with transaction 
-> indexing enabled (`indexer = "kv"`). Using multiple RPC nodes or load 
-> balancers can lead to sync issues.
+> **single** node with transaction indexing enabled (`indexer = "kv"`). 
+> Using multiple RPC nodes or load balancers can lead to sync issues.
 
 Configuration parameters explained:
 * `EOTSManagerAddress`: Address where your EOTS daemon is running
