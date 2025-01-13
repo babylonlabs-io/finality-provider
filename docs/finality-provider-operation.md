@@ -626,14 +626,14 @@ following command:
 fpd edit-finality-provider <hex-string-of-eots-public-key> \
   --commission-rate <commission-rate> \
   --home <path-to-fpd-home-dir>
-  # any other parameters you want to edit
+  # Add any other parameters you would like to modify
 ```
 
 Parameters:
 - `<hex-string-of-eots-public-key>`: The EOTS public key of the finality provider
 - `--commission-rate`: A required flag for the commission rate for the finality 
   provider
-- `--home`: An optional flag for the path   to your finality provider daemon home 
+- `--home`: An optional flag for the path to your finality provider daemon home 
   directory
 
 Parameters you can edit:
