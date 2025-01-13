@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"math"
 	"sync"
 	"time"
 
@@ -114,6 +113,33 @@ func (cp *ChainPoller) GetBlockInfoChan() <-chan *types.BlockInfo {
 	return cp.blockInfoChan
 }
 
+func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
+	var (
+		block *types.BlockInfo
+		err   error
+	)
+	if err := retry.Do(func() error {
+		block, err = cp.cc.QueryBlock(height)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
+		cp.logger.Debug(
+			"failed to query the consumer chain for the latest block",
+			zap.Uint("attempt", n+1),
+			zap.Uint("max_attempts", RtyAttNum),
+			zap.Uint64("height", height),
+			zap.Error(err),
+		)
+	})); err != nil {
+		return nil, err
+	}
+
+	return block, nil
+}
+
 func (cp *ChainPoller) blocksWithRetry(start, end uint64, limit uint32) ([]*types.BlockInfo, error) {
 	var (
 		block []*types.BlockInfo
@@ -213,7 +239,7 @@ func (cp *ChainPoller) pollChain() {
 			// start polling in the first iteration
 			blockToRetrieve := cp.nextHeight
 
-			blocks, err := cp.blocksWithRetry(blockToRetrieve, latestBlock.Height, math.MaxUint32)
+			blocks, err := cp.blocksWithRetry(blockToRetrieve, latestBlock.Height, uint32(latestBlock.Height))
 			if err != nil {
 				failedCycles++
 				cp.logger.Debug(
@@ -259,6 +285,7 @@ func (cp *ChainPoller) pollChain() {
 			// no need to skip heights if the target height is not higher
 			// than the next height to retrieve
 			targetHeight := req.height
+			fmt.Printf("target height %d, next height %d\n", targetHeight, cp.nextHeight)
 			if targetHeight <= cp.nextHeight {
 				resp := &skipHeightResponse{
 					err: fmt.Errorf(
