@@ -401,9 +401,11 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/babylon-node/README.md).
 
 > ⚠️ **Critical RPC Configuration**:
-> When configuring your finality provider to an RPC node, connect to a 
-> **single** node with transaction indexing enabled (`indexer = "kv"`). 
-> Using multiple RPC nodes or load balancers can lead to sync issues.
+> When configuring your finality provider to a Babylon RPC node, you should
+> connect to a **single** node with transaction. Additionally you **must** 
+> ensure that this node has transaction indexing enabled (`indexer = "kv"`)
+> otherwise you will get a `duplicate vote error`. Using multiple RPC nodes or 
+> load balancers can lead to sync issues.
 
 Configuration parameters explained:
 * `EOTSManagerAddress`: Address where your EOTS daemon is running
