@@ -401,9 +401,10 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/babylon-node/README.md).
 
 > ⚠️ **Critical RPC Configuration**:
-> Always configure your finality provider to connect to a **single**, 
-> dedicated RPC node with transaction indexing enabled (`indexer = "kv"`). 
-> Using multiple RPC nodes or load balancers can lead to sync issues.
+> When configuring your finality provider to an RPC node, connect to a 
+> **single** node (either local or dedicated remote) with transaction 
+> indexing enabled (`indexer = "kv"`). Using multiple RPC nodes or load 
+> balancers can lead to sync issues.
 
 Configuration parameters explained:
 * `EOTSManagerAddress`: Address where your EOTS daemon is running
@@ -491,10 +492,6 @@ finality provider instance at a time.
 ## 5. Finality Provider Operations
 
 ### 5.1 Create Finality Provider
-
-> ⚠️ **Important**: Before creating your finality provider, ensure you are 
-> connected to a single, reliable RPC node. Using multiple RPC nodes or 
-> switching between nodes can lead to sync issues
 
 The `create-finality-provider` command initializes a new finality provider,
 submits `MsgCreateFinalityProvider` to register it on the Babylon chain, and
