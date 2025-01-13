@@ -140,7 +140,7 @@ func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
 	return block, nil
 }
 
-func (cp *ChainPoller) blocksWithRetry(start, end uint64, limit uint32) ([]*types.BlockInfo, error) {
+func (cp *ChainPoller) blocksWithRetry(start, end, limit uint64) ([]*types.BlockInfo, error) {
 	var (
 		block []*types.BlockInfo
 		err   error
@@ -163,7 +163,7 @@ func (cp *ChainPoller) blocksWithRetry(start, end uint64, limit uint32) ([]*type
 			zap.Uint("max_attempts", RtyAttNum),
 			zap.Uint64("start_height", start),
 			zap.Uint64("end_height", end),
-			zap.Uint32("limit", limit),
+			zap.Uint64("limit", limit),
 			zap.Error(err),
 		)
 	})); err != nil {
@@ -243,7 +243,7 @@ func (cp *ChainPoller) pollChain() {
 			// start polling in the first iteration
 			blockToRetrieve := cp.nextHeight
 
-			blocks, err := cp.blocksWithRetry(blockToRetrieve, latestBlock.Height, uint32(latestBlock.Height))
+			blocks, err := cp.blocksWithRetry(blockToRetrieve, latestBlock.Height, latestBlock.Height)
 			if err != nil {
 				failedCycles++
 				cp.logger.Debug(
@@ -289,8 +289,8 @@ func (cp *ChainPoller) pollChain() {
 			// no need to skip heights if the target height is not higher
 			// than the next height to retrieve
 			targetHeight := req.height
-			fmt.Printf("target height %d, next height %d\n", targetHeight, cp.nextHeight)
 			if targetHeight <= cp.nextHeight {
+				fmt.Printf("target height %d, next height %d\n", targetHeight, cp.nextHeight)
 				resp := &skipHeightResponse{
 					err: fmt.Errorf(
 						"the target height %d is not higher than the next height %d to retrieve",
