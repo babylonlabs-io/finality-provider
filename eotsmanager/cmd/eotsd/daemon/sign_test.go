@@ -149,7 +149,7 @@ func writeFpInfoToFile(r *rand.Rand, t *testing.T, fpInfoPath, btcPk string) {
 func testApp() *cli.App {
 	app := cli.NewApp()
 	app.Name = "eotsd"
-	app.Commands = append(app.Commands, dcli.StartCommand, dcli.InitCommand, dcli.SignSchnorrSig, dcli.VerifySchnorrSig, dcli.ExportPoPCommand)
+	app.Commands = append(app.Commands, dcli.StartCommand, dcli.InitCommand, dcli.SignSchnorrSig, dcli.VerifySchnorrSig, dcli.PoPCommands)
 	app.Commands = append(app.Commands, dcli.KeysCommands...)
 	return app
 }
