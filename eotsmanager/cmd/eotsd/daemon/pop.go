@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -109,7 +110,7 @@ func NewPopDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Generate the delete data for removing a proof of possession previously created.",
-		Long: `Parse the message from the flag and sign with the BABY keyring, it also loads
+		Long: `Parse the message from the flag --message and sign with the BABY keyring, it also loads
 		the EOTS public key based on the EOTS key associated with the key-name or eots-pk flag.
 		If the both flags are supplied, eots-pk takes priority.`,
 		RunE: deletePop,
@@ -132,88 +133,31 @@ func NewPopDeleteCmd() *cobra.Command {
 }
 
 func exportPop(cmd *cobra.Command, _ []string) error {
-	f := cmd.Flags()
-
-	eotsKeyName, err := f.GetString(keyNameFlag)
+	eotsPassphrase, err := cmd.Flags().GetString(passphraseFlag)
 	if err != nil {
 		return err
 	}
 
-	eotsFpPubKeyStr, err := f.GetString(eotsPkFlag)
+	eotsHomePath, eotsKeyName, eotsFpPubKeyStr, eotsKeyringBackend, err := eotsFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	eotsPassphrase, err := f.GetString(passphraseFlag)
+	babyHomePath, babyKeyName, babyKeyringBackend, err := babyFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	eotsKeyringBackend, err := f.GetString(sdkflags.FlagKeyringBackend)
+	babyKeyring, babyPubKey, bbnAddr, err := babyKeyring(babyHomePath, babyKeyName, babyKeyringBackend, cmd.InOrStdin())
 	if err != nil {
 		return err
 	}
 
-	eotsHomePath, err := getHomePath(cmd)
-	if err != nil {
-		return fmt.Errorf("failed to load home flag: %w", err)
-	}
-
-	babyHomePath, err := getCleanPath(cmd, flagHomeBaby)
-	if err != nil {
-		return fmt.Errorf("failed to load baby home flag: %w", err)
-	}
-
-	babyKeyName, err := f.GetString(flagKeyNameBaby)
+	eotsManager, err := loadEotsManager(eotsHomePath, eotsFpPubKeyStr, eotsKeyName, eotsKeyringBackend)
 	if err != nil {
 		return err
 	}
-
-	babyKeyringBackend, err := f.GetString(flagKeyringBackendBaby)
-	if err != nil {
-		return err
-	}
-
-	cdc := codec.MakeCodec()
-	babyKeyring, err := keyring.New("baby", babyKeyringBackend, babyHomePath, cmd.InOrStdin(), cdc)
-	if err != nil {
-		return fmt.Errorf("failed to create keyring: %w", err)
-	}
-
-	babyKeyRecord, err := babyKeyring.Key(babyKeyName)
-	if err != nil {
-		return err
-	}
-
-	bbnAddr, err := babyKeyRecord.GetAddress()
-	if err != nil {
-		return err
-	}
-
-	if len(eotsFpPubKeyStr) == 0 && len(eotsKeyName) == 0 {
-		return fmt.Errorf("at least one of the flags: %s, %s needs to be informed", keyNameFlag, eotsPkFlag)
-	}
-
-	cfg, err := config.LoadConfig(eotsHomePath)
-	if err != nil {
-		return fmt.Errorf("failed to load config at %s: %w", eotsHomePath, err)
-	}
-
-	logger, err := log.NewRootLoggerWithFile(config.LogFile(eotsHomePath), cfg.LogLevel)
-	if err != nil {
-		return fmt.Errorf("failed to load the logger")
-	}
-
-	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
-	if err != nil {
-		return fmt.Errorf("failed to create db backend: %w", err)
-	}
-	defer dbBackend.Close()
-
-	eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomePath, eotsKeyringBackend, dbBackend, logger)
-	if err != nil {
-		return fmt.Errorf("failed to create EOTS manager: %w", err)
-	}
+	defer cmdCloseEots(cmd, eotsManager)
 
 	bbnAddrStr := bbnAddr.String()
 	hashOfMsgToSign := tmhash.Sum([]byte(bbnAddrStr))
@@ -222,18 +166,12 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to sign address %s: %w", bbnAddrStr, err)
 	}
 
-	babyPubKey, err := babyPk(babyKeyRecord)
-	if err != nil {
-		return err
-	}
-
-	babySignEots := []byte(eotsPk.MarshalHex())
-	babySignature, err := SignCosmosAdr36(babyKeyring, babyKeyName, bbnAddrStr, babySignEots)
-	if err != nil {
-		return err
-	}
-
 	eotsPkHex := eotsPk.MarshalHex()
+	babySignature, err := SignCosmosAdr36(babyKeyring, babyKeyName, bbnAddrStr, []byte(eotsPkHex))
+	if err != nil {
+		return err
+	}
+
 	out := PoPExport{
 		EotsPublicKey: eotsPkHex,
 		BabyPublicKey: base64.StdEncoding.EncodeToString(babyPubKey.Bytes()),
@@ -244,117 +182,37 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 		BabySignEotsPk: base64.StdEncoding.EncodeToString(babySignature),
 	}
 
-	jsonString, err := json.MarshalIndent(out, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	cmd.Println(string(jsonString))
-
-	return nil
+	return printJson(cmd, out)
 }
 
 func deletePop(cmd *cobra.Command, _ []string) error {
-	f := cmd.Flags()
-
-	eotsKeyName, err := f.GetString(keyNameFlag)
+	eotsHomePath, eotsKeyName, eotsFpPubKeyStr, eotsKeyringBackend, err := eotsFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	eotsFpPubKeyStr, err := f.GetString(eotsPkFlag)
+	babyHomePath, babyKeyName, babyKeyringBackend, err := babyFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	eotsKeyringBackend, err := f.GetString(sdkflags.FlagKeyringBackend)
+	babyKeyring, babyPubKey, bbnAddr, err := babyKeyring(babyHomePath, babyKeyName, babyKeyringBackend, cmd.InOrStdin())
 	if err != nil {
 		return err
 	}
 
-	eotsHomePath, err := getHomePath(cmd)
-	if err != nil {
-		return fmt.Errorf("failed to load home flag: %w", err)
-	}
-
-	babyHomePath, err := getCleanPath(cmd, flagHomeBaby)
-	if err != nil {
-		return fmt.Errorf("failed to load baby home flag: %w", err)
-	}
-
-	babyKeyName, err := f.GetString(flagKeyNameBaby)
+	eotsManager, err := loadEotsManager(eotsHomePath, eotsFpPubKeyStr, eotsKeyName, eotsKeyringBackend)
 	if err != nil {
 		return err
 	}
-
-	babyKeyringBackend, err := f.GetString(flagKeyringBackendBaby)
-	if err != nil {
-		return err
-	}
-
-	cdc := codec.MakeCodec()
-	babyKeyring, err := keyring.New("baby", babyKeyringBackend, babyHomePath, cmd.InOrStdin(), cdc)
-	if err != nil {
-		return fmt.Errorf("failed to create keyring: %w", err)
-	}
-
-	babyKeyRecord, err := babyKeyring.Key(babyKeyName)
-	if err != nil {
-		return err
-	}
-
-	bbnAddr, err := babyKeyRecord.GetAddress()
-	if err != nil {
-		return err
-	}
-
-	if len(eotsFpPubKeyStr) == 0 && len(eotsKeyName) == 0 {
-		return fmt.Errorf("at least one of the flags: %s, %s needs to be informed", keyNameFlag, eotsPkFlag)
-	}
-
-	cfg, err := config.LoadConfig(eotsHomePath)
-	if err != nil {
-		return fmt.Errorf("failed to load config at %s: %w", eotsHomePath, err)
-	}
-
-	logger, err := log.NewRootLoggerWithFile(config.LogFile(eotsHomePath), cfg.LogLevel)
-	if err != nil {
-		return fmt.Errorf("failed to load the logger")
-	}
-
-	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
-	if err != nil {
-		return fmt.Errorf("failed to create db backend: %w", err)
-	}
-	defer dbBackend.Close()
-
-	eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomePath, eotsKeyringBackend, dbBackend, logger)
-	if err != nil {
-		return fmt.Errorf("failed to create EOTS manager: %w", err)
-	}
+	defer cmdCloseEots(cmd, eotsManager)
 
 	btcPubKey, err := eotsPubKey(eotsManager, eotsKeyName, eotsFpPubKeyStr)
 	if err != nil {
-		return fmt.Errorf("failed to sign address %s: %w", bbnAddr.String(), err)
+		return fmt.Errorf("failed to get eots pk %w", err)
 	}
 
-	babyPubKey, err := babyPk(babyKeyRecord)
-	if err != nil {
-		return err
-	}
-
-	eotsPkHex := btcPubKey.MarshalHex()
-
-	msg, err := f.GetString(flagMessage)
-	if err != nil {
-		return err
-	}
-	if len(msg) == 0 {
-		return fmt.Errorf("flage --%s is empty", flagMessage)
-	}
-
-	// We are assuming we are receiving string literal with escape characters
-	interpretedMsg, err := strconv.Unquote(`"` + msg + `"`)
+	interpretedMsg, err := getInterpretedMessage(cmd)
 	if err != nil {
 		return err
 	}
@@ -366,22 +224,147 @@ func deletePop(cmd *cobra.Command, _ []string) error {
 	}
 
 	out := PoPExportDelete{
-		EotsPublicKey: eotsPkHex,
+		EotsPublicKey: btcPubKey.MarshalHex(),
 		BabyPublicKey: base64.StdEncoding.EncodeToString(babyPubKey.Bytes()),
 
-		BabyAddress: bbnAddr.String(),
+		BabyAddress: bbnAddrStr,
 
 		BabySignature: base64.StdEncoding.EncodeToString(babySignature),
 	}
 
+	return printJson(cmd, out)
+}
+
+func babyFlags(cmd *cobra.Command) (
+	babyHomePath, babyKeyName, babyKeyringBackend string,
+	err error,
+) {
+	f := cmd.Flags()
+
+	babyHomePath, err = getCleanPath(cmd, flagHomeBaby)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to load baby home flag: %w", err)
+	}
+
+	babyKeyName, err = f.GetString(flagKeyNameBaby)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	babyKeyringBackend, err = f.GetString(flagKeyringBackendBaby)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return babyHomePath, babyKeyName, babyKeyringBackend, nil
+}
+
+func eotsFlags(cmd *cobra.Command) (
+	eotsHomePath, eotsKeyName, eotsFpPubKeyStr, eotsKeyringBackend string,
+	err error,
+) {
+	f := cmd.Flags()
+
+	eotsKeyName, err = f.GetString(keyNameFlag)
+	if err != nil {
+		return "", "", "", "", err
+	}
+
+	eotsFpPubKeyStr, err = f.GetString(eotsPkFlag)
+	if err != nil {
+		return "", "", "", "", err
+	}
+
+	eotsKeyringBackend, err = f.GetString(sdkflags.FlagKeyringBackend)
+	if err != nil {
+		return "", "", "", "", err
+	}
+
+	eotsHomePath, err = getHomePath(cmd)
+	if err != nil {
+		return "", "", "", "", fmt.Errorf("failed to load home flag: %w", err)
+	}
+
+	return eotsHomePath, eotsKeyName, eotsFpPubKeyStr, eotsKeyringBackend, nil
+}
+
+func getInterpretedMessage(cmd *cobra.Command) (string, error) {
+	msg, err := cmd.Flags().GetString(flagMessage)
+	if err != nil {
+		return "", err
+	}
+	if len(msg) == 0 {
+		return "", fmt.Errorf("flage --%s is empty", flagMessage)
+	}
+
+	// We are assuming we are receiving string literal with escape characters
+	interpretedMsg, err := strconv.Unquote(`"` + msg + `"`)
+	if err != nil {
+		return "", err
+	}
+
+	return interpretedMsg, nil
+}
+
+func printJson(cmd *cobra.Command, out any) error {
 	jsonString, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
 		return err
 	}
 
 	cmd.Println(string(jsonString))
-
 	return nil
+}
+
+func babyKeyring(
+	babyHomePath, babyKeyName, babyKeyringBackend string,
+	userInput io.Reader,
+) (keyring.Keyring, *secp256k1.PubKey, sdk.AccAddress, error) {
+	cdc := codec.MakeCodec()
+	babyKeyring, err := keyring.New("baby", babyKeyringBackend, babyHomePath, userInput, cdc)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to create keyring: %w", err)
+	}
+
+	babyKeyRecord, err := babyKeyring.Key(babyKeyName)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	babyPubKey, err := babyPk(babyKeyRecord)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return babyKeyring, babyPubKey, sdk.AccAddress(babyPubKey.Address().Bytes()), nil
+}
+
+func loadEotsManager(eotsHomePath, eotsFpPubKeyStr, eotsKeyName, eotsKeyringBackend string) (*eotsmanager.LocalEOTSManager, error) {
+	if len(eotsFpPubKeyStr) == 0 && len(eotsKeyName) == 0 {
+		return nil, fmt.Errorf("at least one of the flags: %s, %s needs to be informed", keyNameFlag, eotsPkFlag)
+	}
+
+	cfg, err := config.LoadConfig(eotsHomePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config at %s: %w", eotsHomePath, err)
+	}
+
+	logger, err := log.NewRootLoggerWithFile(config.LogFile(eotsHomePath), cfg.LogLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load the logger")
+	}
+
+	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create db backend: %w", err)
+	}
+
+	eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomePath, eotsKeyringBackend, dbBackend, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create EOTS manager: %w", err)
+	}
+
+	return eotsManager, nil
 }
 
 func SignCosmosAdr36(
@@ -533,6 +516,16 @@ func eotsSignMsg(
 	}
 
 	return eotsManager.SignSchnorrSigFromKeyname(keyName, passphrase, hashOfMsgToSign)
+}
+
+func cmdCloseEots(
+	cmd *cobra.Command,
+	eotsManager *eotsmanager.LocalEOTSManager,
+) {
+	err := eotsManager.Close()
+	if err != nil {
+		cmd.Printf("error closing eots manager: %s", err.Error())
+	}
 }
 
 type Msg struct {
