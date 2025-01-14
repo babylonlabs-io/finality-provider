@@ -68,7 +68,7 @@ type PoPExportDelete struct {
 var (
 	PoPCommands = cli.Command{
 		Name:        "pop",
-		Description: "Proof of Possession commands",
+		Usage:       "Proof of Possession commands",
 		Subcommands: cli.Commands{PoPExportCommand, PoPDeleteCommand},
 	}
 	PoPExportCommand = cli.Command{
