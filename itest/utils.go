@@ -49,9 +49,11 @@ func BaseDir(pattern string) (string, error) {
 		return "", err
 	}
 
-	err = os.Chmod(tempName, 0755)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(tempName)
+	})
 
-	if err != nil {
+	if err = os.Chmod(tempName, 0755); err != nil {
 		return "", err
 	}
 

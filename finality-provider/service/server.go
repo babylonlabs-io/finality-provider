@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 
 	"github.com/lightningnetwork/lnd/kvdb"
-	"github.com/lightningnetwork/lnd/signal"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
@@ -25,28 +24,26 @@ type Server struct {
 	cfg    *fpcfg.Config
 	logger *zap.Logger
 
-	rpcServer   *rpcServer
-	db          kvdb.Backend
-	interceptor signal.Interceptor
+	rpcServer *rpcServer
+	db        kvdb.Backend
 
 	quit chan struct{}
 }
 
-// NewFinalityproviderServer creates a new server with the given config.
-func NewFinalityProviderServer(cfg *fpcfg.Config, l *zap.Logger, fpa *FinalityProviderApp, db kvdb.Backend, sig signal.Interceptor) *Server {
+// NewFinalityProviderServer creates a new server with the given config.
+func NewFinalityProviderServer(cfg *fpcfg.Config, l *zap.Logger, fpa *FinalityProviderApp, db kvdb.Backend) *Server {
 	return &Server{
-		cfg:         cfg,
-		logger:      l,
-		rpcServer:   newRPCServer(fpa),
-		db:          db,
-		interceptor: sig,
-		quit:        make(chan struct{}, 1),
+		cfg:       cfg,
+		logger:    l,
+		rpcServer: newRPCServer(fpa),
+		db:        db,
+		quit:      make(chan struct{}, 1),
 	}
 }
 
 // RunUntilShutdown runs the main EOTS manager server loop until a signal is
 // received to shut down the process.
-func (s *Server) RunUntilShutdown() error {
+func (s *Server) RunUntilShutdown(ctx context.Context) error {
 	if atomic.AddInt32(&s.started, 1) != 1 {
 		return nil
 	}
@@ -64,20 +61,25 @@ func (s *Server) RunUntilShutdown() error {
 
 	defer func() {
 		s.logger.Info("Closing database...")
-		s.db.Close()
-		s.logger.Info("Database closed")
-		metricsServer.Stop(context.Background())
+		if err := s.db.Close(); err != nil {
+			s.logger.Error(fmt.Sprintf("Failed to close database: %v", err)) // Log the error
+		} else {
+			s.logger.Info("Database closed")
+		}
+		metricsServer.Stop(ctx)
 		s.logger.Info("Metrics server stopped")
 	}()
 
-	listenAddr := s.cfg.RpcListener
+	listenAddr := s.cfg.RPCListener
 	// we create listeners from the RPCListeners defined
 	// in the config.
 	lis, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", listenAddr, err)
 	}
-	defer lis.Close()
+	defer func() {
+		_ = lis.Close()
+	}()
 
 	grpcServer := grpc.NewServer()
 	defer grpcServer.Stop()
@@ -86,25 +88,22 @@ func (s *Server) RunUntilShutdown() error {
 		return fmt.Errorf("failed to register gRPC server: %w", err)
 	}
 
-	// All the necessary components have been registered, so we can
+	// All the necessary parts have been registered, so we can
 	// actually start listening for requests.
-	if err := s.startGrpcListen(grpcServer, []net.Listener{lis}); err != nil {
-		return fmt.Errorf("failed to start gRPC listener: %v", err)
-	}
+	s.startGrpcListen(grpcServer, []net.Listener{lis})
 
 	s.logger.Info("Finality Provider Daemon is fully active!")
 
 	// Wait for shutdown signal from either a graceful server stop or from
 	// the interrupt handler.
-	<-s.interceptor.ShutdownChannel()
+	<-ctx.Done()
 
 	return nil
 }
 
 // startGrpcListen starts the GRPC server on the passed listeners.
-func (s *Server) startGrpcListen(grpcServer *grpc.Server, listeners []net.Listener) error {
-
-	// Use a WaitGroup so we can be sure the instructions on how to input the
+func (s *Server) startGrpcListen(grpcServer *grpc.Server, listeners []net.Listener) {
+	// Use a WaitGroup, so we can be sure the instructions on how to input the
 	// password is the last thing to be printed to the console.
 	var wg sync.WaitGroup
 
@@ -123,6 +122,4 @@ func (s *Server) startGrpcListen(grpcServer *grpc.Server, listeners []net.Listen
 
 	// Wait for gRPC servers to be up running.
 	wg.Wait()
-
-	return nil
 }

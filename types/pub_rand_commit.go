@@ -35,5 +35,6 @@ func GetPubRandCommitAndProofs(pubRandList []*btcec.FieldVal) ([]byte, []*merkle
 	for _, pr := range pubRandList {
 		prBytesList = append(prBytesList, bbn.NewSchnorrPubRandFromFieldVal(pr).MustMarshal())
 	}
+
 	return merkle.ProofsFromByteSlices(prBytesList)
 }

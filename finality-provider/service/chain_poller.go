@@ -16,7 +16,6 @@ import (
 )
 
 var (
-	// TODO: Maybe configurable?
 	RtyAttNum = uint(5)
 	RtyAtt    = retry.Attempts(RtyAttNum)
 	RtyDel    = retry.Delay(time.Millisecond * 400)
@@ -24,7 +23,6 @@ var (
 )
 
 const (
-	// TODO: Maybe configurable?
 	maxFailedCycles = 20
 )
 
@@ -79,11 +77,6 @@ func (cp *ChainPoller) Start(startHeight uint64) error {
 
 	cp.logger.Info("starting the chain poller")
 
-	err := cp.validateStartHeight(startHeight)
-	if err != nil {
-		return fmt.Errorf("invalid starting height %d: %w", startHeight, err)
-	}
-
 	cp.nextHeight = startHeight
 
 	cp.wg.Add(1)
@@ -118,36 +111,9 @@ func (cp *ChainPoller) IsRunning() bool {
 	return cp.isStarted.Load()
 }
 
-// Return read only channel for incoming blocks
-// TODO: Handle the case when there is more than one consumer. Currently with more than
-// one consumer blocks most probably will be received out of order to those consumers.
+// GetBlockInfoChan returns the read-only channel for incoming blocks
 func (cp *ChainPoller) GetBlockInfoChan() <-chan *types.BlockInfo {
 	return cp.blockInfoChan
-}
-
-func (cp *ChainPoller) latestBlockHeightWithRetry() (uint64, error) {
-	var (
-		latestBlockHeight uint64
-		err               error
-	)
-
-	if err := retry.Do(func() error {
-		latestBlockHeight, err = cp.consumerCon.QueryLatestBlockHeight()
-		if err != nil {
-			return err
-		}
-		return nil
-	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
-		cp.logger.Debug(
-			"failed to query the consumer chain for the latest block",
-			zap.Uint("attempt", n+1),
-			zap.Uint("max_attempts", RtyAttNum),
-			zap.Error(err),
-		)
-	})); err != nil {
-		return 0, err
-	}
-	return latestBlockHeight, nil
 }
 
 func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
@@ -160,6 +126,7 @@ func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
 		if err != nil {
 			return err
 		}
+
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		cp.logger.Debug(
@@ -176,34 +143,6 @@ func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
 	return block, nil
 }
 
-func (cp *ChainPoller) validateStartHeight(startHeight uint64) error {
-	// Infinite retry to get initial latest height
-	// TODO: Add possible cancellation or timeout for starting node
-
-	if startHeight == 0 {
-		return fmt.Errorf("start height can't be 0")
-	}
-
-	var currentBestChainHeight uint64
-	for {
-		lastestBlockHeight, err := cp.latestBlockHeightWithRetry()
-		if err != nil {
-			cp.logger.Debug("failed to query babylon for the latest status", zap.Error(err))
-			continue
-		}
-
-		currentBestChainHeight = lastestBlockHeight
-		break
-	}
-
-	// Allow the start height to be the next chain height
-	if startHeight > currentBestChainHeight+1 {
-		return fmt.Errorf("start height %d is more than the next chain tip height %d", startHeight, currentBestChainHeight+1)
-	}
-
-	return nil
-}
-
 // waitForActivation waits until BTC staking is activated
 func (cp *ChainPoller) waitForActivation() {
 	// ensure that the startHeight is no lower than the activated height
@@ -216,17 +155,16 @@ func (cp *ChainPoller) waitForActivation() {
 			if cp.nextHeight < activatedHeight {
 				cp.nextHeight = activatedHeight
 			}
+
 			return
 		}
-
 		select {
 		case <-time.After(cp.cfg.PollInterval):
-
+			continue
 		case <-cp.quit:
 			return
 		}
 	}
-
 }
 
 func (cp *ChainPoller) pollChain() {
@@ -237,8 +175,7 @@ func (cp *ChainPoller) pollChain() {
 	var failedCycles uint32
 
 	for {
-		// TODO: Handlig of request cancellation, as otherwise shutdown will be blocked
-		// until request is finished
+		// start polling in the first iteration
 		blockToRetrieve := cp.nextHeight
 		block, err := cp.blockWithRetry(blockToRetrieve)
 		if err != nil {
@@ -268,10 +205,9 @@ func (cp *ChainPoller) pollChain() {
 		if failedCycles > maxFailedCycles {
 			cp.logger.Fatal("the poller has reached the max failed cycles, exiting")
 		}
-
 		select {
 		case <-time.After(cp.cfg.PollInterval):
-
+			continue
 		case req := <-cp.skipHeightChan:
 			// no need to skip heights if the target height is not higher
 			// than the next height to retrieve
@@ -282,6 +218,7 @@ func (cp *ChainPoller) pollChain() {
 						"the target height %d is not higher than the next height %d to retrieve",
 						targetHeight, cp.nextHeight)}
 				req.resp <- resp
+
 				continue
 			}
 

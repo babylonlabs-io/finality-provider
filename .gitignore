@@ -29,5 +29,6 @@ devnet-data/
 main
 tmp/
 build/
+dist/
 
 *.swp

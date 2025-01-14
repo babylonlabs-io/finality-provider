@@ -103,7 +103,7 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 
 	if startHeight == math.MaxUint64 {
 		return fp.TestCommitPubRand(targetHeight)
-	} else {
-		return fp.TestCommitPubRandWithStartHeight(startHeight, targetHeight)
 	}
+
+	return fp.TestCommitPubRandWithStartHeight(startHeight, targetHeight)
 }

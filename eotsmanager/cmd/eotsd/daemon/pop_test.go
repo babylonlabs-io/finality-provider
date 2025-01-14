@@ -1,71 +1,48 @@
 package daemon_test
 
 import (
-	"encoding/json"
-	"fmt"
-	"math/rand"
-	"path/filepath"
 	"testing"
 
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bbn "github.com/babylonlabs-io/babylon/types"
-	btcstktypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	dcli "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
-	"github.com/babylonlabs-io/finality-provider/testutil"
-	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli"
 )
 
-func FuzzPoPExport(f *testing.F) {
-	testutil.AddRandomSeedsToFuzzer(f, 10)
-	f.Fuzz(func(t *testing.T, seed int64) {
-		r := rand.New(rand.NewSource(seed))
+var hardcodedPopToVerify daemon.PoPExport = daemon.PoPExport{
+	EotsPublicKey: "3d0bebcbe800236ce8603c5bb1ab6c2af0932e947db4956a338f119797c37f1e",
+	BabyPublicKey: "A0V6yw74EdvoAWVauFqkH/GVM9YIpZitZf6bVEzG69tT",
 
-		tempDir := t.TempDir()
-		homeDir := filepath.Join(tempDir, "eots-home")
-		app := testApp()
+	BabySignEotsPk: "AOoIG2cwC2IMiJL3OL0zLEIUY201X1qKumDr/1qDJ4oQvAp78W1nb5EnVasRPQ/XrKXqudUDnZFprLd0jaRJtQ==",
+	EotsSignBaby:   "pR6vxgU0gXq+VqO+y7dHpZgHTz3zr5hdqXXh0WcWNkqUnRjHrizhYAHDMV8gh4vks4PqzKAIgZ779Wqwf5UrXQ==",
 
-		// init config in home folder
-		hFlag := fmt.Sprintf("--home=%s", homeDir)
-		err := app.Run([]string{"eotsd", "init", hFlag})
-		require.NoError(t, err)
-
-		keyName := testutil.GenRandomHexStr(r, 10)
-		keyNameFlag := fmt.Sprintf("--key-name=%s", keyName)
-
-		outputKeysAdd := appRunWithOutput(r, t, app, []string{"eotsd", "keys", "add", hFlag, keyNameFlag})
-		keyOutJson := searchInTxt(outputKeysAdd, "for recovery):")
-
-		var keyOut dcli.KeyOutput
-		err = json.Unmarshal([]byte(keyOutJson), &keyOut)
-		require.NoError(t, err)
-
-		bbnAddr := datagen.GenRandomAccount().GetAddress()
-
-		eotsBtcPkFlag := fmt.Sprintf("--eots-pk=%s", keyOut.PubKeyHex)
-		exportedPoP := appRunPoPExport(r, t, app, []string{bbnAddr.String(), hFlag, eotsBtcPkFlag})
-		pop, err := btcstktypes.NewPoPBTCFromHex(exportedPoP.PoPHex)
-		require.NoError(t, err)
-
-		require.NotNil(t, exportedPoP)
-		require.NoError(t, pop.ValidateBasic())
-
-		btcPubKey, err := bbn.NewBIP340PubKeyFromHex(exportedPoP.PubKeyHex)
-		require.NoError(t, err)
-		require.NoError(t, pop.Verify(bbnAddr, btcPubKey, &chaincfg.SigNetParams))
-	})
+	BabyAddress: "bbn1f04czxeqprn0s9fe7kdzqyde2e6nqj63dllwsm",
 }
 
-func appRunPoPExport(r *rand.Rand, t *testing.T, app *cli.App, arguments []string) dcli.PoPExport {
-	args := []string{"eotsd", "pop-export"}
-	args = append(args, arguments...)
-	outputSign := appRunWithOutput(r, t, app, args)
-	signatureStr := searchInTxt(outputSign, "")
-
-	var dataSigned dcli.PoPExport
-	err := json.Unmarshal([]byte(signatureStr), &dataSigned)
+func TestPoPValidEotsSignBaby(t *testing.T) {
+	t.Parallel()
+	valid, err := daemon.ValidEotsSignBaby(
+		hardcodedPopToVerify.EotsPublicKey,
+		hardcodedPopToVerify.BabyAddress,
+		hardcodedPopToVerify.EotsSignBaby,
+	)
 	require.NoError(t, err)
+	require.True(t, valid)
+}
 
-	return dataSigned
+func TestPoPValidBabySignEotsPk(t *testing.T) {
+	t.Parallel()
+	valid, err := daemon.ValidBabySignEots(
+		hardcodedPopToVerify.BabyPublicKey,
+		hardcodedPopToVerify.BabyAddress,
+		hardcodedPopToVerify.EotsPublicKey,
+		hardcodedPopToVerify.BabySignEotsPk,
+	)
+	require.NoError(t, err)
+	require.True(t, valid)
+}
+
+func TestPoPVerify(t *testing.T) {
+	t.Parallel()
+	valid, err := daemon.VerifyPopExport(hardcodedPopToVerify)
+	require.NoError(t, err)
+	require.True(t, valid)
 }

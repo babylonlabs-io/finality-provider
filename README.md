@@ -1,117 +1,140 @@
 # Finality Provider
 
-A toolset crafted for the creation and
-management of Finality Providers.
+Finality providers are key participants in the Babylon BTC staking protocol.
+They provide finality votes on top of
+[CometBFT](https://github.com/cometbft/cometbft), Babylon's consensus mechanism,
+and earn commissions from BTC staking delegations.
 
-## 1. Overview
+The finality provider toolset operates on standard UNIX-based 
+systems and consists of three core components:
 
-Finality providers are responsible for voting
-at a finality round on top of [CometBFT](https://github.com/cometbft/cometbft).
-Similar to any native PoS validator,
-a finality provider can receive voting power delegations from BTC stakers, and
-can earn commission from the staking rewards denominated in Babylon tokens.
+1. **Babylon Node**:
+A Babylon network node that provides chain data and transaction 
+submission capabilities. While not mandatory, running your own node is 
+strongly recommended for security rather than relying on third-party RPC nodes. 
+See the [Setup Node Guide](https://github.com/babylonlabs-io/networks/blob/main/bbn-test-5/babylon-node/README.md) 
+for details.
+2. **Extractable One-Time Signature (EOTS) Manager**:
+A secure key management daemon that handles EOTS key operations, 
+generates extractable one-time signatures, and produces public randomness. 
+For enhanced security, this component should run on a separate machine or 
+network segment.
+3. **Finality Provider Daemon**:
+The core daemon that polls Babylon blocks, commits public randomness, and 
+submits finality signatures. It manages the finality provider's status transitions 
+and handles rewards distribution.
 
-The finality provider toolset does not have
-any special hardware requirements
-and can operate on standard mid-sized machines
-running a UNIX-flavored operating system.
-It consists of the following programs:
+**Component Interactions**:
+The Finality Provider daemon communicates with the Babylon Node to monitor blocks 
+and submit transactions. It interacts with the EOTS Manager for signature and 
+randomness generation. The EOTS Manager maintains secure key storage and handles 
+all EOTS key operations.
 
-- *Babylon full node*: An instance of a Babylon node connecting to
-  the Babylon network. Running one is not a strict requirement,
-  but it is recommended for security compared to trusting a third-party RPC node.
-- *Extractable One-Time Signature (EOTS) manager*:
-  A daemon responsible for securely maintaining the finality provider’s
-  private key and producing extractable one time signatures from it.
-- *Finality Provider*: A daemon managing the finality provider.
-  It connects to the EOTS manager to generate EOTS public randomness and
-  finality votes for Babylon blocks, which it submits to Babylon through
-  the node connection.
+![Finality Provider Architecture Diagram](./docs/static/finality-provider-arch.png)
 
-The following graphic demonstrates the interconnections between the above programs:
+## Become a Finality Provider
 
-![Finality Provider Interconnections](./docs/finality-toolset.png)
+For instructions on creating and operating a finality provider,
+see our [Finality Provider Guide](./docs/finality-provider-operation.md).
 
-## 2. Installation
+## High Level Descriptions of EOTS and Finality Provider
 
-### Prerequisites
+<!-- These are out of place right now, we need to decide where to place them -->
+### EOTS Manager
 
-This project requires Go version 1.21 or later.
+The EOTS daemon is responsible for managing EOTS keys, producing EOTS randomness, and
+using them to produce EOTS signatures.
 
-Install Go by following the instructions on
-the [official Go installation guide](https://golang.org/doc/install).
+> ⚡ **Note:** EOTS stands for Extractable One Time Signature. You can read more about it
+in
+the [Babylon BTC Staking Litepaper](https://docs.babylonchain.io/assets/files/btc_staking_litepaper-32bfea0c243773f0bfac63e148387aef.pdf).
+In short, the EOTS manager generates EOTS public/private randomness pairs. The
+finality provider commits the public part of these pairs to Babylon for every future
+block height that they intend to provide a finality signature for. If the finality
+provider votes for two different blocks on the same height, they will have to reuse
+the same private randomness which will lead to their EOTS private key being
+exposed, leading to the slashing. 
 
-### Downloading the code
+Once a finality provider is double-signs, their voting power is immediately reduced
+to zero, while their private key is exposed. A finality provider that double-signs
+can never regain voting power (tombstoning). Additionally, the exposed private key
+of the finality provider can be used to fully sign the slashing transactions of all
+their stake delegations.
 
-To get started, clone the repository to your local machine from Github:
+The EOTS manager is responsible for the following operations:
 
-```bash
-git clone https://github.com/babylonlabs-io/finality-provider.git
-```
+1. **EOTS Key Management:**
+    - Generates [Schnorr](https://en.wikipedia.org/wiki/Schnorr_signature) key pairs
+      for a given finality provider using the
+      [BIP-340](https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki)
+      standard as its EOTS key pair
+    - Persists generated key pairs in the internal Cosmos keyring.
+2. **Randomness Generation:**
+    - Generates lists of EOTS randomness pairs based on the EOTS key, chain ID, and
+      block height.
+    - The randomness is deterministically generated and tied to specific parameters.
+3. **Signature Generation:**
+    - Signs EOTS using the private key of the finality provider and the corresponding
+      secret randomness for a given chain at a specified height.
+    - Signs Schnorr signatures using the private key of the finality provider.
 
-You can choose a specific version from
-the [official releases page](https://github.com/babylonlabs-io/finality-provider/releases)
+### Finality Provider
 
-```bash
-cd finality-provider # cd into the project directory
-git checkout <release-tag>
-```
+The Finality Provider Daemon is responsible for monitoring for new Babylon blocks,
+committing public randomness for the blocks it intends to provide finality signatures
+for, and submitting finality signatures.
 
-### Building and installing the binary
+The daemon can manage multiple finality providers but only run a single 
+finality provider instance at a time performing the following operations:
 
-At the top-level directory of the project
+1. **Creation and Registration**: Creates and registers a finality provider to.
 
-```bash
-make install
-```
+2. **EOTS Randomness Commitment**: The daemon monitors the Babylon chain and commits
+   EOTS public randomness for every Babylon block the finality provider intends to
+   vote for. The commit intervals can be specified in the configuration.
 
-The above command will build and install the following binaries to
-`$GOPATH/bin`:
+3. **Finality Votes Submission**: The daemon monitors the Babylon chain and produces
+   finality votes for each block the finality provider has committed to vote for.
 
-- `eotsd`: The daemon program for the EOTS manager.
-- `fpd`: The daemon program for the finality-provider with overall commands.
+4. **Status Management**: The daemon continuously monitors voting power and overall
+   provider status. It manages state transitions between `ACTIVE`, `INACTIVE`,
+   `JAILED`, and `SLASHED` states, while handling the jailing process when violations
+   occur.
 
-If your shell cannot find the installed binaries, make sure `$GOPATH/bin` is in
-the `$PATH` of your shell. Usually these commands will do the job
+5. **Security and Key Management**: The daemon manages Babylon keys for signing
+    transactions and rewards distribution. It maintains secure coordination with 
+    the EOTS daemon for all key-related operations.
 
-```bash
-export PATH=$HOME/go/bin:$PATH
-echo 'export PATH=$HOME/go/bin:$PATH' >> ~/.profile
-```
+The daemon is controlled by the `fpd` tool, which provides commands for
+interacting with the running daemon.
 
-## 3. Setting up a finality provider
+## Technical Documentation
 
-### 3.1. Setting up a Babylon Full Node
+For detailed technical information about the finality provider's internal operations, see:
+* [Core Heuristics](./docs/fp-core.md)
+* [Public Randomness Commits](./docs/commit-pub-rand.md)
+* [Finality Votes submission](./docs/send-finality-vote.md)
 
-Before setting up the finality provider toolset,
-an operator must ensure a working connection with a Babylon full node.
-It is highly recommended that operators run their own node to avoid
-trusting third parties. Instructions on how to set up a full Babylon node
-can be found in
-[the Babylon documentation](https://docs.babylonchain.io/docs/user-guides/btc-staking-testnet/setup-node).
+## Overview of Keys for Finality Provider and EOTS Manager
 
-### 3.2. Setting up the EOTS Manager
+There are two distinct keys you'll be working with:
 
-After a node and a keyring have been set up,
-the operator can set up and run the
-Extractable One Time Signature (EOTS) manager daemon.
-A complete overview of the EOTS manager, its operation, and
-its configuration options can be found in the
-[EOTS Manager page](docs/eots.md)
+- **EOTS Key**:
+    - Used for generating EOTS signatures, Schnorr signatures, and randomness pairs
+    - This serves as the unique identifier for the finality provider
+    - It's derived from a Bitcoin private key, using the secp256k1
+      elliptic curve.
+    - Stored in the EOTS manager daemon's keyring
+    - This key is used in the Bitcoin-based security model of Babylon.
 
-### 3.3. Setting up a Finality Provider
+- **Babylon Key**:
+    - Used for signing transactions on Babylon.
+    - Associated with a Babylon account that receives rewards
+    - Stored in the finality provider daemon's keyring
 
-The last step is to set up and run
-the finality daemon.
-A complete overview of the finality daemon, its operation, and
-its configuration options can be found in the
-[Finality page](docs/finality-provider.md).
+This dual association allows the finality provider to interact with both the
+Bitcoin network (for security) and the Babylon network (for rewards and
+governance).
 
-## 4. Delegations & Rewards
-
-A finality provider receives BTC delegations through delegators
-interacting with Babylon and choosing it as the recipient of their delegations.
-To perform a self-delegation,
-the operator can either visit the staking web app we provide,
-or run the Babylon [BTC Staker program](https://github.com/babylonlabs-io/btc-staker) once.
-The BTC staker connects to a Bitcoin wallet and Babylon to perform delegations.
+Once a finality provider is created, neither key can be rotated or changed -
+they are permanently associated with that specific finality provider instance.

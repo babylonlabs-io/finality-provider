@@ -16,6 +16,9 @@ jobs:
       go-lint-version: 'v1.60.2'
       run-unit-tests: true
       run-lint: true
+      run-build: true
+      run-gosec: true
+      gosec-args: "-exclude-generated -exclude-dir=itest -exclude-dir=testutil ./..."
 
   e2e_babylon:
     runs-on: ubuntu-22.04
@@ -66,7 +69,15 @@ jobs:
 
   docker_pipeline:
     needs: ["lint_test"]
-    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.7.0
+    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.10.2
     secrets: inherit
     with:
       publish: true
+      dockerfile: ./Dockerfile
+      repoName: finality-provider
+      docker_scan: true
+    permissions:
+      # required for all workflows
+      security-events: write
+      # required to fetch internal or private CodeQL packs
+      packages: read
