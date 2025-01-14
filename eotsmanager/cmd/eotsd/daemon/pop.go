@@ -214,10 +214,11 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to create EOTS manager: %w", err)
 	}
 
-	hashOfMsgToSign := tmhash.Sum([]byte(bbnAddr.String()))
+	bbnAddrStr := bbnAddr.String()
+	hashOfMsgToSign := tmhash.Sum([]byte(bbnAddrStr))
 	schnorrSigOverBabyAddr, btcPubKey, err := eotsSignMsg(eotsManager, eotsKeyName, eotsFpPubKeyStr, eotsPassphrase, hashOfMsgToSign)
 	if err != nil {
-		return fmt.Errorf("failed to sign address %s: %w", bbnAddr.String(), err)
+		return fmt.Errorf("failed to sign address %s: %w", bbnAddrStr, err)
 	}
 
 	babyPubKey, err := babyPk(babyKeyRecord)
@@ -225,32 +226,21 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	eotsPkHex := btcPubKey.MarshalHex()
-
-	babySignBtcDoc := NewCosmosSignDoc(
-		bbnAddr.String(),
-		eotsPkHex,
-	)
-
-	babySignBtcMarshaled, err := json.Marshal(babySignBtcDoc)
-	if err != nil {
-		return fmt.Errorf("failed to marshal sign doc: %w", err)
-	}
-
-	babySignBtcBz := sdk.MustSortJSON(babySignBtcMarshaled)
-	babySignBtc, _, err := babyKeyring.Sign(babyKeyName, babySignBtcBz, signing.SignMode_SIGN_MODE_DIRECT)
+	babySignEots := []byte(btcPubKey.MarshalHex())
+	babySignature, err := SignCosmosAdr36(babyKeyring, babyKeyName, bbnAddrStr, babySignEots)
 	if err != nil {
 		return err
 	}
 
+	eotsPkHex := btcPubKey.MarshalHex()
 	out := PoPExport{
 		EotsPublicKey: eotsPkHex,
 		BabyPublicKey: base64.StdEncoding.EncodeToString(babyPubKey.Bytes()),
 
-		BabyAddress: bbnAddr.String(),
+		BabyAddress: bbnAddrStr,
 
 		EotsSignBaby:   base64.StdEncoding.EncodeToString(schnorrSigOverBabyAddr.Serialize()),
-		BabySignEotsPk: base64.StdEncoding.EncodeToString(babySignBtc),
+		BabySignEotsPk: base64.StdEncoding.EncodeToString(babySignature),
 	}
 
 	jsonString, err := json.MarshalIndent(out, "", "  ")
@@ -400,6 +390,39 @@ func deletePop(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
+func SignCosmosAdr36(
+	kr keyring.Keyring,
+	keyName string,
+	cosmosBech32Address string,
+	bytesToSign []byte,
+) ([]byte, error) {
+	base64Bytes := base64.StdEncoding.EncodeToString(bytesToSign)
+
+	signDoc := NewCosmosSignDoc(
+		cosmosBech32Address,
+		base64Bytes,
+	)
+
+	marshaled, err := json.Marshal(signDoc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal sign doc: %w", err)
+	}
+
+	bz := sdk.MustSortJSON(marshaled)
+
+	babySignBytes, _, err := kr.Sign(
+		keyName,
+		bz,
+		signing.SignMode_SIGN_MODE_DIRECT,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign btc address bytes: %w", err)
+	}
+
+	return babySignBytes, nil
+}
+
 func VerifyPopExport(pop PoPExport) (bool, error) {
 	valid, err := ValidEotsSignBaby(pop.EotsPublicKey, pop.BabyAddress, pop.EotsSignBaby)
 	if err != nil || !valid {
@@ -434,7 +457,7 @@ func ValidEotsSignBaby(eotsPk, babyAddr, eotsSigOverBabyAddr string) (bool, erro
 	return schnorrSig.Verify(sha256Addr, eotsPubKey.MustToBTCPK()), nil
 }
 
-func ValidBabySignEots(babyPk, babyAddr, eotsPk, babySigOverEotsPk string) (bool, error) {
+func ValidBabySignEots(babyPk, babyAddr, eotsPkHex, babySigOverEotsPk string) (bool, error) {
 	babyPubKeyBz, err := base64.StdEncoding.DecodeString(babyPk)
 	if err != nil {
 		return false, err
@@ -444,7 +467,14 @@ func ValidBabySignEots(babyPk, babyAddr, eotsPk, babySigOverEotsPk string) (bool
 		Key: babyPubKeyBz,
 	}
 
-	babySignBtcDoc := NewCosmosSignDoc(babyAddr, eotsPk)
+	eotsPk, err := bbntypes.NewBIP340PubKeyFromHex(eotsPkHex)
+	if err != nil {
+		return false, err
+	}
+
+	babySignEots := []byte(eotsPk.MarshalHex())
+	base64Bytes := base64.StdEncoding.EncodeToString(babySignEots)
+	babySignBtcDoc := NewCosmosSignDoc(babyAddr, base64Bytes)
 	babySignBtcMarshaled, err := json.Marshal(babySignBtcDoc)
 	if err != nil {
 		return false, err

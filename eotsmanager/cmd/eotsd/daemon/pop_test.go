@@ -19,12 +19,21 @@ var (
 	}
 
 	popsToVerify = []daemon.PoPExport{
-		hardcodedPopToVerify,
+		// hardcodedPopToVerify,
+		// daemon.PoPExport{
+		// 	EotsPublicKey: "b1bc317bacf02fba17abea4f695c89997d55fe513a56ad8126237226212dd487",
+		// 	BabyPublicKey: "AyAU94yfGIa+MPq60oR3QnNn1DJ+9cZZrHDCu4Nx1Uo3",
+
+		// 	BabySignEotsPk: "HuPBTw5L3q3vqmb6F77ZSKfVP2pD1zCQvXbd+4JloAxzz/rpGQIvmvt4ZgcLI9vnL8bjltkmIlToRESHdiSbXA==",
+		// 	EotsSignBaby:   "L9wYf+rg2fQRzy2rau2MTO9V5sEBCSUWtWcxJxweSrvkDpR6tJTwKz3Ba0c/q7yNCT91Ag7H4rKMVhKmyN4tkQ==",
+
+		// 	BabyAddress: "bbn1ayrme3m73xv294t50k7v5pfj6pauyps03atepn",
+		// },
 		daemon.PoPExport{
 			EotsPublicKey: "b1bc317bacf02fba17abea4f695c89997d55fe513a56ad8126237226212dd487",
 			BabyPublicKey: "AyAU94yfGIa+MPq60oR3QnNn1DJ+9cZZrHDCu4Nx1Uo3",
 
-			BabySignEotsPk: "HuPBTw5L3q3vqmb6F77ZSKfVP2pD1zCQvXbd+4JloAxzz/rpGQIvmvt4ZgcLI9vnL8bjltkmIlToRESHdiSbXA==",
+			BabySignEotsPk: "kNcxCeqmQFQO//LvqhbzUQwbD3+/FfSbrvfyEa4Xf1MP5YDZp0XKYlOh+wA6dqFsb5IA7Wciz0WRbkGxRwxHVg==",
 			EotsSignBaby:   "L9wYf+rg2fQRzy2rau2MTO9V5sEBCSUWtWcxJxweSrvkDpR6tJTwKz3Ba0c/q7yNCT91Ag7H4rKMVhKmyN4tkQ==",
 
 			BabyAddress: "bbn1ayrme3m73xv294t50k7v5pfj6pauyps03atepn",
