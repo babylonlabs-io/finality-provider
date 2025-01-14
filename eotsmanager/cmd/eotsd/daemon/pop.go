@@ -74,6 +74,7 @@ func NewPopCmd() *cobra.Command {
 		NewPopExportCmd(),
 		NewPopDeleteCmd(),
 	)
+
 	return cmd
 }
 
@@ -216,7 +217,7 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 
 	bbnAddrStr := bbnAddr.String()
 	hashOfMsgToSign := tmhash.Sum([]byte(bbnAddrStr))
-	schnorrSigOverBabyAddr, btcPubKey, err := eotsSignMsg(eotsManager, eotsKeyName, eotsFpPubKeyStr, eotsPassphrase, hashOfMsgToSign)
+	schnorrSigOverBabyAddr, eotsPk, err := eotsSignMsg(eotsManager, eotsKeyName, eotsFpPubKeyStr, eotsPassphrase, hashOfMsgToSign)
 	if err != nil {
 		return fmt.Errorf("failed to sign address %s: %w", bbnAddrStr, err)
 	}
@@ -226,13 +227,13 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	babySignEots := []byte(btcPubKey.MarshalHex())
+	babySignEots := []byte(eotsPk.MarshalHex())
 	babySignature, err := SignCosmosAdr36(babyKeyring, babyKeyName, bbnAddrStr, babySignEots)
 	if err != nil {
 		return err
 	}
 
-	eotsPkHex := btcPubKey.MarshalHex()
+	eotsPkHex := eotsPk.MarshalHex()
 	out := PoPExport{
 		EotsPublicKey: eotsPkHex,
 		BabyPublicKey: base64.StdEncoding.EncodeToString(babyPubKey.Bytes()),
@@ -348,6 +349,9 @@ func deletePop(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	if len(msg) == 0 {
+		return fmt.Errorf("flage --%s is empty", flagMessage)
+	}
 
 	// We are assuming we are receiving string literal with escape characters
 	interpretedMsg, err := strconv.Unquote(`"` + msg + `"`)
@@ -355,18 +359,8 @@ func deletePop(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	babySignMessageDoc := NewCosmosSignDoc(
-		bbnAddr.String(),
-		interpretedMsg,
-	)
-
-	babySignMessageMarshaled, err := json.Marshal(babySignMessageDoc)
-	if err != nil {
-		return fmt.Errorf("failed to marshal sign doc: %w", err)
-	}
-
-	babySignMessageBz := sdk.MustSortJSON(babySignMessageMarshaled)
-	babyMessageSignature, _, err := babyKeyring.Sign(babyKeyName, babySignMessageBz, signing.SignMode_SIGN_MODE_DIRECT)
+	bbnAddrStr := bbnAddr.String()
+	babySignature, err := SignCosmosAdr36(babyKeyring, babyKeyName, bbnAddrStr, []byte(interpretedMsg))
 	if err != nil {
 		return err
 	}
@@ -377,7 +371,7 @@ func deletePop(cmd *cobra.Command, _ []string) error {
 
 		BabyAddress: bbnAddr.String(),
 
-		BabySignature: base64.StdEncoding.EncodeToString(babyMessageSignature),
+		BabySignature: base64.StdEncoding.EncodeToString(babySignature),
 	}
 
 	jsonString, err := json.MarshalIndent(out, "", "  ")
