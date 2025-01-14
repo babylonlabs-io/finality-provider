@@ -313,7 +313,7 @@ func (lm *LocalEOTSManager) SignSchnorrSigFromKeyname(keyName, passphrase string
 }
 
 func (lm *LocalEOTSManager) Close() error {
-	return nil
+	return lm.es.Close()
 }
 
 // getRandomnessPair returns a randomness pair generated based on the given finality provider key, chainID and height
