@@ -182,7 +182,7 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 		BabySignEotsPk: base64.StdEncoding.EncodeToString(babySignature),
 	}
 
-	return printJson(cmd, out)
+	return printJSON(cmd, out)
 }
 
 func deletePop(cmd *cobra.Command, _ []string) error {
@@ -232,26 +232,25 @@ func deletePop(cmd *cobra.Command, _ []string) error {
 		BabySignature: base64.StdEncoding.EncodeToString(babySignature),
 	}
 
-	return printJson(cmd, out)
+	return printJSON(cmd, out)
 }
 
-func babyFlags(cmd *cobra.Command) (
-	babyHomePath, babyKeyName, babyKeyringBackend string,
-	err error,
-) {
+// babyFlags returns the values of flagHomeBaby, flagKeyNameBaby and
+// flagKeyringBackendBaby respectively or error if something fails
+func babyFlags(cmd *cobra.Command) (string, string, string, error) {
 	f := cmd.Flags()
 
-	babyHomePath, err = getCleanPath(cmd, flagHomeBaby)
+	babyHomePath, err := getCleanPath(cmd, flagHomeBaby)
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to load baby home flag: %w", err)
 	}
 
-	babyKeyName, err = f.GetString(flagKeyNameBaby)
+	babyKeyName, err := f.GetString(flagKeyNameBaby)
 	if err != nil {
 		return "", "", "", err
 	}
 
-	babyKeyringBackend, err = f.GetString(flagKeyringBackendBaby)
+	babyKeyringBackend, err := f.GetString(flagKeyringBackendBaby)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -259,28 +258,28 @@ func babyFlags(cmd *cobra.Command) (
 	return babyHomePath, babyKeyName, babyKeyringBackend, nil
 }
 
-func eotsFlags(cmd *cobra.Command) (
-	eotsHomePath, eotsKeyName, eotsFpPubKeyStr, eotsKeyringBackend string,
-	err error,
-) {
+// eotsFlags returns the values of FlagHome, keyNameFlag,
+// eotsPkFlag, FlagKeyringBackend respectively or error
+// if something fails
+func eotsFlags(cmd *cobra.Command) (string, string, string, string, error) {
 	f := cmd.Flags()
 
-	eotsKeyName, err = f.GetString(keyNameFlag)
+	eotsKeyName, err := f.GetString(keyNameFlag)
 	if err != nil {
 		return "", "", "", "", err
 	}
 
-	eotsFpPubKeyStr, err = f.GetString(eotsPkFlag)
+	eotsFpPubKeyStr, err := f.GetString(eotsPkFlag)
 	if err != nil {
 		return "", "", "", "", err
 	}
 
-	eotsKeyringBackend, err = f.GetString(sdkflags.FlagKeyringBackend)
+	eotsKeyringBackend, err := f.GetString(sdkflags.FlagKeyringBackend)
 	if err != nil {
 		return "", "", "", "", err
 	}
 
-	eotsHomePath, err = getHomePath(cmd)
+	eotsHomePath, err := getHomePath(cmd)
 	if err != nil {
 		return "", "", "", "", fmt.Errorf("failed to load home flag: %w", err)
 	}
@@ -306,13 +305,14 @@ func getInterpretedMessage(cmd *cobra.Command) (string, error) {
 	return interpretedMsg, nil
 }
 
-func printJson(cmd *cobra.Command, out any) error {
+func printJSON(cmd *cobra.Command, out any) error {
 	jsonString, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
 		return err
 	}
 
 	cmd.Println(string(jsonString))
+
 	return nil
 }
 
