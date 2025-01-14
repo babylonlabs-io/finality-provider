@@ -20,7 +20,7 @@ func main() {
 	app.Usage = "Extractable One Time Signature Daemon (eotsd)."
 	app.Commands = append(
 		app.Commands, dcli.StartCommand, dcli.InitCommand, dcli.SignSchnorrSig, dcli.VerifySchnorrSig,
-		dcli.ExportPoPCommand,
+		dcli.PoPExportCommand,
 	)
 	app.Commands = append(app.Commands, dcli.KeysCommands...)
 

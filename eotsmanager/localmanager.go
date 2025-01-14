@@ -219,6 +219,35 @@ func (lm *LocalEOTSManager) signSchnorrSigFromPrivKey(privKey *btcec.PrivateKey,
 	return schnorr.Sign(privKey, msg)
 }
 
+func (lm *LocalEOTSManager) LoadBIP340PubKeyFromKeyName(keyName string) (*bbntypes.BIP340PubKey, error) {
+	return LoadBIP340PubKeyFromKeyName(lm.kr, keyName)
+}
+
+func LoadBIP340PubKeyFromKeyName(kr keyring.Keyring, keyName string) (*bbntypes.BIP340PubKey, error) {
+	info, err := kr.Key(keyName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load keyring record for key %s: %w", keyName, err)
+	}
+	pubKey, err := info.GetPubKey()
+	if err != nil {
+		return nil, err
+	}
+
+	var eotsPk *bbntypes.BIP340PubKey
+	switch v := pubKey.(type) {
+	case *secp256k1.PubKey:
+		pk, err := btcec.ParsePubKey(v.Key)
+		if err != nil {
+			return nil, err
+		}
+		eotsPk = bbntypes.NewBIP340PubKeyFromBTCPK(pk)
+
+		return eotsPk, nil
+	default:
+		return nil, fmt.Errorf("unsupported key type in keyring")
+	}
+}
+
 func (lm *LocalEOTSManager) SignSchnorrSigFromKeyname(keyName, passphrase string, msg []byte) (*schnorr.Signature, *bbntypes.BIP340PubKey, error) {
 	lm.input.Reset(passphrase)
 	k, err := lm.kr.Key(keyName)
