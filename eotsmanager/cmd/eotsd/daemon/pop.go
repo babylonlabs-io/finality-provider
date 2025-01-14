@@ -116,10 +116,6 @@ var (
 				Usage: "BABY backend of the keyring",
 				Value: defaultKeyringBackend,
 			},
-			cli.StringFlag{
-				Name:  flagMessage,
-				Usage: "Message to be signed",
-			},
 		},
 		Action: exportPop,
 	}
@@ -160,6 +156,10 @@ var (
 				Name:  flagKeyringBackendBaby,
 				Usage: "BABY backend of the keyring",
 				Value: defaultKeyringBackend,
+			},
+			cli.StringFlag{
+				Name:  flagMessage,
+				Usage: "Message to be signed",
 			},
 		},
 		Action: deletePop,
