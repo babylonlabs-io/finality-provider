@@ -1,7 +1,18 @@
 # Finality Provider Operation
 
-This document guides operators through the complete
-lifecycle of running a finality provider, including:
+## Quick Start
+
+Operating a finality provider on the Babylon network involves several key steps:
+
+1. Importing your EOTS keys from Phase-1 or creating new ones
+2. Starting the EOTS daemon
+3. Adding a finality provider key
+4. Configuring and starting the finality provider daemon
+5. Creating a finality provider
+
+## Overview
+
+This technical guide covers:
 
 * Installing and configuring the finality provider toolset
   (EOTS Manager and Finality Provider daemon)
@@ -10,10 +21,8 @@ lifecycle of running a finality provider, including:
 * Operating and maintaining your finality provider
 * Collecting rewards
 
-This is an operational guide intended for technical finality provider administrators.
-For conceptual understanding, see our [Technical Documentation](./fp-core.md). 
-Please review the [high-level explainer](../README.md) before proceeding to 
-gain an overall understanding of the finality provider. 
+For conceptual understanding, please review the [high-level explainer](../README.md) 
+and [Technical Documentation](./fp-core.md) before proceeding.
 
 ## Table of Contents
 
