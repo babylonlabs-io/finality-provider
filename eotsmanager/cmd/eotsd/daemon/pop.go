@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/cometbft/cometbft/crypto/tmhash"
@@ -26,6 +27,7 @@ const (
 	flagHomeBaby           = "baby-home"
 	flagKeyNameBaby        = "baby-key-name"
 	flagKeyringBackendBaby = "baby-keyring-backend"
+	flagMessage            = "message"
 )
 
 func init() {
@@ -48,9 +50,36 @@ type PoPExport struct {
 	BabyAddress string `json:"babyAddress"`
 }
 
-func NewExportPopCmd() *cobra.Command {
+// PoPExportDelete the data needed to delete an ownership previously created.
+type PoPExportDelete struct {
+	// Btc public key is the EOTS PK *bbntypes.BIP340PubKey marshal hex
+	EotsPublicKey string `json:"eotsPublicKey"`
+	// Baby public key is the *secp256k1.PubKey marshal hex
+	BabyPublicKey string `json:"babyPublicKey"`
+
+	// Babylon key pair signs message
+	BabySignature string `json:"babySignature"`
+
+	// Babylon address ex.: bbn1f04czxeqprn0s9fe7kdzqyde2e6nqj63dllwsm
+	BabyAddress string `json:"babyAddress"`
+}
+
+func NewPopCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "export-pop",
+		Use:   "pop",
+		Short: "Proof of Possession commands",
+	}
+
+	cmd.AddCommand(
+		NewPopExportCmd(),
+		NewPopDeleteCmd(),
+	)
+	return cmd
+}
+
+func NewPopExportCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "export",
 		Short: "Exports the Proof of Possession by (1) signing over the BABY address with the EOTS private key and (2) signing over the EOTS public key with the BABY private key.",
 		Long: `Parse the address from the BABY keyring, load the address, hash it with
 		sha256 and sign based on the EOTS key associated with the key-name or eots-pk flag.
@@ -71,6 +100,32 @@ func NewExportPopCmd() *cobra.Command {
 	f.String(flagHomeBaby, "", "BABY home directory")
 	f.String(flagKeyNameBaby, "", "BABY key name")
 	f.String(flagKeyringBackendBaby, keyring.BackendTest, "BABY backend of the keyring")
+
+	return cmd
+}
+
+func NewPopDeleteCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Generate the delete data for removing a proof of possession previously created.",
+		Long: `Parse the message from the flag and sign with the BABY keyring, it also loads
+		the EOTS public key based on the EOTS key associated with the key-name or eots-pk flag.
+		If the both flags are supplied, eots-pk takes priority.`,
+		RunE: deletePop,
+	}
+
+	f := cmd.Flags()
+
+	f.String(sdkflags.FlagHome, config.DefaultEOTSDir, "EOTS home directory")
+	f.String(keyNameFlag, "", "EOTS key name")
+	f.String(eotsPkFlag, "", "EOTS public key of the finality-provider")
+	f.String(sdkflags.FlagKeyringBackend, keyring.BackendTest, "EOTS backend of the keyring")
+
+	f.String(flagHomeBaby, "", "BABY home directory")
+	f.String(flagKeyNameBaby, "", "BABY key name")
+	f.String(flagKeyringBackendBaby, keyring.BackendTest, "BABY backend of the keyring")
+
+	f.String(flagMessage, "", "Message to be signed")
 
 	return cmd
 }
@@ -208,6 +263,143 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
+func deletePop(cmd *cobra.Command, _ []string) error {
+	f := cmd.Flags()
+
+	eotsKeyName, err := f.GetString(keyNameFlag)
+	if err != nil {
+		return err
+	}
+
+	eotsFpPubKeyStr, err := f.GetString(eotsPkFlag)
+	if err != nil {
+		return err
+	}
+
+	eotsKeyringBackend, err := f.GetString(sdkflags.FlagKeyringBackend)
+	if err != nil {
+		return err
+	}
+
+	eotsHomePath, err := getHomePath(cmd)
+	if err != nil {
+		return fmt.Errorf("failed to load home flag: %w", err)
+	}
+
+	babyHomePath, err := getCleanPath(cmd, flagHomeBaby)
+	if err != nil {
+		return fmt.Errorf("failed to load baby home flag: %w", err)
+	}
+
+	babyKeyName, err := f.GetString(flagKeyNameBaby)
+	if err != nil {
+		return err
+	}
+
+	babyKeyringBackend, err := f.GetString(flagKeyringBackendBaby)
+	if err != nil {
+		return err
+	}
+
+	cdc := codec.MakeCodec()
+	babyKeyring, err := keyring.New("baby", babyKeyringBackend, babyHomePath, cmd.InOrStdin(), cdc)
+	if err != nil {
+		return fmt.Errorf("failed to create keyring: %w", err)
+	}
+
+	babyKeyRecord, err := babyKeyring.Key(babyKeyName)
+	if err != nil {
+		return err
+	}
+
+	bbnAddr, err := babyKeyRecord.GetAddress()
+	if err != nil {
+		return err
+	}
+
+	if len(eotsFpPubKeyStr) == 0 && len(eotsKeyName) == 0 {
+		return fmt.Errorf("at least one of the flags: %s, %s needs to be informed", keyNameFlag, eotsPkFlag)
+	}
+
+	cfg, err := config.LoadConfig(eotsHomePath)
+	if err != nil {
+		return fmt.Errorf("failed to load config at %s: %w", eotsHomePath, err)
+	}
+
+	logger, err := log.NewRootLoggerWithFile(config.LogFile(eotsHomePath), cfg.LogLevel)
+	if err != nil {
+		return fmt.Errorf("failed to load the logger")
+	}
+
+	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
+	if err != nil {
+		return fmt.Errorf("failed to create db backend: %w", err)
+	}
+	defer dbBackend.Close()
+
+	eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomePath, eotsKeyringBackend, dbBackend, logger)
+	if err != nil {
+		return fmt.Errorf("failed to create EOTS manager: %w", err)
+	}
+
+	btcPubKey, err := eotsPubKey(eotsManager, eotsKeyName, eotsFpPubKeyStr)
+	if err != nil {
+		return fmt.Errorf("failed to sign address %s: %w", bbnAddr.String(), err)
+	}
+
+	babyPubKey, err := babyPk(babyKeyRecord)
+	if err != nil {
+		return err
+	}
+
+	eotsPkHex := btcPubKey.MarshalHex()
+
+	msg, err := f.GetString(flagMessage)
+	if err != nil {
+		return err
+	}
+
+	// We are assuming we are receiving string literal with escape characters
+	interpretedMsg, err := strconv.Unquote(`"` + msg + `"`)
+	if err != nil {
+		return err
+	}
+
+	babySignMessageDoc := NewCosmosSignDoc(
+		bbnAddr.String(),
+		interpretedMsg,
+	)
+
+	babySignMessageMarshaled, err := json.Marshal(babySignMessageDoc)
+	if err != nil {
+		return fmt.Errorf("failed to marshal sign doc: %w", err)
+	}
+
+	babySignMessageBz := sdk.MustSortJSON(babySignMessageMarshaled)
+	babyMessageSignature, _, err := babyKeyring.Sign(babyKeyName, babySignMessageBz, signing.SignMode_SIGN_MODE_DIRECT)
+	if err != nil {
+		return err
+	}
+
+	out := PoPExportDelete{
+		EotsPublicKey: eotsPkHex,
+		BabyPublicKey: base64.StdEncoding.EncodeToString(babyPubKey.Bytes()),
+
+		BabyAddress: bbnAddr.String(),
+
+		BabySignature: base64.StdEncoding.EncodeToString(babyMessageSignature),
+	}
+
+	jsonString, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	cmd.Println(string(jsonString))
+
+	return nil
+}
+
 func VerifyPopExport(pop PoPExport) (bool, error) {
 	valid, err := ValidEotsSignBaby(pop.EotsPublicKey, pop.BabyAddress, pop.EotsSignBaby)
 	if err != nil || !valid {
@@ -280,6 +472,22 @@ func babyPk(babyRecord *keyring.Record) (*secp256k1.PubKey, error) {
 	default:
 		return nil, fmt.Errorf("unsupported key type in keyring")
 	}
+}
+
+func eotsPubKey(
+	eotsManager *eotsmanager.LocalEOTSManager,
+	keyName, fpPkStr string,
+) (*bbntypes.BIP340PubKey, error) {
+	if len(fpPkStr) > 0 {
+		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(fpPkStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid finality-provider public key %s: %w", fpPkStr, err)
+		}
+
+		return fpPk, nil
+	}
+
+	return eotsManager.LoadBIP340PubKeyFromKeyName(keyName)
 }
 
 func eotsSignMsg(
