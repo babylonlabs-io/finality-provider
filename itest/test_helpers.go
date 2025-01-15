@@ -174,6 +174,8 @@ func genRandomBtcDelegation() (*bstypes.Params, cosmwasm.ActiveBtcDelegation) {
 	covenantSigners := covenantSKs[:covenantQuorum]
 
 	// construct the BTC delegation with everything
+	startHeight, endHeight := uint32(1), uint32(1000+stakingTimeBlocks)
+	stakingTime := endHeight - startHeight
 	btcDel, err := datagen.GenRandomBTCDelegation(
 		r,
 		t,
@@ -184,8 +186,9 @@ func genRandomBtcDelegation() (*bstypes.Params, cosmwasm.ActiveBtcDelegation) {
 		covenantPKs,
 		covenantQuorum,
 		slashingPkScript,
-		1,
-		uint64(1000+stakingTimeBlocks),
+		stakingTime,
+		startHeight,
+		endHeight,
 		uint64(stakingValue),
 		slashingRate,
 		slashingChangeLockTime,

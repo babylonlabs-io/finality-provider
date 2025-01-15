@@ -27,11 +27,6 @@ type ClientController interface {
 
 	// Note: the following queries are only for PoC
 
-	// QueryFinalityProviderSlashedOrJailed queries if the finality provider is slashed or slashed
-	// Note: if the FP wants to get the information from the consumer chain directly, they should add this interface
-	// function in ConsumerController. (https://github.com/babylonchain/finality-provider/pull/335#discussion_r1606175344)
-	QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error)
-
 	// EditFinalityProvider edits description and commission of a finality provider
 	EditFinalityProvider(fpPk *btcec.PublicKey, commission *math.LegacyDec, description []byte) (*btcstakingtypes.MsgEditFinalityProvider, error)
 
@@ -58,6 +53,11 @@ type ConsumerController interface {
 
 	// QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
 	QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error)
+
+	// QueryFinalityProviderSlashedOrJailed queries if the finality provider is slashed or slashed
+	// Note: if the FP wants to get the information from the consumer chain directly, they should add this interface
+	// function in ConsumerController. (https://github.com/babylonchain/finality-provider/pull/335#discussion_r1606175344)
+	QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error)
 
 	// QueryLatestFinalizedBlock returns the latest finalized block
 	// Note: nil will be returned if the finalized block does not exist

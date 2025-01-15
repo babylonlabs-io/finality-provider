@@ -550,6 +550,12 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 	return lowerBound, nil
 }
 
+// QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
+func (cc *OPStackL2ConsumerController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
+	// TODO: implement slashed or jailed feature in OP stack L2
+	return false, false, nil
+}
+
 func (cc *OPStackL2ConsumerController) QueryFinalityActivationBlockHeight() (uint64, error) {
 	// TODO: implement finality activation feature in OP stack L2
 	return 0, nil

@@ -275,17 +275,6 @@ func (bc *BabylonController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*typ
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-// QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
-func (bc *BabylonController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
-	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
-	if err != nil {
-		return false, false, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
-	}
-
-	return res.FinalityProvider.SlashedBtcHeight > 0, res.FinalityProvider.Jailed, nil
-}
-
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
 func (bc *BabylonController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
 	res, err := bc.bbnClient.QueryClient.FinalityProviderPowerAtHeight(

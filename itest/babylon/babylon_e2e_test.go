@@ -18,7 +18,6 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/jessevdk/go-flags"
@@ -29,7 +28,6 @@ import (
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
@@ -42,17 +40,15 @@ import (
 // a single EOTS manager
 func TestFinalityProviderLifeCycle(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	n := 2
-	tm, fps := StartManagerWithFinalityProvider(t, n, ctx)
+	tm, fps := StartManagerWithFinalityProvider(t, n)
 	defer tm.Stop(t)
 
 	// check the public randomness is committed
 	tm.WaitForFpPubRandTimestamped(t, fps[0])
 
 	// send a BTC delegation
-	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, e2eutils.StakingTime, e2eutils.StakingAmount)
+	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fps[0].GetBtcPk()}, e2eutils.StakingTime, e2eutils.StakingAmount)
 
 	// check the BTC delegation is pending
 	delsResp := tm.WaitForNPendingDels(t, 1)
@@ -73,11 +69,11 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 
 	// stop the FP for several blocks and disable fast sync, and then restart FP
 	// finality signature submission should get into the default case
-	var n uint = 3
+	n = 3
 	// finality signature submission would take about 5 seconds
 	// set the poll interval to 2 seconds to make sure the poller channel has multiple blocks
 	tm.FpConfig.PollerConfig.PollInterval = 2 * time.Second
-	tm.StopAndRestartFpAfterNBlocks(t, n, fpIns)
+	tm.StopAndRestartFpAfterNBlocks(t, n, fps[0])
 
 	// wait for finality signature submission to run two times
 	time.Sleep(12 * time.Second)

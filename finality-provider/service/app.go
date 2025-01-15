@@ -108,27 +108,20 @@ func NewFinalityProviderApp(
 
 	fpMetrics := metrics.NewFpMetrics()
 
-	fpm, err := NewFinalityProviderManager(fpStore, pubRandStore, config, cc, consumerCon, em, fpMetrics, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create finality-provider manager: %w", err)
-	}
-
 	return &FinalityProviderApp{
-		cc:                                  cc,
-		consumerCon:                         consumerCon,
-		fps:                                 fpStore,
-		pubRandStore:                        pubRandStore,
-		kr:                                  kr,
-		config:                              config,
-		logger:                              logger,
-		input:                               input,
-		fpManager:                           fpm,
-		eotsManager:                         em,
-		metrics:                             fpMetrics,
-		quit:                                make(chan struct{}),
-		createFinalityProviderRequestChan:   make(chan *createFinalityProviderRequest),
-		registerFinalityProviderRequestChan: make(chan *registerFinalityProviderRequest),
-		finalityProviderRegisteredEventChan: make(chan *finalityProviderRegisteredEvent),
+		cc:                                cc,
+		consumerCon:                       consumerCon,
+		fps:                               fpStore,
+		pubRandStore:                      pubRandStore,
+		kr:                                kr,
+		config:                            config,
+		logger:                            logger,
+		input:                             input,
+		eotsManager:                       em,
+		metrics:                           fpMetrics,
+		quit:                              make(chan struct{}),
+		unjailFinalityProviderRequestChan: make(chan *UnjailFinalityProviderRequest),
+		createFinalityProviderRequestChan: make(chan *CreateFinalityProviderRequest),
 	}, nil
 }
 
@@ -165,10 +158,6 @@ func (app *FinalityProviderApp) GetFinalityProviderInfo(fpPk *bbntypes.BIP340Pub
 	}
 
 	return fpInfo, nil
-}
-
-func (app *FinalityProviderApp) ListFinalityProviderInstancesForChain(chainID string) []*FinalityProviderInstance {
-	return app.fpManager.ListFinalityProviderInstancesForChain(chainID)
 }
 
 func (app *FinalityProviderApp) ListAllFinalityProvidersInfo() ([]*proto.FinalityProviderInfo, error) {
@@ -223,21 +212,21 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 	}
 
 	for _, fp := range fps {
-		latestBlock, err := app.cc.QueryBestBlock()
+		latestBlockHeight, err := app.consumerCon.QueryLatestBlockHeight()
 		if err != nil {
 			return err
 		}
 
 		pkHex := fp.GetBIP340BTCPK().MarshalHex()
-		power, err := app.cc.QueryFinalityProviderVotingPower(fp.BtcPk, latestBlock.Height)
+		hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(fp.BtcPk, latestBlockHeight)
 		if err != nil {
 			return fmt.Errorf("failed to query voting power for finality provider %s at height %d: %w",
-				fp.GetBIP340BTCPK().MarshalHex(), latestBlock.Height, err)
+				fp.GetBIP340BTCPK().MarshalHex(), latestBlockHeight, err)
 		}
 
 		// power > 0 (slashed_height must > 0), set status to ACTIVE
 		oldStatus := fp.Status
-		if power > 0 {
+		if hasPower {
 			if oldStatus != proto.FinalityProviderStatus_ACTIVE {
 				fp.Status = proto.FinalityProviderStatus_ACTIVE
 				app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_ACTIVE)
@@ -245,13 +234,12 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 					"the finality-provider status is changed to ACTIVE",
 					zap.String("fp_btc_pk", pkHex),
 					zap.String("old_status", oldStatus.String()),
-					zap.Uint64("power", power),
 				)
 			}
 
 			continue
 		}
-		slashed, jailed, err := app.cc.QueryFinalityProviderSlashedOrJailed(fp.BtcPk)
+		slashed, jailed, err := app.consumerCon.QueryFinalityProviderSlashedOrJailed(fp.BtcPk)
 		if err != nil {
 			return err
 		}
@@ -402,8 +390,8 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 		}, nil
 	}
 
-	request := &registerFinalityProviderRequest{
-		chainID:         fp.ChainID,
+	request := &CreateFinalityProviderRequest{
+		chainID:         chainID,
 		fpAddr:          fpAddr,
 		btcPubKey:       eotsPk,
 		pop:             pop,
@@ -522,7 +510,7 @@ func (app *FinalityProviderApp) startFinalityProviderInstance(
 	pkHex := pk.MarshalHex()
 	if app.fpIns == nil {
 		fpIns, err := NewFinalityProviderInstance(
-			pk, app.config, app.fps, app.pubRandStore, app.cc, app.eotsManager,
+			pk, app.config, app.fps, app.pubRandStore, app.cc, app.consumerCon, app.eotsManager,
 			app.metrics, passphrase, app.criticalErrChan, app.logger,
 		)
 		if err != nil {
@@ -616,7 +604,7 @@ func (app *FinalityProviderApp) putFpFromResponse(fp *bstypes.FinalityProviderRe
 		return err
 	}
 
-	power, err := app.cc.QueryFinalityProviderVotingPower(btcPk, fp.Height)
+	hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(btcPk, fp.Height)
 	if err != nil {
 		return fmt.Errorf("failed to query voting power for finality provider %s: %w",
 			fp.BtcPk.MarshalHex(), err)
@@ -624,7 +612,7 @@ func (app *FinalityProviderApp) putFpFromResponse(fp *bstypes.FinalityProviderRe
 
 	var status proto.FinalityProviderStatus
 	switch {
-	case power > 0:
+	case hasPower:
 		status = proto.FinalityProviderStatus_ACTIVE
 	case fp.SlashedBtcHeight > 0:
 		status = proto.FinalityProviderStatus_SLASHED

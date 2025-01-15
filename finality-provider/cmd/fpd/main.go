@@ -37,8 +37,7 @@ func main() {
 	cmd.AddCommand(
 		daemon.CommandInit(), daemon.CommandStart(), daemon.CommandKeys(),
 		daemon.CommandGetDaemonInfo(), daemon.CommandCreateFP(), daemon.CommandLsFP(),
-		daemon.CommandInfoFP(), daemon.CommandRegisterFP(), daemon.CommandAddFinalitySig(), daemon.CommandUnjailFP(),
-		daemon.CommandExportFP(),
+		daemon.CommandInfoFP(), daemon.CommandAddFinalitySig(), daemon.CommandUnjailFP(),
 		daemon.CommandEditFinalityDescription(), daemon.CommandCommitPubRand(),
 		incentivecli.NewWithdrawRewardCmd(), incentivecli.NewSetWithdrawAddressCmd(),
 		version.CommandVersion("fpd"), daemon.CommandUnsafePruneMerkleProof(),

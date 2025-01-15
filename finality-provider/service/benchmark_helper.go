@@ -49,7 +49,7 @@ func (fp *FinalityProviderInstance) HelperCommitPubRand(tipHeight uint64) (*type
 func (fp *FinalityProviderInstance) commitPubRandPairsWithTiming(startHeight uint64) (*types.TxResponse, *CommitPubRandTiming, error) {
 	timing := &CommitPubRandTiming{}
 
-	activationBlkHeight, err := fp.cc.QueryFinalityActivationBlockHeight()
+	activationBlkHeight, err := fp.consumerCon.QueryFinalityActivationBlockHeight()
 	if err != nil {
 		return nil, timing, err
 	}
@@ -58,7 +58,7 @@ func (fp *FinalityProviderInstance) commitPubRandPairsWithTiming(startHeight uin
 
 	// Measure getPubRandList
 	pubRandListStart := time.Now()
-	pubRandList, err := fp.getPubRandList(startHeight, fp.cfg.NumPubRand)
+	pubRandList, err := fp.GetPubRandList(startHeight, fp.cfg.NumPubRand)
 	if err != nil {
 		return nil, timing, fmt.Errorf("failed to generate randomness: %w", err)
 	}
@@ -76,12 +76,12 @@ func (fp *FinalityProviderInstance) commitPubRandPairsWithTiming(startHeight uin
 
 	// Measure CommitPubRandList
 	commitListStart := time.Now()
-	schnorrSig, err := fp.signPubRandCommit(startHeight, numPubRand, commitment)
+	schnorrSig, err := fp.SignPubRandCommit(startHeight, numPubRand, commitment)
 	if err != nil {
 		return nil, timing, fmt.Errorf("failed to sign the Schnorr signature: %w", err)
 	}
 
-	res, err := fp.cc.CommitPubRandList(fp.GetBtcPk(), startHeight, numPubRand, commitment, schnorrSig)
+	res, err := fp.consumerCon.CommitPubRandList(fp.GetBtcPk(), startHeight, numPubRand, commitment, schnorrSig)
 	if err != nil {
 		return nil, timing, fmt.Errorf("failed to commit public randomness to the consumer chain: %w", err)
 	}

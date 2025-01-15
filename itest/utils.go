@@ -49,9 +49,7 @@ func BaseDir(pattern string) (string, error) {
 		return "", err
 	}
 
-	t.Cleanup(func() {
-		_ = os.RemoveAll(tempName)
-	})
+	os.RemoveAll(tempName)
 
 	if err = os.Chmod(tempName, 0755); err != nil {
 		return "", err
@@ -128,7 +126,7 @@ func DefaultFpConfig(keyringDir, homeDir string) *config.Config {
 
 func DefaultFpConfigWithPorts(keyringDir, homeDir string, fpRpcPort, fpMetricsPort, eotsRpcPort int) *config.Config {
 	cfg := DefaultFpConfig(keyringDir, homeDir)
-	cfg.RpcListener = fmt.Sprintf("127.0.0.1:%d", fpRpcPort)
+	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", fpRpcPort)
 	cfg.EOTSManagerAddress = fmt.Sprintf("127.0.0.1:%d", eotsRpcPort)
 	cfg.Metrics.Port = fpMetricsPort
 	return cfg
@@ -136,10 +134,8 @@ func DefaultFpConfigWithPorts(keyringDir, homeDir string, fpRpcPort, fpMetricsPo
 
 // ParseRespBTCDelToBTCDel parses an BTC delegation response to BTC Delegation
 // adapted from
-// https://github.com/babylonlabs-io/babylon-private/blob/74a24c962ce2cf64e5216edba9383fe0b460070c/test/e2e/btc_staking_e2e_test.go#L773
-func ParseRespBTCDelToBTCDel(
-	resp *bstypes.BTCDelegationResponse,
-) (btcDel *bstypes.BTCDelegation, err error) {
+// https://github.com/babylonlabs-io/babylon/blob/1a3c50da64885452c8d669fcea2a2fad78c8a028/test/e2e/btc_staking_e2e_test.go#L548
+func ParseRespBTCDelToBTCDel(resp *bstypes.BTCDelegationResponse) (btcDel *bstypes.BTCDelegation, err error) {
 	stakingTx, err := hex.DecodeString(resp.StakingTxHex)
 	if err != nil {
 		return nil, err
@@ -194,14 +190,6 @@ func ParseRespBTCDelToBTCDel(
 			CovenantSlashingSigs:     ud.CovenantSlashingSigs,
 			SlashingTx:               slashTx,
 			DelegatorSlashingSig:     delSlashingSig,
-		}
-
-		if len(ud.DelegatorUnbondingSigHex) > 0 {
-			delUnbondingSig, err := bbntypes.NewBIP340SignatureFromHex(ud.DelegatorUnbondingSigHex)
-			if err != nil {
-				return nil, err
-			}
-			btcDel.BtcUndelegation.DelegatorUnbondingSig = delUnbondingSig
 		}
 	}
 

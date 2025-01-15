@@ -648,6 +648,12 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderHighestVotedHeight(fp
 	return 0, nil
 }
 
+// QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
+func (wc *CosmwasmConsumerController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
+	// TODO: implement slashed or jailed feature in OP stack L2
+	return false, false, nil
+}
+
 func (wc *CosmwasmConsumerController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error) {
 	// TODO: implement unjail feature in OP stack L2
 	return nil, nil

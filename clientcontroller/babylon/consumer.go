@@ -403,6 +403,17 @@ func (bc *BabylonConsumerController) queryCometBestBlock() (*types.BlockInfo, er
 	}, nil
 }
 
+// QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
+func (bc *BabylonConsumerController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+	if err != nil {
+		return false, false, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
+	}
+
+	return res.FinalityProvider.SlashedBtcHeight > 0, res.FinalityProvider.Jailed, nil
+}
+
 func (bc *BabylonConsumerController) Close() error {
 	if !bc.bbnClient.IsRunning() {
 		return nil
