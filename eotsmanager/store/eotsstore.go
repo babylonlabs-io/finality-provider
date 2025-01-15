@@ -200,3 +200,7 @@ func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*Signi
 
 	return res, true, nil
 }
+
+func (s *EOTSStore) Close() error {
+	return s.db.Close()
+}

@@ -32,11 +32,12 @@ gain an overall understanding of the finality provider.
    4. [Starting the Finality Provider Daemon](#44-starting-the-finality-provider-daemon)
 5. [Finality Provider Operation](#5-finality-provider-operations)
    1. [Create Finality Provider](#51-create-finality-provider)
-   2. [Withdrawing Rewards](#52-withdrawing-rewards)
-   3. [Jailing and Unjailing](#53-jailing-and-unjailing)
-   4. [Slashing](#54-slashing)
-   5. [Prometheus Metrics](#55-prometheus-metrics)
-   6. [Withdrawing Rewards](#56-withdrawing-rewards)
+   2. [Editing your finality provider](#52-editing-your-finality-provider)
+   3. [Withdrawing Rewards](#53-withdrawing-rewards)
+   4. [Jailing and Unjailing](#54-jailing-and-unjailing)
+   5. [Slashing](#55-slashing)
+   6. [Prometheus Metrics](#56-prometheus-metrics)
+   7. [Withdrawing Rewards](#57-withdrawing-rewards)
 
 ## 1. A note about Phase-1 Finality Providers
 
@@ -400,6 +401,12 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > instructions on setting up a Babylon node 
 > [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/babylon-node/README.md).
 
+> ⚠️ **Critical RPC Configuration**:
+> When configuring your finality provider to a Babylon RPC node, you should
+> connect to a **single** node directly. Additionally you **must** 
+> ensure that this node has transaction indexing enabled (`indexer = "kv"`). 
+> Using multiple RPC nodes or load balancers can lead to sync issues.
+
 Configuration parameters explained:
 * `EOTSManagerAddress`: Address where your EOTS daemon is running
 * `RPCListener`: Address for the finality provider RPC server
@@ -515,6 +522,7 @@ Required parameters:
 - `--key-name`: The key name in your Babylon keyring that your finality
   provider will be associated with
 - `--moniker`: A human-readable name for your finality provider
+- `--home`: Path to your finality provider daemon home directory
 
 > ⚠️ **Important**: The same EOTS key should not be used by different 
 > finality providers. This could lead to slashing.
@@ -615,14 +623,46 @@ by running:
 fpd start --eots-pk <hex-string-of-eots-public-key>
 ```
 
-### 5.2. Withdrawing Rewards
+### 5.2. Editing your finality provider
+
+If you need to edit your finality provider's information, you can use the 
+following command:
+
+```shell
+fpd edit-finality-provider <hex-string-of-eots-public-key> \
+  --commission-rate <commission-rate> \
+  --home <path-to-fpd-home-dir>
+  # Add any other parameters you would like to modify
+```
+
+Parameters:
+- `<hex-string-of-eots-public-key>`: The EOTS public key of the finality provider
+- `--commission-rate`: A required flag for the commission rate for the finality 
+  provider
+- `--home`: An optional flag for the path to your finality provider daemon home 
+  directory
+
+Parameters you can edit:
+- `--moniker`: A human-readable name for your finality provider
+- `--website`: Your finality provider's website 
+- `--security-contact`: Contact email for security issues 
+- `--details`: Additional description of your finality provider
+
+You can then use the following command to check if the finality provider has been 
+edited successfully:
+
+```shell
+fpd finality-provider-info <hex-string-of-eots-public-key>
+```
+
+### 5.3. Withdrawing Rewards
 
 As a participant in the Finality Provider Program, you will earn rewards that 
 can be withdrawn. The functionality for withdrawing rewards is currently under 
 development and will be available soon. Further updates will be provided once 
 this feature is implemented.
 
-### 5.3. Jailing and Unjailing
+### 5.4. Jailing and Unjailing
 
 When jailed, the following happens to a finality provider:
 - Their voting power becomes `0`
@@ -649,7 +689,7 @@ Parameters:
 If unjailing is successful, you may start running the finality provider by
 `fpd start --eots-pk <hex-string-of-eots-public-key>`.
 
-### 5.4. Slashing
+### 5.5. Slashing
 
 **Slashing occurs** when a finality provider **double signs**, meaning that the
 finality provider signs conflicting blocks at the same height. This results in
@@ -659,7 +699,7 @@ removal from the active set.
 > ⚠️ **Critical**: Slashing is irreversible and results in
 > permanent removal from the network.
 
-### 5.5. Prometheus Metrics
+### 5.6. Prometheus Metrics
 
 The finality provider exposes Prometheus metrics for monitoring your 
 finality provider. The metrics endpoint is configurable in `fpd.conf`:

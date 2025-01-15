@@ -43,7 +43,7 @@ func FuzzChainPoller_Start(f *testing.F) {
 				Height: i,
 			}}
 
-			mockClientController.EXPECT().QueryBlocks(i, endHeight, uint32(endHeight)).Return(resBlocks, nil).AnyTimes()
+			mockClientController.EXPECT().QueryBlocks(i, endHeight, endHeight).Return(resBlocks, nil).AnyTimes()
 		}
 
 		m := metrics.NewFpMetrics()
