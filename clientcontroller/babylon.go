@@ -332,13 +332,13 @@ func (bc *BabylonController) QueryLastCommittedPublicRand(fpPk *btcec.PublicKey,
 	return res.PubRandCommitMap, nil
 }
 
-func (bc *BabylonController) QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types.BlockInfo, error) {
+func (bc *BabylonController) QueryBlocks(startHeight, endHeight uint64, limit uint64) ([]*types.BlockInfo, error) {
 	if endHeight < startHeight {
 		return nil, fmt.Errorf("the startHeight %v should not be higher than the endHeight %v", startHeight, endHeight)
 	}
 	count := endHeight - startHeight + 1
-	if count > uint64(limit) {
-		count = uint64(limit)
+	if count > limit {
+		count = limit
 	}
 
 	return bc.queryLatestBlocks(sdk.Uint64ToBigEndian(startHeight), count, finalitytypes.QueriedBlockStatus_ANY, false)
