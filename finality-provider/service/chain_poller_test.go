@@ -141,7 +141,7 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 
 		skipped := false
 		seenHeight := map[uint64]struct{}{}
-		for i := startHeight; i <= endHeight; i++ {
+		for uint64(len(seenHeight)) <= endHeight-startHeight {
 			if skipped {
 				break
 			}

@@ -202,6 +202,9 @@ func (cp *ChainPoller) pollChain() {
 
 	cp.waitForActivation()
 
+	ticker := time.NewTicker(cp.cfg.PollInterval)
+	defer ticker.Stop()
+
 	var failedCycles uint32
 
 	for {
@@ -257,7 +260,7 @@ func (cp *ChainPoller) pollChain() {
 			cp.logger.Fatal("the poller has reached the max failed cycles, exiting")
 		}
 		select {
-		case <-time.After(cp.cfg.PollInterval):
+		case <-ticker.C:
 			continue
 		case req := <-cp.skipHeightChan:
 			// no need to skip heights if the target height is not higher
