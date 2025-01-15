@@ -61,7 +61,7 @@ func NewBabylonController(
 	}
 
 	// makes sure that the key in config really exists and is a valid bech32 addr
-	// to allow using mustGetTxSigner
+	// to allow using MustGetTxSigner
 	if _, err := bc.GetAddr(); err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func (bc *BabylonController) SubmitBatchFinalitySigs(
 // UnjailFinalityProvider sends an unjail transaction to the consumer chain
 func (bc *BabylonController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error) {
 	msg := &finalitytypes.MsgUnjailFinalityProvider{
-		Signer:  bc.mustGetTxSigner(),
+		Signer:  bc.MustGetTxSigner(),
 		FpBtcPk: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
 	}
 
@@ -295,7 +295,7 @@ func (bc *BabylonController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey
 	if err != nil {
 		// voting power table not updated indicates that no fp has voting power
 		// therefore, it should be treated as the fp having 0 voting power
-		if strings.Contains(err.Error(), btcstakingtypes.ErrVotingPowerTableNotUpdated.Error()) {
+		if strings.Contains(err.Error(), finalitytypes.ErrVotingPowerTableNotUpdated.Error()) {
 			bc.logger.Info("the voting power table not updated yet")
 			return false, nil
 		}
@@ -563,9 +563,9 @@ func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
 		return nil, err
 	}
 
-	if !strings.EqualFold(fpRes.FinalityProvider.Addr, bc.mustGetTxSigner()) {
+	if !strings.EqualFold(fpRes.FinalityProvider.Addr, bc.MustGetTxSigner()) {
 		return nil, fmt.Errorf("the signer does not correspond to the finality provider's "+
-			"Babylon address, expected %s got %s", bc.mustGetTxSigner(), fpRes.FinalityProvider.Addr)
+			"Babylon address, expected %s got %s", bc.MustGetTxSigner(), fpRes.FinalityProvider.Addr)
 	}
 
 	getValueOrDefault := func(reqValue, defaultValue string) string {
@@ -587,7 +587,7 @@ func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
 	}
 
 	msg := &btcstakingtypes.MsgEditFinalityProvider{
-		Addr:        bc.mustGetTxSigner(),
+		Addr:        bc.MustGetTxSigner(),
 		BtcPk:       fpPubKey.MustMarshal(),
 		Description: desc,
 		Commission:  fpRes.FinalityProvider.Commission,

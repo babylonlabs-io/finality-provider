@@ -3,10 +3,9 @@ package api
 import (
 	"cosmossdk.io/math"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-
-	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 const babylonConsumerChainType = "babylon"
@@ -22,6 +21,9 @@ type ClientController interface {
 		commission *math.LegacyDec,
 		description []byte,
 	) (*types.TxResponse, error)
+
+	// QueryFinalityProvider queries the finality provider by pk
+	QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error)
 
 	// Note: the following queries are only for PoC
 
@@ -54,9 +56,6 @@ type ConsumerController interface {
 		The following methods are queries to the consumer chain
 	*/
 
-	// QueryFinalityProvider queries the finality provider by pk
-	QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error)
-
 	// QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
 	QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error)
 
@@ -67,11 +66,8 @@ type ConsumerController interface {
 	// QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
 	QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error)
 
-	// QueryLatestFinalizedBlocks returns the latest finalized blocks
-	QueryLatestFinalizedBlocks(count uint64) ([]*types.BlockInfo, error)
-
-	// QueryLastCommittedPublicRand returns the last committed public randomness
-	QueryLastCommittedPublicRand(fpPk *btcec.PublicKey, count uint64) (map[uint64]*finalitytypes.PubRandCommitResponse, error)
+	// QueryLastPublicRandCommit returns the last public randomness commitment
+	QueryLastPublicRandCommit(fpPk *btcec.PublicKey) (*types.PubRandCommit, error)
 
 	// QueryBlock queries the block at the given height
 	QueryBlock(height uint64) (*types.BlockInfo, error)
@@ -97,23 +93,4 @@ type ConsumerController interface {
 	QueryFinalityActivationBlockHeight() (uint64, error)
 
 	Close() error
-}
-
-func NewClientController(chainType string, bbnConfig *fpcfg.BBNConfig, netParams *chaincfg.Params, logger *zap.Logger) (ClientController, error) {
-	var (
-		cc  ClientController
-		err error
-	)
-
-	switch chainType {
-	case babylonConsumerChainType:
-		cc, err = NewBabylonController(bbnConfig, netParams, logger)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
-		}
-	default:
-		return nil, fmt.Errorf("unsupported consumer chain")
-	}
-
-	return cc, err
 }
