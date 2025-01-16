@@ -33,17 +33,13 @@ func FuzzCommitPubRandList(f *testing.F) {
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
 		startingBlock := &types.BlockInfo{Height: randomStartingHeight, Hash: testutil.GenRandomByteArray(r, 32)}
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
-		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
+		expectedTxHash := testutil.GenRandomHexStr(r, 32)
+		mockConsumerController := testutil.PrepareMockedConsumerControllerWithTxHash(t, r, randomStartingHeight, currentHeight, expectedTxHash)
 		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).
 			Return(false, nil).AnyTimes()
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
 
-		expectedTxHash := testutil.GenRandomHexStr(r, 32)
-		mockConsumerController.EXPECT().
-			CommitPubRandList(fpIns.GetBtcPk(), startingBlock.Height, gomock.Any(), gomock.Any(), gomock.Any()).
-			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any()).Return(nil, nil).AnyTimes()
 		res, err := fpIns.CommitPubRand(startingBlock.Height)
 		require.NoError(t, err)
 		require.Equal(t, expectedTxHash, res.TxHash)
@@ -60,12 +56,11 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		startingBlock := &types.BlockInfo{Height: randomStartingHeight, Hash: testutil.GenRandomByteArray(r, 32)}
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
-		mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(uint64(0), nil).AnyTimes()
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
 
 		// commit pub rand
-		mockConsumerController.EXPECT().CommitPubRandList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 		_, err := fpIns.CommitPubRand(startingBlock.Height)
 		require.NoError(t, err)
 
@@ -116,6 +111,7 @@ func FuzzDetermineStartHeight(f *testing.F) {
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
 
 		// setup mocks
+		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight().Return(finalityActivationHeight, nil).AnyTimes()
 		mockConsumerController.EXPECT().
 			QueryFinalityProviderHighestVotedHeight(gomock.Any()).
 			Return(highestVotedHeight, nil).
