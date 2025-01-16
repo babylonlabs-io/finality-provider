@@ -229,11 +229,16 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, true, nil).AnyTimes()
 		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
 
+		expectedTxHash := testutil.GenRandomHexStr(r, 32)
+
 		// Create fp app
 		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockClientController)
 		defer cleanup()
 
-		expectedTxHash := datagen.GenRandomHexStr(r, 32)
+		mockClientController.EXPECT().
+			CommitPubRandList(fpPk.MustToBTCPK(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
+
 		mockClientController.EXPECT().UnjailFinalityProvider(fpPk.MustToBTCPK()).Return(&types.TxResponse{TxHash: expectedTxHash}, nil)
 		err := app.StartFinalityProvider(fpPk, "")
 		require.NoError(t, err)
