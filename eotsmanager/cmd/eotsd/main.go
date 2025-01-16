@@ -1,30 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/urfave/cli"
-
-	dcli "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 )
 
-func fatal(err error) {
-	fmt.Fprintf(os.Stderr, "[eotsd] %v\n", err)
-	os.Exit(1)
-}
-
 func main() {
-	app := cli.NewApp()
-	app.Name = "eotsd"
-	app.Usage = "Extractable One Time Signature Daemon (eotsd)."
-	app.Commands = append(
-		app.Commands, dcli.StartCommand, dcli.InitCommand, dcli.SignSchnorrSig, dcli.VerifySchnorrSig,
-		dcli.ExportPoPCommand,
-	)
-	app.Commands = append(app.Commands, dcli.KeysCommands...)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
 
-	if err := app.Run(os.Args); err != nil {
-		fatal(err)
+	if err := daemon.NewRootCmd().ExecuteContext(ctx); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Error while executing eotsd CLI: %s", err.Error())
+		os.Exit(1) //nolint:gocritic
 	}
 }

@@ -23,9 +23,17 @@ service EOTSManager {
   rpc SignEOTS (SignEOTSRequest)
       returns (SignEOTSResponse);
 
+  // UnsafeSignEOTS used only for testing purpose. Use SignEOTS for real operations
+  rpc UnsafeSignEOTS (SignEOTSRequest)
+      returns (SignEOTSResponse);
+
   // SignSchnorrSig signs a Schnorr sig with the EOTS private key
   rpc SignSchnorrSig (SignSchnorrSigRequest)
       returns (SignSchnorrSigResponse);
+
+  // SaveEOTSKeyName saves a new key name mapping for the EOTS public key
+  rpc SaveEOTSKeyName (SaveEOTSKeyNameRequest)
+      returns (SaveEOTSKeyNameResponse);
 }
 
 message PingRequest {}
@@ -109,3 +117,13 @@ message SignSchnorrSigResponse {
   // sig is the Schnorr signature
   bytes sig = 1;
 }
+
+message SaveEOTSKeyNameRequest {
+  // KeyName is the name of the key which corresponds to the
+  // BIP340 public key
+  string key_name = 1;
+  // EotsPK is the public key of the EOTS key BIP340PubKey
+  bytes eots_pk = 2;
+}
+
+message SaveEOTSKeyNameResponse {}

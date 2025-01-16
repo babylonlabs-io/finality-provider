@@ -1,6 +1,7 @@
 package test_manager
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"math/rand"
@@ -68,7 +69,7 @@ func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.Publ
 	delBtcPrivKey, delBtcPubKey, err := datagen.GenRandomBTCKeyPair(r)
 	require.NoError(t, err)
 
-	unbondingTime := uint16(tm.StakingParams.MinimumUnbondingTime()) + 1
+	unbondingTime := uint16(tm.StakingParams.UnbondingTime) + 1
 	testStakingInfo := datagen.GenBTCStakingSlashingInfo(
 		r,
 		t,
@@ -319,7 +320,7 @@ func (tm *BaseTestManager) InsertCovenantSigForDelegation(t *testing.T, btcDel *
 		fpKeys,
 		params.CovenantPks,
 		params.CovenantQuorum,
-		btcDel.GetStakingTime(),
+		uint16(btcDel.GetStakingTime()),
 		btcutil.Amount(btcDel.TotalSat),
 		e2eutils.BtcNetworkParams,
 	)
@@ -565,8 +566,8 @@ func StartEotsManagers(
 		eotsConfigs[i] = eotsCfg
 	}
 
-	eh := e2eutils.NewEOTSServerHandlerMultiFP(t, logger, eotsConfigs, eotsHomeDirs, shutdownInterceptor)
-	eh.Start()
+	eh := e2eutils.NewEOTSServerHandler(t, eotsConfigs[0], eotsHomeDirs[0])
+	eh.Start(context.Background())
 
 	// create EOTS clients
 	for i := 0; i < len(fpCfgs); i++ {
@@ -597,13 +598,13 @@ func CreateAndStartFpApp(
 	bc, err := bbncc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
 	require.NoError(t, err)
 
-	fpdb, err := cfg.DatabaseConfig.GetDbBackend()
+	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, fpdb, logger)
 	require.NoError(t, err)
 
-	err = fpApp.StartWithoutSyncFpStatus()
+	err = fpApp.Start()
 	require.NoError(t, err)
 
 	return fpApp
@@ -620,7 +621,6 @@ func CreateAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProv
 		keyName,
 		chainId,
 		e2eutils.Passphrase,
-		e2eutils.HdPath,
 		nil,
 		desc,
 		&commission,
@@ -630,7 +630,5 @@ func CreateAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProv
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
 	require.NoError(t, err)
 
-	_, err = fpApp.RegisterFinalityProvider(fpPk.MarshalHex())
-	require.NoError(t, err)
 	return fpPk
 }

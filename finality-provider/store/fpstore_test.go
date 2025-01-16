@@ -8,23 +8,25 @@ import (
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/stretchr/testify/require"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/testutil"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // FuzzFinalityProvidersStore tests save and list finality providers properly
 func FuzzFinalityProvidersStore(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		homePath := t.TempDir()
 		cfg := config.DefaultDBConfigWithHomePath(homePath)
 
-		fpdb, err := cfg.GetDbBackend()
+		fpdb, err := cfg.GetDBBackend()
 		require.NoError(t, err)
 		vs, err := fpstore.NewFinalityProviderStore(fpdb)
 		require.NoError(t, err)
@@ -46,9 +48,7 @@ func FuzzFinalityProvidersStore(f *testing.F) {
 			fp.BtcPk,
 			fp.Description,
 			fp.Commission,
-			fp.KeyName,
 			fp.ChainID,
-			fp.Pop.BtcSig,
 		)
 		require.NoError(t, err)
 
@@ -59,9 +59,7 @@ func FuzzFinalityProvidersStore(f *testing.F) {
 			fp.BtcPk,
 			fp.Description,
 			fp.Commission,
-			fp.KeyName,
 			fp.ChainID,
-			fp.Pop.BtcSig,
 		)
 		require.ErrorIs(t, err, fpstore.ErrDuplicateFinalityProvider)
 
@@ -81,6 +79,7 @@ func FuzzFinalityProvidersStore(f *testing.F) {
 }
 
 func TestUpdateFpStatusFromVotingPower(t *testing.T) {
+	t.Parallel()
 	r := rand.New(rand.NewSource(10))
 	anyFpStatus := proto.FinalityProviderStatus(100)
 
@@ -91,13 +90,6 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 		expStatus          proto.FinalityProviderStatus
 		expErr             error
 	}{
-		{
-			"zero vp: Created to Registered",
-			proto.FinalityProviderStatus_CREATED,
-			0,
-			proto.FinalityProviderStatus_REGISTERED,
-			nil,
-		},
 		{
 			"zero vp: Active to Inactive",
 			proto.FinalityProviderStatus_ACTIVE,
@@ -127,13 +119,6 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 			nil,
 		},
 		{
-			"vp > 0: Created to Active",
-			proto.FinalityProviderStatus_CREATED,
-			1,
-			proto.FinalityProviderStatus_ACTIVE,
-			nil,
-		},
-		{
 			"vp > 0: Registered to Active",
 			proto.FinalityProviderStatus_REGISTERED,
 			1,
@@ -155,13 +140,6 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 			fpstore.ErrFinalityProviderNotFound,
 		},
 		{
-			"err: fp not found and vp == 0 && created",
-			proto.FinalityProviderStatus_CREATED,
-			0,
-			anyFpStatus,
-			fpstore.ErrFinalityProviderNotFound,
-		},
-		{
 			"err: fp not found and vp == 0 && active",
 			proto.FinalityProviderStatus_ACTIVE,
 			0,
@@ -173,20 +151,22 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 	homePath := t.TempDir()
 	cfg := config.DefaultDBConfigWithHomePath(homePath)
 
-	fpdb, err := cfg.GetDbBackend()
+	fpdb, err := cfg.GetDBBackend()
 	require.NoError(t, err)
 	fps, err := fpstore.NewFinalityProviderStore(fpdb)
 	require.NoError(t, err)
 
-	defer func() {
+	t.Cleanup(func() {
 		err := fpdb.Close()
 		require.NoError(t, err)
 		err = os.RemoveAll(homePath)
 		require.NoError(t, err)
-	}()
+	})
 
 	for _, tc := range tcs {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			fp := testutil.GenRandomFinalityProvider(r, t)
 			fp.Status = tc.fpStoredStatus
 			if tc.expErr == nil {
@@ -195,9 +175,7 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 					fp.BtcPk,
 					fp.Description,
 					fp.Commission,
-					fp.KeyName,
 					fp.ChainID,
-					fp.Pop.BtcSig,
 				)
 				require.NoError(t, err)
 
@@ -208,6 +186,7 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 			actStatus, err := fps.UpdateFpStatusFromVotingPower(tc.votingPowerOnChain > 0, fp)
 			if tc.expErr != nil {
 				require.EqualError(t, err, tc.expErr.Error())
+
 				return
 			}
 			require.NoError(t, err)

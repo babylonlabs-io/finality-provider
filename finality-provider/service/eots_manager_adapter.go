@@ -4,19 +4,20 @@ import (
 	"fmt"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
-func (fp *FinalityProviderInstance) GetPubRandList(startHeight uint64, numPubRand uint64) ([]*btcec.FieldVal, error) {
+func (fp *FinalityProviderInstance) GetPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
 	pubRandList, err := fp.em.CreateRandomnessPairList(
 		fp.btcPk.MustMarshal(),
 		fp.GetChainID(),
 		startHeight,
-		uint32(numPubRand),
+		numPubRand,
 		fp.passphrase,
 	)
 	if err != nil {
@@ -26,7 +27,6 @@ func (fp *FinalityProviderInstance) GetPubRandList(startHeight uint64, numPubRan
 	return pubRandList, nil
 }
 
-// TODO: have this function in Babylon side
 func getHashToSignForCommitPubRand(startHeight uint64, numPubRand uint64, commitment []byte) ([]byte, error) {
 	hasher := tmhash.New()
 	if _, err := hasher.Write(sdk.Uint64ToBigEndian(startHeight)); err != nil {
@@ -38,6 +38,7 @@ func getHashToSignForCommitPubRand(startHeight uint64, numPubRand uint64, commit
 	if _, err := hasher.Write(commitment); err != nil {
 		return nil, err
 	}
+
 	return hasher.Sum(nil), nil
 }
 
@@ -51,7 +52,6 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 	return fp.em.SignSchnorrSig(fp.btcPk.MustMarshal(), hash, fp.passphrase)
 }
 
-// TODO: have this function in Babylon side
 func getMsgToSignForVote(blockHeight uint64, blockHash []byte) []byte {
 	return append(sdk.Uint64ToBigEndian(blockHeight), blockHash...)
 }

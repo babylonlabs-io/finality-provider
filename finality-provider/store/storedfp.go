@@ -13,16 +13,13 @@ import (
 )
 
 type StoredFinalityProvider struct {
-	FPAddr              string
-	BtcPk               *btcec.PublicKey
-	Description         *stakingtypes.Description
-	Commission          *sdkmath.LegacyDec
-	Pop                 *proto.ProofOfPossession
-	KeyName             string
-	ChainID             string
-	LastVotedHeight     uint64
-	LastProcessedHeight uint64
-	Status              proto.FinalityProviderStatus
+	FPAddr          string
+	BtcPk           *btcec.PublicKey
+	Description     *stakingtypes.Description
+	Commission      *sdkmath.LegacyDec
+	ChainID         string
+	LastVotedHeight uint64
+	Status          proto.FinalityProviderStatus
 }
 
 func protoFpToStoredFinalityProvider(fp *proto.FinalityProvider) (*StoredFinalityProvider, error) {
@@ -42,18 +39,13 @@ func protoFpToStoredFinalityProvider(fp *proto.FinalityProvider) (*StoredFinalit
 	}
 
 	return &StoredFinalityProvider{
-		FPAddr:      fp.FpAddr,
-		BtcPk:       btcPk,
-		Description: &des,
-		Commission:  &commission,
-		Pop: &proto.ProofOfPossession{
-			BtcSig: fp.Pop.BtcSig,
-		},
-		KeyName:             fp.KeyName,
-		ChainID:             fp.ChainId,
-		LastVotedHeight:     fp.LastVotedHeight,
-		LastProcessedHeight: fp.LastProcessedHeight,
-		Status:              fp.Status,
+		FPAddr:          fp.FpAddr,
+		BtcPk:           btcPk,
+		Description:     &des,
+		Commission:      &commission,
+		ChainID:         fp.ChainId,
+		LastVotedHeight: fp.LastVotedHeight,
+		Status:          fp.Status,
 	}, nil
 }
 
@@ -76,17 +68,4 @@ func (sfp *StoredFinalityProvider) ToFinalityProviderInfo() *proto.FinalityProvi
 		LastVotedHeight: sfp.LastVotedHeight,
 		Status:          sfp.Status.String(),
 	}
-}
-
-// ShouldStart returns true if the finality provider should start his instance
-// based on the current status of the finality provider.
-//
-// It returns false if the status is either 'CREATED' or 'SLASHED'.
-// It returs true for all the other status.
-func (sfp *StoredFinalityProvider) ShouldStart() bool {
-	if sfp.Status == proto.FinalityProviderStatus_CREATED || sfp.Status == proto.FinalityProviderStatus_SLASHED {
-		return false
-	}
-
-	return true
 }

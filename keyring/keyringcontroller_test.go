@@ -40,7 +40,7 @@ func FuzzCreatePoP(f *testing.F) {
 
 		eotsHome := filepath.Join(t.TempDir(), "eots-home")
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHome)
-		dbBackend, err := eotsCfg.DatabaseConfig.GetDbBackend()
+		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
 		logger, err := zap.NewDevelopment()
 		require.NoError(t, err)

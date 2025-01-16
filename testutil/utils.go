@@ -15,6 +15,7 @@ const TestPubRandNum = 25
 
 func ZeroCommissionRate() *sdkmath.LegacyDec {
 	zeroCom := sdkmath.LegacyZeroDec()
+
 	return &zeroCom
 }
 

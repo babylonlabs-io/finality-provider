@@ -52,18 +52,21 @@ func NewRootLogger(format string, level string, w io.Writer) (*zap.Logger, error
 		return nil, fmt.Errorf("unsupported log level: %s", level)
 	}
 
-	return zap.New(zapcore.NewCore(
-		enc,
-		zapcore.AddSync(w),
-		lvl,
-	)), nil
+	return zap.New(
+		zapcore.NewCore(
+			enc,
+			zapcore.AddSync(w),
+			lvl,
+		),
+	), nil
 }
 
 func NewRootLoggerWithFile(logFile string, level string) (*zap.Logger, error) {
 	if err := util.MakeDirectory(filepath.Dir(logFile)); err != nil {
 		return nil, err
 	}
-	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0660)
+	// #nosec G304 - The log file path is provided by the user and not externally
+	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -73,5 +76,6 @@ func NewRootLoggerWithFile(logFile string, level string) (*zap.Logger, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return logger, nil
 }

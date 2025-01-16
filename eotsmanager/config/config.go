@@ -37,7 +37,7 @@ var (
 type Config struct {
 	LogLevel       string          `long:"loglevel" description:"Logging level for all subsystems" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal"`
 	KeyringBackend string          `long:"keyring-type" description:"Type of keyring to use"`
-	RpcListener    string          `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
+	RPCListener    string          `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
 	Metrics        *metrics.Config `group:"metrics" namespace:"metrics"`
 
 	DatabaseConfig *DBConfig `group:"dbconfig" namespace:"dbconfig"`
@@ -54,7 +54,7 @@ type Config struct {
 func LoadConfig(homePath string) (*Config, error) {
 	// The home directory is required to have a configuration file with a specific name
 	// under it.
-	cfgFile := ConfigFile(homePath)
+	cfgFile := CfgFile(homePath)
 	if !util.FileExists(cfgFile) {
 		return nil, fmt.Errorf("specified config file does "+
 			"not exist in %s", cfgFile)
@@ -80,9 +80,9 @@ func LoadConfig(homePath string) (*Config, error) {
 // illegal values or combination of values are set. All file system paths are
 // normalized. The cleaned up config is returned on success.
 func (cfg *Config) Validate() error {
-	_, err := net.ResolveTCPAddr("tcp", cfg.RpcListener)
+	_, err := net.ResolveTCPAddr("tcp", cfg.RPCListener)
 	if err != nil {
-		return fmt.Errorf("invalid RPC listener address %s, %w", cfg.RpcListener, err)
+		return fmt.Errorf("invalid RPC listener address %s, %w", cfg.RPCListener, err)
 	}
 
 	if cfg.KeyringBackend == "" {
@@ -100,7 +100,7 @@ func (cfg *Config) Validate() error {
 	return nil
 }
 
-func ConfigFile(homePath string) string {
+func CfgFile(homePath string) string {
 	return filepath.Join(homePath, defaultConfigFileName)
 }
 
@@ -129,13 +129,14 @@ func DefaultConfigWithHomePathAndPorts(homePath string, rpcPort, metricsPort int
 		LogLevel:       defaultLogLevel,
 		KeyringBackend: defaultKeyringBackend,
 		DatabaseConfig: DefaultDBConfigWithHomePath(homePath),
-		RpcListener:    defaultRpcListener,
+		RPCListener:    defaultRpcListener,
 		Metrics:        metrics.DefaultEotsConfig(),
 	}
-	cfg.RpcListener = fmt.Sprintf("%s:%d", DefaultRPCHost, rpcPort)
+	cfg.RPCListener = fmt.Sprintf("%s:%d", DefaultRPCHost, rpcPort)
 	cfg.Metrics.Port = metricsPort
 	if err := cfg.Validate(); err != nil {
 		panic(err)
 	}
+
 	return cfg
 }

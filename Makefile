@@ -15,7 +15,9 @@ MOCKGEN_REPO=github.com/golang/mock/mockgen
 MOCKGEN_VERSION=v1.6.0
 MOCKGEN_CMD=go run ${MOCKGEN_REPO}@${MOCKGEN_VERSION}
 
-ldflags := $(LDFLAGS)
+VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
+
+ldflags := $(LDFLAGS) -X github.com/babylonlabs-io/finality-provider/version.version=$(VERSION)
 build_tags := $(BUILD_TAGS)
 build_args := $(BUILD_ARGS)
 
@@ -67,7 +69,7 @@ lint:
 
 .PHONY: test
 test:
-	go test ./...
+	go test -v ./...
 
 install-babylond:
 	cd $(TOOLS_DIR); \
@@ -148,3 +150,57 @@ update-changelog:
 	./scripts/update_changelog.sh $(sinceTag) $(upcomingTag)
 
 .PHONY: update-changelog
+
+###############################################################################
+###                                Release                                  ###
+###############################################################################
+
+# The below is adapted from https://github.com/osmosis-labs/osmosis/blob/main/Makefile
+GO_VERSION := $(shell grep -E '^go [0-9]+\.[0-9]+' go.mod | awk '{print $$2}')
+GORELEASER_IMAGE := ghcr.io/goreleaser/goreleaser-cross:v$(GO_VERSION)
+COSMWASM_VERSION := $(shell go list -m github.com/CosmWasm/wasmvm/v2 | sed 's/.* //')
+
+.PHONY: release-dry-run release-snapshot release
+release-dry-run:
+	docker run \
+		--rm \
+		-e COSMWASM_VERSION=$(COSMWASM_VERSION) \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/babylon \
+		-w /go/src/babylon \
+		$(GORELEASER_IMAGE) \
+		release \
+		--clean \
+		--skip=publish
+
+release-snapshot:
+	docker run \
+		--rm \
+		-e COSMWASM_VERSION=$(COSMWASM_VERSION) \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/babylon \
+		-w /go/src/babylon \
+		$(GORELEASER_IMAGE) \
+		release \
+		--clean \
+		--snapshot \
+		--skip=publish,validate \
+
+# NOTE: By default, the CI will handle the release process.
+# this is for manually releasing.
+ifdef GITHUB_TOKEN
+release:
+	docker run \
+		--rm \
+		-e GITHUB_TOKEN=$(GITHUB_TOKEN) \
+		-e COSMWASM_VERSION=$(COSMWASM_VERSION) \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/babylon \
+		-w /go/src/babylon \
+		$(GORELEASER_IMAGE) \
+		release \
+		--clean
+else
+release:
+	@echo "Error: GITHUB_TOKEN is not defined. Please define it before running 'make release'."
+endif

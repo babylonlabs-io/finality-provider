@@ -12,8 +12,8 @@ import (
 	"github.com/babylonlabs-io/finality-provider/codec"
 )
 
-func CreateKeyring(keyringDir string, chainId string, backend string, input *strings.Reader) (keyring.Keyring, error) {
-	ctx, err := CreateClientCtx(keyringDir, chainId)
+func CreateKeyring(keyringDir string, chainID string, backend string, input *strings.Reader) (keyring.Keyring, error) {
+	ctx, err := CreateClientCtx(keyringDir, chainID)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func CreateKeyring(keyringDir string, chainId string, backend string, input *str
 	return kr, nil
 }
 
-func CreateClientCtx(keyringDir string, chainId string) (client.Context, error) {
+func CreateClientCtx(keyringDir string, chainID string) (client.Context, error) {
 	var err error
 	var homeDir string
 
@@ -49,7 +49,7 @@ func CreateClientCtx(keyringDir string, chainId string) (client.Context, error) 
 	}
 
 	return client.Context{}.
-		WithChainID(chainId).
+		WithChainID(chainID).
 		WithCodec(codec.MakeCodec()).
 		WithKeyringDir(keyringDir), nil
 }

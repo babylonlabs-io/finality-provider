@@ -83,6 +83,16 @@ func (c *EOTSManagerGRpcClient) CreateRandomnessPairList(uid, chainID []byte, st
 	return pubRandFieldValList, nil
 }
 
+func (c *EOTSManagerGRpcClient) SaveEOTSKeyName(pk *btcec.PublicKey, keyName string) error {
+	req := &proto.SaveEOTSKeyNameRequest{
+		KeyName: keyName,
+		EotsPk:  pk.SerializeUncompressed(),
+	}
+	_, err := c.client.SaveEOTSKeyName(context.Background(), req)
+
+	return err
+}
+
 func (c *EOTSManagerGRpcClient) KeyRecord(uid []byte, passphrase string) (*types.KeyRecord, error) {
 	req := &proto.KeyRecordRequest{Uid: uid, Passphrase: passphrase}
 
@@ -108,6 +118,25 @@ func (c *EOTSManagerGRpcClient) SignEOTS(uid, chaiID, msg []byte, height uint64,
 		Passphrase: passphrase,
 	}
 	res, err := c.client.SignEOTS(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	var s btcec.ModNScalar
+	s.SetByteSlice(res.Sig)
+
+	return &s, nil
+}
+
+func (c *EOTSManagerGRpcClient) UnsafeSignEOTS(uid, chaiID, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error) {
+	req := &proto.SignEOTSRequest{
+		Uid:        uid,
+		ChainId:    chaiID,
+		Msg:        msg,
+		Height:     height,
+		Passphrase: passphrase,
+	}
+	res, err := c.client.UnsafeSignEOTS(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}

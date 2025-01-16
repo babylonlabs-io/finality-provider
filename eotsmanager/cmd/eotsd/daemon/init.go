@@ -2,41 +2,35 @@ package daemon
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/jessevdk/go-flags"
-	"github.com/urfave/cli"
+	"github.com/spf13/cobra"
 
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/util"
 )
 
-var InitCommand = cli.Command{
-	Name:  "init",
-	Usage: "Initialize the eotsd home directory.",
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  homeFlag,
-			Usage: "Path to where the home directory will be initialized",
-			Value: eotscfg.DefaultEOTSDir,
-		},
-		cli.BoolFlag{
-			Name:     forceFlag,
-			Usage:    "Override existing configuration",
-			Required: false,
-		},
-	},
-	Action: initHome,
+func NewInitCmd() *cobra.Command {
+	initCmd := &cobra.Command{
+		Use:   "init <path to executable>",
+		Short: "Initialize the eotsd home directory.",
+		RunE:  initHome,
+	}
+
+	initCmd.Flags().Bool(forceFlag, false, "Override existing configuration")
+
+	return initCmd
 }
 
-func initHome(c *cli.Context) error {
-	homePath, err := filepath.Abs(c.String(homeFlag))
+func initHome(cmd *cobra.Command, _ []string) error {
+	homePath, err := getHomePath(cmd)
 	if err != nil {
 		return err
 	}
-	// Create home directory
-	homePath = util.CleanAndExpandPath(homePath)
-	force := c.Bool(forceFlag)
+	force, err := cmd.Flags().GetBool(forceFlag)
+	if err != nil {
+		return err
+	}
 
 	if util.FileExists(homePath) && !force {
 		return fmt.Errorf("home path %s already exists", homePath)
@@ -60,5 +54,5 @@ func initHome(c *cli.Context) error {
 	defaultConfig.DatabaseConfig.DBPath = dataDir
 	fileParser := flags.NewParser(defaultConfig, flags.Default)
 
-	return flags.NewIniParser(fileParser).WriteFile(eotscfg.ConfigFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
+	return flags.NewIniParser(fileParser).WriteFile(eotscfg.CfgFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
 }

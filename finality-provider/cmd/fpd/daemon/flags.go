@@ -9,8 +9,11 @@ const (
 	appHashFlag          = "app-hash"
 	passphraseFlag       = "passphrase"
 	hdPathFlag           = "hd-path"
-	chainIdFlag          = "chain-id"
+	chainIDFlag          = "chain-id"
 	signedFlag           = "signed"
+	checkDoubleSignFlag  = "check-double-sign"
+	fromFile             = "from-file"
+	upToHeight           = "up-to-height"
 
 	// flags for description
 	monikerFlag         = "moniker"
@@ -18,5 +21,5 @@ const (
 	websiteFlag         = "website"
 	securityContactFlag = "security-contact"
 	detailsFlag         = "details"
-	commissionRateFlag  = "commission"
+	commissionRateFlag  = "commission-rate"
 )

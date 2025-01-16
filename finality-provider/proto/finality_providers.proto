@@ -16,15 +16,15 @@ service FinalityProviders {
     rpc CreateFinalityProvider (CreateFinalityProviderRequest)
         returns (CreateFinalityProviderResponse);
 
-    // RegisterFinalityProvider sends a transactions to the consumer chain to register a BTC
-    // finality provider
-    rpc RegisterFinalityProvider (RegisterFinalityProviderRequest)
-        returns (RegisterFinalityProviderResponse);
-
     // AddFinalitySignature sends a transactions to the consumer chain to add a Finality
     // signature for a block
     rpc AddFinalitySignature(AddFinalitySignatureRequest)
         returns (AddFinalitySignatureResponse);
+
+    // UnjailFinalityProvider sends a transactions to the consumer chain to unjail a given
+    // finality provider
+    rpc UnjailFinalityProvider(UnjailFinalityProviderRequest)
+        returns (UnjailFinalityProviderResponse);
 
     // QueryFinalityProvider queries the finality provider
     rpc QueryFinalityProvider (QueryFinalityProviderRequest) returns (QueryFinalityProviderResponse);
@@ -33,9 +33,11 @@ service FinalityProviders {
     rpc QueryFinalityProviderList (QueryFinalityProviderListRequest)
         returns (QueryFinalityProviderListResponse);
 
-    // SignMessageFromChainKey signs a message from the chain keyring.
-    rpc SignMessageFromChainKey (SignMessageFromChainKeyRequest)
-        returns (SignMessageFromChainKeyResponse);
+    // EditFinalityProvider edits finality provider
+    rpc EditFinalityProvider (EditFinalityProviderRequest) returns (EmptyResponse);
+
+    // UnsafeRemoveMerkleProof removes merkle proofs up to target height
+    rpc UnsafeRemoveMerkleProof (RemoveMerkleProofRequest) returns (EmptyResponse);
 }
 
 message GetInfoRequest {
@@ -50,37 +52,25 @@ message CreateFinalityProviderRequest {
     string key_name = 1;
     // passphrase is used to encrypt the keys
     string passphrase = 2;
-    // hd_path is the hd path for private key derivation
-    string hd_path = 3;
     // chain_id is the identifier of the consumer chain that the finality provider is connected to
-    string chain_id = 4;
+    string chain_id = 3;
     // description defines the description terms for the finality provider
-    bytes description = 5;
+    bytes description = 4;
     // commission defines the commission rate for the finality provider
-    string commission = 6 [
+    string commission = 5 [
         (gogoproto.customtype) = "cosmossdk.io/math.LegacyDec",
         (gogoproto.nullable)   = false
     ];
     // eots_pk_hex it is the optional EOTS public key and used to ask for
     // the key record from the EOTS manager for the corresponding EOTS public key.
     // If this property is not set, it will create a new EOTS key.
-    string eots_pk_hex = 7;
+    string eots_pk_hex = 6;
 }
 
 message CreateFinalityProviderResponse {
     FinalityProviderInfo finality_provider = 1;
-}
-
-message RegisterFinalityProviderRequest {
-    // btc_pk is hex string of the BTC secp256k1 public key of the finality provider encoded in BIP-340 spec
-    string btc_pk = 1;
-    // passphrase is used to encrypt the keys
-    string passphrase = 2;
-}
-
-message RegisterFinalityProviderResponse {
-    // hash of the successful chain registration transaction
-    string tx_hash = 1;
+    // hash of the successful finality provider creation transaction
+    string tx_hash = 2;
 }
 
 message AddFinalitySignatureRequest {
@@ -90,6 +80,8 @@ message AddFinalitySignatureRequest {
     uint64 height = 2;
     // app_hash is the AppHash of the chain block
     bytes app_hash = 3;
+    // check_double_sign use double sign protection when doing EOTS sign
+    bool check_double_sign = 4;
 }
 
 message AddFinalitySignatureResponse {
@@ -99,6 +91,16 @@ message AddFinalitySignatureResponse {
     string extracted_sk_hex = 2;
     // the hex string of the local Bitcoin secp256k1 private key
     string local_sk_hex = 3;
+}
+
+message UnjailFinalityProviderRequest {
+    // btc_pk is hex string of the BTC secp256k1 public key of the finality provider encoded in BIP-340 spec
+    string btc_pk = 1;
+}
+
+message UnjailFinalityProviderResponse {
+    // hash of the successful chain unjail finality provider transaction
+    string tx_hash = 1;
 }
 
 message QueryFinalityProviderRequest {
@@ -111,12 +113,10 @@ message QueryFinalityProviderResponse {
 }
 
 message QueryFinalityProviderListRequest {
-    // TODO add pagination in case the list gets large
 }
 
 message QueryFinalityProviderListResponse {
     repeated FinalityProviderInfo finality_providers = 1;
-    // TODO add pagination in case the list gets large
 }
 
 // FinalityProvider defines current state of finality provider.
@@ -132,19 +132,12 @@ message FinalityProvider {
         (gogoproto.customtype) = "cosmossdk.io/math.LegacyDec",
         (gogoproto.nullable)   = false
     ];
-    // pop is the proof of possession of chain_pk and btc_pk
-    ProofOfPossession pop = 5;
-    // key_name is the identifier of the keyring
-    string key_name = 6;
     // chain_id is the identifier of the consumer chain that the finality provider connected to
-    string chain_id = 7;
+    string chain_id = 5;
     // last_voted_height defines the height of the last voted chain block
-    uint64 last_voted_height = 8;
-    // last_processed_height defines the height of the last successfully processed block
-    // even though the vote is not cast
-    uint64 last_processed_height = 9;
+    uint64 last_voted_height = 6;
     // status defines the current finality provider status
-    FinalityProviderStatus status = 10;
+    FinalityProviderStatus status = 7;
 }
 
 // FinalityProviderInfo is the basic information of a finality provider mainly for external usage
@@ -192,35 +185,36 @@ message SchnorrRandPair {
 }
 
 // FinalityProviderStatus is the status of a finality provider
-// a FinalityProvider object has 4 states:
-//  - Created - created and managed by finality provider client, not registered to
-//  the consumer chain yet
+// a FinalityProvider object has 5 states:
 //  - Registered - created and registered to the consumer chain, but not voting yet (No
 //  delegated stake)
-//  - Active - created and registered to the consumer chain with stake to vote
-//  - Inactive - created and registered to the consumer chain with no stake to vote.
+//  - Inactive - the finality provider does not have voting power to vote
+//  - Active - the finality provider has voting power to vote
 //  Finality Provider was already active.
-// Valid State Transactions:
-//  - Created   -> Registered
-//  - Registered -> Active
-//  - Active    -> Inactive
-//  - Inactive  -> Active
+//  - Slashed - the finality provider looses all the voting power forever due to double voting
+//  - Jailed - the finality provider temporarily looses the voting power due to being sluggish
+// Possible State Transactions:
+//  - Registered -> Inactive
+//  - Inactive   -> Active
+//  - Active     -> Inactive
+//  - Active     -> Slashed
+//  - Active     -> Jailed
+//  - Jailed     -> Active
+//  - Jailed     -> Inactive
 enum FinalityProviderStatus {
     option (gogoproto.goproto_enum_prefix) = false;
 
-    // CREATED defines a finality provider that is awaiting registration
-    CREATED = 0 [(gogoproto.enumvalue_customname) = "CREATED"];
     // REGISTERED defines a finality provider that has been registered
     // to the consumer chain but has no delegated stake
-    REGISTERED = 1 [(gogoproto.enumvalue_customname) = "REGISTERED"];
+    REGISTERED = 0 [(gogoproto.enumvalue_customname) = "REGISTERED"];
     // ACTIVE defines a finality provider that is delegated to vote
-    ACTIVE = 2 [(gogoproto.enumvalue_customname) = "ACTIVE"];
+    ACTIVE = 1 [(gogoproto.enumvalue_customname) = "ACTIVE"];
     // INACTIVE defines a finality provider whose delegations are reduced to zero but not slashed
-    INACTIVE = 3 [(gogoproto.enumvalue_customname) = "INACTIVE"];
+    INACTIVE = 2 [(gogoproto.enumvalue_customname) = "INACTIVE"];
     // SLASHED defines a finality provider that has been slashed
-    SLASHED = 4 [(gogoproto.enumvalue_customname) = "SLASHED"];
+    SLASHED = 3 [(gogoproto.enumvalue_customname) = "SLASHED"];
     // JAILED defines a finality provider that has been jailed
-    JAILED = 5 [(gogoproto.enumvalue_customname) = "JAILED"];
+    JAILED = 4 [(gogoproto.enumvalue_customname) = "JAILED"];
 }
 
 message SignMessageFromChainKeyRequest {
@@ -238,3 +232,28 @@ message SignMessageFromChainKeyRequest {
 message SignMessageFromChainKeyResponse {
     bytes signature = 1;
 }
+
+// FinalityProviderInfo is the basic information of a finality provider mainly for external usage
+message EditFinalityProviderRequest {
+    // btc_pk is the hex string of the BTC secp256k1 PK of the finality provider encoded in BIP-340 spec
+    string btc_pk = 1;
+    // description defines the description terms for the finality provider
+    Description description = 2;
+    // commission defines the updated commission rate of the finality provider
+    string commission = 4 [
+        (cosmos_proto.scalar)  = "cosmos.Dec",
+        (gogoproto.customtype) = "cosmossdk.io/math.LegacyDec"
+    ];
+}
+
+message RemoveMerkleProofRequest {
+    // btc_pk_hex is the hex string of the BTC secp256k1 PK of the finality provider encoded in BIP-340 spec
+    string btc_pk_hex = 1;
+    // chain_id is the identifier of the consumer chain
+    string chain_id = 2;
+    // target_height to to delete all proofs
+    uint64 target_height = 3;
+}
+
+// Define an empty response message
+message EmptyResponse {}

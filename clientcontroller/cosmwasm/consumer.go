@@ -14,6 +14,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cwcclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/types"
 	fptypes "github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -144,7 +145,7 @@ func (wc *CosmwasmConsumerController) SubmitFinalitySig(
 		return nil, err
 	}
 
-	return &fptypes.TxResponse{TxHash: res.TxHash, Events: fromCosmosEventsToBytes(res.Events)}, nil
+	return &fptypes.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }
 
 // SubmitBatchFinalitySigs submits a batch of finality signatures to Babylon
@@ -262,7 +263,7 @@ func (wc *CosmwasmConsumerController) QueryLatestFinalizedBlock() (*fptypes.Bloc
 	return blocks[0], nil
 }
 
-func (wc *CosmwasmConsumerController) QueryBlocks(startHeight, endHeight, limit uint64) ([]*fptypes.BlockInfo, error) {
+func (wc *CosmwasmConsumerController) QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*fptypes.BlockInfo, error) {
 	return wc.queryCometBlocksInRange(startHeight, endHeight)
 }
 
@@ -637,10 +638,23 @@ func (wc *CosmwasmConsumerController) QueryIndexedBlock(height uint64) (*Indexed
 	return &resp, nil
 }
 
-func fromCosmosEventsToBytes(events []provider.RelayerEvent) []byte {
-	bytes, err := json.Marshal(events)
-	if err != nil {
-		return nil
-	}
-	return bytes
+func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight() (uint64, error) {
+	// TODO: implement finality activation feature in OP stack L2
+	return 0, nil
+}
+
+func (wc *CosmwasmConsumerController) QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error) {
+	// TODO: implement highest voted height feature in OP stack L2
+	return 0, nil
+}
+
+// QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
+func (wc *CosmwasmConsumerController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
+	// TODO: implement slashed or jailed feature in OP stack L2
+	return false, false, nil
+}
+
+func (wc *CosmwasmConsumerController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error) {
+	// TODO: implement unjail feature in OP stack L2
+	return nil, nil
 }

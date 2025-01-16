@@ -36,6 +36,7 @@ func (cfg *Config) Address() (string, error) {
 	if err := cfg.Validate(); err != nil {
 		return "", err
 	}
+
 	return fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), nil
 }
 

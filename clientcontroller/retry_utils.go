@@ -42,6 +42,7 @@ func (e ExpectedError) Error() string {
 	if e.error == nil {
 		return "expected error"
 	}
+
 	return e.error.Error()
 }
 
@@ -52,6 +53,7 @@ func (e ExpectedError) Unwrap() error {
 // Is adds support for errors.Is usage on isExpected
 func (ExpectedError) Is(err error) bool {
 	_, isExpected := err.(ExpectedError)
+
 	return isExpected
 }
 

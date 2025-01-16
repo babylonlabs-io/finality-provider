@@ -21,11 +21,12 @@ const _ = grpc.SupportPackageIsVersion7
 const (
 	FinalityProviders_GetInfo_FullMethodName                   = "/proto.FinalityProviders/GetInfo"
 	FinalityProviders_CreateFinalityProvider_FullMethodName    = "/proto.FinalityProviders/CreateFinalityProvider"
-	FinalityProviders_RegisterFinalityProvider_FullMethodName  = "/proto.FinalityProviders/RegisterFinalityProvider"
 	FinalityProviders_AddFinalitySignature_FullMethodName      = "/proto.FinalityProviders/AddFinalitySignature"
+	FinalityProviders_UnjailFinalityProvider_FullMethodName    = "/proto.FinalityProviders/UnjailFinalityProvider"
 	FinalityProviders_QueryFinalityProvider_FullMethodName     = "/proto.FinalityProviders/QueryFinalityProvider"
 	FinalityProviders_QueryFinalityProviderList_FullMethodName = "/proto.FinalityProviders/QueryFinalityProviderList"
-	FinalityProviders_SignMessageFromChainKey_FullMethodName   = "/proto.FinalityProviders/SignMessageFromChainKey"
+	FinalityProviders_EditFinalityProvider_FullMethodName      = "/proto.FinalityProviders/EditFinalityProvider"
+	FinalityProviders_UnsafeRemoveMerkleProof_FullMethodName   = "/proto.FinalityProviders/UnsafeRemoveMerkleProof"
 )
 
 // FinalityProvidersClient is the client API for FinalityProviders service.
@@ -36,18 +37,20 @@ type FinalityProvidersClient interface {
 	GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error)
 	// CreateFinalityProvider generates and saves a finality provider object
 	CreateFinalityProvider(ctx context.Context, in *CreateFinalityProviderRequest, opts ...grpc.CallOption) (*CreateFinalityProviderResponse, error)
-	// RegisterFinalityProvider sends a transactions to the consumer chain to register a BTC
-	// finality provider
-	RegisterFinalityProvider(ctx context.Context, in *RegisterFinalityProviderRequest, opts ...grpc.CallOption) (*RegisterFinalityProviderResponse, error)
 	// AddFinalitySignature sends a transactions to the consumer chain to add a Finality
 	// signature for a block
 	AddFinalitySignature(ctx context.Context, in *AddFinalitySignatureRequest, opts ...grpc.CallOption) (*AddFinalitySignatureResponse, error)
+	// UnjailFinalityProvider sends a transactions to the consumer chain to unjail a given
+	// finality provider
+	UnjailFinalityProvider(ctx context.Context, in *UnjailFinalityProviderRequest, opts ...grpc.CallOption) (*UnjailFinalityProviderResponse, error)
 	// QueryFinalityProvider queries the finality provider
 	QueryFinalityProvider(ctx context.Context, in *QueryFinalityProviderRequest, opts ...grpc.CallOption) (*QueryFinalityProviderResponse, error)
 	// QueryFinalityProviderList queries a list of finality providers
 	QueryFinalityProviderList(ctx context.Context, in *QueryFinalityProviderListRequest, opts ...grpc.CallOption) (*QueryFinalityProviderListResponse, error)
-	// SignMessageFromChainKey signs a message from the chain keyring.
-	SignMessageFromChainKey(ctx context.Context, in *SignMessageFromChainKeyRequest, opts ...grpc.CallOption) (*SignMessageFromChainKeyResponse, error)
+	// EditFinalityProvider edits finality provider
+	EditFinalityProvider(ctx context.Context, in *EditFinalityProviderRequest, opts ...grpc.CallOption) (*EmptyResponse, error)
+	// UnsafeRemoveMerkleProof removes merkle proofs up to target height
+	UnsafeRemoveMerkleProof(ctx context.Context, in *RemoveMerkleProofRequest, opts ...grpc.CallOption) (*EmptyResponse, error)
 }
 
 type finalityProvidersClient struct {
@@ -76,18 +79,18 @@ func (c *finalityProvidersClient) CreateFinalityProvider(ctx context.Context, in
 	return out, nil
 }
 
-func (c *finalityProvidersClient) RegisterFinalityProvider(ctx context.Context, in *RegisterFinalityProviderRequest, opts ...grpc.CallOption) (*RegisterFinalityProviderResponse, error) {
-	out := new(RegisterFinalityProviderResponse)
-	err := c.cc.Invoke(ctx, FinalityProviders_RegisterFinalityProvider_FullMethodName, in, out, opts...)
+func (c *finalityProvidersClient) AddFinalitySignature(ctx context.Context, in *AddFinalitySignatureRequest, opts ...grpc.CallOption) (*AddFinalitySignatureResponse, error) {
+	out := new(AddFinalitySignatureResponse)
+	err := c.cc.Invoke(ctx, FinalityProviders_AddFinalitySignature_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *finalityProvidersClient) AddFinalitySignature(ctx context.Context, in *AddFinalitySignatureRequest, opts ...grpc.CallOption) (*AddFinalitySignatureResponse, error) {
-	out := new(AddFinalitySignatureResponse)
-	err := c.cc.Invoke(ctx, FinalityProviders_AddFinalitySignature_FullMethodName, in, out, opts...)
+func (c *finalityProvidersClient) UnjailFinalityProvider(ctx context.Context, in *UnjailFinalityProviderRequest, opts ...grpc.CallOption) (*UnjailFinalityProviderResponse, error) {
+	out := new(UnjailFinalityProviderResponse)
+	err := c.cc.Invoke(ctx, FinalityProviders_UnjailFinalityProvider_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -112,9 +115,18 @@ func (c *finalityProvidersClient) QueryFinalityProviderList(ctx context.Context,
 	return out, nil
 }
 
-func (c *finalityProvidersClient) SignMessageFromChainKey(ctx context.Context, in *SignMessageFromChainKeyRequest, opts ...grpc.CallOption) (*SignMessageFromChainKeyResponse, error) {
-	out := new(SignMessageFromChainKeyResponse)
-	err := c.cc.Invoke(ctx, FinalityProviders_SignMessageFromChainKey_FullMethodName, in, out, opts...)
+func (c *finalityProvidersClient) EditFinalityProvider(ctx context.Context, in *EditFinalityProviderRequest, opts ...grpc.CallOption) (*EmptyResponse, error) {
+	out := new(EmptyResponse)
+	err := c.cc.Invoke(ctx, FinalityProviders_EditFinalityProvider_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *finalityProvidersClient) UnsafeRemoveMerkleProof(ctx context.Context, in *RemoveMerkleProofRequest, opts ...grpc.CallOption) (*EmptyResponse, error) {
+	out := new(EmptyResponse)
+	err := c.cc.Invoke(ctx, FinalityProviders_UnsafeRemoveMerkleProof_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -129,18 +141,20 @@ type FinalityProvidersServer interface {
 	GetInfo(context.Context, *GetInfoRequest) (*GetInfoResponse, error)
 	// CreateFinalityProvider generates and saves a finality provider object
 	CreateFinalityProvider(context.Context, *CreateFinalityProviderRequest) (*CreateFinalityProviderResponse, error)
-	// RegisterFinalityProvider sends a transactions to the consumer chain to register a BTC
-	// finality provider
-	RegisterFinalityProvider(context.Context, *RegisterFinalityProviderRequest) (*RegisterFinalityProviderResponse, error)
 	// AddFinalitySignature sends a transactions to the consumer chain to add a Finality
 	// signature for a block
 	AddFinalitySignature(context.Context, *AddFinalitySignatureRequest) (*AddFinalitySignatureResponse, error)
+	// UnjailFinalityProvider sends a transactions to the consumer chain to unjail a given
+	// finality provider
+	UnjailFinalityProvider(context.Context, *UnjailFinalityProviderRequest) (*UnjailFinalityProviderResponse, error)
 	// QueryFinalityProvider queries the finality provider
 	QueryFinalityProvider(context.Context, *QueryFinalityProviderRequest) (*QueryFinalityProviderResponse, error)
 	// QueryFinalityProviderList queries a list of finality providers
 	QueryFinalityProviderList(context.Context, *QueryFinalityProviderListRequest) (*QueryFinalityProviderListResponse, error)
-	// SignMessageFromChainKey signs a message from the chain keyring.
-	SignMessageFromChainKey(context.Context, *SignMessageFromChainKeyRequest) (*SignMessageFromChainKeyResponse, error)
+	// EditFinalityProvider edits finality provider
+	EditFinalityProvider(context.Context, *EditFinalityProviderRequest) (*EmptyResponse, error)
+	// UnsafeRemoveMerkleProof removes merkle proofs up to target height
+	UnsafeRemoveMerkleProof(context.Context, *RemoveMerkleProofRequest) (*EmptyResponse, error)
 	mustEmbedUnimplementedFinalityProvidersServer()
 }
 
@@ -154,11 +168,11 @@ func (UnimplementedFinalityProvidersServer) GetInfo(context.Context, *GetInfoReq
 func (UnimplementedFinalityProvidersServer) CreateFinalityProvider(context.Context, *CreateFinalityProviderRequest) (*CreateFinalityProviderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFinalityProvider not implemented")
 }
-func (UnimplementedFinalityProvidersServer) RegisterFinalityProvider(context.Context, *RegisterFinalityProviderRequest) (*RegisterFinalityProviderResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RegisterFinalityProvider not implemented")
-}
 func (UnimplementedFinalityProvidersServer) AddFinalitySignature(context.Context, *AddFinalitySignatureRequest) (*AddFinalitySignatureResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddFinalitySignature not implemented")
+}
+func (UnimplementedFinalityProvidersServer) UnjailFinalityProvider(context.Context, *UnjailFinalityProviderRequest) (*UnjailFinalityProviderResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnjailFinalityProvider not implemented")
 }
 func (UnimplementedFinalityProvidersServer) QueryFinalityProvider(context.Context, *QueryFinalityProviderRequest) (*QueryFinalityProviderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryFinalityProvider not implemented")
@@ -166,8 +180,11 @@ func (UnimplementedFinalityProvidersServer) QueryFinalityProvider(context.Contex
 func (UnimplementedFinalityProvidersServer) QueryFinalityProviderList(context.Context, *QueryFinalityProviderListRequest) (*QueryFinalityProviderListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryFinalityProviderList not implemented")
 }
-func (UnimplementedFinalityProvidersServer) SignMessageFromChainKey(context.Context, *SignMessageFromChainKeyRequest) (*SignMessageFromChainKeyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SignMessageFromChainKey not implemented")
+func (UnimplementedFinalityProvidersServer) EditFinalityProvider(context.Context, *EditFinalityProviderRequest) (*EmptyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EditFinalityProvider not implemented")
+}
+func (UnimplementedFinalityProvidersServer) UnsafeRemoveMerkleProof(context.Context, *RemoveMerkleProofRequest) (*EmptyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnsafeRemoveMerkleProof not implemented")
 }
 func (UnimplementedFinalityProvidersServer) mustEmbedUnimplementedFinalityProvidersServer() {}
 
@@ -218,24 +235,6 @@ func _FinalityProviders_CreateFinalityProvider_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FinalityProviders_RegisterFinalityProvider_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RegisterFinalityProviderRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(FinalityProvidersServer).RegisterFinalityProvider(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: FinalityProviders_RegisterFinalityProvider_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinalityProvidersServer).RegisterFinalityProvider(ctx, req.(*RegisterFinalityProviderRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _FinalityProviders_AddFinalitySignature_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AddFinalitySignatureRequest)
 	if err := dec(in); err != nil {
@@ -250,6 +249,24 @@ func _FinalityProviders_AddFinalitySignature_Handler(srv interface{}, ctx contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FinalityProvidersServer).AddFinalitySignature(ctx, req.(*AddFinalitySignatureRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FinalityProviders_UnjailFinalityProvider_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnjailFinalityProviderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinalityProvidersServer).UnjailFinalityProvider(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FinalityProviders_UnjailFinalityProvider_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinalityProvidersServer).UnjailFinalityProvider(ctx, req.(*UnjailFinalityProviderRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -290,20 +307,38 @@ func _FinalityProviders_QueryFinalityProviderList_Handler(srv interface{}, ctx c
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FinalityProviders_SignMessageFromChainKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SignMessageFromChainKeyRequest)
+func _FinalityProviders_EditFinalityProvider_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EditFinalityProviderRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinalityProvidersServer).SignMessageFromChainKey(ctx, in)
+		return srv.(FinalityProvidersServer).EditFinalityProvider(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: FinalityProviders_SignMessageFromChainKey_FullMethodName,
+		FullMethod: FinalityProviders_EditFinalityProvider_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinalityProvidersServer).SignMessageFromChainKey(ctx, req.(*SignMessageFromChainKeyRequest))
+		return srv.(FinalityProvidersServer).EditFinalityProvider(ctx, req.(*EditFinalityProviderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FinalityProviders_UnsafeRemoveMerkleProof_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveMerkleProofRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinalityProvidersServer).UnsafeRemoveMerkleProof(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FinalityProviders_UnsafeRemoveMerkleProof_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinalityProvidersServer).UnsafeRemoveMerkleProof(ctx, req.(*RemoveMerkleProofRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -324,12 +359,12 @@ var FinalityProviders_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _FinalityProviders_CreateFinalityProvider_Handler,
 		},
 		{
-			MethodName: "RegisterFinalityProvider",
-			Handler:    _FinalityProviders_RegisterFinalityProvider_Handler,
-		},
-		{
 			MethodName: "AddFinalitySignature",
 			Handler:    _FinalityProviders_AddFinalitySignature_Handler,
+		},
+		{
+			MethodName: "UnjailFinalityProvider",
+			Handler:    _FinalityProviders_UnjailFinalityProvider_Handler,
 		},
 		{
 			MethodName: "QueryFinalityProvider",
@@ -340,8 +375,12 @@ var FinalityProviders_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _FinalityProviders_QueryFinalityProviderList_Handler,
 		},
 		{
-			MethodName: "SignMessageFromChainKey",
-			Handler:    _FinalityProviders_SignMessageFromChainKey_Handler,
+			MethodName: "EditFinalityProvider",
+			Handler:    _FinalityProviders_EditFinalityProvider_Handler,
+		},
+		{
+			MethodName: "UnsafeRemoveMerkleProof",
+			Handler:    _FinalityProviders_UnsafeRemoveMerkleProof_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

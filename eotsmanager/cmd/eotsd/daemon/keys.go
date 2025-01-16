@@ -1,167 +1,332 @@
 package daemon
 
 import (
-	"bufio"
+	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
+	"io"
+	"strings"
 
-	"github.com/cosmos/cosmos-sdk/client/input"
-	"github.com/cosmos/go-bip39"
-	"github.com/urfave/cli"
+	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
-	bbntypes "github.com/babylonlabs-io/babylon/types"
+	"github.com/babylonlabs-io/babylon/types"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/log"
+	"github.com/babylonlabs-io/finality-provider/util"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/client/keys"
+	cryptokeyring "github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
 )
 
-type KeyOutput struct {
-	Name      string `json:"name" yaml:"name"`
-	PubKeyHex string `json:"pub_key_hex" yaml:"pub_key_hex"`
-	Mnemonic  string `json:"mnemonic,omitempty" yaml:"mnemonic"`
+type KeyOutputWithPubKeyHex struct {
+	keys.KeyOutput
+	PubKeyHex string `json:"pubkey_hex" yaml:"pubkey_hex"`
 }
 
-var KeysCommands = []cli.Command{
-	{
-		Name:     "keys",
-		Usage:    "Command sets of managing keys for interacting with BTC eots keys.",
-		Category: "Key management",
-		Subcommands: []cli.Command{
-			AddKeyCmd,
-		},
-	},
+func NewKeysCmd() *cobra.Command {
+	keysCmd := keys.Commands()
+
+	// Find the "add" subcommand
+	addCmd := util.GetSubCommand(keysCmd, "add")
+	if addCmd == nil {
+		panic("failed to find keys add command")
+	}
+
+	addCmd.Flags().String(rpcClientFlag, "", "The RPC address of a running eotsd to connect and save new key")
+
+	// Override the original RunE function to run almost the same as
+	// the sdk, but it allows empty hd path and allow to save the key
+	// in the name mapping
+	addCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		oldOut := cmd.OutOrStdout()
+
+		// Create a buffer to intercept the key items
+		var buf bytes.Buffer
+		cmd.SetOut(&buf)
+
+		// Run the original command
+		err := runAddCmdPrepare(cmd, args)
+		if err != nil {
+			return err
+		}
+
+		cmd.SetOut(oldOut)
+		keyName := args[0]
+		eotsPk, err := saveKeyNameMapping(cmd, keyName)
+		if err != nil {
+			return err
+		}
+
+		return printFromKey(cmd, keyName, eotsPk)
+	}
+
+	saveKeyOnPostRun(keysCmd, "import")
+	saveKeyOnPostRun(keysCmd, "import-hex")
+
+	return keysCmd
 }
 
-var AddKeyCmd = cli.Command{
-	Name:  "add",
-	Usage: "Add a key to the EOTS manager keyring.",
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  homeFlag,
-			Usage: "Path to the keyring directory",
-			Value: config.DefaultEOTSDir,
-		},
-		cli.StringFlag{
-			Name:     keyNameFlag,
-			Usage:    "The name of the key to be created",
-			Required: true,
-		},
-		cli.StringFlag{
-			Name:  passphraseFlag,
-			Usage: "The pass phrase used to encrypt the keys",
-			Value: defaultPassphrase,
-		},
-		cli.StringFlag{
-			Name:  hdPathFlag,
-			Usage: "The hd path used to derive the private key",
-			Value: defaultHdPath,
-		},
-		cli.StringFlag{
-			Name:  keyringBackendFlag,
-			Usage: "The backend of the keyring",
-			Value: defaultKeyringBackend,
-		},
-		cli.BoolFlag{
-			Name: recoverFlag,
-			Usage: `Will need to provide a seed phrase to recover
-	the existing key instead of creating`,
-		},
-	},
-	Action: addKey,
+func saveKeyOnPostRun(cmd *cobra.Command, commandName string) {
+	subCmd := util.GetSubCommand(cmd, commandName)
+	if subCmd == nil {
+		panic(fmt.Sprintf("failed to find keys %s command", commandName))
+	}
+
+	subCmd.Flags().String(rpcClientFlag, "", "The RPC address of a running eotsd to connect and save new key")
+
+	subCmd.PostRunE = func(cmd *cobra.Command, args []string) error {
+		keyName := args[0]
+		_, err := saveKeyNameMapping(cmd, keyName)
+
+		return err
+	}
 }
 
-func addKey(ctx *cli.Context) error {
-	keyName := ctx.String(keyNameFlag)
-	keyringBackend := ctx.String(keyringBackendFlag)
-
-	homePath, err := getHomeFlag(ctx)
+func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey, error) {
+	clientCtx, err := client.GetClientQueryContext(cmd)
 	if err != nil {
-		return fmt.Errorf("failed to load home flag: %w", err)
+		return nil, err
 	}
 
-	cfg, err := config.LoadConfig(homePath)
+	// Load configuration
+	cfg, err := config.LoadConfig(clientCtx.HomeDir)
 	if err != nil {
-		return fmt.Errorf("failed to load config at %s: %w", homePath, err)
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	logger, err := log.NewRootLoggerWithFile(config.LogFile(homePath), cfg.LogLevel)
+	rpcListener, err := cmd.Flags().GetString(rpcClientFlag)
 	if err != nil {
-		return fmt.Errorf("failed to load the logger")
+		return nil, err
 	}
 
-	dbBackend, err := cfg.DatabaseConfig.GetDbBackend()
+	if len(rpcListener) > 0 {
+		client, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener)
+		if err != nil {
+			return nil, err
+		}
+
+		kr, err := eotsmanager.InitKeyring(clientCtx.HomeDir, clientCtx.Keyring.Backend(), strings.NewReader(""))
+		if err != nil {
+			return nil, fmt.Errorf("failed to init keyring: %w", err)
+		}
+
+		eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(kr, keyName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get public key for key %s: %w", keyName, err)
+		}
+
+		if err := client.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
+			return nil, fmt.Errorf("failed to save key name mapping: %w", err)
+		}
+
+		return eotsPk, nil
+	}
+
+	// Setup logger
+	logger, err := log.NewRootLoggerWithFile(config.LogFile(clientCtx.HomeDir), cfg.LogLevel)
 	if err != nil {
-		return fmt.Errorf("failed to create db backend: %w", err)
+		return nil, fmt.Errorf("failed to load the logger: %w", err)
+	}
+
+	// Get database backend
+	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create db backend: %w", err)
 	}
 	defer dbBackend.Close()
 
-	eotsManager, err := eotsmanager.NewLocalEOTSManager(homePath, keyringBackend, dbBackend, logger)
+	// Create EOTS manager
+	eotsManager, err := eotsmanager.NewLocalEOTSManager(clientCtx.HomeDir, clientCtx.Keyring.Backend(), dbBackend, logger)
 	if err != nil {
-		return fmt.Errorf("failed to create EOTS manager: %w", err)
+		return nil, fmt.Errorf("failed to create EOTS manager: %w", err)
 	}
 
-	eotsPk, mnemonic, err := createKey(ctx, eotsManager, keyName)
+	// Get the public key for the newly added key
+	eotsPk, err := eotsManager.LoadBIP340PubKeyFromKeyName(keyName)
 	if err != nil {
-		return fmt.Errorf("failed to create key: %w", err)
+		return nil, fmt.Errorf("failed to get public key for key %s: %w", keyName, err)
 	}
 
-	printRespJSONKeys(
-		KeyOutput{
-			Name:      keyName,
-			PubKeyHex: eotsPk.MarshalHex(),
-			Mnemonic:  mnemonic,
-		},
-	)
+	// Save the public key to key name mapping
+	if err := eotsManager.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
+		return nil, fmt.Errorf("failed to save key name mapping: %w", err)
+	}
+
+	return eotsPk, nil
+}
+
+// CommandPrintAllKeys prints all EOTS keys
+func CommandPrintAllKeys() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "Print all EOTS key names and public keys mapping from database.",
+		Example: `eotsd list --home=/path/to/cfg`,
+		Args:    cobra.NoArgs,
+		RunE:    runCommandPrintAllKeys,
+	}
+
+	cmd.Flags().String(flags.FlagHome, config.DefaultEOTSDir, "The path to the eotsd home directory")
+
+	return cmd
+}
+
+func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
+	eotsKeys, err := getAllEOTSKeys(cmd)
+	if err != nil {
+		return err
+	}
+
+	for keyName, key := range eotsKeys {
+		pk, err := schnorr.ParsePubKey(key)
+		if err != nil {
+			return err
+		}
+		eotsPk := types.NewBIP340PubKeyFromBTCPK(pk)
+		cmd.Printf("Key Name: %s, EOTS PK: %s\n", keyName, eotsPk.MarshalHex())
+	}
+
 	return nil
 }
 
-// createKey checks if recover flag is set to create a key from mnemonic or if not set, randomly creates it.
-func createKey(
-	ctx *cli.Context,
-	eotsManager *eotsmanager.LocalEOTSManager,
-	keyName string,
-) (eotsPk *bbntypes.BIP340PubKey, mnemonic string, err error) {
-	passphrase := ctx.String(passphraseFlag)
-	hdPath := ctx.String(hdPathFlag)
-
-	mnemonic, err = getMnemonic(ctx)
+func getAllEOTSKeys(cmd *cobra.Command) (map[string][]byte, error) {
+	homePath, err := getHomePath(cmd)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	eotsPk, err = eotsManager.CreateKeyWithMnemonic(keyName, passphrase, hdPath, mnemonic)
+	// Load configuration
+	cfg, err := config.LoadConfig(homePath)
 	if err != nil {
-		return nil, "", err
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
-	return eotsPk, mnemonic, nil
+
+	// Setup logger
+	logger, err := log.NewRootLoggerWithFile(config.LogFile(homePath), cfg.LogLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load the logger: %w", err)
+	}
+
+	// Get database backend
+	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create db backend: %w", err)
+	}
+	defer dbBackend.Close()
+
+	// Create EOTS manager
+	eotsManager, err := eotsmanager.NewLocalEOTSManager(homePath, cfg.KeyringBackend, dbBackend, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create EOTS manager: %w", err)
+	}
+
+	res, err := eotsManager.ListEOTSKeys()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get keys from db: %w", err)
+	}
+
+	return res, nil
 }
 
-func getMnemonic(ctx *cli.Context) (string, error) {
-	if ctx.Bool(recoverFlag) {
-		reader := bufio.NewReader(os.Stdin)
-		mnemonic, err := input.GetString("Enter your mnemonic", reader)
+func printFromKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey) error {
+	clientCtx, err := client.GetClientQueryContext(cmd)
+	if err != nil {
+		return err
+	}
+
+	k, err := clientCtx.Keyring.Key(keyName)
+	if err != nil {
+		return fmt.Errorf("failed to get public get key %s: %w", keyName, err)
+	}
+
+	ctx := cmd.Context()
+	mnemonic := ctx.Value(mnemonicCtxKey).(string) //nolint: forcetypeassert
+	showMnemonic := ctx.Value(mnemonicShowCtxKey).(bool)
+
+	return printCreatePubKeyHex(cmd, k, eotsPk, showMnemonic, mnemonic, clientCtx.OutputFormat)
+}
+
+func printCreatePubKeyHex(cmd *cobra.Command, k *cryptokeyring.Record, eotsPk *types.BIP340PubKey, showMnemonic bool, mnemonic, outputFormat string) error {
+	out, err := keys.MkAccKeyOutput(k)
+	if err != nil {
+		return err
+	}
+	keyOutput := newKeyOutputWithPubKeyHex(out, eotsPk)
+
+	switch outputFormat {
+	case flags.OutputFormatText:
+		cmd.PrintErrln()
+		if err := printKeyringRecord(cmd.OutOrStdout(), keyOutput, outputFormat); err != nil {
+			return err
+		}
+
+		// print mnemonic unless requested not to.
+		if showMnemonic {
+			if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "\n**Important** write this mnemonic phrase in a safe place.\nIt is the only way to recover your account if you ever forget your password.\n\n%s\n", mnemonic); err != nil {
+				return fmt.Errorf("failed to print mnemonic: %s", err.Error())
+			}
+		}
+	case flags.OutputFormatJSON:
+		if showMnemonic {
+			keyOutput.Mnemonic = mnemonic
+		}
+
+		jsonString, err := json.MarshalIndent(keyOutput, "", "  ")
 		if err != nil {
-			return "", fmt.Errorf("failed to read mnemonic from stdin: %w", err)
-		}
-		if !bip39.IsMnemonicValid(mnemonic) {
-			return "", errors.New("invalid mnemonic")
+			return err
 		}
 
-		return mnemonic, nil
+		cmd.Println(string(jsonString))
+
+	default:
+		return fmt.Errorf("invalid output format %s", outputFormat)
 	}
 
-	return eotsmanager.NewMnemonic()
+	return nil
 }
 
-func printRespJSONKeys(resp interface{}) {
-	jsonBytes, err := json.MarshalIndent(resp, "", "    ")
-	if err != nil {
-		fmt.Println("unable to decode response: ", err)
-		return
+func newKeyOutputWithPubKeyHex(k keys.KeyOutput, eotsPk *types.BIP340PubKey) KeyOutputWithPubKeyHex {
+	return KeyOutputWithPubKeyHex{
+		KeyOutput: k,
+		PubKeyHex: eotsPk.MarshalHex(),
+	}
+}
+
+func printKeyringRecord(w io.Writer, ko KeyOutputWithPubKeyHex, output string) error {
+	switch output {
+	case flags.OutputFormatText:
+		if err := printTextRecords(w, []KeyOutputWithPubKeyHex{ko}); err != nil {
+			return err
+		}
+
+	case flags.OutputFormatJSON:
+		out, err := json.Marshal(ko)
+		if err != nil {
+			return err
+		}
+
+		if _, err := fmt.Fprintln(w, string(out)); err != nil {
+			return err
+		}
 	}
 
-	fmt.Printf("New key for the BTC chain is created "+
-		"(mnemonic should be kept in a safe place for recovery):\n%s\n", jsonBytes)
+	return nil
+}
+
+func printTextRecords(w io.Writer, kos []KeyOutputWithPubKeyHex) error {
+	out, err := yaml.Marshal(&kos)
+	if err != nil {
+		return err
+	}
+
+	if _, err := fmt.Fprintln(w, string(out)); err != nil {
+		return err
+	}
+
+	return nil
 }

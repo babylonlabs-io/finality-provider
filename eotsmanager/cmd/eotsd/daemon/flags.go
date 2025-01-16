@@ -1,22 +1,22 @@
 package daemon
 
-import "github.com/cosmos/cosmos-sdk/crypto/keyring"
-
 const (
-	homeFlag        = "home"
-	forceFlag       = "force"
-	rpcListenerFlag = "rpc-listener"
-	eotsPkFlag      = "eots-pk"
-	signatureFlag   = "signature"
-
-	// flags for keys
-	keyNameFlag        = "key-name"
-	passphraseFlag     = "passphrase"
-	hdPathFlag         = "hd-path"
-	keyringBackendFlag = "keyring-backend"
-	recoverFlag        = "recover"
-
-	defaultKeyringBackend = keyring.BackendTest
-	defaultHdPath         = ""
-	defaultPassphrase     = ""
+	keyNameFlag           = "key-name"
+	eotsPkFlag            = "eots-pk"
+	passphraseFlag        = "passphrase"
+	forceFlag             = "force"
+	rpcListenerFlag       = "rpc-listener"
+	rpcClientFlag         = "rpc-client"
+	flagInteractive       = "interactive"
+	flagNoBackup          = "no-backup"
+	flagMultisig          = "multisig"
+	flagMultiSigThreshold = "multisig-threshold"
+	flagPubKeyBase64      = "pubkey-base64"
+	flagNoSort            = "nosort"
+	flagCoinType          = "coin-type"
+	flagAccount           = "account"
+	flagHDPath            = "hd-path"
+	flagIndex             = "index"
+	flagRecover           = "recover"
+	flagMnemonicSrc       = "source"
 )

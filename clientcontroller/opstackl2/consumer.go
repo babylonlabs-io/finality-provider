@@ -329,14 +329,14 @@ func (cc *OPStackL2ConsumerController) QueryLatestFinalizedBlock() (*types.Block
 	}, nil
 }
 
-func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight, limit uint64) ([]*types.BlockInfo, error) {
+func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types.BlockInfo, error) {
 	if startHeight > endHeight {
 		return nil, fmt.Errorf("the start height %v should not be higher than the end height %v", startHeight, endHeight)
 	}
 	// limit the number of blocks to query
 	count := endHeight - startHeight + 1
-	if limit > 0 && count >= limit {
-		count = limit
+	if limit > 0 && count >= uint64(limit) {
+		count = uint64(limit)
 	}
 
 	// create batch requests
@@ -375,7 +375,7 @@ func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight, limit
 		"Successfully batch query blocks",
 		zap.Uint64("start_height", startHeight),
 		zap.Uint64("end_height", endHeight),
-		zap.Uint64("limit", limit),
+		zap.Uint32("limit", limit),
 		zap.String("last_block_hash", hex.EncodeToString(blocks[len(blocks)-1].Hash)),
 	)
 	return blocks, nil
@@ -550,6 +550,27 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 	return lowerBound, nil
 }
 
+// QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
+func (cc *OPStackL2ConsumerController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
+	// TODO: implement slashed or jailed feature in OP stack L2
+	return false, false, nil
+}
+
+func (cc *OPStackL2ConsumerController) QueryFinalityActivationBlockHeight() (uint64, error) {
+	// TODO: implement finality activation feature in OP stack L2
+	return 0, nil
+}
+
+func (cc *OPStackL2ConsumerController) QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error) {
+	// TODO: implement highest voted height feature in OP stack L2
+	return 0, nil
+}
+
+func (cc *OPStackL2ConsumerController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error) {
+	// TODO: implement unjail feature in OP stack L2
+	return nil, nil
+}
+
 func (cc *OPStackL2ConsumerController) Close() error {
 	cc.opl2Client.Close()
 	return cc.CwClient.Stop()
@@ -563,7 +584,7 @@ func (cc *OPStackL2ConsumerController) isDelegationActive(
 	covQuorum := btcStakingParams.GetParams().CovenantQuorum
 	ud := btcDel.UndelegationResponse
 
-	if len(ud.GetDelegatorUnbondingSigHex()) > 0 {
+	if ud.DelegatorUnbondingInfoResponse != nil {
 		return false, nil
 	}
 
