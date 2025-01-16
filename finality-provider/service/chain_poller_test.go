@@ -22,6 +22,7 @@ import (
 func FuzzChainPoller_Start(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		currentHeight := uint64(r.Int63n(100) + 1)
@@ -37,17 +38,17 @@ func FuzzChainPoller_Start(f *testing.F) {
 			Height: endHeight,
 		}
 		mockClientController.EXPECT().QueryBestBlock().Return(currentBlockRes, nil).AnyTimes()
+		pollerCfg := fpcfg.DefaultChainPollerConfig()
 
 		for i := startHeight; i <= endHeight; i++ {
 			resBlocks := []*types.BlockInfo{{
 				Height: i,
 			}}
 
-			mockClientController.EXPECT().QueryBlocks(i, endHeight, endHeight).Return(resBlocks, nil).AnyTimes()
+			mockClientController.EXPECT().QueryBlocks(i, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
 		}
 
 		m := metrics.NewFpMetrics()
-		pollerCfg := fpcfg.DefaultChainPollerConfig()
 		pollerCfg.PollInterval = 10 * time.Millisecond
 		poller := service.NewChainPoller(testutil.GetTestLogger(t), &pollerCfg, mockClientController, m)
 		err := poller.Start(startHeight)
@@ -73,6 +74,7 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		currentHeight := uint64(r.Int63n(100) + 1)
@@ -97,19 +99,21 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 			}
 			resBlocks = append(resBlocks, resBlock)
 		}
-		mockClientController.EXPECT().QueryBlocks(startHeight, endHeight, endHeight).Return(resBlocks, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBlocks(endHeight+1, endHeight, endHeight).Return(resBlocks, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBlocks(startHeight, skipHeight, skipHeight).Return(resBlocks, nil).AnyTimes()
+
+		pollerCfg := fpcfg.DefaultChainPollerConfig()
+
+		mockClientController.EXPECT().QueryBlocks(startHeight, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(endHeight+1, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(startHeight, skipHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
 
 		resBlocks = append(resBlocks, &types.BlockInfo{
 			Height: skipHeight,
 		})
-		mockClientController.EXPECT().QueryBlocks(skipHeight, endHeight, endHeight).Return(resBlocks, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBlocks(skipHeight+1, endHeight, endHeight).Return(resBlocks, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBlocks(skipHeight+1, skipHeight, skipHeight).Return(resBlocks, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(skipHeight, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(skipHeight+1, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(skipHeight+1, skipHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
 
 		m := metrics.NewFpMetrics()
-		pollerCfg := fpcfg.DefaultChainPollerConfig()
 		pollerCfg.PollInterval = 1 * time.Second
 		poller := service.NewChainPoller(testutil.GetTestLogger(t), &pollerCfg, mockClientController, m)
 		// should expect error if the poller is not started

@@ -114,7 +114,7 @@ func (cp *ChainPoller) GetBlockInfoChan() <-chan *types.BlockInfo {
 	return cp.blockInfoChan
 }
 
-func (cp *ChainPoller) blocksWithRetry(start, end, limit uint64) ([]*types.BlockInfo, error) {
+func (cp *ChainPoller) blocksWithRetry(start, end uint64, limit uint32) ([]*types.BlockInfo, error) {
 	var (
 		block []*types.BlockInfo
 		err   error
@@ -137,7 +137,7 @@ func (cp *ChainPoller) blocksWithRetry(start, end, limit uint64) ([]*types.Block
 			zap.Uint("max_attempts", RtyAttNum),
 			zap.Uint64("start_height", start),
 			zap.Uint64("end_height", end),
-			zap.Uint64("limit", limit),
+			zap.Uint32("limit", limit),
 			zap.Error(err),
 		)
 	})); err != nil {
@@ -219,8 +219,14 @@ func (cp *ChainPoller) pollChain() {
 		} else {
 			// start polling in the first iteration
 			blockToRetrieve := cp.NextHeight()
+			var blocks []*types.BlockInfo
+			var err error
+			if blockToRetrieve == latestBlock.Height {
+				blocks = []*types.BlockInfo{latestBlock}
+			} else {
+				blocks, err = cp.blocksWithRetry(blockToRetrieve, latestBlock.Height, cp.cfg.PollSize)
+			}
 
-			blocks, err := cp.blocksWithRetry(blockToRetrieve, latestBlock.Height, latestBlock.Height)
 			if err != nil {
 				failedCycles++
 				cp.logger.Debug(

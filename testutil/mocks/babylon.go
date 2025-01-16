@@ -129,7 +129,7 @@ func (mr *MockClientControllerMockRecorder) QueryBlock(height interface{}) *gomo
 }
 
 // QueryBlocks mocks base method.
-func (m *MockClientController) QueryBlocks(startHeight, endHeight, limit uint64) ([]*types1.BlockInfo, error) {
+func (m *MockClientController) QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types1.BlockInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "QueryBlocks", startHeight, endHeight, limit)
 	ret0, _ := ret[0].([]*types1.BlockInfo)
