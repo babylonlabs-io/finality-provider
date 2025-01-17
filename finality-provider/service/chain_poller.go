@@ -26,28 +26,17 @@ const (
 	maxFailedCycles = 20
 )
 
-type skipHeightRequest struct {
-	height uint64
-	resp   chan *skipHeightResponse
-}
-
-type skipHeightResponse struct {
-	err error
-}
-
 type ChainPoller struct {
-	isStarted *atomic.Bool
-	wg        sync.WaitGroup
-	quit      chan struct{}
-
-	cc             clientcontroller.ClientController
-	cfg            *cfg.ChainPollerConfig
-	metrics        *metrics.FpMetrics
-	blockInfoChan  chan *types.BlockInfo
-	skipHeightChan chan *skipHeightRequest
-	nextHeight     uint64
-	logger         *zap.Logger
-	mu             sync.RWMutex
+	mu            sync.RWMutex
+	wg            sync.WaitGroup
+	isStarted     *atomic.Bool
+	quit          chan struct{}
+	cc            clientcontroller.ClientController
+	cfg           *cfg.ChainPollerConfig
+	metrics       *metrics.FpMetrics
+	blockInfoChan chan *types.BlockInfo
+	logger        *zap.Logger
+	nextHeight    uint64
 }
 
 func NewChainPoller(
@@ -57,14 +46,13 @@ func NewChainPoller(
 	metrics *metrics.FpMetrics,
 ) *ChainPoller {
 	return &ChainPoller{
-		isStarted:      atomic.NewBool(false),
-		logger:         logger,
-		cfg:            cfg,
-		cc:             cc,
-		metrics:        metrics,
-		blockInfoChan:  make(chan *types.BlockInfo, cfg.BufferSize),
-		skipHeightChan: make(chan *skipHeightRequest),
-		quit:           make(chan struct{}),
+		isStarted:     atomic.NewBool(false),
+		logger:        logger,
+		cfg:           cfg,
+		cc:            cc,
+		metrics:       metrics,
+		blockInfoChan: make(chan *types.BlockInfo, cfg.BufferSize),
+		quit:          make(chan struct{}),
 	}
 }
 
@@ -268,59 +256,9 @@ func (cp *ChainPoller) pollChain() {
 		select {
 		case <-ticker.C:
 			continue
-		case req := <-cp.skipHeightChan:
-			// no need to skip heights if the target height is not higher
-			// than the next height to retrieve
-			targetHeight := req.height
-			if targetHeight <= cp.nextHeight {
-				resp := &skipHeightResponse{
-					err: fmt.Errorf(
-						"the target height %d is not higher than the next height %d to retrieve",
-						targetHeight, cp.nextHeight)}
-				req.resp <- resp
-
-				continue
-			}
-
-			// drain blocks that can be skipped from blockInfoChan
-			cp.clearChanBufferUpToHeight(targetHeight)
-
-			// set the next height to the skip height
-			cp.setNextHeight(targetHeight)
-
-			cp.logger.Debug("the poller has skipped height(s)",
-				zap.Uint64("next_height", req.height))
-
-			req.resp <- &skipHeightResponse{}
-
 		case <-cp.quit:
 			return
 		}
-	}
-}
-
-func (cp *ChainPoller) SkipToHeight(height uint64) error {
-	if !cp.IsRunning() {
-		return fmt.Errorf("the chain poller is stopped")
-	}
-
-	respChan := make(chan *skipHeightResponse, 1)
-
-	// this handles the case when the poller is stopped before the
-	// skip height request is sent
-	select {
-	case <-cp.quit:
-		return fmt.Errorf("the chain poller is stopped")
-	case cp.skipHeightChan <- &skipHeightRequest{height: height, resp: respChan}:
-	}
-
-	// this handles the case when the poller is stopped before
-	// the skip height request is returned
-	select {
-	case <-cp.quit:
-		return fmt.Errorf("the chain poller is stopped")
-	case resp := <-respChan:
-		return resp.err
 	}
 }
 
@@ -336,13 +274,4 @@ func (cp *ChainPoller) setNextHeight(height uint64) {
 	defer cp.mu.Unlock()
 
 	cp.nextHeight = height
-}
-
-func (cp *ChainPoller) clearChanBufferUpToHeight(upToHeight uint64) {
-	for len(cp.blockInfoChan) > 0 {
-		block := <-cp.blockInfoChan
-		if block.Height+1 >= upToHeight {
-			break
-		}
-	}
 }
