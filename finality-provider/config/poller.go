@@ -1,6 +1,9 @@
 package config
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 var (
 	defaultBufferSize        = uint32(1000)
@@ -25,4 +28,16 @@ func DefaultChainPollerConfig() ChainPollerConfig {
 		StaticChainScanningStartHeight: defaultStaticStartHeight,
 		AutoChainScanningMode:          true,
 	}
+}
+
+func (c ChainPollerConfig) Validate() error {
+	if c.BufferSize == 0 {
+		return fmt.Errorf("invalid buffersize: %d", c.BufferSize)
+	}
+
+	if c.PollSize == 0 {
+		return fmt.Errorf("invalid pollinterval: %d", c.PollInterval)
+	}
+
+	return nil
 }
