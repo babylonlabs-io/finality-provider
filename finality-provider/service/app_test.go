@@ -42,6 +42,7 @@ const (
 func FuzzCreateFinalityProvider(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		logger := testutil.GetTestLogger(t)
@@ -66,6 +67,8 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(),
 			gomock.Any()).Return(uint64(0), nil).AnyTimes()
 		mockClientController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(nil, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+		mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(nil, nil).AnyTimes()
 
 		// Create randomized config
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
@@ -138,7 +141,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(nil, nil).AnyTimes()
 		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
 		mockClientController.EXPECT().QueryBestBlock().Return(blkInfo, nil).Return(blkInfo, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBlock(gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
 
 		noVotingPowerTable := r.Int31n(10) > 5
 		if noVotingPowerTable {
@@ -198,6 +201,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 func FuzzUnjailFinalityProvider(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
@@ -217,7 +221,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		mockClientController.EXPECT().QueryLastCommittedPublicRand(gomock.Any(), uint64(1)).Return(nil, nil).AnyTimes()
 		mockClientController.EXPECT().QueryLatestFinalizedBlocks(gomock.Any()).Return(nil, nil).AnyTimes()
 		mockClientController.EXPECT().QueryBestBlock().Return(blkInfo, nil).Return(blkInfo, nil).AnyTimes()
-		mockClientController.EXPECT().QueryBlock(gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
 
 		// set voting power to be positive so that the fp should eventually become ACTIVE
 		mockClientController.EXPECT().QueryFinalityProviderVotingPower(gomock.Any(), gomock.Any()).Return(uint64(0), nil).AnyTimes()
@@ -225,11 +229,16 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		mockClientController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, true, nil).AnyTimes()
 		mockClientController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
 
+		expectedTxHash := testutil.GenRandomHexStr(r, 32)
+
 		// Create fp app
 		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockClientController)
 		defer cleanup()
 
-		expectedTxHash := datagen.GenRandomHexStr(r, 32)
+		mockClientController.EXPECT().
+			CommitPubRandList(fpPk.MustToBTCPK(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
+
 		mockClientController.EXPECT().UnjailFinalityProvider(fpPk.MustToBTCPK()).Return(&types.TxResponse{TxHash: expectedTxHash}, nil)
 		err := app.StartFinalityProvider(fpPk, "")
 		require.NoError(t, err)
@@ -248,6 +257,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		logger := testutil.GetTestLogger(t)

@@ -22,6 +22,7 @@ import (
 func FuzzChainPoller_Start(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		currentHeight := uint64(r.Int63n(100) + 1)
@@ -34,19 +35,20 @@ func FuzzChainPoller_Start(f *testing.F) {
 		mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
 
 		currentBlockRes := &types.BlockInfo{
-			Height: currentHeight,
+			Height: endHeight,
 		}
 		mockClientController.EXPECT().QueryBestBlock().Return(currentBlockRes, nil).AnyTimes()
+		pollerCfg := fpcfg.DefaultChainPollerConfig()
 
 		for i := startHeight; i <= endHeight; i++ {
-			resBlock := &types.BlockInfo{
+			resBlocks := []*types.BlockInfo{{
 				Height: i,
-			}
-			mockClientController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
+			}}
+
+			mockClientController.EXPECT().QueryBlocks(i, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
 		}
 
 		m := metrics.NewFpMetrics()
-		pollerCfg := fpcfg.DefaultChainPollerConfig()
 		pollerCfg.PollInterval = 10 * time.Millisecond
 		poller := service.NewChainPoller(testutil.GetTestLogger(t), &pollerCfg, mockClientController, m)
 		err := poller.Start(startHeight)
@@ -72,12 +74,13 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		currentHeight := uint64(r.Int63n(100) + 1)
 		startHeight := currentHeight + 1
 		endHeight := startHeight + uint64(r.Int63n(10)+2)
-		skipHeight := endHeight + uint64(r.Int63n(10)+1)
+		skipHeight := endHeight + uint64(r.Int63n(10)+2)
 
 		ctl := gomock.NewController(t)
 		mockClientController := mocks.NewMockClientController(ctl)
@@ -85,19 +88,32 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 		mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
 
 		currentBlockRes := &types.BlockInfo{
-			Height: currentHeight,
+			Height: endHeight,
 		}
 		mockClientController.EXPECT().QueryBestBlock().Return(currentBlockRes, nil).AnyTimes()
 
-		for i := startHeight; i <= skipHeight; i++ {
+		var resBlocks []*types.BlockInfo
+		for i := startHeight; i <= endHeight; i++ {
 			resBlock := &types.BlockInfo{
 				Height: i,
 			}
-			mockClientController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
+			resBlocks = append(resBlocks, resBlock)
 		}
 
-		m := metrics.NewFpMetrics()
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
+
+		mockClientController.EXPECT().QueryBlocks(startHeight, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(endHeight+1, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(startHeight, skipHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
+
+		resBlocks = append(resBlocks, &types.BlockInfo{
+			Height: skipHeight,
+		})
+		mockClientController.EXPECT().QueryBlocks(skipHeight, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(skipHeight+1, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
+		mockClientController.EXPECT().QueryBlocks(skipHeight+1, skipHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
+
+		m := metrics.NewFpMetrics()
 		pollerCfg.PollInterval = 1 * time.Second
 		poller := service.NewChainPoller(testutil.GetTestLogger(t), &pollerCfg, mockClientController, m)
 		// should expect error if the poller is not started
@@ -116,7 +132,7 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
-			wg.Done()
+			defer wg.Done()
 			// insert a skipToHeight request with height lower than the next
 			// height to retrieve, expecting an error
 			err = poller.SkipToHeight(poller.NextHeight() - 1)
@@ -128,7 +144,8 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 		}()
 
 		skipped := false
-		for i := startHeight; i <= endHeight; i++ {
+		seenHeight := map[uint64]struct{}{}
+		for uint64(len(seenHeight)) <= endHeight-startHeight {
 			if skipped {
 				break
 			}
@@ -137,15 +154,25 @@ func FuzzChainPoller_SkipHeight(f *testing.F) {
 				if info.Height == skipHeight {
 					skipped = true
 				} else {
-					require.Equal(t, i, info.Height)
+					seenHeight[info.Height] = struct{}{}
 				}
 			case <-time.After(10 * time.Second):
 				t.Fatalf("Failed to get block info")
 			}
 		}
 
-		wg.Wait()
+		for i := startHeight; i <= endHeight; i++ {
+			if i == skipHeight {
+				break
+			}
+			if _, ok := seenHeight[i]; !ok {
+				t.Fatalf("height %d not seen", i)
+			}
+		}
 
-		require.Equal(t, skipHeight+1, poller.NextHeight())
+		wg.Wait()
+		require.Eventually(t, func() bool {
+			return skipHeight+1 == poller.NextHeight()
+		}, eventuallyWaitTimeOut, eventuallyPollTime)
 	})
 }

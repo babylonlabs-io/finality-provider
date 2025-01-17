@@ -191,7 +191,11 @@ func (cfg *Config) Validate() error {
 	}
 
 	if err := cfg.Metrics.Validate(); err != nil {
-		return fmt.Errorf("invalid metrics config")
+		return fmt.Errorf("invalid metrics config: %w", err)
+	}
+
+	if err := cfg.PollerConfig.Validate(); err != nil {
+		return fmt.Errorf("invalid poller config: %w", err)
 	}
 
 	// All good, return the sanitized result.
