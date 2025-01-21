@@ -744,12 +744,13 @@ func (bc *BabylonController) InsertSpvProofs(submitter string, proofs []*btcctyp
 }
 
 // RegisterConsumerChain registers a consumer chain via a MsgRegisterChain to Babylon
-func (bc *BabylonController) RegisterConsumerChain(id, name, description string) (*types.TxResponse, error) {
+func (bc *BabylonController) RegisterConsumerChain(id, name, description, ethL2FinalityContractAddress string) (*types.TxResponse, error) {
 	msg := &bsctypes.MsgRegisterConsumer{
-		Signer:              bc.MustGetTxSigner(),
-		ConsumerId:          id,
-		ConsumerName:        name,
-		ConsumerDescription: description,
+		Signer:                       bc.MustGetTxSigner(),
+		ConsumerId:                   id,
+		ConsumerName:                 name,
+		ConsumerDescription:          description,
+		EthL2FinalityContractAddress: ethL2FinalityContractAddress,
 	}
 
 	res, err := bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
