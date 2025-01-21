@@ -17,13 +17,14 @@ type ImageConfig struct {
 
 //nolint:deadcode
 const (
-	dockerBabylondRepository = "babylonlabs/babylond"
+	dockerBabylondRepository = "babylonlabs-io/babylond"
 )
 
 // NewImageConfig returns ImageConfig needed for running e2e test.
 func NewImageConfig(t *testing.T) ImageConfig {
 	babylondVersion, err := testutil.GetBabylonVersion()
 	require.NoError(t, err)
+	babylondVersion = "latest" // TODO: change back
 	return ImageConfig{
 		BabylonRepository: dockerBabylondRepository,
 		BabylonVersion:    babylondVersion,

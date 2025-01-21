@@ -44,6 +44,7 @@ func PrepareMockedConsumerControllerWithTxHash(t *testing.T, r *rand.Rand, start
 		CommitPubRandList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&types.TxResponse{TxHash: txHash}, nil).
 		AnyTimes()
+
 	return mockConsumerController
 }
 

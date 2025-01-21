@@ -33,6 +33,7 @@ WARNING: this can drain the finality provider's balance if the target height is 
 		RunE:    fpcmd.RunEWithClientCtx(runCommandCommitPubRand),
 	}
 	cmd.Flags().Uint64("start-height", math.MaxUint64, "The block height to start committing pubrand from (optional)")
+
 	return cmd
 }
 
@@ -51,8 +52,7 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 	}
 
 	// Get homePath from context like in start.go
-	clientCtx := client.GetClientContextFromCmd(cmd)
-	homePath, err := filepath.Abs(clientCtx.HomeDir)
+	homePath, err := filepath.Abs(ctx.HomeDir)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return fmt.Errorf("failed to initialize the logger: %w", err)
 	}
 
-	db, err := cfg.DatabaseConfig.GetDbBackend()
+	db, err := cfg.DatabaseConfig.GetDBBackend()
 	if err != nil {
 		return fmt.Errorf("failed to create db backend: %w", err)
 	}
@@ -94,7 +94,7 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}
 
-	fp, err := service.TestNewUnregisteredFinalityProviderInstance(
+	fp, err := service.NewFinalityProviderInstance(
 		fpPk, cfg, fpStore, pubRandStore, cc, consumerCon, em, metrics.NewFpMetrics(), "",
 		make(chan<- *service.CriticalError), logger)
 	if err != nil {

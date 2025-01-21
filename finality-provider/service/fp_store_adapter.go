@@ -59,6 +59,7 @@ func (fp *FinalityProviderInstance) GetBtcPkBIP340() *bbntypes.BIP340PubKey {
 	fp.fpState.withLock(func() {
 		pk = fp.fpState.sfp.GetBIP340BTCPK()
 	})
+
 	return pk
 }
 
@@ -67,6 +68,7 @@ func (fp *FinalityProviderInstance) GetBtcPk() *btcec.PublicKey {
 	fp.fpState.withLock(func() {
 		pk = fp.fpState.sfp.BtcPk
 	})
+
 	return pk
 }
 
@@ -79,6 +81,7 @@ func (fp *FinalityProviderInstance) GetStatus() proto.FinalityProviderStatus {
 	fp.fpState.withLock(func() {
 		status = fp.fpState.sfp.Status
 	})
+
 	return status
 }
 
@@ -87,6 +90,7 @@ func (fp *FinalityProviderInstance) GetLastVotedHeight() uint64 {
 	fp.fpState.withLock(func() {
 		lastVotedHeight = fp.fpState.sfp.LastVotedHeight
 	})
+
 	return lastVotedHeight
 }
 
@@ -95,6 +99,7 @@ func (fp *FinalityProviderInstance) GetChainID() []byte {
 	fp.fpState.withLock(func() {
 		chainID = fp.fpState.sfp.ChainID
 	})
+
 	return []byte(chainID)
 }
 

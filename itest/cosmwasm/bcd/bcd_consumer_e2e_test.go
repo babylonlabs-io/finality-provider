@@ -35,7 +35,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	babylonContractPath := "../../bytecode/babylon_contract.wasm"
 	err := ctm.BcdConsumerClient.StoreWasmCode(babylonContractPath)
 	require.NoError(t, err)
-	babylonContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeId()
+	babylonContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), babylonContractWasmId)
 
@@ -43,7 +43,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	btcStakingContractPath := "../../bytecode/btc_staking.wasm"
 	err = ctm.BcdConsumerClient.StoreWasmCode(btcStakingContractPath)
 	require.NoError(t, err)
-	btcStakingContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeId()
+	btcStakingContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
 	require.NoError(t, err)
 	require.Equal(t, uint64(2), btcStakingContractWasmId)
 
@@ -98,7 +98,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, consumerFpsResp)
 	require.Len(t, consumerFpsResp.Fps, 1)
-	require.Equal(t, fpMsg.BtcStaking.NewFP[0].ConsumerID, consumerFpsResp.Fps[0].ConsumerId)
+	require.Equal(t, fpMsg.BtcStaking.NewFP[0].ConsumerID, consumerFpsResp.Fps[0].ConsumerID)
 	require.Equal(t, fpMsg.BtcStaking.NewFP[0].BTCPKHex, consumerFpsResp.Fps[0].BtcPkHex)
 
 	// ensure consumer finality providers are stored in Babylon

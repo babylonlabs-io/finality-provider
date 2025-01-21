@@ -12,7 +12,6 @@ import (
 	"time"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	bbncfg "github.com/babylonlabs-io/babylon/client/config"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	opcc "github.com/babylonlabs-io/finality-provider/clientcontroller/opstackl2"
@@ -22,8 +21,10 @@ import (
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
+	"github.com/babylonlabs-io/finality-provider/itest/container"
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
 	"github.com/babylonlabs-io/finality-provider/metrics"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/testutil/log"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -36,9 +37,13 @@ import (
 )
 
 const (
-	opFinalityGadgetContractPath = "../bytecode/op_finality_gadget_16f6154.wasm"
 	opConsumerChainId            = "op-stack-l2-706114"
 	bbnAddrTopUpAmount           = 100000000
+	eventuallyWaitTimeOut        = 5 * time.Minute
+	eventuallyPollTime           = 500 * time.Millisecond
+	passphrase                   = "testpass"
+	hdPath                       = ""
+	opFinalityGadgetContractPath = "../bytecode/op_finality_gadget_16f6154.wasm"
 )
 
 type BaseTestManager = base_test_manager.BaseTestManager
@@ -46,12 +51,13 @@ type BaseTestManager = base_test_manager.BaseTestManager
 type OpL2ConsumerTestManager struct {
 	BaseTestManager
 	BaseDir              string
-	BabylonHandler       *e2eutils.BabylonNodeHandler
+	manager              *container.Manager
 	OpConsumerController *opcc.OPStackL2ConsumerController
 	EOTSServerHandler    *e2eutils.EOTSServerHandler
 	BabylonFpApp         *service.FinalityProviderApp
 	ConsumerFpApp        *service.FinalityProviderApp
 	ConsumerEOTSClient   *client.EOTSManagerGRpcClient
+	logger               *zap.Logger
 }
 
 // StartOpL2ConsumerManager
@@ -60,7 +66,7 @@ type OpL2ConsumerTestManager struct {
 // - creates and starts Babylon and consumer FPs without any FP instances
 func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 	// Setup base dir and logger
-	testDir, err := e2eutils.BaseDir("op-fp-e2e-test")
+	testDir, err := base_test_manager.TempDir(t, "op-fp-e2e-test-*")
 	require.NoError(t, err)
 
 	// setup logger
@@ -70,10 +76,10 @@ func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 	require.NoError(t, err)
 
 	// start Babylon node
-	babylonHandler, covenantPrivKeys := startBabylonNode(t)
+	manager, covenantPrivKeys := startBabylonNode(t)
 
 	// wait for Babylon node starts b/c we will fund the FP address with babylon node
-	babylonController, stakingParams := waitForBabylonNodeStart(t, testDir, logger, babylonHandler)
+	babylonController, _ := waitForBabylonNodeStart(t, testDir, logger, manager)
 
 	// register consumer chain to Babylon
 	_, err = babylonController.RegisterConsumerChain(
@@ -85,7 +91,7 @@ func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 	t.Logf(log.Prefix("Register consumer %s to Babylon"), opConsumerChainId)
 
 	// create cosmwasm client
-	consumerFpCfg, opConsumerCfg := createConsumerFpConfig(t, testDir, babylonHandler)
+	consumerFpCfg, opConsumerCfg := createConsumerFpConfig(t, testDir, manager)
 	cwConfig := opConsumerCfg.ToCosmwasmConfig()
 	cwClient, err := opcc.NewCwClient(&cwConfig, logger)
 	require.NoError(t, err)
@@ -101,7 +107,7 @@ func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 	consumerFpCfg.OPStackL2Config = opConsumerCfg
 
 	// create Babylon FP config
-	babylonFpCfg := createBabylonFpConfig(t, testDir, babylonHandler)
+	babylonFpCfg := createBabylonFpConfig(t, testDir, manager)
 
 	// create shutdown interceptor
 	shutdownInterceptor, err := signal.Intercept()
@@ -130,40 +136,49 @@ func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 		BaseTestManager: BaseTestManager{
 			BBNClient:        babylonController,
 			CovenantPrivKeys: covenantPrivKeys,
-			StakingParams:    stakingParams,
 		},
 		BaseDir:              testDir,
-		BabylonHandler:       babylonHandler,
+		manager:              manager,
 		OpConsumerController: opConsumerController,
 		EOTSServerHandler:    eotsHandler,
 		BabylonFpApp:         babylonFpApp,
 		ConsumerFpApp:        consumerFpApp,
 		ConsumerEOTSClient:   EOTSClients[1],
+		logger:               logger,
 	}
 
 	return ctm
 }
 
-func startBabylonNode(t *testing.T) (*e2eutils.BabylonNodeHandler, []*secp256k1.PrivateKey) {
+func startBabylonNode(t *testing.T) (*container.Manager, []*secp256k1.PrivateKey) {
 	// generate covenant committee
 	covenantQuorum := 2
 	numCovenants := 3
 	covenantPrivKeys, covenantPubKeys := e2eutils.GenerateCovenantCommittee(numCovenants, t)
 
-	bh := e2eutils.NewBabylonNodeHandler(t, covenantQuorum, covenantPubKeys)
-	err := bh.Start()
+	// Create container manager
+	manager, err := container.NewManager(t)
 	require.NoError(t, err)
-	return bh, covenantPrivKeys
+
+	// Create temp dir for babylon node
+	babylonDir, err := base_test_manager.TempDir(t, "babylon-test-*")
+	require.NoError(t, err)
+
+	// Start babylon node in docker
+	_, err = manager.RunBabylondResource(t, babylonDir, covenantQuorum, covenantPubKeys)
+	require.NoError(t, err)
+
+	return manager, covenantPrivKeys
 }
 
 func waitForBabylonNodeStart(
 	t *testing.T,
 	testDir string,
 	logger *zap.Logger,
-	babylonHandler *e2eutils.BabylonNodeHandler,
+	manager *container.Manager,
 ) (*bbncc.BabylonController, *types.StakingParams) {
 	// create Babylon FP config
-	babylonFpCfg := createBabylonFpConfig(t, testDir, babylonHandler)
+	babylonFpCfg := createBabylonFpConfig(t, testDir, manager)
 
 	// create Babylon controller
 	babylonController, err := bbncc.NewBabylonController(babylonFpCfg.BabylonConfig, &babylonFpCfg.BTCNetParams, logger)
@@ -187,93 +202,112 @@ func waitForBabylonNodeStart(
 func createBabylonFpConfig(
 	t *testing.T,
 	testDir string,
-	bh *e2eutils.BabylonNodeHandler,
+	manager *container.Manager,
 ) *fpcfg.Config {
 	fpHomeDir := filepath.Join(testDir, "babylon-fp-home")
 	t.Logf(log.Prefix("Babylon FP home dir: %s"), fpHomeDir)
+
+	// Get dynamically allocated ports from docker
+	babylonDir, err := base_test_manager.TempDir(t, "babylon-test-*")
+	require.NoError(t, err)
+
+	// Start babylond if not already started
+	babylond, err := manager.RunBabylondResource(t, babylonDir, 2, nil)
+	require.NoError(t, err)
+	require.NotNil(t, babylond)
+
 	cfg := e2eutils.DefaultFpConfigWithPorts(
-		bh.GetNodeDataDir(),
+		"/home/node0/babylond", // This is the path inside docker container
 		fpHomeDir,
 		fpcfg.DefaultRPCPort,
 		metrics.DefaultFpConfig().Port,
 		eotsconfig.DefaultRPCPort,
 	)
+
+	// Update ports with dynamically allocated ones from docker
+	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
+	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("localhost:%s", babylond.GetPort("9090/tcp"))
+
 	return cfg
 }
 
 func createConsumerFpConfig(
 	t *testing.T,
 	testDir string,
-	bh *e2eutils.BabylonNodeHandler,
+	manager *container.Manager,
 ) (*fpcfg.Config, *fpcfg.OPStackL2Config) {
 	fpHomeDir := filepath.Join(testDir, "consumer-fp-home")
 	t.Logf(log.Prefix("Consumer FP home dir: %s"), fpHomeDir)
 
+	// Get dynamically allocated ports from docker
+	babylonDir, err := base_test_manager.TempDir(t, "babylon-test-*")
+	require.NoError(t, err)
+
+	// Start babylond if not already started
+	babylond, err := manager.RunBabylondResource(t, babylonDir, 2, nil)
+	require.NoError(t, err)
+	require.NotNil(t, babylond)
+
 	cfg := e2eutils.DefaultFpConfigWithPorts(
+		"/home/node0/babylond", // This is the path inside docker container
 		fpHomeDir,
-		fpHomeDir,
-		fpcfg.DefaultRPCPort+1,
-		metrics.DefaultFpConfig().Port+1,
-		eotsconfig.DefaultRPCPort+1,
+		fpcfg.DefaultRPCPort,
+		metrics.DefaultFpConfig().Port,
+		eotsconfig.DefaultRPCPort,
 	)
 
+	// Update ports with dynamically allocated ones from docker
+	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
+	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("localhost:%s", babylond.GetPort("9090/tcp"))
+
 	// create consumer FP key/address
-	fpBbnKeyInfo, err := service.CreateChainKey(
+	fpBbnKeyInfo, err := testutil.CreateChainKey(
 		cfg.BabylonConfig.KeyDirectory,
 		cfg.BabylonConfig.ChainID,
 		cfg.BabylonConfig.Key,
 		cfg.BabylonConfig.KeyringBackend,
-		e2eutils.Passphrase,
-		e2eutils.HdPath,
+		passphrase,
+		hdPath,
 		"",
 	)
 	require.NoError(t, err)
 
 	// fund the consumer FP address
 	t.Logf(log.Prefix("Funding %dubbn to %s"), bbnAddrTopUpAmount, fpBbnKeyInfo.AccAddress.String())
-	err = bh.BabylonNode.TxBankSend(
-		fpBbnKeyInfo.AccAddress.String(),
-		fmt.Sprintf("%dubbn", bbnAddrTopUpAmount),
-	)
+	_, _, err = manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), fmt.Sprintf("%dubbn", bbnAddrTopUpAmount), "node0")
 	require.NoError(t, err)
 
 	// check consumer FP address balance
 	require.Eventually(t, func() bool {
-		balance, err := bh.BabylonNode.CheckAddrBalance(fpBbnKeyInfo.AccAddress.String())
+		out, _, err := manager.ExecBabylondCmd(t, []string{"query", "bank", "balances", fpBbnKeyInfo.AccAddress.String(), "--output=json"})
 		if err != nil {
-			t.Logf("Error checking balance: %v", err)
 			return false
 		}
-		return balance == bbnAddrTopUpAmount
-	}, 30*time.Second, 2*time.Second, fmt.Sprintf("failed to top up %s", fpBbnKeyInfo.AccAddress.String()))
-	t.Logf(log.Prefix("Sent %dubbn to %s"), bbnAddrTopUpAmount, fpBbnKeyInfo.AccAddress.String())
+		var balances struct {
+			Balances []struct {
+				Denom  string `json:"denom"`
+				Amount string `json:"amount"`
+			} `json:"balances"`
+		}
+		if err := json.Unmarshal(out.Bytes(), &balances); err != nil {
+			return false
+		}
+		for _, bal := range balances.Balances {
+			if bal.Denom == "ubbn" && bal.Amount == fmt.Sprintf("%d", bbnAddrTopUpAmount) {
+				return true
+			}
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
-	// set consumer FP config
-	dc := bbncfg.DefaultBabylonConfig()
-	opConsumerCfg := &fpcfg.OPStackL2Config{
-		// it will be updated later
-		OPFinalityGadgetAddress: "",
-		// it must be a dialable RPC address checked by NewOPStackL2ConsumerController
-		OPStackL2RPCAddress: "https://optimism-sepolia.drpc.org",
-		// the value does not matter for the test
-		BabylonFinalityGadgetRpc: "127.0.0.1:50051",
-		Key:                      cfg.BabylonConfig.Key,
-		ChainID:                  dc.ChainID,
-		RPCAddr:                  dc.RPCAddr,
-		GRPCAddr:                 dc.GRPCAddr,
-		AccountPrefix:            dc.AccountPrefix,
-		KeyringBackend:           dc.KeyringBackend,
-		KeyDirectory:             cfg.BabylonConfig.KeyDirectory,
-		GasAdjustment:            1.5,
-		GasPrices:                "0.002ubbn",
-		Debug:                    dc.Debug,
-		Timeout:                  dc.Timeout,
-		BlockTimeout:             1 * time.Minute,
-		OutputFormat:             dc.OutputFormat,
-		SignModeStr:              dc.SignModeStr,
+	// create consumer FP config
+	opCfg := &fpcfg.OPStackL2Config{
+		ChainID:                  opConsumerChainId,
+		OPStackL2RPCAddress:      "http://localhost:8545",
+		BabylonFinalityGadgetRpc: "http://localhost:8547",
 	}
-	cfg.OPStackL2Config = opConsumerCfg
-	return cfg, opConsumerCfg
+
+	return cfg, opCfg
 }
 
 func deployCwContract(t *testing.T, cwClient *cwclient.Client) string {
@@ -283,7 +317,7 @@ func deployCwContract(t *testing.T, cwClient *cwclient.Client) string {
 
 	var codeId uint64
 	require.Eventually(t, func() bool {
-		codeId, _ = cwClient.GetLatestCodeId()
+		codeId, _ = cwClient.GetLatestCodeID()
 		return codeId > 0
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 	require.Equal(t, uint64(1), codeId, "first deployed contract code_id should be 1")
@@ -318,8 +352,8 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 
 	// wait for Babylon FP registration
 	require.Eventually(t, func() bool {
-		_, err := ctm.BBNClient.QueryFinalityProviders()
-		return err == nil
+		fps, err := ctm.BBNClient.QueryFinalityProviders()
+		return err == nil && len(fps) > 0
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime, "Failed to wait for Babylon FP registration")
 
 	// create and register consumer FP
@@ -328,8 +362,8 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 
 	// wait for consumer FP registration
 	require.Eventually(t, func() bool {
-		_, err := ctm.BBNClient.QueryConsumerFinalityProviders(opConsumerChainId)
-		return err == nil
+		fps, err := ctm.BBNClient.QueryFinalityProviders()
+		return err == nil && len(fps) > 1
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime, "Failed to wait for consumer FP registration")
 
 	return []*bbntypes.BIP340PubKey{babylonFpPk, consumerFpPk}
@@ -343,10 +377,10 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	fpStore := ctm.ConsumerFpApp.GetFinalityProviderStore()
 	pubRandStore := ctm.ConsumerFpApp.GetPubRandProofStore()
 	bc := ctm.BabylonFpApp.GetBabylonController()
-	logger := ctm.ConsumerFpApp.Logger()
-	fpInstance, err := service.TestNewUnregisteredFinalityProviderInstance(
+
+	fpInstance, err := service.NewFinalityProviderInstance(
 		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.OpConsumerController, ctm.ConsumerEOTSClient,
-		metrics.NewFpMetrics(), "", make(chan<- *service.CriticalError), logger)
+		metrics.NewFpMetrics(), "", make(chan<- *service.CriticalError), ctm.logger)
 	require.NoError(t, err)
 	return fpInstance
 }
@@ -372,11 +406,9 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 	t *testing.T,
 	queryMsg map[string]interface{},
 ) *wasmtypes.QuerySmartContractStateResponse {
-	logger := ctm.ConsumerFpApp.Logger()
-
 	// create cosmwasm client
 	cwConfig := ctm.OpConsumerController.Cfg.ToCosmwasmConfig()
-	cwClient, err := opcc.NewCwClient(&cwConfig, logger)
+	cwClient, err := opcc.NewCwClient(&cwConfig, ctm.logger)
 	require.NoError(t, err)
 
 	// marshal query message
@@ -402,9 +434,8 @@ func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
 	require.NoError(t, err)
 	err = ctm.ConsumerFpApp.Stop()
 	require.NoError(t, err)
-	err = ctm.BabylonHandler.Stop()
+	err = ctm.manager.ClearResources()
 	require.NoError(t, err)
-	ctm.EOTSServerHandler.Stop()
 	err = os.RemoveAll(ctm.BaseDir)
 	require.NoError(t, err)
 }

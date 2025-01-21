@@ -37,6 +37,10 @@ func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string) 
 	}
 }
 
+func (eh *EOTSServerHandler) Config() *config.Config {
+	return eh.cfg
+}
+
 func (eh *EOTSServerHandler) Start(ctx context.Context) {
 	go eh.startServer(ctx)
 }

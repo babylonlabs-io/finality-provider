@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -31,7 +32,7 @@ func New(cfg *config.CosmwasmConfig, chainName string, encodingCfg wasmdparams.E
 
 	// ensure cfg is valid
 	if err := cfg.Validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
 	// use the existing logger or create a new one if not given
@@ -39,7 +40,7 @@ func New(cfg *config.CosmwasmConfig, chainName string, encodingCfg wasmdparams.E
 	if zapLogger == nil {
 		zapLogger, err = newRootLogger("console", true)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create root logger: %w", err)
 		}
 	}
 
@@ -50,10 +51,13 @@ func New(cfg *config.CosmwasmConfig, chainName string, encodingCfg wasmdparams.E
 		chainName,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create cosmos provider: %w", err)
 	}
 
-	cp := provider.(*cosmos.CosmosProvider)
+	cp, ok := provider.(*cosmos.CosmosProvider)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast provider to CosmosProvider")
+	}
 	cp.PCfg.KeyDirectory = cfg.KeyDirectory
 	cp.Cdc = cosmos.Codec{
 		InterfaceRegistry: encodingCfg.InterfaceRegistry,
@@ -66,9 +70,8 @@ func New(cfg *config.CosmwasmConfig, chainName string, encodingCfg wasmdparams.E
 	// NOTE: this will create a RPC client. The RPC client will be used for
 	// submitting txs and making ad hoc queries. It won't create WebSocket
 	// connection with wasmd node
-	err = cp.Init(context.Background())
-	if err != nil {
-		return nil, err
+	if err = cp.Init(context.Background()); err != nil {
+		return nil, fmt.Errorf("failed to initialize cosmos provider: %w", err)
 	}
 
 	// create a queryClient so that the Client inherits all query functions
@@ -77,11 +80,11 @@ func New(cfg *config.CosmwasmConfig, chainName string, encodingCfg wasmdparams.E
 	// see https://github.com/strangelove-ventures/cometbft-client
 	c, err := rpchttp.NewWithTimeout(cp.PCfg.RPCAddr, "/websocket", uint(cfg.Timeout.Seconds()))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create RPC client: %w", err)
 	}
 	queryClient, err := query.NewWithClient(c, cfg.Timeout)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create query client: %w", err)
 	}
 
 	return &Client{

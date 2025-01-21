@@ -13,7 +13,7 @@ import (
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 )
 
-func (cwClient *Client) StoreWasmCode(wasmFile string) error {
+func (c *Client) StoreWasmCode(wasmFile string) error {
 	wasmCode, err := os.ReadFile(wasmFile)
 	if err != nil {
 		return err
@@ -33,10 +33,10 @@ func (cwClient *Client) StoreWasmCode(wasmFile string) error {
 	}
 
 	storeMsg := &wasmdtypes.MsgStoreCode{
-		Sender:       cwClient.MustGetAddr(),
+		Sender:       c.MustGetAddr(),
 		WASMByteCode: wasmCode,
 	}
-	_, err = cwClient.ReliablySendMsg(context.Background(), storeMsg, nil, nil)
+	_, err = c.ReliablySendMsg(context.Background(), storeMsg, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -44,17 +44,17 @@ func (cwClient *Client) StoreWasmCode(wasmFile string) error {
 	return nil
 }
 
-func (cwClient *Client) InstantiateContract(codeID uint64, initMsg []byte) error {
+func (c *Client) InstantiateContract(codeID uint64, initMsg []byte) error {
 	instantiateMsg := &wasmdtypes.MsgInstantiateContract{
-		Sender: cwClient.MustGetAddr(),
-		Admin:  cwClient.MustGetAddr(),
+		Sender: c.MustGetAddr(),
+		Admin:  c.MustGetAddr(),
 		CodeID: codeID,
 		Label:  "cw",
 		Msg:    initMsg,
 		Funds:  nil,
 	}
 
-	_, err := cwClient.ReliablySendMsg(context.Background(), instantiateMsg, nil, nil)
+	_, err := c.ReliablySendMsg(context.Background(), instantiateMsg, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -62,15 +62,15 @@ func (cwClient *Client) InstantiateContract(codeID uint64, initMsg []byte) error
 	return nil
 }
 
-func (cwClient *Client) ExecuteContract(contractAddr string, execMsg []byte, funds []sdk.Coin) error {
+func (c *Client) ExecuteContract(contractAddr string, execMsg []byte, funds []sdk.Coin) error {
 	executeMsg := &wasmdtypes.MsgExecuteContract{
-		Sender:   cwClient.MustGetAddr(),
+		Sender:   c.MustGetAddr(),
 		Contract: contractAddr,
 		Msg:      execMsg,
 		Funds:    funds,
 	}
 
-	_, err := cwClient.ReliablySendMsg(context.Background(), executeMsg, nil, nil)
+	_, err := c.ReliablySendMsg(context.Background(), executeMsg, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -79,12 +79,12 @@ func (cwClient *Client) ExecuteContract(contractAddr string, execMsg []byte, fun
 }
 
 // returns the latest wasm code id.
-func (cwClient *Client) GetLatestCodeId() (uint64, error) {
+func (c *Client) GetLatestCodeID() (uint64, error) {
 	pagination := &sdkquery.PageRequest{
 		Limit:   1,
 		Reverse: true,
 	}
-	resp, err := cwClient.ListCodes(pagination)
+	resp, err := c.ListCodes(pagination)
 	if err != nil {
 		return 0, err
 	}

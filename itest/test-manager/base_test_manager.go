@@ -1,9 +1,11 @@
 package test_manager
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -27,7 +29,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/metrics"
-	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/wire"
@@ -40,7 +41,6 @@ import (
 
 type BaseTestManager struct {
 	BBNClient        *bbncc.BabylonController
-	StakingParams    *types.StakingParams
 	CovenantPrivKeys []*btcec.PrivateKey
 }
 
@@ -61,14 +61,14 @@ type TestDelegationData struct {
 }
 
 func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.PublicKey, stakingTime uint16, stakingAmount int64) *TestDelegationData {
-	params := tm.StakingParams
+	params, err := tm.BBNClient.QueryStakingParams()
+	require.NoError(t, err)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// delegator BTC key pairs, staking tx and slashing tx
 	delBtcPrivKey, delBtcPubKey, err := datagen.GenRandomBTCKeyPair(r)
 	require.NoError(t, err)
 
-	unbondingTime := uint16(tm.StakingParams.MinimumUnbondingTime()) + 1
 	testStakingInfo := datagen.GenBTCStakingSlashingInfo(
 		r,
 		t,
@@ -81,7 +81,7 @@ func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.Publ
 		stakingAmount,
 		params.SlashingPkScript,
 		params.SlashingRate,
-		unbondingTime,
+		uint16(params.UnbondingTime),
 	)
 
 	stakerAddr := tm.BBNClient.GetKeyAddress()
@@ -142,11 +142,11 @@ func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.Publ
 		params.CovenantPks,
 		params.CovenantQuorum,
 		wire.NewOutPoint(&stakingTxHash, 0),
-		unbondingTime,
+		uint16(params.UnbondingTime),
 		unbondingValue,
 		params.SlashingPkScript,
 		params.SlashingRate,
-		unbondingTime,
+		uint16(params.UnbondingTime),
 	)
 
 	unbondingTxMsg := testUnbondingInfo.UnbondingTx
@@ -176,7 +176,7 @@ func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.Publ
 		testStakingInfo.SlashingTx,
 		delegatorSig,
 		serializedUnbondingTx,
-		uint32(unbondingTime),
+		uint32(params.UnbondingTime),
 		unbondingValue,
 		testUnbondingInfo.SlashingTx,
 		unbondingSig)
@@ -307,7 +307,8 @@ func (tm *BaseTestManager) InsertCovenantSigForDelegation(t *testing.T, btcDel *
 	stakingMsgTx, err := bbntypes.NewBTCTxFromBytes(stakingTx)
 	require.NoError(t, err)
 
-	params := tm.StakingParams
+	params, err := tm.BBNClient.QueryStakingParams()
+	require.NoError(t, err)
 
 	var fpKeys []*btcec.PublicKey
 	for _, v := range btcDel.FpBtcPkList {
@@ -319,7 +320,7 @@ func (tm *BaseTestManager) InsertCovenantSigForDelegation(t *testing.T, btcDel *
 		fpKeys,
 		params.CovenantPks,
 		params.CovenantQuorum,
-		btcDel.GetStakingTime(),
+		uint16(btcDel.EndHeight-btcDel.StartHeight),
 		btcutil.Amount(btcDel.TotalSat),
 		e2eutils.BtcNetworkParams,
 	)
@@ -330,7 +331,6 @@ func (tm *BaseTestManager) InsertCovenantSigForDelegation(t *testing.T, btcDel *
 	idx, err := bbntypes.GetOutputIdxInBTCTx(stakingMsgTx, stakingInfo.StakingOutput)
 	require.NoError(t, err)
 
-	require.NoError(t, err)
 	slashingPathInfo, err := stakingInfo.SlashingPathSpendInfo()
 	require.NoError(t, err)
 
@@ -459,6 +459,7 @@ func (tm *BaseTestManager) FinalizeUntilEpoch(t *testing.T, epoch uint64) {
 		if err != nil {
 			return false
 		}
+
 		return epoch <= lastSealedCkpt.RawCheckpoint.EpochNum
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 
@@ -536,8 +537,10 @@ func (tm *BaseTestManager) FinalizeUntilEpoch(t *testing.T, epoch uint64) {
 		lastFinalizedCkpt, err := bbnClient.LatestEpochFromStatus(ckpttypes.Finalized)
 		if err != nil {
 			t.Logf("failed to get last finalized epoch: %v", err)
+
 			return false
 		}
+
 		return epoch <= lastFinalizedCkpt.RawCheckpoint.EpochNum
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 
@@ -565,8 +568,8 @@ func StartEotsManagers(
 		eotsConfigs[i] = eotsCfg
 	}
 
-	eh := e2eutils.NewEOTSServerHandlerMultiFP(t, logger, eotsConfigs, eotsHomeDirs, shutdownInterceptor)
-	eh.Start()
+	eh := e2eutils.NewEOTSServerHandler(t, eotsConfigs[0], eotsHomeDirs[0])
+	eh.Start(context.Background())
 
 	// create EOTS clients
 	for i := 0; i < len(fpCfgs); i++ {
@@ -578,12 +581,15 @@ func StartEotsManagers(
 			eotsCli, err = eotsclient.NewEOTSManagerGRpcClient(fpCfgs[i].EOTSManagerAddress)
 			if err != nil {
 				t.Logf("Error creating EOTS client: %v", err)
+
 				return false
 			}
 			eotsClients[i] = eotsCli
+
 			return true
 		}, 5*time.Second, time.Second, "Failed to create EOTS client")
 	}
+
 	return eh, eotsClients
 }
 
@@ -597,13 +603,13 @@ func CreateAndStartFpApp(
 	bc, err := bbncc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
 	require.NoError(t, err)
 
-	fpdb, err := cfg.DatabaseConfig.GetDbBackend()
+	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, fpdb, logger)
 	require.NoError(t, err)
 
-	err = fpApp.StartWithoutSyncFpStatus()
+	err = fpApp.Start()
 	require.NoError(t, err)
 
 	return fpApp
@@ -620,7 +626,6 @@ func CreateAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProv
 		keyName,
 		chainId,
 		e2eutils.Passphrase,
-		e2eutils.HdPath,
 		nil,
 		desc,
 		&commission,
@@ -630,7 +635,22 @@ func CreateAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProv
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
 	require.NoError(t, err)
 
-	_, err = fpApp.RegisterFinalityProvider(fpPk.MarshalHex())
-	require.NoError(t, err)
 	return fpPk
+}
+
+func TempDir(t *testing.T, pattern string) (string, error) {
+	tempName, err := os.MkdirTemp(os.TempDir(), pattern)
+	if err != nil {
+		return "", err
+	}
+
+	t.Cleanup(func() {
+		_ = os.RemoveAll(tempName)
+	})
+
+	if err = os.Chmod(tempName, 0755); err != nil {
+		return "", err
+	}
+
+	return tempName, nil
 }

@@ -5,6 +5,13 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	mrand "math/rand"
+	"regexp"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbn "github.com/babylonlabs-io/babylon/types"
 	"github.com/babylonlabs-io/finality-provider/testutil"
@@ -13,12 +20,6 @@ import (
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/require"
-	mrand "math/rand"
-	"regexp"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (
@@ -195,6 +196,7 @@ func (m *Manager) ExecCmd(t *testing.T, containerName string, command []string) 
 
 			if err != nil {
 				t.Logf("failed to create exec: %v", err)
+
 				return false
 			}
 
@@ -206,6 +208,7 @@ func (m *Manager) ExecCmd(t *testing.T, containerName string, command []string) 
 			})
 			if err != nil {
 				t.Logf("failed to start exec: %v", err)
+
 				return false
 			}
 

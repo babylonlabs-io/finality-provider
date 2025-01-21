@@ -38,6 +38,7 @@ var _ api.ClientController = &BabylonController{}
 
 var emptyErrs = []*sdkErr.Error{}
 
+//nolint:revive
 type BabylonController struct {
 	bbnClient *bbnclient.Client
 	cfg       *fpcfg.BBNConfig
@@ -61,7 +62,7 @@ func NewBabylonController(
 	}
 
 	// makes sure that the key in config really exists and is a valid bech32 addr
-	// to allow using mustGetTxSigner
+	// to allow using MustGetTxSigner
 	if _, err := bc.GetAddr(); err != nil {
 		return nil, err
 	}
@@ -253,7 +254,7 @@ func (bc *BabylonController) SubmitBatchFinalitySigs(
 // UnjailFinalityProvider sends an unjail transaction to the consumer chain
 func (bc *BabylonController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error) {
 	msg := &finalitytypes.MsgUnjailFinalityProvider{
-		Signer:  bc.mustGetTxSigner(),
+		Signer:  bc.MustGetTxSigner(),
 		FpBtcPk: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
 	}
 
@@ -275,17 +276,6 @@ func (bc *BabylonController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*typ
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-// QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
-func (bc *BabylonController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
-	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
-	if err != nil {
-		return false, false, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
-	}
-
-	return res.FinalityProvider.SlashedBtcHeight > 0, res.FinalityProvider.Jailed, nil
-}
-
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
 func (bc *BabylonController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
 	res, err := bc.bbnClient.QueryClient.FinalityProviderPowerAtHeight(
@@ -295,8 +285,9 @@ func (bc *BabylonController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey
 	if err != nil {
 		// voting power table not updated indicates that no fp has voting power
 		// therefore, it should be treated as the fp having 0 voting power
-		if strings.Contains(err.Error(), btcstakingtypes.ErrVotingPowerTableNotUpdated.Error()) {
+		if strings.Contains(err.Error(), finalitytypes.ErrVotingPowerTableNotUpdated.Error()) {
 			bc.logger.Info("the voting power table not updated yet")
+
 			return false, nil
 		}
 
@@ -540,6 +531,28 @@ func (bc *BabylonController) QueryFinalityProviders() ([]*btcstakingtypes.Finali
 	return fps, nil
 }
 
+func (bc *BabylonController) QueryConsumerFinalityProviders(consumerID string) ([]*bsctypes.FinalityProviderResponse, error) {
+	var fps []*bsctypes.FinalityProviderResponse
+	pagination := &sdkquery.PageRequest{
+		Limit: 100,
+	}
+
+	for {
+		res, err := bc.bbnClient.QueryClient.QueryConsumerFinalityProviders(consumerID, pagination)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query finality providers: %w", err)
+		}
+		fps = append(fps, res.FinalityProviders...)
+		if res.Pagination == nil || res.Pagination.NextKey == nil {
+			break
+		}
+
+		pagination.Key = res.Pagination.NextKey
+	}
+
+	return fps, nil
+}
+
 func (bc *BabylonController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
@@ -563,9 +576,9 @@ func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
 		return nil, err
 	}
 
-	if !strings.EqualFold(fpRes.FinalityProvider.Addr, bc.mustGetTxSigner()) {
+	if !strings.EqualFold(fpRes.FinalityProvider.Addr, bc.MustGetTxSigner()) {
 		return nil, fmt.Errorf("the signer does not correspond to the finality provider's "+
-			"Babylon address, expected %s got %s", bc.mustGetTxSigner(), fpRes.FinalityProvider.Addr)
+			"Babylon address, expected %s got %s", bc.MustGetTxSigner(), fpRes.FinalityProvider.Addr)
 	}
 
 	getValueOrDefault := func(reqValue, defaultValue string) string {
@@ -587,7 +600,7 @@ func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
 	}
 
 	msg := &btcstakingtypes.MsgEditFinalityProvider{
-		Addr:        bc.mustGetTxSigner(),
+		Addr:        bc.MustGetTxSigner(),
 		BtcPk:       fpPubKey.MustMarshal(),
 		Description: desc,
 		Commission:  fpRes.FinalityProvider.Commission,

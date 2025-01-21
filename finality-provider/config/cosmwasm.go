@@ -48,6 +48,7 @@ func (cfg *CosmwasmConfig) Validate() error {
 	if !strings.HasPrefix(cfg.BtcStakingContractAddress, cfg.AccountPrefix) {
 		return fmt.Errorf("babylon-contract-address: invalid address prefix: %w", err)
 	}
+
 	return nil
 }
 

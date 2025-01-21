@@ -47,7 +47,7 @@ func (c *QueryClient) GetTx(hash []byte) (*coretypes.ResultTx, error) {
 	return c.RPCClient.Tx(ctx, hash, false)
 }
 
-func (c *QueryClient) Subscribe(subscriber, query string, outCapacity ...int) (out <-chan coretypes.ResultEvent, err error) {
+func (c *QueryClient) Subscribe(subscriber, query string, outCapacity ...int) (<-chan coretypes.ResultEvent, error) {
 	return c.RPCClient.Subscribe(context.Background(), subscriber, query, outCapacity...)
 }
 

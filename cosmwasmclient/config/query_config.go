@@ -19,6 +19,7 @@ func (cfg *WasmQueryConfig) Validate() error {
 	if cfg.Timeout <= 0 {
 		return fmt.Errorf("cfg.Timeout must be positive")
 	}
+
 	return nil
 }
 

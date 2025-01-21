@@ -20,6 +20,7 @@ func (prc *PubRandCommit) Validate() error {
 	if prc.NumPubRand < 1 {
 		return fmt.Errorf("NumPubRand must be >= 1, got %d", prc.NumPubRand)
 	}
+
 	return nil
 }
 

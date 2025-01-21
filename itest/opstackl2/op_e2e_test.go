@@ -19,6 +19,7 @@ import (
 // - CommitPubRandList
 // - QueryLastPublicRandCommit
 func TestPubRandCommitment(t *testing.T) {
+	t.Parallel()
 	ctm := StartOpL2ConsumerManager(t)
 	defer ctm.Stop(t)
 
@@ -52,6 +53,7 @@ func TestPubRandCommitment(t *testing.T) {
 // TestFinalitySigSubmission tests the consumer controller's function:
 // - SubmitBatchFinalitySigs
 func TestFinalitySigSubmission(t *testing.T) {
+	t.Parallel()
 	ctm := StartOpL2ConsumerManager(t)
 	defer ctm.Stop(t)
 
@@ -105,6 +107,7 @@ func TestFinalitySigSubmission(t *testing.T) {
 // TestFinalityProviderHasPower tests the consumer controller's function:
 // - QueryFinalityProviderHasPower
 func TestFinalityProviderHasPower(t *testing.T) {
+	t.Parallel()
 	ctm := StartOpL2ConsumerManager(t)
 	defer ctm.Stop(t)
 

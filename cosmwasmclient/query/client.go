@@ -13,6 +13,8 @@ import (
 // QueryClient is a client that can only perform queries to a Babylon node
 // It only requires `Cfg` to have `Timeout` and `RPCAddr`, but not other fields
 // such as keyring, chain ID, etc..
+//
+//nolint:revive
 type QueryClient struct {
 	RPCClient rpcclient.Client
 	timeout   time.Duration
@@ -66,5 +68,6 @@ func (c *QueryClient) IsRunning() bool {
 // (adapted from https://github.com/strangelove-ventures/lens/blob/v0.5.4/client/query/query_options.go#L29-L36)
 func (c *QueryClient) getQueryContext() (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+
 	return ctx, cancel
 }

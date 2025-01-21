@@ -14,7 +14,7 @@ import (
 type OPStackL2Config struct {
 	OPStackL2RPCAddress      string `long:"opstackl2-rpc-address" description:"the rpc address of the op-stack-l2 node to connect to"`
 	OPFinalityGadgetAddress  string `long:"op-finality-gadget" description:"the contract address of the op-finality-gadget"`
-	BabylonFinalityGadgetRpc string `long:"babylon-finality-gadget-rpc" description:"the rpc address of babylon op finality gadget"`
+	BabylonFinalityGadgetRpc string `long:"babylon-finality-gadget-rpc" description:"the rpc address of babylon op finality gadget"` //nolint:stylecheck,revive
 	// Below configurations are needed for the Babylon client
 	Key            string        `long:"key" description:"name of the babylon key to sign transactions with"`
 	ChainID        string        `long:"chain-id" description:"chain id of the babylon chain to connect to"`
@@ -55,6 +55,7 @@ func (cfg *OPStackL2Config) Validate() error {
 	if cfg.BlockTimeout < 0 {
 		return fmt.Errorf("block-timeout can't be negative")
 	}
+
 	return nil
 }
 

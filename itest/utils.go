@@ -49,9 +49,7 @@ func BaseDir(pattern string) (string, error) {
 		return "", err
 	}
 
-	t.Cleanup(func() {
-		_ = os.RemoveAll(tempName)
-	})
+	os.RemoveAll(tempName)
 
 	if err = os.Chmod(tempName, 0755); err != nil {
 		return "", err
@@ -64,7 +62,7 @@ func RunCommand(name string, args ...string) ([]byte, error) {
 	cmd := exec.Command(name, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("error running command: %v", err)
+		return nil, fmt.Errorf("error running command: %w", err)
 	}
 	return output, nil
 }
@@ -109,10 +107,16 @@ func WaitForFpPubRandCommitted(t *testing.T, fpIns *service.FinalityProviderInst
 func DefaultFpConfig(keyringDir, homeDir string) *config.Config {
 	cfg := config.DefaultConfigWithHome(homeDir)
 
+	cfg.NumPubRand = 1000
+	cfg.NumPubRandMax = 1000
+	cfg.TimestampingDelayBlocks = 0
+
 	cfg.BitcoinNetwork = "simnet"
 	cfg.BTCNetParams = chaincfg.SimNetParams
 
+	cfg.PollerConfig.PollInterval = 1 * time.Millisecond
 	cfg.PollerConfig.AutoChainScanningMode = false
+
 	// babylon configs for sending transactions
 	cfg.BabylonConfig.KeyDirectory = keyringDir
 	// need to use this one to send otherwise we will have account sequence mismatch
@@ -120,15 +124,13 @@ func DefaultFpConfig(keyringDir, homeDir string) *config.Config {
 	cfg.BabylonConfig.Key = "test-spending-key"
 	// Big adjustment to make sure we have enough gas in our transactions
 	cfg.BabylonConfig.GasAdjustment = 20
-	// adjust num pub rand to 1000
-	cfg.NumPubRand = 1000
 
 	return &cfg
 }
 
 func DefaultFpConfigWithPorts(keyringDir, homeDir string, fpRpcPort, fpMetricsPort, eotsRpcPort int) *config.Config {
 	cfg := DefaultFpConfig(keyringDir, homeDir)
-	cfg.RpcListener = fmt.Sprintf("127.0.0.1:%d", fpRpcPort)
+	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", fpRpcPort)
 	cfg.EOTSManagerAddress = fmt.Sprintf("127.0.0.1:%d", eotsRpcPort)
 	cfg.Metrics.Port = fpMetricsPort
 	return cfg
@@ -136,10 +138,8 @@ func DefaultFpConfigWithPorts(keyringDir, homeDir string, fpRpcPort, fpMetricsPo
 
 // ParseRespBTCDelToBTCDel parses an BTC delegation response to BTC Delegation
 // adapted from
-// https://github.com/babylonlabs-io/babylon-private/blob/74a24c962ce2cf64e5216edba9383fe0b460070c/test/e2e/btc_staking_e2e_test.go#L773
-func ParseRespBTCDelToBTCDel(
-	resp *bstypes.BTCDelegationResponse,
-) (btcDel *bstypes.BTCDelegation, err error) {
+// https://github.com/babylonlabs-io/babylon/blob/1a3c50da64885452c8d669fcea2a2fad78c8a028/test/e2e/btc_staking_e2e_test.go#L548
+func ParseRespBTCDelToBTCDel(resp *bstypes.BTCDelegationResponse) (btcDel *bstypes.BTCDelegation, err error) {
 	stakingTx, err := hex.DecodeString(resp.StakingTxHex)
 	if err != nil {
 		return nil, err
@@ -194,14 +194,6 @@ func ParseRespBTCDelToBTCDel(
 			CovenantSlashingSigs:     ud.CovenantSlashingSigs,
 			SlashingTx:               slashTx,
 			DelegatorSlashingSig:     delSlashingSig,
-		}
-
-		if len(ud.DelegatorUnbondingSigHex) > 0 {
-			delUnbondingSig, err := bbntypes.NewBIP340SignatureFromHex(ud.DelegatorUnbondingSigHex)
-			if err != nil {
-				return nil, err
-			}
-			btcDel.BtcUndelegation.DelegatorUnbondingSig = delUnbondingSig
 		}
 	}
 

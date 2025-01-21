@@ -64,7 +64,7 @@ func (w *BcdNodeHandler) Stop(t *testing.T) {
 	// require.NoError(t, err)
 	// TODO: investigate why stopping the bcd process is failing
 	if err != nil {
-		log.Printf("error stopping bcd process: %v", err)
+		log.Printf("error stopping bcd process: %w", err)
 	}
 
 	err = w.cleanup()

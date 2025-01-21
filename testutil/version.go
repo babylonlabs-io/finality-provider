@@ -2,14 +2,37 @@ package testutil
 
 import (
 	"fmt"
-	"golang.org/x/mod/modfile"
 	"os"
 	"path/filepath"
+
+	"golang.org/x/mod/modfile"
 )
 
 // GetBabylonVersion returns babylond version from go.mod
 func GetBabylonVersion() (string, error) {
-	goModPath := filepath.Join("..", "go.mod")
+	// Get the current working directory
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	// Walk up directories until we find go.mod
+	var goModPath string
+	dir := wd
+	for {
+		candidate := filepath.Join(dir, "go.mod")
+		if _, err := os.Stat(candidate); err == nil {
+			goModPath = candidate
+
+			break
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("could not find go.mod in any parent directory")
+		}
+		dir = parent
+	}
+
 	data, err := os.ReadFile(goModPath)
 	if err != nil {
 		return "", err

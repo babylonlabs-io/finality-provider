@@ -2,7 +2,6 @@ package babylon
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -27,6 +26,7 @@ import (
 
 var _ api.ConsumerController = &BabylonConsumerController{}
 
+//nolint:revive
 type BabylonConsumerController struct {
 	bbnClient *bbnclient.Client
 	cfg       *fpcfg.BBNConfig
@@ -39,7 +39,6 @@ func NewBabylonConsumerController(
 	btcParams *chaincfg.Params,
 	logger *zap.Logger,
 ) (*BabylonConsumerController, error) {
-
 	bbnConfig := fpcfg.BBNConfigToBabylonConfig(cfg)
 
 	if err := bbnConfig.Validate(); err != nil {
@@ -62,9 +61,10 @@ func NewBabylonConsumerController(
 	}, nil
 }
 
-func (bc *BabylonConsumerController) mustGetTxSigner() string {
+func (bc *BabylonConsumerController) MustGetTxSigner() string {
 	signer := bc.GetKeyAddress()
 	prefix := bc.cfg.AccountPrefix
+
 	return sdk.MustBech32ifyAddressBytes(prefix, signer)
 }
 
@@ -112,7 +112,7 @@ func (bc *BabylonConsumerController) CommitPubRandList(
 	sig *schnorr.Signature,
 ) (*types.TxResponse, error) {
 	msg := &finalitytypes.MsgCommitPubRandList{
-		Signer:      bc.mustGetTxSigner(),
+		Signer:      bc.MustGetTxSigner(),
 		FpBtcPk:     bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
 		StartHeight: startHeight,
 		NumPubRand:  numPubRand,
@@ -149,7 +149,7 @@ func (bc *BabylonConsumerController) SubmitFinalitySig(
 	}
 
 	msg := &finalitytypes.MsgAddFinalitySig{
-		Signer:       bc.mustGetTxSigner(),
+		Signer:       bc.MustGetTxSigner(),
 		FpBtcPk:      bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
 		BlockHeight:  block.Height,
 		PubRand:      bbntypes.NewSchnorrPubRandFromFieldVal(pubRand),
@@ -164,12 +164,20 @@ func (bc *BabylonConsumerController) SubmitFinalitySig(
 		btcstakingtypes.ErrFpAlreadySlashed,
 	}
 
-	res, err := bc.reliablySendMsg(msg, emptyErrs, unrecoverableErrs)
+	expectedErrs := []*sdkErr.Error{
+		finalitytypes.ErrDuplicatedFinalitySig,
+	}
+
+	res, err := bc.reliablySendMsg(msg, expectedErrs, unrecoverableErrs)
 	if err != nil {
 		return nil, err
 	}
 
-	return &types.TxResponse{TxHash: res.TxHash, Events: fromCosmosEventsToBytes(res.Events)}, nil
+	if res == nil {
+		return &types.TxResponse{}, nil
+	}
+
+	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }
 
 // SubmitBatchFinalitySigs submits a batch of finality signatures to Babylon
@@ -192,7 +200,7 @@ func (bc *BabylonConsumerController) SubmitBatchFinalitySigs(
 		}
 
 		msg := &finalitytypes.MsgAddFinalitySig{
-			Signer:       bc.mustGetTxSigner(),
+			Signer:       bc.MustGetTxSigner(),
 			FpBtcPk:      bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
 			BlockHeight:  b.Height,
 			PubRand:      bbntypes.NewSchnorrPubRandFromFieldVal(pubRandList[i]),
@@ -209,9 +217,17 @@ func (bc *BabylonConsumerController) SubmitBatchFinalitySigs(
 		btcstakingtypes.ErrFpAlreadySlashed,
 	}
 
-	res, err := bc.reliablySendMsgs(msgs, emptyErrs, unrecoverableErrs)
+	expectedErrs := []*sdkErr.Error{
+		finalitytypes.ErrDuplicatedFinalitySig,
+	}
+
+	res, err := bc.reliablySendMsgs(msgs, expectedErrs, unrecoverableErrs)
 	if err != nil {
 		return nil, err
+	}
+
+	if res == nil {
+		return &types.TxResponse{}, nil
 	}
 
 	return &types.TxResponse{TxHash: res.TxHash}, nil
@@ -229,8 +245,9 @@ func (bc *BabylonConsumerController) QueryFinalityProviderHasPower(
 	if err != nil {
 		// voting power table not updated indicates that no fp has voting power
 		// therefore, it should be treated as the fp having 0 voting power
-		if strings.Contains(err.Error(), btcstakingtypes.ErrVotingPowerTableNotUpdated.Error()) {
+		if strings.Contains(err.Error(), finalitytypes.ErrVotingPowerTableNotUpdated.Error()) {
 			bc.logger.Info("the voting power table not updated yet")
+
 			return false, nil
 		}
 
@@ -245,17 +262,19 @@ func (bc *BabylonConsumerController) QueryLatestFinalizedBlock() (*types.BlockIn
 	if blocks == nil {
 		return nil, err
 	}
-	return blocks[0], err
+
+	return blocks[0], nil
 }
 
-func (bc *BabylonConsumerController) QueryBlocks(startHeight, endHeight, limit uint64) ([]*types.BlockInfo, error) {
+func (bc *BabylonConsumerController) QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types.BlockInfo, error) {
 	if endHeight < startHeight {
 		return nil, fmt.Errorf("the startHeight %v should not be higher than the endHeight %v", startHeight, endHeight)
 	}
 	count := endHeight - startHeight + 1
-	if count > limit {
-		count = limit
+	if count > uint64(limit) {
+		count = uint64(limit)
 	}
+
 	return bc.queryLatestBlocks(sdk.Uint64ToBigEndian(startHeight), count, finalitytypes.QueriedBlockStatus_ANY, false)
 }
 
@@ -269,7 +288,7 @@ func (bc *BabylonConsumerController) queryLatestBlocks(startKey []byte, count ui
 
 	res, err := bc.bbnClient.QueryClient.ListBlocks(status, pagination)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query finalized blocks: %v", err)
+		return nil, fmt.Errorf("failed to query finalized blocks: %w", err)
 	}
 
 	for _, b := range res.Blocks {
@@ -318,7 +337,7 @@ func (bc *BabylonConsumerController) QueryLastPublicRandCommit(fpPk *btcec.Publi
 		return nil, fmt.Errorf("expected length to be 1, but get :%d", len(res.PubRandCommitMap))
 	}
 
-	var commit *types.PubRandCommit = nil
+	var commit *types.PubRandCommit
 	for height, commitRes := range res.PubRandCommitMap {
 		commit = &types.PubRandCommit{
 			StartHeight: height,
@@ -343,6 +362,15 @@ func (bc *BabylonConsumerController) QueryIsBlockFinalized(height uint64) (bool,
 	return res.Block.Finalized, nil
 }
 
+func (bc *BabylonConsumerController) QueryFinalityActivationBlockHeight() (uint64, error) {
+	res, err := bc.bbnClient.QueryClient.FinalityParams()
+	if err != nil {
+		return 0, fmt.Errorf("failed to query finality params to get finality activation block height: %w", err)
+	}
+
+	return res.Params.FinalityActivationHeight, nil
+}
+
 func (bc *BabylonConsumerController) QueryActivatedHeight() (uint64, error) {
 	res, err := bc.bbnClient.QueryClient.ActivatedHeight()
 	if err != nil {
@@ -350,6 +378,17 @@ func (bc *BabylonConsumerController) QueryActivatedHeight() (uint64, error) {
 	}
 
 	return res.Height, nil
+}
+
+// QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
+func (bc *BabylonConsumerController) QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error) {
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+	if err != nil {
+		return 0, fmt.Errorf("failed to query highest voted height for finality provider %s: %w", fpPubKey.MarshalHex(), err)
+	}
+
+	return uint64(res.FinalityProvider.HighestVotedHeight), nil
 }
 
 func (bc *BabylonConsumerController) QueryLatestBlockHeight() (uint64, error) {
@@ -360,6 +399,7 @@ func (bc *BabylonConsumerController) QueryLatestBlockHeight() (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
+
 		return block.Height, nil
 	}
 
@@ -384,6 +424,17 @@ func (bc *BabylonConsumerController) queryCometBestBlock() (*types.BlockInfo, er
 	}, nil
 }
 
+// QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
+func (bc *BabylonConsumerController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+	if err != nil {
+		return false, false, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
+	}
+
+	return res.FinalityProvider.SlashedBtcHeight > 0, res.FinalityProvider.Jailed, nil
+}
+
 func (bc *BabylonConsumerController) Close() error {
 	if !bc.bbnClient.IsRunning() {
 		return nil
@@ -392,10 +443,23 @@ func (bc *BabylonConsumerController) Close() error {
 	return bc.bbnClient.Stop()
 }
 
-func fromCosmosEventsToBytes(events []provider.RelayerEvent) []byte {
-	bytes, err := json.Marshal(events)
-	if err != nil {
-		return nil
+// UnjailFinalityProvider sends an unjail transaction to the consumer chain
+func (bc *BabylonConsumerController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error) {
+	msg := &finalitytypes.MsgUnjailFinalityProvider{
+		Signer:  bc.MustGetTxSigner(),
+		FpBtcPk: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
 	}
-	return bytes
+
+	unrecoverableErrs := []*sdkErr.Error{
+		btcstakingtypes.ErrFpNotFound,
+		btcstakingtypes.ErrFpNotJailed,
+		btcstakingtypes.ErrFpAlreadySlashed,
+	}
+
+	res, err := bc.reliablySendMsg(msg, emptyErrs, unrecoverableErrs)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }

@@ -3,12 +3,12 @@ package api
 import (
 	"cosmossdk.io/math"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-
-	"github.com/babylonlabs-io/finality-provider/types"
 )
 
+//nolint:revive,unused
 const babylonConsumerChainType = "babylon"
 
 type ClientController interface {
@@ -23,12 +23,10 @@ type ClientController interface {
 		description []byte,
 	) (*types.TxResponse, error)
 
-	// Note: the following queries are only for PoC
+	// QueryFinalityProvider queries the finality provider by pk
+	QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error)
 
-	// QueryFinalityProviderSlashedOrJailed queries if the finality provider is slashed or slashed
-	// Note: if the FP wants to get the information from the consumer chain directly, they should add this interface
-	// function in ConsumerController. (https://github.com/babylonchain/finality-provider/pull/335#discussion_r1606175344)
-	QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error)
+	// Note: the following queries are only for PoC
 
 	// EditFinalityProvider edits description and commission of a finality provider
 	EditFinalityProvider(fpPk *btcec.PublicKey, commission *math.LegacyDec, description []byte) (*btcstakingtypes.MsgEditFinalityProvider, error)
@@ -54,11 +52,13 @@ type ConsumerController interface {
 		The following methods are queries to the consumer chain
 	*/
 
-	// QueryFinalityProvider queries the finality provider by pk
-	QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error)
-
 	// QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
 	QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error)
+
+	// QueryFinalityProviderSlashedOrJailed queries if the finality provider is slashed or slashed
+	// Note: if the FP wants to get the information from the consumer chain directly, they should add this interface
+	// function in ConsumerController. (https://github.com/babylonchain/finality-provider/pull/335#discussion_r1606175344)
+	QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error)
 
 	// QueryLatestFinalizedBlock returns the latest finalized block
 	// Note: nil will be returned if the finalized block does not exist
@@ -67,11 +67,8 @@ type ConsumerController interface {
 	// QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
 	QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error)
 
-	// QueryLatestFinalizedBlocks returns the latest finalized blocks
-	QueryLatestFinalizedBlocks(count uint64) ([]*types.BlockInfo, error)
-
-	// QueryLastCommittedPublicRand returns the last committed public randomness
-	QueryLastCommittedPublicRand(fpPk *btcec.PublicKey, count uint64) (map[uint64]*finalitytypes.PubRandCommitResponse, error)
+	// QueryLastPublicRandCommit returns the last public randomness commitment
+	QueryLastPublicRandCommit(fpPk *btcec.PublicKey) (*types.PubRandCommit, error)
 
 	// QueryBlock queries the block at the given height
 	QueryBlock(height uint64) (*types.BlockInfo, error)
@@ -97,23 +94,4 @@ type ConsumerController interface {
 	QueryFinalityActivationBlockHeight() (uint64, error)
 
 	Close() error
-}
-
-func NewClientController(chainType string, bbnConfig *fpcfg.BBNConfig, netParams *chaincfg.Params, logger *zap.Logger) (ClientController, error) {
-	var (
-		cc  ClientController
-		err error
-	)
-
-	switch chainType {
-	case babylonConsumerChainType:
-		cc, err = NewBabylonController(bbnConfig, netParams, logger)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
-		}
-	default:
-		return nil, fmt.Errorf("unsupported consumer chain")
-	}
-
-	return cc, err
 }
