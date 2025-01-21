@@ -4,11 +4,10 @@
 package e2etest_bcd
 
 import (
+	"context"
 	"encoding/json"
-	"strings"
 	"testing"
 
-	sdkmath "cosmossdk.io/math"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
@@ -28,7 +27,9 @@ import (
 // NOTE: the delegation is injected after ensuring pub randomness loop in fp daemon has started
 // this order is necessary otherwise pub randomness loop takes time to start and due to this blocks won't get finalized.
 func TestConsumerFpLifecycle(t *testing.T) {
-	ctm := StartBcdTestManager(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctm := StartBcdTestManager(t, ctx)
 	defer ctm.Stop(t)
 
 	// store babylon contract
@@ -77,52 +78,13 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	ctm.BcdConsumerClient.SetBtcStakingContractAddress(btcStakingContractAddr.String())
 
 	// register consumer to babylon
-	_, err = ctm.BBNClient.RegisterConsumerChain(bcdChainID, "Consumer chain 1 (test)", "Test Consumer Chain 1")
+	_, err = ctm.BBNClient.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1")
 	require.NoError(t, err)
 
 	// register consumer fps to babylon
 	// this will be submitted to babylon once fp daemon starts
-	fps := ctm.CreateConsumerFinalityProviders(t, bcdChainID, 1)
+	fps := ctm.CreateConsumerFinalityProviders(t, bcdConsumerID, 1)
 	fpPk := fps[0].GetBtcPkBIP340()
-	fpPkHex := fpPk.MarshalHex()
-
-	// inject fp in smart contract using admin
-	fpMsg := e2eutils.GenBtcStakingFpExecMsg(fpPkHex)
-	fpMsgBytes, err := json.Marshal(fpMsg)
-	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteContract(fpMsgBytes)
-	require.NoError(t, err)
-
-	// query finality providers in smart contract
-	consumerFpsResp, err := ctm.BcdConsumerClient.QueryFinalityProviders()
-	require.NoError(t, err)
-	require.NotNil(t, consumerFpsResp)
-	require.Len(t, consumerFpsResp.Fps, 1)
-	require.Equal(t, fpMsg.BtcStaking.NewFP[0].ConsumerID, consumerFpsResp.Fps[0].ConsumerID)
-	require.Equal(t, fpMsg.BtcStaking.NewFP[0].BTCPKHex, consumerFpsResp.Fps[0].BtcPkHex)
-
-	// ensure consumer finality providers are stored in Babylon
-	// this will happen after the finality provider daemon has started
-	require.Eventually(t, func() bool {
-		fps, err := ctm.BBNClient.QueryConsumerFinalityProviders(bcdChainID)
-		if err != nil {
-			t.Logf("failed to query finality providers from Babylon %s", err.Error())
-			return false
-		}
-
-		if len(fps) != 1 {
-			return false
-		}
-
-		if !strings.Contains(fps[0].Description.Moniker, e2eutils.MonikerPrefix) {
-			return false
-		}
-		if !fps[0].Commission.Equal(sdkmath.LegacyZeroDec()) {
-			return false
-		}
-
-		return true
-	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 
 	// ensure pub rand is submitted to smart contract
 	require.Eventually(t, func() bool {
@@ -163,7 +125,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, consumerFpsByPowerResp)
 	require.Len(t, consumerFpsByPowerResp.Fps, 1)
-	require.Equal(t, fpMsg.BtcStaking.NewFP[0].BTCPKHex, consumerFpsByPowerResp.Fps[0].BtcPkHex)
+	require.Equal(t, fpPk.MarshalHex(), consumerFpsByPowerResp.Fps[0].BtcPkHex)
 	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].TotalSat, consumerFpsByPowerResp.Fps[0].Power)
 
 	// get comet latest height

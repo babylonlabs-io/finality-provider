@@ -49,8 +49,6 @@ func BaseDir(pattern string) (string, error) {
 		return "", err
 	}
 
-	os.RemoveAll(tempName)
-
 	if err = os.Chmod(tempName, 0755); err != nil {
 		return "", err
 	}

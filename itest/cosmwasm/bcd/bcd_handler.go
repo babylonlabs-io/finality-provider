@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	bcdRpcPort int = 3990
-	bcdP2pPort int = 3991
-	bcdChainID     = "bcd-test"
+	bcdRpcPort    int = 3990
+	bcdP2pPort    int = 3991
+	bcdChainID        = "bcd-test"
+	bcdConsumerID     = "09-localhost" // TODO: mock a real consumer ID
 )
 
 type BcdNodeHandler struct {
@@ -64,7 +65,7 @@ func (w *BcdNodeHandler) Stop(t *testing.T) {
 	// require.NoError(t, err)
 	// TODO: investigate why stopping the bcd process is failing
 	if err != nil {
-		log.Printf("error stopping bcd process: %w", err)
+		log.Printf("error stopping bcd process: %v", err)
 	}
 
 	err = w.cleanup()

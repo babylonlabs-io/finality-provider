@@ -14,7 +14,7 @@ type ConsumerFpsResponse struct {
 type SingleConsumerFpResponse struct {
 	BtcPkHex             string `json:"btc_pk_hex"`
 	SlashedBabylonHeight uint64 `json:"slashed_babylon_height"`
-	SlashedBtcHeight     uint64 `json:"slashed_btc_height"`
+	SlashedBtcHeight     uint32 `json:"slashed_btc_height"`
 	ConsumerID           string `json:"consumer_id"`
 }
 
@@ -25,8 +25,8 @@ type ConsumerDelegationsResponse struct {
 type SingleConsumerDelegationResponse struct {
 	BtcPkHex             string                      `json:"btc_pk_hex"`
 	FpBtcPkList          []string                    `json:"fp_btc_pk_list"`
-	StartHeight          uint64                      `json:"start_height"`
-	EndHeight            uint64                      `json:"end_height"`
+	StartHeight          uint32                      `json:"start_height"`
+	EndHeight            uint32                      `json:"end_height"`
 	TotalSat             uint64                      `json:"total_sat"`
 	StakingTx            []byte                      `json:"staking_tx"`
 	SlashingTx           []byte                      `json:"slashing_tx"`
