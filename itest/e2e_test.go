@@ -291,7 +291,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 
 	fpIns := fps[0]
 
-	cmd := daemon.CommandCreateFP()
+	cmdCreateFP := daemon.CommandCreateFP()
 
 	eotsKeyName := "eots-key-2"
 	eotsPkBz, err := tm.EOTSClient.CreateKey(eotsKeyName, passphrase, hdPath)
@@ -335,18 +335,22 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 		log.Fatalf("Failed to write JSON to file: %v", err)
 	}
 
-	cmd.SetArgs([]string{
+	cmdCreateFP.SetArgs([]string{
 		"--from-file=" + file.Name(),
 		"--daemon-address=" + fpIns.GetConfig().RPCListener,
 	})
 
 	// Run the command
-	err = cmd.Execute()
+	err = cmdCreateFP.Execute()
 	require.NoError(t, err)
 
 	fp, err := tm.BBNClient.QueryFinalityProvider(eotsPk.MustToBTCPK())
 	require.NoError(t, err)
 	require.NotNil(t, fp)
+
+	cmdStart := daemon.CommandStart()
+	err = cmdStart.Execute()
+	require.NoError(t, err)
 }
 
 func TestRemoveMerkleProofsCmd(t *testing.T) {
