@@ -146,5 +146,6 @@ func startApp(
 	}
 
 	fpApp.Logger().Info("No finality providers found in DB. Waiting for registration.")
+
 	return nil
 }
