@@ -171,7 +171,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", tm.babylond.GetPort("9090/tcp"))
 	fpBbnKeyInfo, err := testutil.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, cfg.BabylonConfig.Key, cfg.BabylonConfig.KeyringBackend, passphrase, hdPath, "")
 	require.NoError(t, err)
-	
+
 	// add some funds for new fp pay for fees '-'
 	_, _, err = tm.manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), "1000000ubbn", "node0")
 	require.NoError(t, err)
@@ -196,6 +196,9 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
+
+	err = fpApp.StartFinalityProvider(eotsPk, passphrase)
+	require.NoError(t, err)
 
 	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb)
 	go func() {

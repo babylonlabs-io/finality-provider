@@ -1,6 +1,3 @@
-//go:build e2e
-// +build e2e
-
 package e2etest
 
 import (
@@ -12,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -22,11 +20,13 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/jessevdk/go-flags"
+	goflags "github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/require"
 
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
@@ -291,8 +291,6 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 
 	fpIns := fps[0]
 
-	cmdCreateFP := daemon.CommandCreateFP()
-
 	eotsKeyName := "eots-key-2"
 	eotsPkBz, err := tm.EOTSClient.CreateKey(eotsKeyName, passphrase, hdPath)
 	require.NoError(t, err)
@@ -335,8 +333,13 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 		log.Fatalf("Failed to write JSON to file: %v", err)
 	}
 
+	fpHome := filepath.Join(tm.baseDir, "fp-home")
+
+	cmdCreateFP := daemon.CommandCreateFP()
+
 	cmdCreateFP.SetArgs([]string{
 		"--from-file=" + file.Name(),
+		"--home=" + fpHome,
 		"--daemon-address=" + fpIns.GetConfig().RPCListener,
 	})
 
@@ -348,8 +351,18 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, fp)
 
-	cmdStart := daemon.CommandStart()
-	err = cmdStart.Execute()
+	config := tm.FpConfig
+	fileParser := goflags.NewParser(&config, goflags.Default)
+
+	err = goflags.NewIniParser(fileParser).WriteFile(fpcfg.CfgFile(fpHome), goflags.IniIncludeComments|goflags.IniIncludeDefaults)
+	require.NoError(t, err)
+
+	startCmd := daemon.CommandStart()
+	startCmd.SetArgs([]string{
+		"--home=" + fpHome,
+	})
+
+	err = startCmd.Execute()
 	require.NoError(t, err)
 }
 

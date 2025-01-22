@@ -8,6 +8,7 @@ import (
 	"github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcwallet/walletdb"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
@@ -31,6 +32,7 @@ func CommandStart() *cobra.Command {
 	cmd.Flags().String(fpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
 	cmd.Flags().String(passphraseFlag, "", "The pass phrase used to decrypt the private key")
 	cmd.Flags().String(rpcListenerFlag, "", "The address that the RPC server listens to")
+	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 
 	return cmd
 }
