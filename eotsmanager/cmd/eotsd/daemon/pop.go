@@ -74,6 +74,7 @@ func NewPopCmd() *cobra.Command {
 	cmd.AddCommand(
 		NewPopExportCmd(),
 		NewPopDeleteCmd(),
+		NewPopValidateExportCmd(),
 	)
 
 	return cmd
@@ -106,6 +107,25 @@ func NewPopExportCmd() *cobra.Command {
 	return cmd
 }
 
+func NewPopValidateExportCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "validate",
+		Short: "Validates the PoP of the pop export command.",
+		Long:  `Receives as an argument the output of eotsd pop export as a raw string '{...}'`,
+		Example: `eotsd pop validate '{
+  "eotsPublicKey": "3d0bebcbe800236ce8603c5bb1ab6c2af0932e947db4956a338f119797c37f1e",
+  "babyPublicKey": "A0V6yw74EdvoAWVauFqkH/GVM9YIpZitZf6bVEzG69tT",
+  "babySignEotsPk": "GO7xlC+BIypdcQdnIDsM+Ts75X9JKTOkDpXt5t4TSOIt/P1puAHVNhaYbweStVs25J9uRK+4XfrjD0M+t0Qy4g==",
+  "eotsSignBaby": "pR6vxgU0gXq+VqO+y7dHpZgHTz3zr5hdqXXh0WcWNkqUnRjHrizhYAHDMV8gh4vks4PqzKAIgZ779Wqwf5UrXQ==",
+  "babyAddress": "bbn1f04czxeqprn0s9fe7kdzqyde2e6nqj63dllwsm"
+}'`,
+		RunE: validatePop,
+		Args: cobra.ExactArgs(1),
+	}
+
+	return cmd
+}
+
 func NewPopDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
@@ -130,6 +150,25 @@ func NewPopDeleteCmd() *cobra.Command {
 	f.String(flagMessage, "", "Message to be signed")
 
 	return cmd
+}
+
+func validatePop(cmd *cobra.Command, args []string) error {
+	strExportJson := args[0]
+	var pop PoPExport
+	if err := json.Unmarshal([]byte(strExportJson), &pop); err != nil {
+		return fmt.Errorf("failed to marshal %s into PoPExport structure", strExportJson)
+	}
+
+	valid, err := ValidPopExport(pop)
+	if err != nil {
+		return fmt.Errorf("failed to validate pop %+v, reason: %w", pop, err)
+	}
+	if !valid {
+		return fmt.Errorf("invalid pop %+v", pop)
+	}
+
+	cmd.Println("Proof of Possesion is valid!")
+	return nil
 }
 
 func exportPop(cmd *cobra.Command, _ []string) error {
@@ -400,7 +439,7 @@ func SignCosmosAdr36(
 	return babySignBytes, nil
 }
 
-func VerifyPopExport(pop PoPExport) (bool, error) {
+func ValidPopExport(pop PoPExport) (bool, error) {
 	valid, err := ValidEotsSignBaby(pop.EotsPublicKey, pop.BabyAddress, pop.EotsSignBaby)
 	if err != nil || !valid {
 		return false, err
