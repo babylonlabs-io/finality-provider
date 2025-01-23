@@ -153,10 +153,10 @@ func NewPopDeleteCmd() *cobra.Command {
 }
 
 func validatePop(cmd *cobra.Command, args []string) error {
-	strExportJson := args[0]
+	strExportJSON := args[0]
 	var pop PoPExport
-	if err := json.Unmarshal([]byte(strExportJson), &pop); err != nil {
-		return fmt.Errorf("failed to marshal %s into PoPExport structure", strExportJson)
+	if err := json.Unmarshal([]byte(strExportJSON), &pop); err != nil {
+		return fmt.Errorf("failed to marshal %s into PoPExport structure", strExportJSON)
 	}
 
 	valid, err := ValidPopExport(pop)
@@ -167,7 +167,8 @@ func validatePop(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid pop %+v", pop)
 	}
 
-	cmd.Println("Proof of Possesion is valid!")
+	cmd.Println("Proof of Possession is valid!")
+
 	return nil
 }
 

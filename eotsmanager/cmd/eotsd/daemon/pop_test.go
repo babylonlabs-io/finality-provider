@@ -69,6 +69,7 @@ func TestPoPVerify(t *testing.T) {
 }
 
 func TestPoPValidate(t *testing.T) {
+	t.Parallel()
 	validateCmd := daemon.NewPopValidateExportCmd()
 
 	for _, pop := range popsToVerify {
@@ -83,6 +84,6 @@ func TestPoPValidate(t *testing.T) {
 		err = validateCmd.ExecuteContext(context.Background())
 		require.NoError(t, err)
 
-		require.Equal(t, writer.String(), "Proof of Possesion is valid!\n")
+		require.Equal(t, writer.String(), "Proof of Possession is valid!\n")
 	}
 }
