@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
@@ -72,14 +75,20 @@ func TestPoPValidate(t *testing.T) {
 	t.Parallel()
 	validateCmd := daemon.NewPopValidateExportCmd()
 
-	for _, pop := range popsToVerify {
+	tmp := t.TempDir()
+
+	for i, pop := range popsToVerify {
 		jsonString, err := json.MarshalIndent(pop, "", "  ")
 		require.NoError(t, err)
 
 		writer := bytes.NewBuffer([]byte{})
 		validateCmd.SetOutput(writer)
 
-		validateCmd.SetArgs([]string{string(jsonString)})
+		fileName := filepath.Join(tmp, fmt.Sprintf("%d-pop-out.json", i))
+		err = os.WriteFile(fileName, jsonString, 0644)
+		require.NoError(t, err)
+
+		validateCmd.SetArgs([]string{fileName})
 
 		err = validateCmd.ExecuteContext(context.Background())
 		require.NoError(t, err)

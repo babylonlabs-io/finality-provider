@@ -47,6 +47,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#277](https://github.com/babylonlabs-io/finality-provider/pull/277) Poll many blocks in poller
 * [#291](https://github.com/babylonlabs-io/finality-provider/pull/291) chore: remove skip height
 * [#297](https://github.com/babylonlabs-io/finality-provider/pull/297) Add new command to validate pop
+* [#302](https://github.com/babylonlabs-io/finality-provider/pull/302) Update pop commands to write to a file
 
 ## v0.14.3
 
