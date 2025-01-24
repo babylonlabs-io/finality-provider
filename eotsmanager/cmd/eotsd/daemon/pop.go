@@ -29,6 +29,7 @@ const (
 	flagKeyNameBaby        = "baby-key-name"
 	flagKeyringBackendBaby = "baby-keyring-backend"
 	flagMessage            = "message"
+	flagOutputFile         = "output-file"
 )
 
 func init() {
@@ -120,6 +121,11 @@ var (
 				Usage: "BABY backend of the keyring",
 				Value: defaultKeyringBackend,
 			},
+			cli.StringFlag{
+				Name:  flagOutputFile,
+				Usage: "Path to output JSON file",
+				Value: "",
+			},
 		},
 		Action: exportPop,
 	}
@@ -165,21 +171,20 @@ var (
 				Name:  flagMessage,
 				Usage: "Message to be signed",
 			},
+			cli.StringFlag{
+				Name:  flagOutputFile,
+				Usage: "Path to output JSON file",
+				Value: "",
+			},
 		},
 		Action: deletePop,
 	}
 	PoPValidateExportCommand = cli.Command{
 		Name:        "validate",
 		Usage:       "Validates the PoP of the pop export command.",
-		Description: `Receives as an argument the output of eotsd pop export as a raw string '{...}'`,
-		UsageText: `eotsd pop validate '{
-  "eotsPublicKey": "3d0bebcbe800236ce8603c5bb1ab6c2af0932e947db4956a338f119797c37f1e",
-  "babyPublicKey": "A0V6yw74EdvoAWVauFqkH/GVM9YIpZitZf6bVEzG69tT",
-  "babySignEotsPk": "GO7xlC+BIypdcQdnIDsM+Ts75X9JKTOkDpXt5t4TSOIt/P1puAHVNhaYbweStVs25J9uRK+4XfrjD0M+t0Qy4g==",
-  "eotsSignBaby": "pR6vxgU0gXq+VqO+y7dHpZgHTz3zr5hdqXXh0WcWNkqUnRjHrizhYAHDMV8gh4vks4PqzKAIgZ779Wqwf5UrXQ==",
-  "babyAddress": "bbn1f04czxeqprn0s9fe7kdzqyde2e6nqj63dllwsm"
-}'`,
-		Action: validatePop,
+		Description: `Receives as an argument the file path of the JSON output of the command eotsd pop export`,
+		UsageText:   "stakercli pop validate <path-to-pop.json>",
+		Action:      validatePop,
 	}
 )
 
@@ -230,16 +235,21 @@ func exportPop(ctx *cli.Context) error {
 		BabySignEotsPk: base64.StdEncoding.EncodeToString(babySignature),
 	}
 
-	printRespJSON(out)
-	return nil
+	return printRespJSON(ctx, out)
 }
 
 func validatePop(ctx *cli.Context) error {
 	args := ctx.Args()
-	strExportJSON := args.First()
+	filePath := args.First()
+
+	bzExportJSON, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read pop file: %w", err)
+	}
+
 	var pop PoPExport
-	if err := json.Unmarshal([]byte(strExportJSON), &pop); err != nil {
-		return fmt.Errorf("failed to marshal %s into PoPExport structure", strExportJSON)
+	if err := json.Unmarshal([]byte(bzExportJSON), &pop); err != nil {
+		return fmt.Errorf("failed to marshal %s into PoPExport structure", bzExportJSON)
 	}
 
 	valid, err := ValidPopExport(pop)
@@ -301,9 +311,8 @@ func deletePop(ctx *cli.Context) error {
 
 		BabySignature: base64.StdEncoding.EncodeToString(babySignature),
 	}
-	printRespJSON(out)
 
-	return nil
+	return printRespJSON(ctx, out)
 }
 
 func loadEotsManager(eotsHomePath, eotsFpPubKeyStr, eotsKeyName, eotsKeyringBackend string) (*eotsmanager.LocalEOTSManager, error) {

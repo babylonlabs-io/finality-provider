@@ -173,14 +173,12 @@ func SignSchnorr(ctx *cli.Context) error {
 		return fmt.Errorf("failed to sign msg: %w", err)
 	}
 
-	printRespJSON(DataSigned{
+	return printRespJSON(ctx, DataSigned{
 		KeyName:             keyName,
 		PubKeyHex:           pubKey.MarshalHex(),
 		SignedDataHashHex:   hex.EncodeToString(hashOfMsgToSign),
 		SchnorrSignatureHex: hex.EncodeToString(signature.Serialize()),
 	})
-
-	return nil
 }
 
 func hashFromFile(inputFilePath string) ([]byte, error) {
@@ -219,12 +217,21 @@ func singMsg(
 	return eotsManager.SignSchnorrSigFromKeyname(keyName, passphrase, hashOfMsgToSign)
 }
 
-func printRespJSON(resp interface{}) {
-	jsonBytes, err := json.MarshalIndent(resp, "", "    ")
+func printRespJSON(ctx *cli.Context, resp interface{}) error {
+	jsonBz, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
 		fmt.Println("unable to decode response: ", err)
-		return
+		return nil
 	}
 
-	fmt.Printf("%s\n", jsonBytes)
+	outputFilePath := ctx.String(flagOutputFile)
+	if len(outputFilePath) > 0 {
+		if err := os.WriteFile(outputFilePath, jsonBz, 0644); err != nil {
+			return fmt.Errorf("failed to write output file: %w", err)
+		}
+	}
+
+	fmt.Printf("%s\n", jsonBz)
+
+	return nil
 }
