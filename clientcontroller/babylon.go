@@ -3,7 +3,6 @@ package clientcontroller
 import (
 	"context"
 	"fmt"
-	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	"strings"
 	"time"
 
@@ -416,8 +415,13 @@ func (bc *BabylonController) QueryBestBlock() (*types.BlockInfo, error) {
 	return blocks[0], nil
 }
 
-func (bc *BabylonController) NodeStatus() (*coretypes.ResultStatus, error) {
-	return bc.bbnClient.GetStatus()
+func (bc *BabylonController) NodeTxIndexEnabled() (bool, error) {
+	res, err := bc.bbnClient.GetStatus()
+	if err != nil {
+		return false, fmt.Errorf("failed to query node status: %w", err)
+	}
+
+	return res.TxIndexEnabled(), nil
 }
 
 func (bc *BabylonController) queryCometBestBlock() (*types.BlockInfo, error) {

@@ -1,10 +1,8 @@
 package clientcontroller
 
 import (
-	"fmt"
-	coretypes "github.com/cometbft/cometbft/rpc/core/types"
-
 	"cosmossdk.io/math"
+	"fmt"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -90,7 +88,7 @@ type ClientController interface {
 	// the value zero should be returned.
 	QueryFinalityActivationBlockHeight() (uint64, error)
 
-	NodeStatus() (*coretypes.ResultStatus, error)
+	NodeTxIndexEnabled() (bool, error)
 
 	Close() error
 }

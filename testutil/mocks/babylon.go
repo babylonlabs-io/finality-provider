@@ -13,7 +13,6 @@ import (
 	types1 "github.com/babylonlabs-io/finality-provider/types"
 	btcec "github.com/btcsuite/btcd/btcec/v2"
 	schnorr "github.com/btcsuite/btcd/btcec/v2/schnorr"
-	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -84,19 +83,19 @@ func (mr *MockClientControllerMockRecorder) EditFinalityProvider(fpPk, commissio
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditFinalityProvider", reflect.TypeOf((*MockClientController)(nil).EditFinalityProvider), fpPk, commission, description)
 }
 
-// NodeStatus mocks base method.
-func (m *MockClientController) NodeStatus() (*coretypes.ResultStatus, error) {
+// NodeTxIndexEnabled mocks base method.
+func (m *MockClientController) NodeTxIndexEnabled() (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NodeStatus")
-	ret0, _ := ret[0].(*coretypes.ResultStatus)
+	ret := m.ctrl.Call(m, "NodeTxIndexEnabled")
+	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// NodeStatus indicates an expected call of NodeStatus.
-func (mr *MockClientControllerMockRecorder) NodeStatus() *gomock.Call {
+// NodeTxIndexEnabled indicates an expected call of NodeTxIndexEnabled.
+func (mr *MockClientControllerMockRecorder) NodeTxIndexEnabled() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeStatus", reflect.TypeOf((*MockClientController)(nil).NodeStatus))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeTxIndexEnabled", reflect.TypeOf((*MockClientController)(nil).NodeTxIndexEnabled))
 }
 
 // QueryActivatedHeight mocks base method.

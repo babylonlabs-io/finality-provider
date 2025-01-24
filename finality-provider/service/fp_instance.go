@@ -1041,12 +1041,12 @@ func (fp *FinalityProviderInstance) GetFinalityProviderSlashedOrJailedWithRetry(
 }
 
 func (fp *FinalityProviderInstance) txIndexEnabled() error {
-	res, err := fp.cc.NodeStatus()
+	enabled, err := fp.cc.NodeTxIndexEnabled()
 	if err != nil {
 		return fmt.Errorf("failed to query node status: %w", err)
 	}
 
-	if !res.TxIndexEnabled() {
+	if !enabled {
 		return fmt.Errorf("tx indexing in the babylon node must be enabled")
 	}
 
