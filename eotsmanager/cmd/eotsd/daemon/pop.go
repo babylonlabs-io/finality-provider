@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -29,6 +30,7 @@ const (
 	flagKeyNameBaby        = "baby-key-name"
 	flagKeyringBackendBaby = "baby-keyring-backend"
 	flagMessage            = "message"
+	flagOutputFile         = "output-file"
 )
 
 func init() {
@@ -104,23 +106,19 @@ func NewPopExportCmd() *cobra.Command {
 	f.String(flagKeyNameBaby, "", "BABY key name")
 	f.String(flagKeyringBackendBaby, keyring.BackendTest, "BABY backend of the keyring")
 
+	f.String(flagOutputFile, "", "Path to output JSON file")
+
 	return cmd
 }
 
 func NewPopValidateExportCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "validate",
-		Short: "Validates the PoP of the pop export command.",
-		Long:  `Receives as an argument the output of eotsd pop export as a raw string '{...}'`,
-		Example: `eotsd pop validate '{
-  "eotsPublicKey": "3d0bebcbe800236ce8603c5bb1ab6c2af0932e947db4956a338f119797c37f1e",
-  "babyPublicKey": "A0V6yw74EdvoAWVauFqkH/GVM9YIpZitZf6bVEzG69tT",
-  "babySignEotsPk": "GO7xlC+BIypdcQdnIDsM+Ts75X9JKTOkDpXt5t4TSOIt/P1puAHVNhaYbweStVs25J9uRK+4XfrjD0M+t0Qy4g==",
-  "eotsSignBaby": "pR6vxgU0gXq+VqO+y7dHpZgHTz3zr5hdqXXh0WcWNkqUnRjHrizhYAHDMV8gh4vks4PqzKAIgZ779Wqwf5UrXQ==",
-  "babyAddress": "bbn1f04czxeqprn0s9fe7kdzqyde2e6nqj63dllwsm"
-}'`,
-		RunE: validatePop,
-		Args: cobra.ExactArgs(1),
+		Use:     "validate",
+		Short:   "Validates the PoP of the pop export command.",
+		Long:    `Receives as an argument the file path of the JSON output of the command eotsd pop export`,
+		Example: `eotsd pop validate /path/to/pop.json`,
+		RunE:    validatePop,
+		Args:    cobra.ExactArgs(1),
 	}
 
 	return cmd
@@ -149,14 +147,22 @@ func NewPopDeleteCmd() *cobra.Command {
 
 	f.String(flagMessage, "", "Message to be signed")
 
+	f.String(flagOutputFile, "", "Path to output JSON file")
+
 	return cmd
 }
 
 func validatePop(cmd *cobra.Command, args []string) error {
-	strExportJSON := args[0]
+	filePath := args[0]
+
+	bzExportJSON, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read pop file: %w", err)
+	}
+
 	var pop PoPExport
-	if err := json.Unmarshal([]byte(strExportJSON), &pop); err != nil {
-		return fmt.Errorf("failed to marshal %s into PoPExport structure", strExportJSON)
+	if err := json.Unmarshal(bzExportJSON, &pop); err != nil {
+		return fmt.Errorf("failed to marshal %s into PoPExport structure", string(bzExportJSON))
 	}
 
 	valid, err := ValidPopExport(pop)
@@ -222,7 +228,7 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 		BabySignEotsPk: base64.StdEncoding.EncodeToString(babySignature),
 	}
 
-	return printJSON(cmd, out)
+	return handleOutputJSON(cmd, out)
 }
 
 func deletePop(cmd *cobra.Command, _ []string) error {
@@ -272,7 +278,7 @@ func deletePop(cmd *cobra.Command, _ []string) error {
 		BabySignature: base64.StdEncoding.EncodeToString(babySignature),
 	}
 
-	return printJSON(cmd, out)
+	return handleOutputJSON(cmd, out)
 }
 
 // babyFlags returns the values of flagHomeBaby, flagKeyNameBaby and
@@ -345,13 +351,24 @@ func getInterpretedMessage(cmd *cobra.Command) (string, error) {
 	return interpretedMsg, nil
 }
 
-func printJSON(cmd *cobra.Command, out any) error {
-	jsonString, err := json.MarshalIndent(out, "", "  ")
+func handleOutputJSON(cmd *cobra.Command, out any) error {
+	jsonBz, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	cmd.Println(string(jsonString))
+	outputFilePath, err := cmd.Flags().GetString(flagOutputFile)
+	if err != nil {
+		return err
+	}
+
+	if len(outputFilePath) > 0 {
+		if err := os.WriteFile(outputFilePath, jsonBz, 0644); err != nil {
+			return fmt.Errorf("failed to write output file: %w", err)
+		}
+	}
+
+	cmd.Println(string(jsonBz))
 
 	return nil
 }
