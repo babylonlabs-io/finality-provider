@@ -46,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#284](https://github.com/babylonlabs-io/finality-provider/pull/284) Add new command to delete pop
 * [#277](https://github.com/babylonlabs-io/finality-provider/pull/277) Poll many blocks in poller
 * [#291](https://github.com/babylonlabs-io/finality-provider/pull/291) chore: remove skip height
+* [#301](https://github.com/babylonlabs-io/finality-provider/pull/301) chore: check tx index enabled
 
 ## v0.14.3
 
