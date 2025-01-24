@@ -3,6 +3,7 @@ package clientcontroller
 import (
 	"context"
 	"fmt"
+	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	"strings"
 	"time"
 
@@ -413,6 +414,10 @@ func (bc *BabylonController) QueryBestBlock() (*types.BlockInfo, error) {
 	}
 
 	return blocks[0], nil
+}
+
+func (bc *BabylonController) NodeStatus() (*coretypes.ResultStatus, error) {
+	return bc.bbnClient.GetStatus()
 }
 
 func (bc *BabylonController) queryCometBestBlock() (*types.BlockInfo, error) {

@@ -108,6 +108,10 @@ func (fp *FinalityProviderInstance) Start() error {
 		return fmt.Errorf("the finality-provider instance %s is already started", fp.GetBtcPkHex())
 	}
 
+	if err := fp.txIndexEnabled(); err != nil {
+		return err
+	}
+
 	if fp.IsJailed() {
 		fp.logger.Warn("the finality provider is jailed",
 			zap.String("pk", fp.GetBtcPkHex()))
@@ -1034,4 +1038,17 @@ func (fp *FinalityProviderInstance) GetFinalityProviderSlashedOrJailedWithRetry(
 	}
 
 	return slashed, jailed, nil
+}
+
+func (fp *FinalityProviderInstance) txIndexEnabled() error {
+	res, err := fp.cc.NodeStatus()
+	if err != nil {
+		return fmt.Errorf("failed to query node status: %w", err)
+	}
+
+	if !res.TxIndexEnabled() {
+		return fmt.Errorf("tx indexing in the babylon node must be enabled")
+	}
+
+	return nil
 }

@@ -2,6 +2,7 @@ package clientcontroller
 
 import (
 	"fmt"
+	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 
 	"cosmossdk.io/math"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
@@ -88,6 +89,8 @@ type ClientController interface {
 	// if the consumer chain wants to accept finality voting at any block height
 	// the value zero should be returned.
 	QueryFinalityActivationBlockHeight() (uint64, error)
+
+	NodeStatus() (*coretypes.ResultStatus, error)
 
 	Close() error
 }
