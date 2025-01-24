@@ -67,9 +67,13 @@ type PoPExportDelete struct {
 
 var (
 	PoPCommands = cli.Command{
-		Name:        "pop",
-		Usage:       "Proof of Possession commands",
-		Subcommands: cli.Commands{PoPExportCommand, PoPDeleteCommand},
+		Name:  "pop",
+		Usage: "Proof of Possession commands",
+		Subcommands: cli.Commands{
+			PoPExportCommand,
+			PoPDeleteCommand,
+			PoPValidateExportCommand,
+		},
 	}
 	PoPExportCommand = cli.Command{
 		Name:  "export",
@@ -164,6 +168,19 @@ var (
 		},
 		Action: deletePop,
 	}
+	PoPValidateExportCommand = cli.Command{
+		Name:        "validate",
+		Usage:       "Validates the PoP of the pop export command.",
+		Description: `Receives as an argument the output of eotsd pop export as a raw string '{...}'`,
+		UsageText: `eotsd pop validate '{
+  "eotsPublicKey": "3d0bebcbe800236ce8603c5bb1ab6c2af0932e947db4956a338f119797c37f1e",
+  "babyPublicKey": "A0V6yw74EdvoAWVauFqkH/GVM9YIpZitZf6bVEzG69tT",
+  "babySignEotsPk": "GO7xlC+BIypdcQdnIDsM+Ts75X9JKTOkDpXt5t4TSOIt/P1puAHVNhaYbweStVs25J9uRK+4XfrjD0M+t0Qy4g==",
+  "eotsSignBaby": "pR6vxgU0gXq+VqO+y7dHpZgHTz3zr5hdqXXh0WcWNkqUnRjHrizhYAHDMV8gh4vks4PqzKAIgZ779Wqwf5UrXQ==",
+  "babyAddress": "bbn1f04czxeqprn0s9fe7kdzqyde2e6nqj63dllwsm"
+}'`,
+		Action: validatePop,
+	}
 )
 
 func exportPop(ctx *cli.Context) error {
@@ -214,6 +231,27 @@ func exportPop(ctx *cli.Context) error {
 	}
 
 	printRespJSON(out)
+	return nil
+}
+
+func validatePop(ctx *cli.Context) error {
+	args := ctx.Args()
+	strExportJSON := args.First()
+	var pop PoPExport
+	if err := json.Unmarshal([]byte(strExportJSON), &pop); err != nil {
+		return fmt.Errorf("failed to marshal %s into PoPExport structure", strExportJSON)
+	}
+
+	valid, err := ValidPopExport(pop)
+	if err != nil {
+		return fmt.Errorf("failed to validate pop %+v, reason: %w", pop, err)
+	}
+	if !valid {
+		return fmt.Errorf("invalid pop %+v", pop)
+	}
+
+	fmt.Println("Proof of Possession is valid!")
+
 	return nil
 }
 
@@ -417,7 +455,7 @@ func SignCosmosAdr36(
 	return babySignBytes, nil
 }
 
-func VerifyPopExport(pop PoPExport) (bool, error) {
+func ValidPopExport(pop PoPExport) (bool, error) {
 	valid, err := ValidEotsSignBaby(pop.EotsPublicKey, pop.BabyAddress, pop.EotsSignBaby)
 	if err != nil || !valid {
 		return false, err
