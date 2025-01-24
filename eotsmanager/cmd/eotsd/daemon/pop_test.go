@@ -2,7 +2,10 @@ package daemon_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -72,12 +75,17 @@ func TestPoPValidate(t *testing.T) {
 	t.Parallel()
 	app := testApp()
 
+	tmp := t.TempDir()
 	r := rand.New(rand.NewSource(time.Now().Unix()))
-	for _, pop := range popsToVerify {
+	for i, pop := range popsToVerify {
 		jsonString, err := json.MarshalIndent(pop, "", "  ")
 		require.NoError(t, err)
 
-		outputKeysAdd := appRunWithOutput(r, t, app, []string{"eotsd", "pop", "validate", string(jsonString)})
+		fileName := filepath.Join(tmp, fmt.Sprintf("%d-pop-out.json", i))
+		err = os.WriteFile(fileName, jsonString, 0644)
+		require.NoError(t, err)
+
+		outputKeysAdd := appRunWithOutput(r, t, app, []string{"eotsd", "pop", "validate", fileName})
 
 		require.Equal(t, outputKeysAdd, "Proof of Possession is valid!\n")
 	}
