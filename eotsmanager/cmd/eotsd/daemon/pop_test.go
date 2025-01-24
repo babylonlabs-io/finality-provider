@@ -1,7 +1,10 @@
 package daemon_test
 
 import (
+	"encoding/json"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 	"github.com/stretchr/testify/require"
@@ -59,8 +62,23 @@ func TestPoPValidBabySignEotsPk(t *testing.T) {
 func TestPoPVerify(t *testing.T) {
 	t.Parallel()
 	for _, pop := range popsToVerify {
-		valid, err := daemon.VerifyPopExport(pop)
+		valid, err := daemon.ValidPopExport(pop)
 		require.NoError(t, err)
 		require.True(t, valid)
+	}
+}
+
+func TestPoPValidate(t *testing.T) {
+	t.Parallel()
+	app := testApp()
+
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	for _, pop := range popsToVerify {
+		jsonString, err := json.MarshalIndent(pop, "", "  ")
+		require.NoError(t, err)
+
+		outputKeysAdd := appRunWithOutput(r, t, app, []string{"eotsd", "pop", "validate", string(jsonString)})
+
+		require.Equal(t, outputKeysAdd, "Proof of Possession is valid!\n")
 	}
 }
