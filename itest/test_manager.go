@@ -120,6 +120,9 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	var bc *fpcc.BabylonController
 	require.Eventually(t, func() bool {
 		bc, err = fpcc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		if err != nil {
+			t.Log(err)
+		}
 		return err == nil
 	}, 5*time.Second, eventuallyPollTime)
 
@@ -171,7 +174,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", tm.babylond.GetPort("9090/tcp"))
 	fpBbnKeyInfo, err := testutil.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, cfg.BabylonConfig.Key, cfg.BabylonConfig.KeyringBackend, passphrase, hdPath, "")
 	require.NoError(t, err)
-	
+
 	// add some funds for new fp pay for fees '-'
 	_, _, err = tm.manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), "1000000ubbn", "node0")
 	require.NoError(t, err)
