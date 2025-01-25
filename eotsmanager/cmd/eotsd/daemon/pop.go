@@ -155,6 +155,7 @@ func NewPopDeleteCmd() *cobra.Command {
 func validatePop(cmd *cobra.Command, args []string) error {
 	filePath := args[0]
 
+	// #nosec G304 - The file path is provided by the user and not externally
 	bzExportJSON, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read pop file: %w", err)
@@ -363,7 +364,7 @@ func handleOutputJSON(cmd *cobra.Command, out any) error {
 	}
 
 	if len(outputFilePath) > 0 {
-		if err := os.WriteFile(outputFilePath, jsonBz, 0644); err != nil {
+		if err := os.WriteFile(outputFilePath, jsonBz, 0600); err != nil {
 			return fmt.Errorf("failed to write output file: %w", err)
 		}
 	}
