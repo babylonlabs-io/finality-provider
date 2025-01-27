@@ -158,6 +158,7 @@ func validatePop(cmd *cobra.Command, args []string) error {
 	path := args[0]
 
 	// Add path validation
+	// #nosec G304 - The file path is provided by the user and not externally
 	bzExportJSON, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return fmt.Errorf("failed to read pop file: %w", err)

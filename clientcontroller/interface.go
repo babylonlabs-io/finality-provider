@@ -1,9 +1,9 @@
 package clientcontroller
 
 import (
-	"fmt"
-
 	"cosmossdk.io/math"
+	"fmt"
+	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -21,6 +21,8 @@ const (
 )
 
 type ClientController interface {
+	// Start - starts the client controller
+	Start() error
 	// RegisterFinalityProvider registers a finality provider to the consumer chain
 	// it returns tx hash and error. The address of the finality provider will be
 	// the signer of the msg.
@@ -98,12 +100,18 @@ func NewClientController(chainType string, bbnConfig *fpcfg.BBNConfig, netParams
 		err error
 	)
 
+	cfg := fpcfg.BBNConfigToBabylonConfig(bbnConfig)
+	bc, err := bbnclient.New(
+		&cfg,
+		logger,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
+	}
+
 	switch chainType {
 	case babylonConsumerChainType:
-		cc, err = NewBabylonController(bbnConfig, netParams, logger)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
-		}
+		cc = NewBabylonController(bc, bbnConfig, netParams, logger)
 	default:
 		return nil, fmt.Errorf("unsupported consumer chain")
 	}

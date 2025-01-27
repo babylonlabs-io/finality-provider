@@ -85,6 +85,9 @@ func runCommandCommitPubRand(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create rpc client for the Babylon chain: %w", err)
 	}
+	if err := cc.Start(); err != nil {
+		return fmt.Errorf("failed to start client controller: %w", err)
+	}
 	em, err := eotsclient.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress)
 	if err != nil {
 		return fmt.Errorf("failed to create EOTS manager client: %w", err)

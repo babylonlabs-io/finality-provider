@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -117,9 +118,17 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", babylond.GetPort("9090/tcp"))
 
+	bbnCfg := fpcfg.BBNConfigToBabylonConfig(cfg.BabylonConfig)
+	bbnCl, err := bbnclient.New(&bbnCfg, logger)
+	require.NoError(t, err)
+
 	var bc *fpcc.BabylonController
 	require.Eventually(t, func() bool {
-		bc, err = fpcc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		bc = fpcc.NewBabylonController(bbnCl, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		err = bc.Start()
+		if err != nil {
+			t.Log(err)
+		}
 		return err == nil
 	}, 10*time.Second, eventuallyPollTime)
 
@@ -180,6 +189,8 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 	eotsCli, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.cfg.RPCListener)
 	require.NoError(t, err)
 	cc, err := fpcc.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, tm.logger)
+	require.NoError(t, err)
+	err = cc.Start()
 	require.NoError(t, err)
 	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
