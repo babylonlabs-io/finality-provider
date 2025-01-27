@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v0.14.4
+
 ### Improvements
 
 * [#294](https://github.com/babylonlabs-io/finality-provider/pull/294) chore: Improve fpd start
