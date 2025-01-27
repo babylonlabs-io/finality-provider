@@ -44,32 +44,36 @@ type BabylonController struct {
 }
 
 func NewBabylonController(
+	bbnClient *bbnclient.Client,
 	cfg *fpcfg.BBNConfig,
 	btcParams *chaincfg.Params,
 	logger *zap.Logger,
-) (*BabylonController, error) {
-	bbnConfig := fpcfg.BBNConfigToBabylonConfig(cfg)
-
-	bc, err := bbnclient.New(
-		&bbnConfig,
-		logger,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
-	}
-
-	// makes sure that the key in config really exists and is a valid bech32 addr
-	// to allow using mustGetTxSigner
-	if _, err := bc.GetAddr(); err != nil {
-		return nil, err
-	}
-
+) *BabylonController {
 	return &BabylonController{
-		bc,
+		bbnClient,
 		cfg,
 		btcParams,
 		logger,
-	}, nil
+	}
+}
+
+func (bc *BabylonController) Start() error {
+	// makes sure that the key in config really exists and is a valid bech32 addr
+	// to allow using mustGetTxSigner
+	if _, err := bc.bbnClient.GetAddr(); err != nil {
+		return fmt.Errorf("failed to get addr: %w", err)
+	}
+
+	enabled, err := bc.NodeTxIndexEnabled()
+	if err != nil {
+		return err
+	}
+
+	if !enabled {
+		return fmt.Errorf("tx indexing in the babylon node must be enabled")
+	}
+
+	return nil
 }
 
 func (bc *BabylonController) mustGetTxSigner() string {

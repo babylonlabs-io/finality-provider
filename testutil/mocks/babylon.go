@@ -279,6 +279,20 @@ func (mr *MockClientControllerMockRecorder) RegisterFinalityProvider(fpPk, pop, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterFinalityProvider", reflect.TypeOf((*MockClientController)(nil).RegisterFinalityProvider), fpPk, pop, commission, description)
 }
 
+// Start mocks base method.
+func (m *MockClientController) Start() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Start")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockClientControllerMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockClientController)(nil).Start))
+}
+
 // SubmitBatchFinalitySigs mocks base method.
 func (m *MockClientController) SubmitBatchFinalitySigs(fpPk *btcec.PublicKey, blocks []*types1.BlockInfo, pubRandList []*btcec.FieldVal, proofList [][]byte, sigs []*btcec.ModNScalar) (*types1.TxResponse, error) {
 	m.ctrl.T.Helper()
