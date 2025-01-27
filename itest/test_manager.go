@@ -130,7 +130,7 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 			t.Log(err)
 		}
 		return err == nil
-	}, 5*time.Second, eventuallyPollTime)
+	}, 10*time.Second, eventuallyPollTime)
 
 	// 3. prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
@@ -207,6 +207,9 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
+
+	err = fpApp.StartFinalityProvider(eotsPk, passphrase)
+	require.NoError(t, err)
 
 	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb)
 	go func() {
