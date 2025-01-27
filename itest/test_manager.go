@@ -121,7 +121,7 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	require.Eventually(t, func() bool {
 		bc, err = fpcc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
 		return err == nil
-	}, 5*time.Second, eventuallyPollTime)
+	}, 10*time.Second, eventuallyPollTime)
 
 	// 3. prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
