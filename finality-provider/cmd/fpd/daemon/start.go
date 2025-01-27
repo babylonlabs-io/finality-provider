@@ -8,6 +8,7 @@ import (
 	"github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcwallet/walletdb"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/lightningnetwork/lnd/signal"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -32,6 +33,8 @@ func CommandStart() *cobra.Command {
 	cmd.Flags().String(fpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
 	cmd.Flags().String(passphraseFlag, "", "The pass phrase used to decrypt the private key")
 	cmd.Flags().String(rpcListenerFlag, "", "The address that the RPC server listens to")
+	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
+
 	return cmd
 }
 
@@ -126,20 +129,31 @@ func startApp(
 		return fmt.Errorf("failed to start the finality provider app: %w", err)
 	}
 
-	// no fp instance will be started if public key is not specified
-	if fpPkStr == "" {
-		return nil
+	// fp instance will be started if public key is specified
+	if fpPkStr != "" {
+		// start the finality-provider instance with the given public key
+		fpPk, err := types.NewBIP340PubKeyFromHex(fpPkStr)
+		if err != nil {
+			return fmt.Errorf("invalid finality provider public key %s: %w", fpPkStr, err)
+		}
+
+		return fpApp.StartFinalityProvider(fpPk, passphrase)
 	}
 
-	// start the finality-provider instance with the given public key
-	fpPk, err := types.NewBIP340PubKeyFromHex(fpPkStr)
+	storedFps, err := fpApp.GetFinalityProviderStore().GetAllStoredFinalityProviders()
 	if err != nil {
-		return fmt.Errorf("invalid finality provider public key %s: %w", fpPkStr, err)
+		return err
 	}
 
-	if err := fpApp.StartFinalityProvider(fpPk, passphrase); err != nil {
-		return fmt.Errorf("failed to start the finality-provider instance %s: %w", fpPkStr, err)
+	if len(storedFps) == 1 {
+		return fpApp.StartFinalityProvider(types.NewBIP340PubKeyFromBTCPK(storedFps[0].BtcPk), passphrase)
 	}
+
+	if len(storedFps) > 1 {
+		return fmt.Errorf("%d finality providers found in DB. Please specify the EOTS public key", len(storedFps))
+	}
+
+	fpApp.Logger().Info("No finality providers found in DB. Waiting for registration.")
 
 	return nil
 }

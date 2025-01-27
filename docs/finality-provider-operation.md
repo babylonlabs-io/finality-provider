@@ -549,7 +549,8 @@ your finality provider's details:
       "status": "REGISTERED"
     }
     "tx_hash": "C08377CF289DF0DC5FA462E6409ADCB65A3492C22A112C58EA449F4DC544A3B1"
-} 
+}
+Your finality provider is successfully created. Please restart your fpd. 
 ```
 
 The response includes: 
@@ -584,6 +585,10 @@ by running:
 ```shell
 fpd start --eots-pk <hex-string-of-eots-public-key>
 ```
+
+If `--eots-pk` is not specified, the command will start the finality provider
+if it is the only one stored in the database. If multiple finality providers
+are in the database, specifying `--eots-pk` is required.
 
 ### 5.2. Withdrawing Rewards
 

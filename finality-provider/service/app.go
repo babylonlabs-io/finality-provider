@@ -175,6 +175,10 @@ func (app *FinalityProviderApp) GetFinalityProviderInstance() (*FinalityProvider
 	return app.fpIns, nil
 }
 
+func (app *FinalityProviderApp) Logger() *zap.Logger {
+	return app.logger
+}
+
 // StartFinalityProvider starts a finality provider instance with the given EOTS public key
 // Note: this should be called right after the finality-provider is registered
 func (app *FinalityProviderApp) StartFinalityProvider(fpPk *bbntypes.BIP340PubKey, passphrase string) error {
@@ -411,14 +415,6 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 		storedFp, err := app.fps.GetFinalityProvider(btcPk)
 		if err != nil {
 			return nil, err
-		}
-
-		if err = app.startFinalityProviderInstance(storedFp.GetBIP340BTCPK(), ""); err != nil {
-			app.logger.Error(
-				"failed to start fp instance",
-				zap.String("eots_pk", pkHex),
-				zap.Error(err),
-			)
 		}
 
 		return &CreateFinalityProviderResult{
