@@ -83,21 +83,6 @@ func (mr *MockClientControllerMockRecorder) EditFinalityProvider(fpPk, commissio
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditFinalityProvider", reflect.TypeOf((*MockClientController)(nil).EditFinalityProvider), fpPk, commission, description)
 }
 
-// NodeTxIndexEnabled mocks base method.
-func (m *MockClientController) NodeTxIndexEnabled() (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NodeTxIndexEnabled")
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// NodeTxIndexEnabled indicates an expected call of NodeTxIndexEnabled.
-func (mr *MockClientControllerMockRecorder) NodeTxIndexEnabled() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeTxIndexEnabled", reflect.TypeOf((*MockClientController)(nil).NodeTxIndexEnabled))
-}
-
 // QueryActivatedHeight mocks base method.
 func (m *MockClientController) QueryActivatedHeight() (uint64, error) {
 	m.ctrl.T.Helper()

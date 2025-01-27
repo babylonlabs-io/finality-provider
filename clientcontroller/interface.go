@@ -91,8 +91,6 @@ type ClientController interface {
 	// the value zero should be returned.
 	QueryFinalityActivationBlockHeight() (uint64, error)
 
-	NodeTxIndexEnabled() (bool, error)
-
 	Close() error
 }
 
