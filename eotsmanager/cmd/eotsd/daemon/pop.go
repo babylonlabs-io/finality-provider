@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -19,6 +20,7 @@ import (
 
 	bbnparams "github.com/babylonlabs-io/babylon/app/params"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+
 	"github.com/babylonlabs-io/finality-provider/codec"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
@@ -153,9 +155,10 @@ func NewPopDeleteCmd() *cobra.Command {
 }
 
 func validatePop(cmd *cobra.Command, args []string) error {
-	filePath := args[0]
+	path := args[0]
 
-	bzExportJSON, err := os.ReadFile(filePath)
+	// Add path validation
+	bzExportJSON, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return fmt.Errorf("failed to read pop file: %w", err)
 	}
@@ -363,7 +366,19 @@ func handleOutputJSON(cmd *cobra.Command, out any) error {
 	}
 
 	if len(outputFilePath) > 0 {
-		if err := os.WriteFile(outputFilePath, jsonBz, 0644); err != nil {
+		// Add path validation
+		cleanPath, err := filepath.Abs(filepath.Clean(outputFilePath))
+		if err != nil {
+			return fmt.Errorf("invalid output file path: %w", err)
+		}
+
+		// Create directory if it doesn't exist
+		dir := filepath.Dir(cleanPath)
+		if err := os.MkdirAll(dir, 0750); err != nil {
+			return fmt.Errorf("failed to create output directory: %w", err)
+		}
+
+		if err := os.WriteFile(cleanPath, jsonBz, 0600); err != nil {
 			return fmt.Errorf("failed to write output file: %w", err)
 		}
 	}
