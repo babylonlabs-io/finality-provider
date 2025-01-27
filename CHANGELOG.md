@@ -39,6 +39,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
+* [#308](https://github.com/babylonlabs-io/finality-provider/issues/308) chore: bump babylon to v1.0.0-rc.4
+
+### Improvements
+
 * [#251](https://github.com/babylonlabs-io/finality-provider/pull/251) Add nlreturn lint
 * [#252](https://github.com/babylonlabs-io/finality-provider/pull/252) Remove interceptors and use context
 * [#266](https://github.com/babylonlabs-io/finality-provider/pull/266) Change default config
