@@ -6,16 +6,16 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	goflags "github.com/jessevdk/go-flags"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/util"
-	goflags "github.com/jessevdk/go-flags"
 )
 
 func TestPersistClientCtx(t *testing.T) {

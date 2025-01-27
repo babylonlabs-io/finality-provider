@@ -122,7 +122,7 @@ func StartManager(t *testing.T) *TestManager {
 	require.Eventually(t, func() bool {
 		bc, err = fpcc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
 		return err == nil
-	}, 5*time.Second, eventuallyPollTime)
+	}, 10*time.Second, eventuallyPollTime)
 
 	shutdownInterceptor, err := signal.Intercept()
 	require.NoError(t, err)
@@ -200,6 +200,9 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T) *service.FinalityProvid
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
+
+	err = fpApp.StartFinalityProvider(eotsPk, passphrase)
+	require.NoError(t, err)
 
 	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb, tm.interceptor)
 	go func() {
