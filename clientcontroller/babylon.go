@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/babylonlabs-io/babylon/client/babylonclient"
-	"strings"
-	"time"
-
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	"strings"
 
 	sdkErr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
@@ -370,12 +368,6 @@ func (bc *BabylonController) queryLatestBlocks(startKey []byte, count uint64, st
 	}
 
 	return blocks, nil
-}
-
-func getContextWithCancel(timeout time.Duration) (context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-
-	return ctx, cancel
 }
 
 func (bc *BabylonController) QueryBlock(height uint64) (*types.BlockInfo, error) {
