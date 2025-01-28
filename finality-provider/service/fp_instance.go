@@ -489,6 +489,9 @@ func (fp *FinalityProviderInstance) retrySubmitSigsUntilFinalized(targetBlocks [
 				zap.String("pk", fp.GetBtcPkHex()),
 				zap.Uint64("target_height", targetHeight),
 			)
+
+			fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
+
 			// TODO: returning nil here is to safely break the loop
 			//  the error still exists
 			return nil, nil
