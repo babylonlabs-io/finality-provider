@@ -413,7 +413,7 @@ func (bc *BabylonController) QueryBestBlock() (*types.BlockInfo, error) {
 	blocks, err := bc.queryLatestBlocks(nil, 1, finalitytypes.QueriedBlockStatus_ANY, true)
 	if err != nil || len(blocks) != 1 {
 		// try query comet block if the index block query is not available
-		return bc.queryCometBestBlock()
+		return nil, fmt.Errorf("failed to query the best block: %w", err)
 	}
 
 	return blocks[0], nil
@@ -426,28 +426,6 @@ func (bc *BabylonController) NodeTxIndexEnabled() (bool, error) {
 	}
 
 	return res.TxIndexEnabled(), nil
-}
-
-func (bc *BabylonController) queryCometBestBlock() (*types.BlockInfo, error) {
-	ctx, cancel := getContextWithCancel(bc.cfg.Timeout)
-	// this will return 20 items at max in the descending order (highest first)
-	chainInfo, err := bc.bbnClient.RPCClient.BlockchainInfo(ctx, 0, 0)
-	defer cancel()
-
-	if err != nil {
-		return nil, err
-	}
-
-	headerHeightInt64 := chainInfo.BlockMetas[0].Header.Height
-	if headerHeightInt64 < 0 {
-		return nil, fmt.Errorf("block height %v should be positive", headerHeightInt64)
-	}
-	// Returning response directly, if header with specified number did not exist
-	// at request will contain nil header
-	return &types.BlockInfo{
-		Height: uint64(headerHeightInt64),
-		Hash:   chainInfo.BlockMetas[0].Header.AppHash,
-	}, nil
 }
 
 func (bc *BabylonController) Close() error {
