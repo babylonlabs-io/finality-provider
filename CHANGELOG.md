@@ -54,6 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#297](https://github.com/babylonlabs-io/finality-provider/pull/297) Add new command to validate pop
 * [#302](https://github.com/babylonlabs-io/finality-provider/pull/302) Update pop commands to write to a file
 * [#301](https://github.com/babylonlabs-io/finality-provider/pull/301) chore: check tx index enabled
+* [#308](https://github.com/babylonlabs-io/finality-provider/issues/308) chore: bump babylon to v1.0.0-rc.4
 
 ## v0.14.3
 
