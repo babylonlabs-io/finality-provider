@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug Fixes
+
+* [#307](https://github.com/babylonlabs-io/finality-provider/pull/307) fix: increment fp_total_failed_votes
+
 ### Improvements
 
 * [#251](https://github.com/babylonlabs-io/finality-provider/pull/251) Add nlreturn lint
