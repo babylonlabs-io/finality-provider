@@ -403,9 +403,13 @@ func (bc *BabylonController) QueryFinalityActivationBlockHeight() (uint64, error
 
 func (bc *BabylonController) QueryBestBlock() (*types.BlockInfo, error) {
 	blocks, err := bc.queryLatestBlocks(nil, 1, finalitytypes.QueriedBlockStatus_ANY, true)
-	if err != nil || len(blocks) != 1 {
+	if err != nil {
 		// try query comet block if the index block query is not available
 		return nil, fmt.Errorf("failed to query the best block: %w", err)
+	}
+
+	if len(blocks) == 0 {
+		return nil, fmt.Errorf("failed to query the best block: no blocks found")
 	}
 
 	return blocks[0], nil
