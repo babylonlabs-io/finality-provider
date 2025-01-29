@@ -12,6 +12,8 @@ import (
 const babylonConsumerChainType = "babylon"
 
 type ClientController interface {
+	// Start - starts the client controller
+	Start() error
 	// RegisterFinalityProvider registers a finality provider to the consumer chain
 	// it returns tx hash and error. The address of the finality provider will be
 	// the signer of the msg.

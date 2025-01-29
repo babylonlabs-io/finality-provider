@@ -12,21 +12,22 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
-	"github.com/btcsuite/btcd/btcec/v2"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-
+	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
+	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/itest/container"
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/btcsuite/btcd/btcec/v2"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 const (
@@ -87,10 +88,10 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", babylond.GetPort("9090/tcp"))
 
-	var bc *bbncc.BabylonController
-	var bcc *bbncc.BabylonConsumerController
+	var bc ccapi.ClientController
+	var bcc ccapi.ConsumerController
 	require.Eventually(t, func() bool {
-		bc, err = bbncc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		bc, err = fpcc.NewBabylonController(cfg, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon controller: %v", err)
 			return false
@@ -116,14 +117,14 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 
 	tm := &TestManager{
 		BaseTestManager: &base_test_manager.BaseTestManager{
-			BBNClient:        bc,
+			BBNClient:        bc.(*bbncc.BabylonController),
 			CovenantPrivKeys: covenantPrivKeys,
 		},
 		EOTSServerHandler: eh,
 		EOTSHomeDir:       eotsHomeDir,
 		FpConfig:          cfg,
 		EOTSClient:        eotsCli,
-		BBNConsumerClient: bcc,
+		BBNConsumerClient: bcc.(*bbncc.BabylonConsumerController),
 		baseDir:           testDir,
 		manager:           manager,
 		logger:            logger,
@@ -163,7 +164,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 	require.NoError(t, err)
 
 	// create new clients
-	bc, err := bbncc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, tm.logger)
+	bc, err := fpcc.NewBabylonController(cfg, tm.logger)
 	require.NoError(t, err)
 	bcc, err := bbncc.NewBabylonConsumerController(cfg.BabylonConfig, &cfg.BTCNetParams, tm.logger)
 	require.NoError(t, err)

@@ -59,14 +59,19 @@ func NewFinalityProviderAppFromConfig(
 	db kvdb.Backend,
 	logger *zap.Logger,
 ) (*FinalityProviderApp, error) {
-	cc, err := fpcc.NewClientController(cfg, logger)
+	cc, err := fpcc.NewBabylonController(cfg, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create rpc client for the Babylon chain: %w", err)
 	}
+	if err := cc.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start rpc client for the Babylon chain: %w", err)
+	}
+
 	consumerCon, err := fpcc.NewConsumerController(cfg, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
 	}
+
 	// if the EOTSManagerAddress is empty, run a local EOTS manager;
 	// otherwise connect a remote one with a gRPC client
 	em, err := client.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress)
@@ -189,6 +194,10 @@ func (app *FinalityProviderApp) GetFinalityProviderInstance() (*FinalityProvider
 	}
 
 	return app.fpIns, nil
+}
+
+func (app *FinalityProviderApp) Logger() *zap.Logger {
+	return app.logger
 }
 
 // StartFinalityProvider starts a finality provider instance with the given EOTS public key
@@ -430,14 +439,6 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 		storedFp, err := app.fps.GetFinalityProvider(btcPk)
 		if err != nil {
 			return nil, err
-		}
-
-		if err = app.startFinalityProviderInstance(storedFp.GetBIP340BTCPK(), ""); err != nil {
-			app.logger.Error(
-				"failed to start fp instance",
-				zap.String("eots_pk", pkHex),
-				zap.Error(err),
-			)
 		}
 
 		return &CreateFinalityProviderResult{

@@ -97,6 +97,20 @@ func (mr *MockClientControllerMockRecorder) RegisterFinalityProvider(chainID, fp
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterFinalityProvider", reflect.TypeOf((*MockClientController)(nil).RegisterFinalityProvider), chainID, fpPk, pop, commission, description)
 }
 
+// Start mocks base method.
+func (m *MockClientController) Start() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Start")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockClientControllerMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockClientController)(nil).Start))
+}
+
 // MockConsumerController is a mock of ConsumerController interface.
 type MockConsumerController struct {
 	ctrl     *gomock.Controller

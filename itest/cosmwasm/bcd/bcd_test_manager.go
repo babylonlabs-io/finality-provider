@@ -22,6 +22,7 @@ import (
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
+	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	cwcc "github.com/babylonlabs-io/finality-provider/clientcontroller/cosmwasm"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
@@ -103,9 +104,9 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("localhost:%s", babylond.GetPort("9090/tcp"))
 
-	var bc *bbncc.BabylonController
+	var bc ccapi.ClientController
 	require.Eventually(t, func() bool {
-		bc, err = bbncc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		bc, err = fpcc.NewBabylonController(cfg, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon controller: %v", err)
 			return false
@@ -165,7 +166,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	ctm := &BcdTestManager{
 		BaseTestManager: &base_test_manager.BaseTestManager{
-			BBNClient:        bc,
+			BBNClient:        bc.(*bbncc.BabylonController),
 			CovenantPrivKeys: covenantPrivKeys,
 		},
 		manager:           manager,

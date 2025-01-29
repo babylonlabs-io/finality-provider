@@ -10,6 +10,7 @@ import (
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
 	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	"github.com/babylonlabs-io/babylon/client/babylonclient"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cwcclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
@@ -21,7 +22,6 @@ import (
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 )
 
@@ -62,17 +62,24 @@ func NewCosmwasmConsumerController(
 	}, nil
 }
 
-func (wc *CosmwasmConsumerController) reliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*provider.RelayerTxResponse, error) {
+func (wc *CosmwasmConsumerController) reliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	return wc.reliablySendMsgs([]sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
-func (wc *CosmwasmConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*provider.RelayerTxResponse, error) {
-	return wc.cwClient.ReliablySendMsgs(
+func (wc *CosmwasmConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+	resp, err := wc.cwClient.ReliablySendMsgs(
 		context.Background(),
 		msgs,
 		expectedErrs,
 		unrecoverableErrs,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	bbnResp := fptypes.NewBabylonTxResponse(resp)
+
+	return bbnResp, nil
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness via a MsgCommitPubRand to Babylon
@@ -548,7 +555,7 @@ func (wc *CosmwasmConsumerController) Close() error {
 	return wc.cwClient.Stop()
 }
 
-func (wc *CosmwasmConsumerController) ExecuteContract(msgBytes []byte) (*provider.RelayerTxResponse, error) {
+func (wc *CosmwasmConsumerController) ExecuteContract(msgBytes []byte) (*babylonclient.RelayerTxResponse, error) {
 	execMsg := &wasmdtypes.MsgExecuteContract{
 		Sender:   wc.cwClient.MustGetAddr(),
 		Contract: wc.cfg.BtcStakingContractAddress,

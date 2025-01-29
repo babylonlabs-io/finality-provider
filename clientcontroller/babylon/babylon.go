@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/babylonlabs-io/babylon/client/babylonclient"
+
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 
 	sdkErr "cosmossdk.io/errors"
@@ -25,7 +27,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	sttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 	protobuf "google.golang.org/protobuf/proto"
 
@@ -47,6 +48,7 @@ type BabylonController struct {
 }
 
 func NewBabylonController(
+	bbnClient *bbnclient.Client,
 	cfg *fpcfg.BBNConfig,
 	btcParams *chaincfg.Params,
 	logger *zap.Logger,
@@ -68,11 +70,30 @@ func NewBabylonController(
 	}
 
 	return &BabylonController{
-		bc,
+		bbnClient,
 		cfg,
 		btcParams,
 		logger,
 	}, nil
+}
+
+func (bc *BabylonController) Start() error {
+	// makes sure that the key in config really exists and is a valid bech32 addr
+	// to allow using mustGetTxSigner
+	if _, err := bc.bbnClient.GetAddr(); err != nil {
+		return fmt.Errorf("failed to get addr: %w", err)
+	}
+
+	enabled, err := bc.NodeTxIndexEnabled()
+	if err != nil {
+		return err
+	}
+
+	if !enabled {
+		return fmt.Errorf("tx indexing in the babylon node must be enabled")
+	}
+
+	return nil
 }
 
 func (bc *BabylonController) MustGetTxSigner() string {
@@ -101,11 +122,11 @@ func (bc *BabylonController) GetKeyAddress() sdk.AccAddress {
 	return addr
 }
 
-func (bc *BabylonController) reliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*provider.RelayerTxResponse, error) {
+func (bc *BabylonController) reliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	return bc.reliablySendMsgs([]sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
-func (bc *BabylonController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*provider.RelayerTxResponse, error) {
+func (bc *BabylonController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	return bc.bbnClient.ReliablySendMsgs(
 		context.Background(),
 		msgs,
@@ -413,6 +434,15 @@ func (bc *BabylonController) QueryBestBlock() (*types.BlockInfo, error) {
 	return blocks[0], nil
 }
 
+func (bc *BabylonController) NodeTxIndexEnabled() (bool, error) {
+	res, err := bc.bbnClient.GetStatus()
+	if err != nil {
+		return false, fmt.Errorf("failed to query node status: %w", err)
+	}
+
+	return res.TxIndexEnabled(), nil
+}
+
 func (bc *BabylonController) queryCometBestBlock() (*types.BlockInfo, error) {
 	ctx, cancel := getContextWithCancel(bc.cfg.Timeout)
 	// this will return 20 items at max in the descending order (highest first)
@@ -492,7 +522,7 @@ func (bc *BabylonController) CreateBTCDelegation(
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-func (bc *BabylonController) InsertBtcBlockHeaders(headers []bbntypes.BTCHeaderBytes) (*provider.RelayerTxResponse, error) {
+func (bc *BabylonController) InsertBtcBlockHeaders(headers []bbntypes.BTCHeaderBytes) (*babylonclient.RelayerTxResponse, error) {
 	msg := &btclctypes.MsgInsertHeaders{
 		Signer:  bc.MustGetTxSigner(),
 		Headers: headers,
@@ -729,7 +759,7 @@ func (bc *BabylonController) SubmitCovenantSigs(
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-func (bc *BabylonController) InsertSpvProofs(submitter string, proofs []*btcctypes.BTCSpvProof) (*provider.RelayerTxResponse, error) {
+func (bc *BabylonController) InsertSpvProofs(submitter string, proofs []*btcctypes.BTCSpvProof) (*babylonclient.RelayerTxResponse, error) {
 	msg := &btcctypes.MsgInsertBTCSpvProof{
 		Submitter: submitter,
 		Proofs:    proofs,

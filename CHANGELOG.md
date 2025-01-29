@@ -37,12 +37,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug Fixes
+
+* [#307](https://github.com/babylonlabs-io/finality-provider/pull/307) fix: increment fp_total_failed_votes
+
 ### Improvements
 
 * [#251](https://github.com/babylonlabs-io/finality-provider/pull/251) Add nlreturn lint
 * [#252](https://github.com/babylonlabs-io/finality-provider/pull/252) Remove interceptors and use context
 * [#266](https://github.com/babylonlabs-io/finality-provider/pull/266) Change default config
 * [#262](https://github.com/babylonlabs-io/finality-provider/pull/262) Add new command to export pop
+* [#284](https://github.com/babylonlabs-io/finality-provider/pull/284) Add new command to delete pop
+* [#277](https://github.com/babylonlabs-io/finality-provider/pull/277) Poll many blocks in poller
+* [#291](https://github.com/babylonlabs-io/finality-provider/pull/291) chore: remove skip height
+* [#294](https://github.com/babylonlabs-io/finality-provider/pull/294) chore: Improve fpd start
+* [#297](https://github.com/babylonlabs-io/finality-provider/pull/297) Add new command to validate pop
+* [#302](https://github.com/babylonlabs-io/finality-provider/pull/302) Update pop commands to write to a file
+* [#301](https://github.com/babylonlabs-io/finality-provider/pull/301) chore: check tx index enabled
+* [#308](https://github.com/babylonlabs-io/finality-provider/issues/308) chore: bump babylon to v1.0.0-rc.4
 
 ## v0.14.3
 

@@ -3,6 +3,7 @@ package clientcontroller
 import (
 	"fmt"
 
+	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/cosmwasm"
@@ -18,9 +19,16 @@ const (
 	WasmConsumerChainType      = "wasm"
 )
 
-// NewClientController TODO: this is always going to be babylon so rename accordingly
-func NewClientController(config *fpcfg.Config, logger *zap.Logger) (api.ClientController, error) {
-	cc, err := babylon.NewBabylonController(config.BabylonConfig, &config.BTCNetParams, logger)
+func NewBabylonController(config *fpcfg.Config, logger *zap.Logger) (api.ClientController, error) {
+	bbnConfig := fpcfg.BBNConfigToBabylonConfig(config.BabylonConfig)
+	bbnClient, err := bbnclient.New(
+		&bbnConfig,
+		logger,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
+	}
+	cc, err := babylon.NewBabylonController(bbnClient, config.BabylonConfig, &config.BTCNetParams, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
 	}

@@ -26,47 +26,33 @@ const (
 	maxFailedCycles = 20
 )
 
-type skipHeightRequest struct {
-	height uint64
-	resp   chan *skipHeightResponse
-}
-
-type skipHeightResponse struct {
-	err error
-}
-
 type ChainPoller struct {
-	isStarted *atomic.Bool
-	wg        sync.WaitGroup
-	quit      chan struct{}
-
-	cc             ccapi.ClientController
-	consumerCon    ccapi.ConsumerController
-	cfg            *cfg.ChainPollerConfig
-	metrics        *metrics.FpMetrics
-	blockInfoChan  chan *types.BlockInfo
-	skipHeightChan chan *skipHeightRequest
-	nextHeight     uint64
-	logger         *zap.Logger
+	mu            sync.RWMutex
+	wg            sync.WaitGroup
+	isStarted     *atomic.Bool
+	quit          chan struct{}
+	consumerCon   ccapi.ConsumerController
+	cfg           *cfg.ChainPollerConfig
+	metrics       *metrics.FpMetrics
+	blockInfoChan chan *types.BlockInfo
+	logger        *zap.Logger
+	nextHeight    uint64
 }
 
 func NewChainPoller(
 	logger *zap.Logger,
 	cfg *cfg.ChainPollerConfig,
-	cc ccapi.ClientController,
 	consumerCon ccapi.ConsumerController,
 	metrics *metrics.FpMetrics,
 ) *ChainPoller {
 	return &ChainPoller{
-		isStarted:      atomic.NewBool(false),
-		logger:         logger,
-		cfg:            cfg,
-		cc:             cc,
-		consumerCon:    consumerCon,
-		metrics:        metrics,
-		blockInfoChan:  make(chan *types.BlockInfo, cfg.BufferSize),
-		skipHeightChan: make(chan *skipHeightRequest),
-		quit:           make(chan struct{}),
+		isStarted:     atomic.NewBool(false),
+		logger:        logger,
+		cfg:           cfg,
+		consumerCon:   consumerCon,
+		metrics:       metrics,
+		blockInfoChan: make(chan *types.BlockInfo, cfg.BufferSize),
+		quit:          make(chan struct{}),
 	}
 }
 
@@ -80,7 +66,6 @@ func (cp *ChainPoller) Start(startHeight uint64) error {
 	cp.nextHeight = startHeight
 
 	cp.wg.Add(1)
-
 	go cp.pollChain()
 
 	cp.metrics.RecordPollerStartingHeight(startHeight)
@@ -95,7 +80,7 @@ func (cp *ChainPoller) Stop() error {
 	}
 
 	cp.logger.Info("stopping the chain poller")
-	err := cp.cc.Close()
+	err := cp.consumerCon.Close()
 	if err != nil {
 		return err
 	}
@@ -116,24 +101,30 @@ func (cp *ChainPoller) GetBlockInfoChan() <-chan *types.BlockInfo {
 	return cp.blockInfoChan
 }
 
-func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
+func (cp *ChainPoller) blocksWithRetry(start, end uint64, limit uint32) ([]*types.BlockInfo, error) {
 	var (
-		block *types.BlockInfo
+		block []*types.BlockInfo
 		err   error
 	)
 	if err := retry.Do(func() error {
-		block, err = cp.consumerCon.QueryBlock(height)
+		block, err = cp.consumerCon.QueryBlocks(start, end, limit)
 		if err != nil {
 			return err
+		}
+
+		if len(block) == 0 {
+			return fmt.Errorf("no blocks found for range %d-%d", start, end)
 		}
 
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		cp.logger.Debug(
-			"failed to query the consumer chain for the latest block",
+			"failed to query the consumer chain for block range",
 			zap.Uint("attempt", n+1),
 			zap.Uint("max_attempts", RtyAttNum),
-			zap.Uint64("height", height),
+			zap.Uint64("start_height", start),
+			zap.Uint64("end_height", end),
+			zap.Uint32("limit", limit),
 			zap.Error(err),
 		)
 	})); err != nil {
@@ -141,6 +132,31 @@ func (cp *ChainPoller) blockWithRetry(height uint64) (*types.BlockInfo, error) {
 	}
 
 	return block, nil
+}
+
+func (cp *ChainPoller) latestBlockHeightWithRetry() (uint64, error) {
+	var (
+		latestBlockHeight uint64
+		err               error
+	)
+
+	if err := retry.Do(func() error {
+		latestBlockHeight, err = cp.consumerCon.QueryLatestBlockHeight()
+		if err != nil {
+			return err
+		}
+		return nil
+	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
+		cp.logger.Debug(
+			"failed to query the consumer chain for the latest block",
+			zap.Uint("attempt", n+1),
+			zap.Uint("max_attempts", RtyAttNum),
+			zap.Error(err),
+		)
+	})); err != nil {
+		return 0, err
+	}
+	return latestBlockHeight, nil
 }
 
 // waitForActivation waits until BTC staking is activated
@@ -172,107 +188,90 @@ func (cp *ChainPoller) pollChain() {
 
 	cp.waitForActivation()
 
+	ticker := time.NewTicker(cp.cfg.PollInterval)
+	defer ticker.Stop()
+
 	var failedCycles uint32
 
 	for {
-		// start polling in the first iteration
-		blockToRetrieve := cp.nextHeight
-		block, err := cp.blockWithRetry(blockToRetrieve)
+		latestBlockHeight, err := cp.latestBlockHeightWithRetry()
 		if err != nil {
 			failedCycles++
 			cp.logger.Debug(
-				"failed to query the consumer chain for the block",
+				"failed to query the consumer chain for the latest block",
 				zap.Uint32("current_failures", failedCycles),
-				zap.Uint64("block_to_retrieve", blockToRetrieve),
 				zap.Error(err),
 			)
 		} else {
-			// no error and we got the header we wanted to get, bump the state and push
-			// notification about data
-			cp.nextHeight = blockToRetrieve + 1
-			failedCycles = 0
-			cp.metrics.RecordLastPolledHeight(block.Height)
+			// start polling in the first iteration
+			blockToRetrieve := cp.NextHeight()
+			var blocks []*types.BlockInfo
+			var err error
+			if blockToRetrieve == latestBlockHeight {
+				var latestBlock *types.BlockInfo
+				latestBlock, err = cp.consumerCon.QueryBlock(latestBlockHeight)
+				blocks = []*types.BlockInfo{latestBlock}
+			} else {
+				blocks, err = cp.blocksWithRetry(blockToRetrieve, latestBlockHeight, cp.cfg.PollSize)
+			}
 
-			cp.logger.Info("the poller retrieved the block from the consumer chain",
-				zap.Uint64("height", block.Height))
+			if err != nil {
+				failedCycles++
+				cp.logger.Debug(
+					"failed to query the consumer chain for the block range",
+					zap.Uint32("current_failures", failedCycles),
+					zap.Uint64("start_height", blockToRetrieve),
+					zap.Uint64("end_height", latestBlockHeight),
+					zap.Error(err),
+				)
+			} else {
+				// no error and we got the header we wanted to get, bump the state and push
+				// notification about data
+				failedCycles = 0
+				if len(blocks) == 0 {
+					continue
+				}
 
-			// push the data to the channel
-			// Note: if the consumer is too slow -- the buffer is full
-			// the channel will block, and we will stop retrieving data from the node
-			cp.blockInfoChan <- block
+				lb := blocks[len(blocks)-1]
+				cp.setNextHeight(lb.Height + 1)
+
+				cp.metrics.RecordLastPolledHeight(lb.Height)
+
+				cp.logger.Info("the poller retrieved the blocks from the consumer chain",
+					zap.Uint64("start_height", blockToRetrieve),
+					zap.Uint64("end_height", lb.Height))
+
+				// push the data to the channel
+				// Note: if the consumer is too slow -- the buffer is full
+				// the channel will block, and we will stop retrieving data from the node
+				for _, block := range blocks {
+					cp.blockInfoChan <- block
+				}
+			}
 		}
 
 		if failedCycles > maxFailedCycles {
 			cp.logger.Fatal("the poller has reached the max failed cycles, exiting")
 		}
 		select {
-		case <-time.After(cp.cfg.PollInterval):
+		case <-ticker.C:
 			continue
-		case req := <-cp.skipHeightChan:
-			// no need to skip heights if the target height is not higher
-			// than the next height to retrieve
-			targetHeight := req.height
-			if targetHeight <= cp.nextHeight {
-				resp := &skipHeightResponse{
-					err: fmt.Errorf(
-						"the target height %d is not higher than the next height %d to retrieve",
-						targetHeight, cp.nextHeight)}
-				req.resp <- resp
-
-				continue
-			}
-
-			// drain blocks that can be skipped from blockInfoChan
-			cp.clearChanBufferUpToHeight(targetHeight)
-
-			// set the next height to the skip height
-			cp.nextHeight = targetHeight
-
-			cp.logger.Debug("the poller has skipped height(s)",
-				zap.Uint64("next_height", req.height))
-
-			req.resp <- &skipHeightResponse{}
-
 		case <-cp.quit:
 			return
 		}
 	}
 }
 
-func (cp *ChainPoller) SkipToHeight(height uint64) error {
-	if !cp.IsRunning() {
-		return fmt.Errorf("the chain poller is stopped")
-	}
-
-	respChan := make(chan *skipHeightResponse, 1)
-
-	// this handles the case when the poller is stopped before the
-	// skip height request is sent
-	select {
-	case <-cp.quit:
-		return fmt.Errorf("the chain poller is stopped")
-	case cp.skipHeightChan <- &skipHeightRequest{height: height, resp: respChan}:
-	}
-
-	// this handles the case when the poller is stopped before
-	// the skip height request is returned
-	select {
-	case <-cp.quit:
-		return fmt.Errorf("the chain poller is stopped")
-	case resp := <-respChan:
-		return resp.err
-	}
-}
-
 func (cp *ChainPoller) NextHeight() uint64 {
+	cp.mu.RLock()
+	defer cp.mu.RUnlock()
+
 	return cp.nextHeight
 }
 
-func (cp *ChainPoller) clearChanBufferUpToHeight(upToHeight uint64) {
-	for len(cp.blockInfoChan) > 0 {
-		block := <-cp.blockInfoChan
-		if block.Height+1 >= upToHeight {
-			break
-		}
-	}
+func (cp *ChainPoller) setNextHeight(height uint64) {
+	cp.mu.Lock()
+	defer cp.mu.Unlock()
+
+	cp.nextHeight = height
 }

@@ -13,6 +13,7 @@ import (
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	opcc "github.com/babylonlabs-io/finality-provider/clientcontroller/opstackl2"
 	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
@@ -192,11 +193,12 @@ func waitForBabylonNodeStart(
 	var babylonController *bbncc.BabylonController
 	require.Eventually(t, func() bool {
 		var err error
-		babylonController, err = bbncc.NewBabylonController(babylonFpCfg.BabylonConfig, &babylonFpCfg.BTCNetParams, logger)
+		bc, err := fpcc.NewBabylonController(babylonFpCfg, logger)
 		if err != nil {
 			t.Logf("Failed to create Babylon controller: %v", err)
 			return false
 		}
+		babylonController = bc.(*bbncc.BabylonController)
 		return true
 	}, 30*time.Second, 1*time.Second)
 

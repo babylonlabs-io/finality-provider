@@ -126,7 +126,7 @@ func (fp *FinalityProviderInstance) Start() error {
 	fp.logger.Info("starting the finality provider instance",
 		zap.String("pk", fp.GetBtcPkHex()), zap.Uint64("height", startHeight))
 
-	poller := NewChainPoller(fp.logger, fp.cfg.PollerConfig, fp.cc, fp.consumerCon, fp.metrics)
+	poller := NewChainPoller(fp.logger, fp.cfg.PollerConfig, fp.consumerCon, fp.metrics)
 
 	if err := poller.Start(startHeight); err != nil {
 		return fmt.Errorf("failed to start the poller with start height %d: %w", startHeight, err)
@@ -494,6 +494,9 @@ func (fp *FinalityProviderInstance) retrySubmitSigsUntilFinalized(targetBlocks [
 				zap.String("pk", fp.GetBtcPkHex()),
 				zap.Uint64("target_height", targetHeight),
 			)
+
+			fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
+
 			// TODO: returning nil here is to safely break the loop
 			//  the error still exists
 			return nil, nil

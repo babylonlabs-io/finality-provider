@@ -42,6 +42,7 @@ const (
 func FuzzCreateFinalityProvider(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		logger := testutil.GetTestLogger(t)
@@ -65,6 +66,8 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		mockConsumerController.EXPECT().QueryLatestFinalizedBlock().Return(nil, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(),
 			gomock.Any()).Return(false, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any()).Return(nil, nil).AnyTimes()
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 
 		// Create randomized config
@@ -200,6 +203,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 func FuzzUnjailFinalityProvider(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
@@ -227,11 +231,13 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		mockConsumerController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, true, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
 
+		expectedTxHash := testutil.GenRandomHexStr(r, 32)
+
 		// Create fp app
 		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockBabylonController, mockConsumerController)
 		defer cleanup()
 
-		expectedTxHash := datagen.GenRandomHexStr(r, 32)
+		expectedTxHash = datagen.GenRandomHexStr(r, 32)
 		mockConsumerController.EXPECT().UnjailFinalityProvider(fpPk.MustToBTCPK()).Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
 		err := app.StartFinalityProvider(fpPk, "")
 		require.NoError(t, err)
@@ -250,6 +256,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		logger := testutil.GetTestLogger(t)

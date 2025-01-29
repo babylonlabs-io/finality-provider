@@ -20,6 +20,7 @@ import (
 	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	ckpttypes "github.com/babylonlabs-io/babylon/x/checkpointing/types"
+	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
@@ -600,7 +601,7 @@ func CreateAndStartFpApp(
 	cc api.ConsumerController,
 	eotsCli *client.EOTSManagerGRpcClient,
 ) *service.FinalityProviderApp {
-	bc, err := bbncc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+	bc, err := fpcc.NewBabylonController(cfg, logger)
 	require.NoError(t, err)
 
 	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
