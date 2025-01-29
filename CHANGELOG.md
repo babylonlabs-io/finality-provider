@@ -56,6 +56,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#301](https://github.com/babylonlabs-io/finality-provider/pull/301) chore: check tx index enabled
 * [#308](https://github.com/babylonlabs-io/finality-provider/issues/308) chore: bump babylon to v1.0.0-rc.4
 
+### Bug Fixes
+
+* [#296](https://github.com/babylonlabs-io/finality-provider/pull/296) fix: edit finality provider      commission-rate
+
 ## v0.14.3
 
 ### Improvements
