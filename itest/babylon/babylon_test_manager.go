@@ -10,6 +10,7 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
@@ -91,9 +92,20 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	var bc ccapi.ClientController
 	var bcc ccapi.ConsumerController
 	require.Eventually(t, func() bool {
-		bc, err = fpcc.NewBabylonController(cfg, logger)
+		bbnCfg := fpcfg.BBNConfigToBabylonConfig(cfg.BabylonConfig)
+		bbnCl, err := bbnclient.New(&bbnCfg, logger)
+		if err != nil {
+			t.Logf("failed to create Babylon client: %v", err)
+			return false
+		}
+		bc, err = bbncc.NewBabylonController(bbnCl, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon controller: %v", err)
+			return false
+		}
+		err = bc.Start()
+		if err != nil {
+			t.Logf("failed to start Babylon controller: %v", err)
 			return false
 		}
 		bcc, err = bbncc.NewBabylonConsumerController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
@@ -166,6 +178,8 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 	// create new clients
 	bc, err := fpcc.NewBabylonController(cfg, tm.logger)
 	require.NoError(t, err)
+	err = bc.Start()
+	require.NoError(t, err)
 	bcc, err := bbncc.NewBabylonConsumerController(cfg.BabylonConfig, &cfg.BTCNetParams, tm.logger)
 	require.NoError(t, err)
 
@@ -187,6 +201,9 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
+
+	err = fpApp.StartFinalityProvider(eotsPk, passphrase)
+	require.NoError(t, err)
 
 	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb)
 	go func() {

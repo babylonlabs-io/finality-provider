@@ -145,6 +145,7 @@ func (cp *ChainPoller) latestBlockHeightWithRetry() (uint64, error) {
 		if err != nil {
 			return err
 		}
+
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		cp.logger.Debug(
@@ -156,6 +157,7 @@ func (cp *ChainPoller) latestBlockHeightWithRetry() (uint64, error) {
 	})); err != nil {
 		return 0, err
 	}
+
 	return latestBlockHeight, nil
 }
 
