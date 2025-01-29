@@ -615,27 +615,22 @@ func CreateAndStartFpApp(
 	return fpApp
 }
 
-func CreateAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProviderApp, chainId string) *bbntypes.BIP340PubKey {
+func CreateAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProviderApp, chainId string, eotsPk *bbntypes.BIP340PubKey) {
 	fpCfg := fpApp.GetConfig()
 	keyName := fpCfg.BabylonConfig.Key
 	moniker := fmt.Sprintf("%s-%s", chainId, e2eutils.MonikerPrefix)
 	commission := sdkmath.LegacyZeroDec()
 	desc := e2eutils.NewDescription(moniker)
 
-	res, err := fpApp.CreateFinalityProvider(
+	_, err := fpApp.CreateFinalityProvider(
 		keyName,
 		chainId,
 		e2eutils.Passphrase,
-		nil,
+		eotsPk,
 		desc,
 		&commission,
 	)
 	require.NoError(t, err)
-
-	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
-	require.NoError(t, err)
-
-	return fpPk
 }
 
 func TempDir(t *testing.T, pattern string) (string, error) {
