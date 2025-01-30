@@ -19,6 +19,7 @@ import (
 	wasmparams "github.com/CosmWasm/wasmd/app/params"
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	_ "github.com/babylonlabs-io/babylon-sdk/demo/app"
+	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
@@ -106,9 +107,20 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	var bc ccapi.ClientController
 	require.Eventually(t, func() bool {
-		bc, err = fpcc.NewBabylonController(cfg, logger)
+		bbnCfg := fpcfg.BBNConfigToBabylonConfig(cfg.BabylonConfig)
+		bbnCl, err := bbnclient.New(&bbnCfg, logger)
+		if err != nil {
+			t.Logf("failed to create Babylon client: %v", err)
+			return false
+		}
+		bc, err = bbncc.NewBabylonController(bbnCl, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon controller: %v", err)
+			return false
+		}
+		err = bc.Start()
+		if err != nil {
+			t.Logf("failed to start Babylon controller: %v", err)
 			return false
 		}
 		return true
@@ -219,43 +231,41 @@ func (ctm *BcdTestManager) Stop(t *testing.T) {
 
 // CreateConsumerFinalityProviders creates finality providers for a consumer chain
 // and registers them in Babylon and consumer smart contract
-func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consumerId string, n int) []*service.FinalityProviderInstance {
+func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consumerId string) *service.FinalityProviderInstance {
 	app := ctm.Fpa
 	cfg := app.GetConfig()
 	keyName := cfg.BabylonConfig.Key
 
 	// register all finality providers
-	fpPKs := make([]*bbntypes.BIP340PubKey, 0, n)
-	for i := 0; i < n; i++ {
-		moniker := e2eutils.MonikerPrefix + consumerId + "-" + strconv.Itoa(i)
-		commission := sdkmath.LegacyZeroDec()
-		desc := e2eutils.NewDescription(moniker)
+	moniker := e2eutils.MonikerPrefix + consumerId + "-" + strconv.Itoa(0)
+	commission := sdkmath.LegacyZeroDec()
+	desc := e2eutils.NewDescription(moniker)
 
-		eotsPk, err := ctm.EOTSClient.CreateKey(keyName, passphrase, hdPath)
-		require.NoError(t, err)
-		eotsPubKey, err := bbntypes.NewBIP340PubKey(eotsPk)
-		require.NoError(t, err)
+	eotsPk, err := ctm.EOTSClient.CreateKey(keyName, passphrase, hdPath)
+	require.NoError(t, err)
+	eotsPubKey, err := bbntypes.NewBIP340PubKey(eotsPk)
+	require.NoError(t, err)
 
-		// inject fp in smart contract using admin
-		fpMsg := e2eutils.GenBtcStakingFpExecMsg(eotsPubKey.MarshalHex())
-		fpMsgBytes, err := json.Marshal(fpMsg)
-		require.NoError(t, err)
-		_, err = ctm.BcdConsumerClient.ExecuteContract(fpMsgBytes)
-		require.NoError(t, err)
+	// inject fp in smart contract using admin
+	fpMsg := e2eutils.GenBtcStakingFpExecMsg(eotsPubKey.MarshalHex())
+	fpMsgBytes, err := json.Marshal(fpMsg)
+	require.NoError(t, err)
+	_, err = ctm.BcdConsumerClient.ExecuteContract(fpMsgBytes)
+	require.NoError(t, err)
 
-		// register fp in Babylon
-		_, err = app.CreateFinalityProvider(keyName, consumerId, passphrase, eotsPubKey, desc, &commission)
-		require.NoError(t, err)
-		fpPKs = append(fpPKs, eotsPubKey)
-	}
+	// register fp in Babylon
+	_, err = app.CreateFinalityProvider(keyName, consumerId, passphrase, eotsPubKey, desc, &commission)
+	require.NoError(t, err)
 
-	var fpInsList []*service.FinalityProviderInstance
-	for i := 0; i < n; i++ {
-		fpIns, err := app.GetFinalityProviderInstance()
-		require.NoError(t, err)
-		require.True(t, fpIns.IsRunning())
-		fpInsList = append(fpInsList, fpIns)
-	}
+	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
+
+	err = app.StartFinalityProvider(eotsPubKey, passphrase)
+	require.NoError(t, err)
+
+	fpIns, err := app.GetFinalityProviderInstance()
+	require.NoError(t, err)
+	require.True(t, fpIns.IsRunning())
 
 	// ensure finality providers are registered in smart contract
 	require.Eventually(t, func() bool {
@@ -267,19 +277,17 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 		if consumerFpsResp == nil {
 			return false
 		}
-		if len(consumerFpsResp.Fps) != n {
+		if len(consumerFpsResp.Fps) != 1 {
 			return false
 		}
 		// verify each FP matches the expected public key
-		for i, fp := range consumerFpsResp.Fps {
-			if fp.BtcPkHex != fpPKs[i].MarshalHex() {
-				return false
-			}
+		if consumerFpsResp.Fps[0].BtcPkHex != eotsPubKey.MarshalHex() {
+			return false
 		}
 		return true
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 
-	t.Logf("the consumer test manager is running with %v finality-provider(s)", len(fpInsList))
+	t.Logf("the consumer test manager is running with %v finality-provider(s)", 1)
 
-	return fpInsList
+	return fpIns
 }

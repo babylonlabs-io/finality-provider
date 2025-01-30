@@ -83,8 +83,8 @@ func TestConsumerFpLifecycle(t *testing.T) {
 
 	// register consumer fps to babylon
 	// this will be submitted to babylon once fp daemon starts
-	fps := ctm.CreateConsumerFinalityProviders(t, bcdConsumerID, 1)
-	fpPk := fps[0].GetBtcPkBIP340()
+	fp := ctm.CreateConsumerFinalityProviders(t, bcdConsumerID)
+	fpPk := fp.GetBtcPkBIP340()
 
 	// ensure pub rand is submitted to smart contract
 	require.Eventually(t, func() bool {
