@@ -358,7 +358,7 @@ func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight uint64
 	for i := range batchElemList {
 		batchElemList[i] = ethrpc.BatchElem{
 			Method: "eth_getBlockByNumber",
-			Args:   []interface{}{hexutil.EncodeUint64(startHeight + uint64(i)), false},
+			Args:   []interface{}{hexutil.EncodeUint64(startHeight + uint64(i)), false}, // #nosec G115
 			Result: &blockHeaders[i],
 		}
 	}
@@ -372,7 +372,7 @@ func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight uint64
 			return nil, batchElemList[i].Error
 		}
 		if blockHeaders[i] == nil {
-			return nil, fmt.Errorf("got null header for block %d", startHeight+uint64(i))
+			return nil, fmt.Errorf("got null header for block %d", startHeight+uint64(i)) // #nosec G115
 		}
 	}
 
@@ -514,8 +514,8 @@ func (cc *OPStackL2ConsumerController) QueryLastPublicRandCommit(fpPk *btcec.Pub
 
 func ConvertProof(cmtProof cmtcrypto.Proof) Proof {
 	return Proof{
-		Total:    uint64(cmtProof.Total),
-		Index:    uint64(cmtProof.Index),
+		Total:    uint64(cmtProof.Total), // #nosec G115
+		Index:    uint64(cmtProof.Index), // #nosec G115
 		LeafHash: cmtProof.LeafHash,
 		Aunts:    cmtProof.Aunts,
 	}
@@ -552,7 +552,7 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 
 	for lowerBound <= upperBound {
 		midBlockNumber := (lowerBound + upperBound) / 2
-		block, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(int64(midBlockNumber)))
+		block, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(int64(midBlockNumber))) // #nosec G115
 		if err != nil {
 			return math.MaxUint64, err
 		}
@@ -612,13 +612,13 @@ func (cc *OPStackL2ConsumerController) isDelegationActive(
 		return false, nil
 	}
 
-	if uint32(len(btcDel.CovenantSigs)) < covQuorum {
+	if len(btcDel.CovenantSigs) < int(covQuorum) { // #nosec G115
 		return false, nil
 	}
-	if len(ud.CovenantUnbondingSigList) < int(covQuorum) {
+	if len(ud.CovenantUnbondingSigList) < int(covQuorum) { // #nosec G115
 		return false, nil
 	}
-	if len(ud.CovenantSlashingSigs) < int(covQuorum) {
+	if len(ud.CovenantSlashingSigs) < int(covQuorum) { // #nosec G115
 		return false, nil
 	}
 

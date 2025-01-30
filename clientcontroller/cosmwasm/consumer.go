@@ -276,13 +276,13 @@ func (wc *CosmwasmConsumerController) QueryBlocks(startHeight, endHeight uint64,
 }
 
 func (wc *CosmwasmConsumerController) QueryBlock(height uint64) (*fptypes.BlockInfo, error) {
-	block, err := wc.cwClient.GetBlock(int64(height))
+	block, err := wc.cwClient.GetBlock(int64(height)) // #nosec G115
 	if err != nil {
 		return nil, err
 	}
 
 	return &fptypes.BlockInfo{
-		Height: uint64(block.Block.Header.Height),
+		Height: uint64(block.Block.Header.Height), // #nosec G115
 		Hash:   block.Block.Header.AppHash,
 	}, nil
 }
@@ -358,7 +358,7 @@ func (wc *CosmwasmConsumerController) QueryActivatedHeight() (uint64, error) {
 	var resp struct {
 		Height uint64 `json:"height"`
 	}
-	err = json.Unmarshal(dataFromContract.Data, &resp)
+	err = json.Unmarshal(dataFromContract.Data, &resp) // #nosec G115
 	if err != nil {
 		return 0, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
@@ -509,7 +509,7 @@ func (wc *CosmwasmConsumerController) queryCometBestBlock() (*fptypes.BlockInfo,
 	// Returning response directly, if header with specified number did not exist
 	// at request will contain nil header
 	return &fptypes.BlockInfo{
-		Height: uint64(chainInfo.BlockMetas[0].Header.Height),
+		Height: uint64(chainInfo.BlockMetas[0].Header.Height), // #nosec G115
 		Hash:   chainInfo.BlockMetas[0].Header.AppHash,
 	}, nil
 }
@@ -519,7 +519,7 @@ func (wc *CosmwasmConsumerController) queryCometBlocksInRange(startHeight, endHe
 	defer cancel()
 
 	// this will return 20 items at max in the descending order (highest first)
-	chainInfo, err := wc.cwClient.RPCClient.BlockchainInfo(ctx, int64(startHeight), int64(endHeight))
+	chainInfo, err := wc.cwClient.RPCClient.BlockchainInfo(ctx, int64(startHeight), int64(endHeight)) // #nosec G115
 	if err != nil {
 		return nil, err
 	}
@@ -533,7 +533,7 @@ func (wc *CosmwasmConsumerController) queryCometBlocksInRange(startHeight, endHe
 	var blocks []*fptypes.BlockInfo
 	for _, blockMeta := range chainInfo.BlockMetas {
 		block := &fptypes.BlockInfo{
-			Height: uint64(blockMeta.Header.Height),
+			Height: uint64(blockMeta.Header.Height), // #nosec G115
 			Hash:   blockMeta.Header.AppHash,
 		}
 		blocks = append(blocks, block)

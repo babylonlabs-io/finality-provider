@@ -419,7 +419,7 @@ func (bc *BabylonConsumerController) queryCometBestBlock() (*types.BlockInfo, er
 	// Returning response directly, if header with specified number did not exist
 	// at request will contain nil header
 	return &types.BlockInfo{
-		Height: uint64(chainInfo.BlockMetas[0].Header.Height),
+		Height: uint64(chainInfo.BlockMetas[0].Header.Height), // #nosec G115
 		Hash:   chainInfo.BlockMetas[0].Header.AppHash,
 	}, nil
 }

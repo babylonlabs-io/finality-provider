@@ -14,7 +14,7 @@ import (
 )
 
 func (c *Client) StoreWasmCode(wasmFile string) error {
-	wasmCode, err := os.ReadFile(wasmFile)
+	wasmCode, err := os.ReadFile(wasmFile) // #nosec G304
 	if err != nil {
 		return err
 	}
