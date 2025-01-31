@@ -43,6 +43,7 @@ type FinalityProviderApp struct {
 	logger       *zap.Logger
 	input        *strings.Reader
 
+	fpInsMu     sync.RWMutex // Protects fpIns
 	fpIns       *FinalityProviderInstance
 	eotsManager eotsmanager.EOTSManager
 
@@ -189,6 +190,9 @@ func (app *FinalityProviderApp) ListAllFinalityProvidersInfo() ([]*proto.Finalit
 
 // GetFinalityProviderInstance returns the finality-provider instance with the given Babylon public key
 func (app *FinalityProviderApp) GetFinalityProviderInstance() (*FinalityProviderInstance, error) {
+	app.fpInsMu.RLock()
+	defer app.fpInsMu.RUnlock()
+
 	if app.fpIns == nil {
 		return nil, fmt.Errorf("finality provider does not exist")
 	}
@@ -511,6 +515,9 @@ func (app *FinalityProviderApp) startFinalityProviderInstance(
 	passphrase string,
 ) error {
 	pkHex := pk.MarshalHex()
+	app.fpInsMu.Lock()
+	defer app.fpInsMu.Unlock()
+
 	if app.fpIns == nil {
 		fpIns, err := NewFinalityProviderInstance(
 			pk, app.config, app.fps, app.pubRandStore, app.cc, app.consumerCon, app.eotsManager,
@@ -530,6 +537,9 @@ func (app *FinalityProviderApp) startFinalityProviderInstance(
 }
 
 func (app *FinalityProviderApp) IsFinalityProviderRunning(fpPk *bbntypes.BIP340PubKey) bool {
+	app.fpInsMu.RLock()
+	defer app.fpInsMu.RUnlock()
+
 	if app.fpIns == nil {
 		return false
 	}
@@ -542,6 +552,9 @@ func (app *FinalityProviderApp) IsFinalityProviderRunning(fpPk *bbntypes.BIP340P
 }
 
 func (app *FinalityProviderApp) removeFinalityProviderInstance() error {
+	app.fpInsMu.Lock()
+	defer app.fpInsMu.Unlock()
+
 	fpi := app.fpIns
 	if fpi == nil {
 		return fmt.Errorf("the finality provider instance does not exist")

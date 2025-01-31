@@ -4,6 +4,7 @@
 package e2etest_op
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -31,7 +32,6 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"github.com/lightningnetwork/lnd/signal"
 	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -67,7 +67,7 @@ type OpL2ConsumerTestManager struct {
 // - starts Babylon node and wait for it starts
 // - deploys finality gadget cw contract
 // - creates and starts Babylon and consumer FPs without any FP instances
-func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
+func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTestManager {
 	// Setup base dir and logger
 	testDir, err := base_test_manager.TempDir(t, "op-fp-e2e-test-*")
 	require.NoError(t, err)
@@ -113,12 +113,8 @@ func StartOpL2ConsumerManager(t *testing.T) *OpL2ConsumerTestManager {
 	// create Babylon FP config
 	babylonFpCfg := createBabylonFpConfig(t, keyDir, testDir, manager, babylond)
 
-	// create shutdown interceptor
-	shutdownInterceptor, err := signal.Intercept()
-	require.NoError(t, err)
-
 	// create EOTS handler and EOTS gRPC clients for Babylon and consumer
-	eotsHandler, EOTSClients := base_test_manager.StartEotsManagers(t, logger, testDir, babylonFpCfg, consumerFpCfg, &shutdownInterceptor)
+	eotsHandler, EOTSClients := base_test_manager.StartEotsManagers(t, ctx, logger, testDir, babylonFpCfg, consumerFpCfg)
 
 	// create Babylon consumer controller
 	babylonConsumerController, err := bbncc.NewBabylonConsumerController(babylonFpCfg.BabylonConfig, &babylonFpCfg.BTCNetParams, logger)

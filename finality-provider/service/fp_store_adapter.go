@@ -51,7 +51,14 @@ func (fps *fpState) setLastVotedHeight(height uint64) error {
 }
 
 func (fp *FinalityProviderInstance) GetStoreFinalityProvider() *store.StoredFinalityProvider {
-	return fp.fpState.sfp
+	var sfp *store.StoredFinalityProvider
+	fp.fpState.withLock(func() {
+		// Create a copy of the stored finality provider to prevent data races
+		sfpCopy := *fp.fpState.sfp
+		sfp = &sfpCopy
+	})
+
+	return sfp
 }
 
 func (fp *FinalityProviderInstance) GetBtcPkBIP340() *bbntypes.BIP340PubKey {

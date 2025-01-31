@@ -35,7 +35,6 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/lightningnetwork/lnd/signal"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -550,11 +549,11 @@ func (tm *BaseTestManager) FinalizeUntilEpoch(t *testing.T, epoch uint64) {
 
 func StartEotsManagers(
 	t *testing.T,
+	ctx context.Context,
 	logger *zap.Logger,
 	testDir string,
 	babylonFpCfg *fpcfg.Config,
 	consumerFpCfg *fpcfg.Config,
-	shutdownInterceptor *signal.Interceptor,
 ) (*e2eutils.EOTSServerHandler, []*eotsclient.EOTSManagerGRpcClient) {
 	fpCfgs := []*fpcfg.Config{babylonFpCfg, consumerFpCfg}
 	eotsClients := make([]*eotsclient.EOTSManagerGRpcClient, len(fpCfgs))
@@ -570,7 +569,7 @@ func StartEotsManagers(
 	}
 
 	eh := e2eutils.NewEOTSServerHandler(t, eotsConfigs[0], eotsHomeDirs[0])
-	eh.Start(context.Background())
+	eh.Start(ctx)
 
 	// create EOTS clients
 	for i := 0; i < len(fpCfgs); i++ {

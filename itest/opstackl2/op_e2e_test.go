@@ -4,6 +4,7 @@
 package e2etest_op
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"math/rand"
@@ -19,8 +20,9 @@ import (
 // - CommitPubRandList
 // - QueryLastPublicRandCommit
 func TestPubRandCommitment(t *testing.T) {
-	t.Parallel()
-	ctm := StartOpL2ConsumerManager(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctm := StartOpL2ConsumerManager(t, ctx)
 	defer ctm.Stop(t)
 
 	// create and register Babylon FP and OP consumer FP
@@ -53,8 +55,9 @@ func TestPubRandCommitment(t *testing.T) {
 // TestFinalitySigSubmission tests the consumer controller's function:
 // - SubmitBatchFinalitySigs
 func TestFinalitySigSubmission(t *testing.T) {
-	t.Parallel()
-	ctm := StartOpL2ConsumerManager(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctm := StartOpL2ConsumerManager(t, ctx)
 	defer ctm.Stop(t)
 
 	// create and register Babylon FP and OP consumer FP
@@ -107,8 +110,9 @@ func TestFinalitySigSubmission(t *testing.T) {
 // TestFinalityProviderHasPower tests the consumer controller's function:
 // - QueryFinalityProviderHasPower
 func TestFinalityProviderHasPower(t *testing.T) {
-	t.Parallel()
-	ctm := StartOpL2ConsumerManager(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctm := StartOpL2ConsumerManager(t, ctx)
 	defer ctm.Stop(t)
 
 	// create and register Babylon FP and OP consumer FP
