@@ -8,7 +8,8 @@ import (
 	reflect "reflect"
 
 	math "cosmossdk.io/math"
-	types "github.com/babylonlabs-io/finality-provider/types"
+	types "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	types0 "github.com/babylonlabs-io/finality-provider/types"
 	btcec "github.com/btcsuite/btcd/btcec/v2"
 	schnorr "github.com/btcsuite/btcd/btcec/v2/schnorr"
 	gomock "github.com/golang/mock/gomock"
@@ -51,27 +52,41 @@ func (mr *MockClientControllerMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockClientController)(nil).Close))
 }
 
-// QueryFinalityProviderSlashedOrJailed mocks base method.
-func (m *MockClientController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
+// EditFinalityProvider mocks base method.
+func (m *MockClientController) EditFinalityProvider(fpPk *btcec.PublicKey, commission *math.LegacyDec, description []byte) (*types.MsgEditFinalityProvider, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryFinalityProviderSlashedOrJailed", fpPk)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(bool)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret := m.ctrl.Call(m, "EditFinalityProvider", fpPk, commission, description)
+	ret0, _ := ret[0].(*types.MsgEditFinalityProvider)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// QueryFinalityProviderSlashedOrJailed indicates an expected call of QueryFinalityProviderSlashedOrJailed.
-func (mr *MockClientControllerMockRecorder) QueryFinalityProviderSlashedOrJailed(fpPk interface{}) *gomock.Call {
+// EditFinalityProvider indicates an expected call of EditFinalityProvider.
+func (mr *MockClientControllerMockRecorder) EditFinalityProvider(fpPk, commission, description interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderSlashedOrJailed", reflect.TypeOf((*MockClientController)(nil).QueryFinalityProviderSlashedOrJailed), fpPk)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditFinalityProvider", reflect.TypeOf((*MockClientController)(nil).EditFinalityProvider), fpPk, commission, description)
+}
+
+// QueryFinalityProvider mocks base method.
+func (m *MockClientController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*types.QueryFinalityProviderResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QueryFinalityProvider", fpPk)
+	ret0, _ := ret[0].(*types.QueryFinalityProviderResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// QueryFinalityProvider indicates an expected call of QueryFinalityProvider.
+func (mr *MockClientControllerMockRecorder) QueryFinalityProvider(fpPk interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProvider", reflect.TypeOf((*MockClientController)(nil).QueryFinalityProvider), fpPk)
 }
 
 // RegisterFinalityProvider mocks base method.
-func (m *MockClientController) RegisterFinalityProvider(chainID string, fpPk *btcec.PublicKey, pop []byte, commission *math.LegacyDec, description []byte) (*types.TxResponse, error) {
+func (m *MockClientController) RegisterFinalityProvider(chainID string, fpPk *btcec.PublicKey, pop []byte, commission *math.LegacyDec, description []byte) (*types0.TxResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegisterFinalityProvider", chainID, fpPk, pop, commission, description)
-	ret0, _ := ret[0].(*types.TxResponse)
+	ret0, _ := ret[0].(*types0.TxResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -80,6 +95,20 @@ func (m *MockClientController) RegisterFinalityProvider(chainID string, fpPk *bt
 func (mr *MockClientControllerMockRecorder) RegisterFinalityProvider(chainID, fpPk, pop, commission, description interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterFinalityProvider", reflect.TypeOf((*MockClientController)(nil).RegisterFinalityProvider), chainID, fpPk, pop, commission, description)
+}
+
+// Start mocks base method.
+func (m *MockClientController) Start() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Start")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockClientControllerMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockClientController)(nil).Start))
 }
 
 // MockConsumerController is a mock of ConsumerController interface.
@@ -120,10 +149,10 @@ func (mr *MockConsumerControllerMockRecorder) Close() *gomock.Call {
 }
 
 // CommitPubRandList mocks base method.
-func (m *MockConsumerController) CommitPubRandList(fpPk *btcec.PublicKey, startHeight, numPubRand uint64, commitment []byte, sig *schnorr.Signature) (*types.TxResponse, error) {
+func (m *MockConsumerController) CommitPubRandList(fpPk *btcec.PublicKey, startHeight, numPubRand uint64, commitment []byte, sig *schnorr.Signature) (*types0.TxResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CommitPubRandList", fpPk, startHeight, numPubRand, commitment, sig)
-	ret0, _ := ret[0].(*types.TxResponse)
+	ret0, _ := ret[0].(*types0.TxResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -150,10 +179,10 @@ func (mr *MockConsumerControllerMockRecorder) QueryActivatedHeight() *gomock.Cal
 }
 
 // QueryBlock mocks base method.
-func (m *MockConsumerController) QueryBlock(height uint64) (*types.BlockInfo, error) {
+func (m *MockConsumerController) QueryBlock(height uint64) (*types0.BlockInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "QueryBlock", height)
-	ret0, _ := ret[0].(*types.BlockInfo)
+	ret0, _ := ret[0].(*types0.BlockInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -165,10 +194,10 @@ func (mr *MockConsumerControllerMockRecorder) QueryBlock(height interface{}) *go
 }
 
 // QueryBlocks mocks base method.
-func (m *MockConsumerController) QueryBlocks(startHeight, endHeight, limit uint64) ([]*types.BlockInfo, error) {
+func (m *MockConsumerController) QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types0.BlockInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "QueryBlocks", startHeight, endHeight, limit)
-	ret0, _ := ret[0].([]*types.BlockInfo)
+	ret0, _ := ret[0].([]*types0.BlockInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -177,6 +206,21 @@ func (m *MockConsumerController) QueryBlocks(startHeight, endHeight, limit uint6
 func (mr *MockConsumerControllerMockRecorder) QueryBlocks(startHeight, endHeight, limit interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryBlocks", reflect.TypeOf((*MockConsumerController)(nil).QueryBlocks), startHeight, endHeight, limit)
+}
+
+// QueryFinalityActivationBlockHeight mocks base method.
+func (m *MockConsumerController) QueryFinalityActivationBlockHeight() (uint64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QueryFinalityActivationBlockHeight")
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// QueryFinalityActivationBlockHeight indicates an expected call of QueryFinalityActivationBlockHeight.
+func (mr *MockConsumerControllerMockRecorder) QueryFinalityActivationBlockHeight() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityActivationBlockHeight", reflect.TypeOf((*MockConsumerController)(nil).QueryFinalityActivationBlockHeight))
 }
 
 // QueryFinalityProviderHasPower mocks base method.
@@ -192,6 +236,37 @@ func (m *MockConsumerController) QueryFinalityProviderHasPower(fpPk *btcec.Publi
 func (mr *MockConsumerControllerMockRecorder) QueryFinalityProviderHasPower(fpPk, blockHeight interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderHasPower", reflect.TypeOf((*MockConsumerController)(nil).QueryFinalityProviderHasPower), fpPk, blockHeight)
+}
+
+// QueryFinalityProviderHighestVotedHeight mocks base method.
+func (m *MockConsumerController) QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QueryFinalityProviderHighestVotedHeight", fpPk)
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// QueryFinalityProviderHighestVotedHeight indicates an expected call of QueryFinalityProviderHighestVotedHeight.
+func (mr *MockConsumerControllerMockRecorder) QueryFinalityProviderHighestVotedHeight(fpPk interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderHighestVotedHeight", reflect.TypeOf((*MockConsumerController)(nil).QueryFinalityProviderHighestVotedHeight), fpPk)
+}
+
+// QueryFinalityProviderSlashedOrJailed mocks base method.
+func (m *MockConsumerController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QueryFinalityProviderSlashedOrJailed", fpPk)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// QueryFinalityProviderSlashedOrJailed indicates an expected call of QueryFinalityProviderSlashedOrJailed.
+func (mr *MockConsumerControllerMockRecorder) QueryFinalityProviderSlashedOrJailed(fpPk interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderSlashedOrJailed", reflect.TypeOf((*MockConsumerController)(nil).QueryFinalityProviderSlashedOrJailed), fpPk)
 }
 
 // QueryIsBlockFinalized mocks base method.
@@ -210,10 +285,10 @@ func (mr *MockConsumerControllerMockRecorder) QueryIsBlockFinalized(height inter
 }
 
 // QueryLastPublicRandCommit mocks base method.
-func (m *MockConsumerController) QueryLastPublicRandCommit(fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
+func (m *MockConsumerController) QueryLastPublicRandCommit(fpPk *btcec.PublicKey) (*types0.PubRandCommit, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "QueryLastPublicRandCommit", fpPk)
-	ret0, _ := ret[0].(*types.PubRandCommit)
+	ret0, _ := ret[0].(*types0.PubRandCommit)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -240,10 +315,10 @@ func (mr *MockConsumerControllerMockRecorder) QueryLatestBlockHeight() *gomock.C
 }
 
 // QueryLatestFinalizedBlock mocks base method.
-func (m *MockConsumerController) QueryLatestFinalizedBlock() (*types.BlockInfo, error) {
+func (m *MockConsumerController) QueryLatestFinalizedBlock() (*types0.BlockInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "QueryLatestFinalizedBlock")
-	ret0, _ := ret[0].(*types.BlockInfo)
+	ret0, _ := ret[0].(*types0.BlockInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -255,10 +330,10 @@ func (mr *MockConsumerControllerMockRecorder) QueryLatestFinalizedBlock() *gomoc
 }
 
 // SubmitBatchFinalitySigs mocks base method.
-func (m *MockConsumerController) SubmitBatchFinalitySigs(fpPk *btcec.PublicKey, blocks []*types.BlockInfo, pubRandList []*btcec.FieldVal, proofList [][]byte, sigs []*btcec.ModNScalar) (*types.TxResponse, error) {
+func (m *MockConsumerController) SubmitBatchFinalitySigs(fpPk *btcec.PublicKey, blocks []*types0.BlockInfo, pubRandList []*btcec.FieldVal, proofList [][]byte, sigs []*btcec.ModNScalar) (*types0.TxResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubmitBatchFinalitySigs", fpPk, blocks, pubRandList, proofList, sigs)
-	ret0, _ := ret[0].(*types.TxResponse)
+	ret0, _ := ret[0].(*types0.TxResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -270,10 +345,10 @@ func (mr *MockConsumerControllerMockRecorder) SubmitBatchFinalitySigs(fpPk, bloc
 }
 
 // SubmitFinalitySig mocks base method.
-func (m *MockConsumerController) SubmitFinalitySig(fpPk *btcec.PublicKey, block *types.BlockInfo, pubRand *btcec.FieldVal, proof []byte, sig *btcec.ModNScalar) (*types.TxResponse, error) {
+func (m *MockConsumerController) SubmitFinalitySig(fpPk *btcec.PublicKey, block *types0.BlockInfo, pubRand *btcec.FieldVal, proof []byte, sig *btcec.ModNScalar) (*types0.TxResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubmitFinalitySig", fpPk, block, pubRand, proof, sig)
-	ret0, _ := ret[0].(*types.TxResponse)
+	ret0, _ := ret[0].(*types0.TxResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -282,4 +357,19 @@ func (m *MockConsumerController) SubmitFinalitySig(fpPk *btcec.PublicKey, block 
 func (mr *MockConsumerControllerMockRecorder) SubmitFinalitySig(fpPk, block, pubRand, proof, sig interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitFinalitySig", reflect.TypeOf((*MockConsumerController)(nil).SubmitFinalitySig), fpPk, block, pubRand, proof, sig)
+}
+
+// UnjailFinalityProvider mocks base method.
+func (m *MockConsumerController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types0.TxResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnjailFinalityProvider", fpPk)
+	ret0, _ := ret[0].(*types0.TxResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnjailFinalityProvider indicates an expected call of UnjailFinalityProvider.
+func (mr *MockConsumerControllerMockRecorder) UnjailFinalityProvider(fpPk interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnjailFinalityProvider", reflect.TypeOf((*MockConsumerController)(nil).UnjailFinalityProvider), fpPk)
 }

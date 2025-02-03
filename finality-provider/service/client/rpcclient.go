@@ -18,14 +18,18 @@ type FinalityProviderServiceGRpcClient struct {
 }
 
 // NewFinalityProviderServiceGRpcClient creates a new GRPC connection with finality provider daemon.
-func NewFinalityProviderServiceGRpcClient(remoteAddr string) (client *FinalityProviderServiceGRpcClient, cleanUp func(), err error) {
+func NewFinalityProviderServiceGRpcClient(remoteAddr string) (*FinalityProviderServiceGRpcClient, func() error, error) {
 	conn, err := grpc.NewClient(remoteAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build gRPC connection to %s: %w", remoteAddr, err)
 	}
 
-	cleanUp = func() {
-		conn.Close()
+	cleanUp := func() error {
+		if conn == nil {
+			return nil
+		}
+
+		return conn.Close()
 	}
 
 	return &FinalityProviderServiceGRpcClient{
@@ -43,28 +47,12 @@ func (c *FinalityProviderServiceGRpcClient) GetInfo(ctx context.Context) (*proto
 	return res, nil
 }
 
-func (c *FinalityProviderServiceGRpcClient) RegisterFinalityProvider(
-	ctx context.Context,
-	fpPk *bbntypes.BIP340PubKey,
-	passphrase string,
-) (*proto.RegisterFinalityProviderResponse, error) {
-
-	req := &proto.RegisterFinalityProviderRequest{BtcPk: fpPk.MarshalHex(), Passphrase: passphrase}
-	res, err := c.client.RegisterFinalityProvider(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
 func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 	ctx context.Context,
-	keyName, chainID, eotsPkHex, passphrase, hdPath string,
+	keyName, chainID, eotsPkHex, passphrase string,
 	description types.Description,
 	commission *sdkmath.LegacyDec,
 ) (*proto.CreateFinalityProviderResponse, error) {
-
 	descBytes, err := description.Marshal()
 	if err != nil {
 		return nil, err
@@ -74,7 +62,6 @@ func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 		KeyName:     keyName,
 		ChainId:     chainID,
 		Passphrase:  passphrase,
-		HdPath:      hdPath,
 		Description: descBytes,
 		Commission:  commission.String(),
 		EotsPkHex:   eotsPkHex,
@@ -88,14 +75,34 @@ func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 	return res, nil
 }
 
-func (c *FinalityProviderServiceGRpcClient) AddFinalitySignature(ctx context.Context, fpPk string, height uint64, appHash []byte) (*proto.AddFinalitySignatureResponse, error) {
+func (c *FinalityProviderServiceGRpcClient) AddFinalitySignature(
+	ctx context.Context,
+	fpPk string,
+	height uint64,
+	appHash []byte,
+	checkDoubleSign bool,
+) (*proto.AddFinalitySignatureResponse, error) {
 	req := &proto.AddFinalitySignatureRequest{
-		BtcPk:   fpPk,
-		Height:  height,
-		AppHash: appHash,
+		BtcPk:           fpPk,
+		Height:          height,
+		AppHash:         appHash,
+		CheckDoubleSign: checkDoubleSign,
 	}
 
 	res, err := c.client.AddFinalitySignature(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (c *FinalityProviderServiceGRpcClient) UnjailFinalityProvider(ctx context.Context, fpPk string) (*proto.UnjailFinalityProviderResponse, error) {
+	req := &proto.UnjailFinalityProviderRequest{
+		BtcPk: fpPk,
+	}
+
+	res, err := c.client.UnjailFinalityProvider(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -113,6 +120,7 @@ func (c *FinalityProviderServiceGRpcClient) QueryFinalityProviderList(ctx contex
 	return res, nil
 }
 
+// QueryFinalityProviderInfo - gets the finality provider data from local store
 func (c *FinalityProviderServiceGRpcClient) QueryFinalityProviderInfo(ctx context.Context, fpPk *bbntypes.BIP340PubKey) (*proto.QueryFinalityProviderResponse, error) {
 	req := &proto.QueryFinalityProviderRequest{BtcPk: fpPk.MarshalHex()}
 	res, err := c.client.QueryFinalityProvider(ctx, req)
@@ -123,16 +131,35 @@ func (c *FinalityProviderServiceGRpcClient) QueryFinalityProviderInfo(ctx contex
 	return res, nil
 }
 
-func (c *FinalityProviderServiceGRpcClient) SignMessageFromChainKey(
-	ctx context.Context,
-	keyName, passphrase, hdPath string,
-	rawMsgToSign []byte,
-) (*proto.SignMessageFromChainKeyResponse, error) {
-	req := &proto.SignMessageFromChainKeyRequest{
-		MsgToSign:  rawMsgToSign,
-		KeyName:    keyName,
-		Passphrase: passphrase,
-		HdPath:     hdPath,
+// EditFinalityProvider - edit the finality provider data.
+func (c *FinalityProviderServiceGRpcClient) EditFinalityProvider(
+	ctx context.Context, fpPk *bbntypes.BIP340PubKey, desc *proto.Description, rate string) error {
+	if rate == "" {
+		currentProvider, err := c.QueryFinalityProviderInfo(ctx, fpPk)
+		if err != nil {
+			return fmt.Errorf("failed to get current provider info: %w", err)
+		}
+		rate = currentProvider.FinalityProvider.Commission
 	}
-	return c.client.SignMessageFromChainKey(ctx, req)
+
+	req := &proto.EditFinalityProviderRequest{BtcPk: fpPk.MarshalHex(), Description: desc, Commission: rate}
+
+	_, err := c.client.EditFinalityProvider(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to edit finality provider: %w", err)
+	}
+
+	return nil
+}
+
+// UnsafeRemoveMerkleProof - remove all proofs up to target height
+func (c *FinalityProviderServiceGRpcClient) UnsafeRemoveMerkleProof(
+	ctx context.Context, fpPk *bbntypes.BIP340PubKey, chainID string, targetHeight uint64) error {
+	req := &proto.RemoveMerkleProofRequest{BtcPkHex: fpPk.MarshalHex(), ChainId: chainID, TargetHeight: targetHeight}
+	_, err := c.client.UnsafeRemoveMerkleProof(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

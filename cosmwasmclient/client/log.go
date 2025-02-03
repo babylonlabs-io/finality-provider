@@ -33,6 +33,7 @@ func newRootLogger(format string, debug bool) (*zap.Logger, error) {
 	if debug {
 		level = zap.DebugLevel
 	}
+
 	return zap.New(zapcore.NewCore(
 		enc,
 		os.Stderr,

@@ -37,6 +37,7 @@ func NewFinalityProviderStore(db kvdb.Backend) (*FinalityProviderStore, error) {
 func (s *FinalityProviderStore) initBuckets() error {
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		_, err := tx.CreateTopLevelBucket(finalityProviderBucketName)
+
 		return err
 	})
 }
@@ -46,8 +47,7 @@ func (s *FinalityProviderStore) CreateFinalityProvider(
 	btcPk *btcec.PublicKey,
 	description *stakingtypes.Description,
 	commission *sdkmath.LegacyDec,
-	keyName, chainId string,
-	btcSig []byte,
+	chainID string,
 ) error {
 	desBytes, err := description.Marshal()
 	if err != nil {
@@ -58,12 +58,8 @@ func (s *FinalityProviderStore) CreateFinalityProvider(
 		BtcPk:       schnorr.SerializePubKey(btcPk),
 		Description: desBytes,
 		Commission:  commission.String(),
-		Pop: &proto.ProofOfPossession{
-			BtcSig: btcSig,
-		},
-		KeyName: keyName,
-		ChainId: chainId,
-		Status:  proto.FinalityProviderStatus_CREATED,
+		ChainId:     chainID,
+		Status:      proto.FinalityProviderStatus_REGISTERED,
 	}
 
 	return s.createFinalityProviderInternal(fp)
@@ -75,7 +71,7 @@ func (s *FinalityProviderStore) createFinalityProviderInternal(
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		fpBucket := tx.ReadWriteBucket(finalityProviderBucketName)
 		if fpBucket == nil {
-			return ErrCorruptedFinalityProviderDb
+			return ErrCorruptedFinalityProviderDB
 		}
 
 		// check btc pk first to avoid duplicates
@@ -106,10 +102,17 @@ func saveFinalityProvider(
 func (s *FinalityProviderStore) SetFpStatus(btcPk *btcec.PublicKey, status proto.FinalityProviderStatus) error {
 	setFpStatus := func(fp *proto.FinalityProvider) error {
 		fp.Status = status
+
 		return nil
 	}
 
 	return s.setFinalityProviderState(btcPk, setFpStatus)
+}
+
+func (s *FinalityProviderStore) MustSetFpStatus(btcPk *btcec.PublicKey, status proto.FinalityProviderStatus) {
+	if err := s.SetFpStatus(btcPk, status); err != nil {
+		panic(err)
+	}
 }
 
 // UpdateFpStatusFromVotingPower based on the current voting power of the finality provider
@@ -117,7 +120,7 @@ func (s *FinalityProviderStore) SetFpStatus(btcPk *btcec.PublicKey, status proto
 func (s *FinalityProviderStore) UpdateFpStatusFromVotingPower(
 	hasPower bool,
 	fp *StoredFinalityProvider,
-) (newStatus proto.FinalityProviderStatus, err error) {
+) (proto.FinalityProviderStatus, error) {
 	if fp.Status == proto.FinalityProviderStatus_SLASHED {
 		// Slashed FP should not update status
 		return proto.FinalityProviderStatus_SLASHED, nil
@@ -128,15 +131,11 @@ func (s *FinalityProviderStore) UpdateFpStatusFromVotingPower(
 		return proto.FinalityProviderStatus_ACTIVE, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_ACTIVE)
 	}
 
-	// voting power == 0 then set status depending on previous status
-	switch fp.Status {
-	case proto.FinalityProviderStatus_CREATED:
-		// previous status is CREATED then set to REGISTERED
-		return proto.FinalityProviderStatus_REGISTERED, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_REGISTERED)
-	case proto.FinalityProviderStatus_ACTIVE:
+	if fp.Status == proto.FinalityProviderStatus_ACTIVE {
 		// previous status is ACTIVE then set to INACTIVE
 		return proto.FinalityProviderStatus_INACTIVE, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_INACTIVE)
 	}
+
 	return fp.Status, nil
 }
 
@@ -147,9 +146,6 @@ func (s *FinalityProviderStore) SetFpLastVotedHeight(btcPk *btcec.PublicKey, las
 		if fp.LastVotedHeight < lastVotedHeight {
 			fp.LastVotedHeight = lastVotedHeight
 		}
-		if fp.LastProcessedHeight < lastVotedHeight {
-			fp.LastProcessedHeight = lastVotedHeight
-		}
 
 		return nil
 	}
@@ -157,39 +153,26 @@ func (s *FinalityProviderStore) SetFpLastVotedHeight(btcPk *btcec.PublicKey, las
 	return s.setFinalityProviderState(btcPk, setFpLastVotedHeight)
 }
 
-// SetFpLastProcessedHeight sets the last processed height to the stored last processed height
-// only if it is larger than the stored one. This is to ensure the stored state to increase monotonically
-func (s *FinalityProviderStore) SetFpLastProcessedHeight(btcPk *btcec.PublicKey, lastProcessedHeight uint64) error {
-	setFpLastProcessedHeight := func(fp *proto.FinalityProvider) error {
-		if fp.LastProcessedHeight < lastProcessedHeight {
-			fp.LastProcessedHeight = lastProcessedHeight
-		}
-
-		return nil
-	}
-
-	return s.setFinalityProviderState(btcPk, setFpLastProcessedHeight)
-}
-
 func (s *FinalityProviderStore) setFinalityProviderState(
 	btcPk *btcec.PublicKey,
 	stateTransitionFn func(provider *proto.FinalityProvider) error,
 ) error {
 	pkBytes := schnorr.SerializePubKey(btcPk)
+
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		fpBucket := tx.ReadWriteBucket(finalityProviderBucketName)
 		if fpBucket == nil {
-			return ErrCorruptedFinalityProviderDb
+			return ErrCorruptedFinalityProviderDB
 		}
 
-		fpFromDb := fpBucket.Get(pkBytes)
-		if fpFromDb == nil {
+		fpFromDB := fpBucket.Get(pkBytes)
+		if fpFromDB == nil {
 			return ErrFinalityProviderNotFound
 		}
 
 		var storedFp proto.FinalityProvider
-		if err := pm.Unmarshal(fpFromDb, &storedFp); err != nil {
-			return ErrCorruptedFinalityProviderDb
+		if err := pm.Unmarshal(fpFromDB, &storedFp); err != nil {
+			return ErrCorruptedFinalityProviderDB
 		}
 
 		if err := stateTransitionFn(&storedFp); err != nil {
@@ -207,7 +190,7 @@ func (s *FinalityProviderStore) GetFinalityProvider(btcPk *btcec.PublicKey) (*St
 	err := s.db.View(func(tx kvdb.RTx) error {
 		fpBucket := tx.ReadBucket(finalityProviderBucketName)
 		if fpBucket == nil {
-			return ErrCorruptedFinalityProviderDb
+			return ErrCorruptedFinalityProviderDB
 		}
 
 		fpBytes := fpBucket.Get(pkBytes)
@@ -217,15 +200,16 @@ func (s *FinalityProviderStore) GetFinalityProvider(btcPk *btcec.PublicKey) (*St
 
 		var fpProto proto.FinalityProvider
 		if err := pm.Unmarshal(fpBytes, &fpProto); err != nil {
-			return ErrCorruptedFinalityProviderDb
+			return ErrCorruptedFinalityProviderDB
 		}
 
-		fpFromDb, err := protoFpToStoredFinalityProvider(&fpProto)
+		fpFromDB, err := protoFpToStoredFinalityProvider(&fpProto)
 		if err != nil {
 			return err
 		}
 
-		storedFp = fpFromDb
+		storedFp = fpFromDB
+
 		return nil
 	}, func() {})
 
@@ -245,20 +229,20 @@ func (s *FinalityProviderStore) GetAllStoredFinalityProviders() ([]*StoredFinali
 	err := s.db.View(func(tx kvdb.RTx) error {
 		fpBucket := tx.ReadBucket(finalityProviderBucketName)
 		if fpBucket == nil {
-			return ErrCorruptedFinalityProviderDb
+			return ErrCorruptedFinalityProviderDB
 		}
 
-		return fpBucket.ForEach(func(k, v []byte) error {
+		return fpBucket.ForEach(func(_, v []byte) error {
 			var fpProto proto.FinalityProvider
 			if err := pm.Unmarshal(v, &fpProto); err != nil {
-				return ErrCorruptedFinalityProviderDb
+				return ErrCorruptedFinalityProviderDB
 			}
 
-			fpFromDb, err := protoFpToStoredFinalityProvider(&fpProto)
+			fpFromDB, err := protoFpToStoredFinalityProvider(&fpProto)
 			if err != nil {
 				return err
 			}
-			storedFps = append(storedFps, fpFromDb)
+			storedFps = append(storedFps, fpFromDB)
 
 			return nil
 		})
@@ -269,4 +253,21 @@ func (s *FinalityProviderStore) GetAllStoredFinalityProviders() ([]*StoredFinali
 	}
 
 	return storedFps, nil
+}
+
+// SetFpDescription updates description of finality provider
+func (s *FinalityProviderStore) SetFpDescription(btcPk *btcec.PublicKey, desc *stakingtypes.Description, rate *sdkmath.LegacyDec) error {
+	setDescription := func(fp *proto.FinalityProvider) error {
+		descBytes, err := desc.Marshal()
+		if err != nil {
+			return err
+		}
+
+		fp.Description = descBytes
+		fp.Commission = rate.String()
+
+		return nil
+	}
+
+	return s.setFinalityProviderState(btcPk, setDescription)
 }

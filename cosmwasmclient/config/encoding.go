@@ -19,6 +19,7 @@ func GetWasmdEncodingConfig() wasmdparams.EncodingConfig {
 		if err != nil {
 			panic("failed to create temp dir: " + err.Error())
 		}
+
 		return dir
 	}
 

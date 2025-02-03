@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	defaultDbName = "finality-provider.db"
+	defaultDBName = "finality-provider.db"
 )
 
 type DBConfig struct {
@@ -47,13 +47,12 @@ func DefaultDBConfig() *DBConfig {
 func DefaultDBConfigWithHomePath(homePath string) *DBConfig {
 	return &DBConfig{
 		DBPath:            DataDir(homePath),
-		DBFileName:        defaultDbName,
+		DBFileName:        defaultDBName,
 		NoFreelistSync:    true,
 		AutoCompact:       false,
 		AutoCompactMinAge: kvdb.DefaultBoltAutoCompactMinAge,
 		DBTimeout:         kvdb.DefaultDBTimeout,
 	}
-
 }
 
 func (db *DBConfig) DBConfigToBoltBackendConfig() *kvdb.BoltBackendConfig {
@@ -67,6 +66,6 @@ func (db *DBConfig) DBConfigToBoltBackendConfig() *kvdb.BoltBackendConfig {
 	}
 }
 
-func (db *DBConfig) GetDbBackend() (kvdb.Backend, error) {
+func (db *DBConfig) GetDBBackend() (kvdb.Backend, error) {
 	return kvdb.GetBoltBackend(db.DBConfigToBoltBackendConfig())
 }

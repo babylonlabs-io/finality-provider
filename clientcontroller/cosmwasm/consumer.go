@@ -10,6 +10,7 @@ import (
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
 	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	"github.com/babylonlabs-io/babylon/client/babylonclient"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cwcclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
@@ -21,12 +22,12 @@ import (
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 )
 
 var _ api.ConsumerController = &CosmwasmConsumerController{}
 
+//nolint:revive
 type CosmwasmConsumerController struct {
 	cwClient *cwcclient.Client
 	cfg      *fpcfg.CosmwasmConfig
@@ -61,17 +62,24 @@ func NewCosmwasmConsumerController(
 	}, nil
 }
 
-func (wc *CosmwasmConsumerController) reliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*provider.RelayerTxResponse, error) {
+func (wc *CosmwasmConsumerController) reliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	return wc.reliablySendMsgs([]sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
-func (wc *CosmwasmConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*provider.RelayerTxResponse, error) {
-	return wc.cwClient.ReliablySendMsgs(
+func (wc *CosmwasmConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+	resp, err := wc.cwClient.ReliablySendMsgs(
 		context.Background(),
 		msgs,
 		expectedErrs,
 		unrecoverableErrs,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	bbnResp := fptypes.NewBabylonTxResponse(resp)
+
+	return bbnResp, nil
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness via a MsgCommitPubRand to Babylon
@@ -144,7 +152,7 @@ func (wc *CosmwasmConsumerController) SubmitFinalitySig(
 		return nil, err
 	}
 
-	return &fptypes.TxResponse{TxHash: res.TxHash, Events: fromCosmosEventsToBytes(res.Events)}, nil
+	return &fptypes.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }
 
 // SubmitBatchFinalitySigs submits a batch of finality signatures to Babylon
@@ -209,7 +217,7 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderHasPower(
 	}
 	queryMsgBytes, err := json.Marshal(queryMsgStruct)
 	if err != nil {
-		return false, fmt.Errorf("failed to marshal query message: %v", err)
+		return false, fmt.Errorf("failed to marshal query message: %w", err)
 	}
 	dataFromContract, err := wc.QuerySmartContractState(wc.cfg.BtcStakingContractAddress, string(queryMsgBytes))
 	if err != nil {
@@ -232,7 +240,7 @@ func (wc *CosmwasmConsumerController) QueryFinalityProvidersByPower() (*Consumer
 
 	queryMsgBytes, err := json.Marshal(queryMsgStruct)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal query message: %v", err)
+		return nil, fmt.Errorf("failed to marshal query message: %w", err)
 	}
 
 	dataFromContract, err := wc.QuerySmartContractState(wc.cfg.BtcStakingContractAddress, string(queryMsgBytes))
@@ -256,23 +264,25 @@ func (wc *CosmwasmConsumerController) QueryLatestFinalizedBlock() (*fptypes.Bloc
 	if err != nil || len(blocks) == 0 {
 		// do not return error here as FP handles this situation by
 		// not running fast sync
+		//nolint:nilerr
 		return nil, nil
 	}
 
 	return blocks[0], nil
 }
 
-func (wc *CosmwasmConsumerController) QueryBlocks(startHeight, endHeight, limit uint64) ([]*fptypes.BlockInfo, error) {
+func (wc *CosmwasmConsumerController) QueryBlocks(startHeight, endHeight uint64, _ uint32) ([]*fptypes.BlockInfo, error) {
 	return wc.queryCometBlocksInRange(startHeight, endHeight)
 }
 
 func (wc *CosmwasmConsumerController) QueryBlock(height uint64) (*fptypes.BlockInfo, error) {
-	block, err := wc.cwClient.GetBlock(int64(height))
+	block, err := wc.cwClient.GetBlock(int64(height)) // #nosec G115
 	if err != nil {
 		return nil, err
 	}
+
 	return &fptypes.BlockInfo{
-		Height: uint64(block.Block.Header.Height),
+		Height: uint64(block.Block.Header.Height), // #nosec G115
 		Hash:   block.Block.Header.AppHash,
 	}, nil
 }
@@ -290,7 +300,7 @@ func (wc *CosmwasmConsumerController) QueryLastPublicRandCommit(fpPk *btcec.Publ
 
 	queryMsgBytes, err := json.Marshal(queryMsgStruct)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal query message: %v", err)
+		return nil, fmt.Errorf("failed to marshal query message: %w", err)
 	}
 
 	// Query the smart contract state
@@ -320,7 +330,7 @@ func (wc *CosmwasmConsumerController) QueryLastPublicRandCommit(fpPk *btcec.Publ
 func (wc *CosmwasmConsumerController) QueryIsBlockFinalized(height uint64) (bool, error) {
 	resp, err := wc.QueryIndexedBlock(height)
 	if err != nil || resp == nil {
-		return false, nil
+		return false, err
 	}
 
 	return resp.Finalized, nil
@@ -348,7 +358,7 @@ func (wc *CosmwasmConsumerController) QueryActivatedHeight() (uint64, error) {
 	var resp struct {
 		Height uint64 `json:"height"`
 	}
-	err = json.Unmarshal(dataFromContract.Data, &resp)
+	err = json.Unmarshal(dataFromContract.Data, &resp) // #nosec G115
 	if err != nil {
 		return 0, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
@@ -365,7 +375,8 @@ func (wc *CosmwasmConsumerController) QueryLatestBlockHeight() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return block.Height, err
+
+	return block.Height, nil
 }
 
 func (wc *CosmwasmConsumerController) QueryFinalitySignature(fpBtcPkHex string, height uint64) (*FinalitySignatureResponse, error) {
@@ -377,7 +388,7 @@ func (wc *CosmwasmConsumerController) QueryFinalitySignature(fpBtcPkHex string, 
 	}
 	queryMsgBytes, err := json.Marshal(queryMsgStruct)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal query message: %v", err)
+		return nil, fmt.Errorf("failed to marshal query message: %w", err)
 	}
 
 	dataFromContract, err := wc.QuerySmartContractState(wc.cfg.BtcStakingContractAddress, string(queryMsgBytes))
@@ -401,7 +412,7 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviders() (*ConsumerFpsResp
 
 	queryMsgBytes, err := json.Marshal(queryMsgStruct)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal query message: %v", err)
+		return nil, fmt.Errorf("failed to marshal query message: %w", err)
 	}
 
 	dataFromContract, err := wc.QuerySmartContractState(wc.cfg.BtcStakingContractAddress, string(queryMsgBytes))
@@ -425,7 +436,7 @@ func (wc *CosmwasmConsumerController) QueryDelegations() (*ConsumerDelegationsRe
 
 	queryMsgBytes, err := json.Marshal(queryMsgStruct)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal query message: %v", err)
+		return nil, fmt.Errorf("failed to marshal query message: %w", err)
 	}
 
 	dataFromContract, err := wc.QuerySmartContractState(wc.cfg.BtcStakingContractAddress, string(queryMsgBytes))
@@ -498,7 +509,7 @@ func (wc *CosmwasmConsumerController) queryCometBestBlock() (*fptypes.BlockInfo,
 	// Returning response directly, if header with specified number did not exist
 	// at request will contain nil header
 	return &fptypes.BlockInfo{
-		Height: uint64(chainInfo.BlockMetas[0].Header.Height),
+		Height: uint64(chainInfo.BlockMetas[0].Header.Height), // #nosec G115
 		Hash:   chainInfo.BlockMetas[0].Header.AppHash,
 	}, nil
 }
@@ -508,7 +519,7 @@ func (wc *CosmwasmConsumerController) queryCometBlocksInRange(startHeight, endHe
 	defer cancel()
 
 	// this will return 20 items at max in the descending order (highest first)
-	chainInfo, err := wc.cwClient.RPCClient.BlockchainInfo(ctx, int64(startHeight), int64(endHeight))
+	chainInfo, err := wc.cwClient.RPCClient.BlockchainInfo(ctx, int64(startHeight), int64(endHeight)) // #nosec G115
 	if err != nil {
 		return nil, err
 	}
@@ -522,7 +533,7 @@ func (wc *CosmwasmConsumerController) queryCometBlocksInRange(startHeight, endHe
 	var blocks []*fptypes.BlockInfo
 	for _, blockMeta := range chainInfo.BlockMetas {
 		block := &fptypes.BlockInfo{
-			Height: uint64(blockMeta.Header.Height),
+			Height: uint64(blockMeta.Header.Height), // #nosec G115
 			Hash:   blockMeta.Header.AppHash,
 		}
 		blocks = append(blocks, block)
@@ -544,7 +555,7 @@ func (wc *CosmwasmConsumerController) Close() error {
 	return wc.cwClient.Stop()
 }
 
-func (wc *CosmwasmConsumerController) ExecuteContract(msgBytes []byte) (*provider.RelayerTxResponse, error) {
+func (wc *CosmwasmConsumerController) ExecuteContract(msgBytes []byte) (*babylonclient.RelayerTxResponse, error) {
 	execMsg := &wasmdtypes.MsgExecuteContract{
 		Sender:   wc.cwClient.MustGetAddr(),
 		Contract: wc.cfg.BtcStakingContractAddress,
@@ -577,10 +588,10 @@ func (wc *CosmwasmConsumerController) InstantiateContract(codeID uint64, initMsg
 	return wc.cwClient.InstantiateContract(codeID, initMsg)
 }
 
-// GetLatestCodeId returns the latest wasm code id.
+// GetLatestCodeID returns the latest wasm code id.
 // NOTE: this function is only meant to be used in tests.
-func (wc *CosmwasmConsumerController) GetLatestCodeId() (uint64, error) {
-	return wc.cwClient.GetLatestCodeId()
+func (wc *CosmwasmConsumerController) GetLatestCodeID() (uint64, error) {
+	return wc.cwClient.GetLatestCodeID()
 }
 
 // ListContractsByCode lists all contracts by wasm code id
@@ -618,7 +629,7 @@ func (wc *CosmwasmConsumerController) QueryIndexedBlock(height uint64) (*Indexed
 	}
 	queryMsgBytes, err := json.Marshal(queryMsgStruct)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal query message: %v", err)
+		return nil, fmt.Errorf("failed to marshal query message: %w", err)
 	}
 
 	// Query the smart contract state
@@ -637,10 +648,25 @@ func (wc *CosmwasmConsumerController) QueryIndexedBlock(height uint64) (*Indexed
 	return &resp, nil
 }
 
-func fromCosmosEventsToBytes(events []provider.RelayerEvent) []byte {
-	bytes, err := json.Marshal(events)
-	if err != nil {
-		return nil
-	}
-	return bytes
+func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight() (uint64, error) {
+	// TODO: implement finality activation feature in OP stack L2
+	return 0, nil
+}
+
+//nolint:revive
+func (wc *CosmwasmConsumerController) QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error) {
+	// TODO: implement highest voted height feature in OP stack L2
+	return 0, nil
+}
+
+//nolint:revive
+func (wc *CosmwasmConsumerController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
+	// TODO: implement slashed or jailed feature in OP stack L2
+	return false, false, nil
+}
+
+//nolint:revive
+func (wc *CosmwasmConsumerController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*fptypes.TxResponse, error) {
+	// TODO: implement unjail feature in OP stack L2
+	return nil, nil
 }

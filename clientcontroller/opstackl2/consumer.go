@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/babylonlabs-io/babylon/client/babylonclient"
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
@@ -27,7 +28,6 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -41,6 +41,7 @@ const (
 
 var _ api.ConsumerController = &OPStackL2ConsumerController{}
 
+// nolint:revive // Ignore stutter warning - full name provides clarity
 type OPStackL2ConsumerController struct {
 	Cfg        *fpcfg.OPStackL2Config
 	CwClient   *cwclient.Client
@@ -57,7 +58,7 @@ func NewOPStackL2ConsumerController(
 		return nil, fmt.Errorf("nil config for OP consumer controller")
 	}
 	if err := opl2Cfg.Validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 	cwConfig := opl2Cfg.ToCosmwasmConfig()
 
@@ -114,21 +115,29 @@ func NewCwClient(cwConfig *cwconfig.CosmwasmConfig, logger *zap.Logger) (*cwclie
 		cwEncodingCfg,
 		logger,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create CW client: %w", err)
+	}
 
-	return cwClient, err
+	return cwClient, nil
 }
 
-func (cc *OPStackL2ConsumerController) ReliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*provider.RelayerTxResponse, error) {
+func (cc *OPStackL2ConsumerController) ReliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	return cc.reliablySendMsgs([]sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
-func (cc *OPStackL2ConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*provider.RelayerTxResponse, error) {
-	return cc.CwClient.ReliablySendMsgs(
+func (cc *OPStackL2ConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+	resp, err := cc.CwClient.ReliablySendMsgs(
 		context.Background(),
 		msgs,
 		expectedErrs,
 		unrecoverableErrs,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return types.NewBabylonTxResponse(resp), nil
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness to Babylon CosmWasm contract
@@ -169,6 +178,7 @@ func (cc *OPStackL2ConsumerController) CommitPubRandList(
 		zap.Uint64("start_height", startHeight),
 		zap.Uint64("num_pub_rand", numPubRand),
 	)
+
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
@@ -241,6 +251,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 		zap.Uint64("start_height", blocks[0].Height),
 		zap.Uint64("end_height", blocks[len(blocks)-1].Height),
 	)
+
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
@@ -270,6 +281,7 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec
 			"FP has 0 voting power because there is no public randomness at this height",
 			zap.Uint64("height", blockHeight),
 		)
+
 		return false, nil
 	}
 
@@ -307,6 +319,7 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec
 		zap.String("fp_btc_pk", fpBtcPkHex),
 		zap.Uint64("height", blockHeight),
 	)
+
 	return false, nil
 }
 
@@ -329,14 +342,14 @@ func (cc *OPStackL2ConsumerController) QueryLatestFinalizedBlock() (*types.Block
 	}, nil
 }
 
-func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight, limit uint64) ([]*types.BlockInfo, error) {
+func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types.BlockInfo, error) {
 	if startHeight > endHeight {
 		return nil, fmt.Errorf("the start height %v should not be higher than the end height %v", startHeight, endHeight)
 	}
 	// limit the number of blocks to query
 	count := endHeight - startHeight + 1
-	if limit > 0 && count >= limit {
-		count = limit
+	if limit > 0 && count >= uint64(limit) {
+		count = uint64(limit)
 	}
 
 	// create batch requests
@@ -345,7 +358,7 @@ func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight, limit
 	for i := range batchElemList {
 		batchElemList[i] = ethrpc.BatchElem{
 			Method: "eth_getBlockByNumber",
-			Args:   []interface{}{hexutil.EncodeUint64(startHeight + uint64(i)), false},
+			Args:   []interface{}{hexutil.EncodeUint64(startHeight + uint64(i)), false}, // #nosec G115
 			Result: &blockHeaders[i],
 		}
 	}
@@ -359,7 +372,7 @@ func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight, limit
 			return nil, batchElemList[i].Error
 		}
 		if blockHeaders[i] == nil {
-			return nil, fmt.Errorf("got null header for block %d", startHeight+uint64(i))
+			return nil, fmt.Errorf("got null header for block %d", startHeight+uint64(i)) // #nosec G115
 		}
 	}
 
@@ -375,9 +388,10 @@ func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight, limit
 		"Successfully batch query blocks",
 		zap.Uint64("start_height", startHeight),
 		zap.Uint64("end_height", endHeight),
-		zap.Uint64("limit", limit),
+		zap.Uint32("limit", limit),
 		zap.String("last_block_hash", hex.EncodeToString(blocks[len(blocks)-1].Hash)),
 	)
+
 	return blocks, nil
 }
 
@@ -394,6 +408,7 @@ func (cc *OPStackL2ConsumerController) QueryBlock(height uint64) (*types.BlockIn
 		zap.Uint64("height", height),
 		zap.String("block_hash", hex.EncodeToString(blockHashBytes)),
 	)
+
 	return &types.BlockInfo{
 		Height: height,
 		Hash:   blockHashBytes,
@@ -419,6 +434,7 @@ func (cc *OPStackL2ConsumerController) QueryIsBlockFinalized(height uint64) (boo
 	if height > l2Block.Height {
 		return false, nil
 	}
+
 	return true, nil
 }
 
@@ -427,18 +443,21 @@ func (cc *OPStackL2ConsumerController) QueryActivatedHeight() (uint64, error) {
 	finalityGadgetClient, err := fgclient.NewFinalityGadgetGrpcClient(cc.Cfg.BabylonFinalityGadgetRpc)
 	if err != nil {
 		cc.logger.Error("failed to initialize Babylon Finality Gadget Grpc client", zap.Error(err))
+
 		return math.MaxUint64, err
 	}
 
 	activatedTimestamp, err := finalityGadgetClient.QueryBtcStakingActivatedTimestamp()
 	if err != nil {
 		cc.logger.Error("failed to query BTC staking activate timestamp", zap.Error(err))
+
 		return math.MaxUint64, err
 	}
 
 	l2BlockNumber, err := cc.GetBlockNumberByTimestamp(context.Background(), activatedTimestamp)
 	if err != nil {
 		cc.logger.Error("failed to convert L2 block number from the given BTC staking activation timestamp", zap.Error(err))
+
 		return math.MaxUint64, err
 	}
 
@@ -495,8 +514,8 @@ func (cc *OPStackL2ConsumerController) QueryLastPublicRandCommit(fpPk *btcec.Pub
 
 func ConvertProof(cmtProof cmtcrypto.Proof) Proof {
 	return Proof{
-		Total:    uint64(cmtProof.Total),
-		Index:    uint64(cmtProof.Index),
+		Total:    uint64(cmtProof.Total), // #nosec G115
+		Index:    uint64(cmtProof.Index), // #nosec G115
 		LeafHash: cmtProof.LeafHash,
 		Aunts:    cmtProof.Aunts,
 	}
@@ -533,16 +552,17 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 
 	for lowerBound <= upperBound {
 		midBlockNumber := (lowerBound + upperBound) / 2
-		block, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(int64(midBlockNumber)))
+		block, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(int64(midBlockNumber))) // #nosec G115
 		if err != nil {
 			return math.MaxUint64, err
 		}
 
-		if block.Time < targetTimestamp {
+		switch {
+		case block.Time < targetTimestamp:
 			lowerBound = midBlockNumber + 1
-		} else if block.Time > targetTimestamp {
+		case block.Time > targetTimestamp:
 			upperBound = midBlockNumber - 1
-		} else {
+		default:
 			return midBlockNumber, nil
 		}
 	}
@@ -550,30 +570,55 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 	return lowerBound, nil
 }
 
+// QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
+// nolint:revive // Ignore stutter warning - full name provides clarity
+func (cc *OPStackL2ConsumerController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
+	// TODO: implement slashed or jailed feature in OP stack L2
+	return false, false, nil
+}
+
+func (cc *OPStackL2ConsumerController) QueryFinalityActivationBlockHeight() (uint64, error) {
+	// TODO: implement finality activation feature in OP stack L2
+	return 0, nil
+}
+
+// nolint:revive // Ignore stutter warning - full name provides clarity
+func (cc *OPStackL2ConsumerController) QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error) {
+	// TODO: implement highest voted height feature in OP stack L2
+	return 0, nil
+}
+
+// nolint:revive // Ignore stutter warning - full name provides clarity
+func (cc *OPStackL2ConsumerController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error) {
+	// TODO: implement unjail feature in OP stack L2
+	return nil, nil
+}
+
 func (cc *OPStackL2ConsumerController) Close() error {
 	cc.opl2Client.Close()
+
 	return cc.CwClient.Stop()
 }
 
+// nolint:unparam
 func (cc *OPStackL2ConsumerController) isDelegationActive(
 	btcStakingParams *btcstakingtypes.QueryParamsResponse,
 	btcDel *btcstakingtypes.BTCDelegationResponse,
 ) (bool, error) {
-
 	covQuorum := btcStakingParams.GetParams().CovenantQuorum
 	ud := btcDel.UndelegationResponse
 
-	if len(ud.GetDelegatorUnbondingSigHex()) > 0 {
+	if ud.DelegatorUnbondingInfoResponse != nil {
 		return false, nil
 	}
 
-	if uint32(len(btcDel.CovenantSigs)) < covQuorum {
+	if len(btcDel.CovenantSigs) < int(covQuorum) { // #nosec G115
 		return false, nil
 	}
-	if len(ud.CovenantUnbondingSigList) < int(covQuorum) {
+	if len(ud.CovenantUnbondingSigList) < int(covQuorum) { // #nosec G115
 		return false, nil
 	}
-	if len(ud.CovenantSlashingSigs) < int(covQuorum) {
+	if len(ud.CovenantSlashingSigs) < int(covQuorum) { // #nosec G115
 		return false, nil
 	}
 

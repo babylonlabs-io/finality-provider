@@ -1,6 +1,7 @@
 package eotsmanager
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -49,7 +50,7 @@ func NewLocalEOTSManager(homeDir, keyringBackend string, dbbackend kvdb.Backend,
 		return nil, fmt.Errorf("failed to initialize store: %w", err)
 	}
 
-	kr, err := initKeyring(homeDir, keyringBackend, inputReader)
+	kr, err := InitKeyring(homeDir, keyringBackend, inputReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize keyring: %w", err)
 	}
@@ -65,7 +66,7 @@ func NewLocalEOTSManager(homeDir, keyringBackend string, dbbackend kvdb.Backend,
 	}, nil
 }
 
-func initKeyring(homeDir, keyringBackend string, inputReader *strings.Reader) (keyring.Keyring, error) {
+func InitKeyring(homeDir, keyringBackend string, inputReader *strings.Reader) (keyring.Keyring, error) {
 	return keyring.New(
 		"eots-manager",
 		keyringBackend,
@@ -119,17 +120,17 @@ func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, passphrase, hdPath, mnem
 	// as when creating an account, passphrase will be asked twice
 	// by the keyring
 	lm.input.Reset(passphrase + "\n" + passphrase)
-	record, err := lm.kr.NewAccount(name, mnemonic, passphrase, hdPath, algo)
+	_, err = lm.kr.NewAccount(name, mnemonic, passphrase, hdPath, algo)
 	if err != nil {
 		return nil, err
 	}
 
-	eotsPk, err := loadBIP340PubKeyFromKeyringRecord(record)
+	eotsPk, err := lm.LoadBIP340PubKeyFromKeyName(name)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := lm.es.AddEOTSKeyName(eotsPk.MustToBTCPK(), name); err != nil {
+	if err := lm.SaveEOTSKeyName(eotsPk.MustToBTCPK(), name); err != nil {
 		return nil, err
 	}
 
@@ -143,8 +144,20 @@ func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, passphrase, hdPath, mnem
 	return eotsPk, nil
 }
 
-func loadBIP340PubKeyFromKeyringRecord(record *keyring.Record) (*bbntypes.BIP340PubKey, error) {
-	pubKey, err := record.GetPubKey()
+func (lm *LocalEOTSManager) SaveEOTSKeyName(pk *btcec.PublicKey, keyName string) error {
+	return lm.es.AddEOTSKeyName(pk, keyName)
+}
+
+func (lm *LocalEOTSManager) LoadBIP340PubKeyFromKeyName(keyName string) (*bbntypes.BIP340PubKey, error) {
+	return LoadBIP340PubKeyFromKeyName(lm.kr, keyName)
+}
+
+func LoadBIP340PubKeyFromKeyName(kr keyring.Keyring, keyName string) (*bbntypes.BIP340PubKey, error) {
+	info, err := kr.Key(keyName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load keyring record for key %s: %w", keyName, err)
+	}
+	pubKey, err := info.GetPubKey()
 	if err != nil {
 		return nil, err
 	}
@@ -157,16 +170,13 @@ func loadBIP340PubKeyFromKeyringRecord(record *keyring.Record) (*bbntypes.BIP340
 			return nil, err
 		}
 		eotsPk = bbntypes.NewBIP340PubKeyFromBTCPK(pk)
+
 		return eotsPk, nil
 	default:
 		return nil, fmt.Errorf("unsupported key type in keyring")
 	}
 }
 
-// TODO the current implementation is a PoC, which does not contain any anti-slasher mechanism
-//
-//	a simple anti-slasher mechanism could be that the manager remembers the tuple (fpPk, chainID, height) or
-//	the hash of each generated randomness and return error if the same randomness is requested twice
 func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte, startHeight uint64, num uint32, passphrase string) ([]*btcec.FieldVal, error) {
 	prList := make([]*btcec.FieldVal, 0, num)
 
@@ -185,7 +195,68 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 	return prList, nil
 }
 
-func (lm *LocalEOTSManager) SignEOTS(fpPk []byte, chainID []byte, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error) {
+func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error) {
+	record, found, err := lm.es.GetSignRecord(eotsPk, chainID, height)
+	if err != nil {
+		return nil, fmt.Errorf("error getting sign record: %w", err)
+	}
+
+	if found {
+		if bytes.Equal(msg, record.Msg) {
+			var s btcec.ModNScalar
+			s.SetByteSlice(record.Signature)
+
+			lm.logger.Warn(
+				"duplicate sign requested",
+				zap.String("eots_pk", hex.EncodeToString(eotsPk)),
+				zap.String("hash", hex.EncodeToString(msg)),
+				zap.Uint64("height", height),
+				zap.String("chainID", string(chainID)),
+			)
+
+			return &s, nil
+		}
+
+		lm.logger.Error(
+			"double sign requested",
+			zap.String("eots_pk", hex.EncodeToString(eotsPk)),
+			zap.String("hash", hex.EncodeToString(msg)),
+			zap.Uint64("height", height),
+			zap.String("chainID", string(chainID)),
+		)
+
+		return nil, eotstypes.ErrDoubleSign
+	}
+
+	privRand, _, err := lm.getRandomnessPair(eotsPk, chainID, height, passphrase)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get private randomness: %w", err)
+	}
+
+	privKey, err := lm.getEOTSPrivKey(eotsPk, passphrase)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
+	}
+
+	// Update metrics
+	lm.metrics.IncrementEotsFpTotalEotsSignCounter(hex.EncodeToString(eotsPk))
+	lm.metrics.SetEotsFpLastEotsSignHeight(hex.EncodeToString(eotsPk), float64(height))
+
+	signedBytes, err := eots.Sign(privKey, privRand, msg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign eots")
+	}
+
+	b := signedBytes.Bytes()
+	if err := lm.es.SaveSignRecord(height, chainID, msg, eotsPk, b[:]); err != nil {
+		return nil, fmt.Errorf("failed to save signing record: %w", err)
+	}
+
+	return signedBytes, nil
+}
+
+// UnsafeSignEOTS should only be used in e2e test to demonstrate double sign
+func (lm *LocalEOTSManager) UnsafeSignEOTS(fpPk []byte, chainID []byte, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error) {
 	privRand, _, err := lm.getRandomnessPair(fpPk, chainID, height, passphrase)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get private randomness: %w", err)
@@ -216,22 +287,19 @@ func (lm *LocalEOTSManager) SignSchnorrSig(fpPk []byte, msg []byte, passphrase s
 func (lm *LocalEOTSManager) signSchnorrSigFromPrivKey(privKey *btcec.PrivateKey, fpPk []byte, msg []byte) (*schnorr.Signature, error) {
 	// Update metrics
 	lm.metrics.IncrementEotsFpTotalSchnorrSignCounter(hex.EncodeToString(fpPk))
+
 	return schnorr.Sign(privKey, msg)
 }
 
 func (lm *LocalEOTSManager) SignSchnorrSigFromKeyname(keyName, passphrase string, msg []byte) (*schnorr.Signature, *bbntypes.BIP340PubKey, error) {
 	lm.input.Reset(passphrase)
-	k, err := lm.kr.Key(keyName)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load keyring record for key %s: %w", keyName, err)
-	}
 
-	eotsPk, err := loadBIP340PubKeyFromKeyringRecord(k)
+	eotsPk, err := lm.LoadBIP340PubKeyFromKeyName(keyName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	privKey, err := eotsPrivKeyFromRecord(k)
+	privKey, err := lm.eotsPrivKeyFromKeyName(keyName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -240,11 +308,12 @@ func (lm *LocalEOTSManager) SignSchnorrSigFromKeyname(keyName, passphrase string
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to schnorr sign: %w", err)
 	}
+
 	return signature, eotsPk, nil
 }
 
 func (lm *LocalEOTSManager) Close() error {
-	return nil
+	return lm.es.Close()
 }
 
 // getRandomnessPair returns a randomness pair generated based on the given finality provider key, chainID and height
@@ -254,10 +323,10 @@ func (lm *LocalEOTSManager) getRandomnessPair(fpPk []byte, chainID []byte, heigh
 		return nil, nil, err
 	}
 	privRand, pubRand := randgenerator.GenerateRandomness(record.PrivKey.Serialize(), chainID, height)
+
 	return privRand, pubRand, nil
 }
 
-// TODO: we ignore passPhrase in local implementation for now
 func (lm *LocalEOTSManager) KeyRecord(fpPk []byte, passphrase string) (*eotstypes.KeyRecord, error) {
 	name, err := lm.es.GetEOTSKeyName(fpPk)
 	if err != nil {
@@ -283,21 +352,22 @@ func (lm *LocalEOTSManager) getEOTSPrivKey(fpPk []byte, passphrase string) (*btc
 	}
 
 	lm.input.Reset(passphrase)
+
+	return lm.eotsPrivKeyFromKeyName(keyName)
+}
+
+func (lm *LocalEOTSManager) eotsPrivKeyFromKeyName(keyName string) (*btcec.PrivateKey, error) {
 	k, err := lm.kr.Key(keyName)
 	if err != nil {
 		return nil, err
 	}
-
-	return eotsPrivKeyFromRecord(k)
-}
-
-func eotsPrivKeyFromRecord(k *keyring.Record) (*btcec.PrivateKey, error) {
 	privKeyCached := k.GetLocal().PrivKey.GetCachedValue()
 
 	var privKey *btcec.PrivateKey
 	switch v := privKeyCached.(type) {
 	case *secp256k1.PrivKey:
 		privKey, _ = btcec.PrivKeyFromBytes(v.Key)
+
 		return privKey, nil
 	default:
 		return nil, fmt.Errorf("unsupported key type in keyring")
@@ -306,5 +376,10 @@ func eotsPrivKeyFromRecord(k *keyring.Record) (*btcec.PrivateKey, error) {
 
 func (lm *LocalEOTSManager) keyExists(name string) bool {
 	_, err := lm.kr.Key(name)
+
 	return err == nil
+}
+
+func (lm *LocalEOTSManager) ListEOTSKeys() (map[string][]byte, error) {
+	return lm.es.GetAllEOTSKeyNames()
 }

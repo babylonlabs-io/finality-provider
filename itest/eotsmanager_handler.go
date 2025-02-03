@@ -1,9 +1,9 @@
 package e2e_utils
 
 import (
+	"context"
 	"testing"
 
-	"github.com/lightningnetwork/lnd/signal"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -13,54 +13,39 @@ import (
 )
 
 type EOTSServerHandler struct {
-	t           *testing.T
-	interceptor *signal.Interceptor
-	eotsServers []*service.Server
+	t          *testing.T
+	eotsServer *service.Server
+	cfg        *config.Config
 }
 
-func NewEOTSServerHandlerMultiFP(
-	t *testing.T, logger *zap.Logger, configs []*config.Config, eotsHomeDirs []string, shutdownInterceptor *signal.Interceptor,
-) *EOTSServerHandler {
-	eotsServers := make([]*service.Server, 0, len(configs))
-	for i, cfg := range configs {
-		dbBackend, err := cfg.DatabaseConfig.GetDbBackend()
-		require.NoError(t, err)
+func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string) *EOTSServerHandler {
+	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
+	require.NoError(t, err)
+	loggerConfig := zap.NewDevelopmentConfig()
+	loggerConfig.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	logger, err := loggerConfig.Build()
+	require.NoError(t, err)
+	eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, cfg.KeyringBackend, dbBackend, logger)
+	require.NoError(t, err)
 
-		eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomeDirs[i], cfg.KeyringBackend, dbBackend, logger)
-		require.NoError(t, err)
-
-		eotsServer := service.NewEOTSManagerServer(cfg, logger, eotsManager, dbBackend, *shutdownInterceptor)
-		eotsServers = append(eotsServers, eotsServer)
-	}
+	eotsServer := service.NewEOTSManagerServer(cfg, logger, eotsManager, dbBackend)
 
 	return &EOTSServerHandler{
-		t:           t,
-		eotsServers: eotsServers,
-		interceptor: shutdownInterceptor,
+		t:          t,
+		eotsServer: eotsServer,
+		cfg:        cfg,
 	}
 }
 
-func NewEOTSServerHandler(t *testing.T, logger *zap.Logger, cfg *config.Config, eotsHomeDir string) *EOTSServerHandler {
-	// create shutdown interceptor
-	shutdownInterceptor, err := signal.Intercept()
-	require.NoError(t, err)
-	// this need refactor of NewEOTSServerHandler
-	return NewEOTSServerHandlerMultiFP(t, logger, []*config.Config{cfg}, []string{eotsHomeDir}, &shutdownInterceptor)
+func (eh *EOTSServerHandler) Config() *config.Config {
+	return eh.cfg
 }
 
-func (eh *EOTSServerHandler) Start() {
-	go eh.startServer()
+func (eh *EOTSServerHandler) Start(ctx context.Context) {
+	go eh.startServer(ctx)
 }
 
-func (eh *EOTSServerHandler) startServer() {
-	for _, eotsServer := range eh.eotsServers {
-		go func(eotsServer *service.Server) {
-			err := eotsServer.RunUntilShutdown()
-			require.NoError(eh.t, err)
-		}(eotsServer)
-	}
-}
-
-func (eh *EOTSServerHandler) Stop() {
-	eh.interceptor.RequestShutdown()
+func (eh *EOTSServerHandler) startServer(ctx context.Context) {
+	err := eh.eotsServer.RunUntilShutdown(ctx)
+	require.NoError(eh.t, err)
 }

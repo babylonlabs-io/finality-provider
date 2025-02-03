@@ -4,11 +4,12 @@
 package e2etest_bcd
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -18,31 +19,38 @@ import (
 	wasmparams "github.com/CosmWasm/wasmd/app/params"
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	_ "github.com/babylonlabs-io/babylon-sdk/demo/app"
+	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
+	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	cwcc "github.com/babylonlabs-io/finality-provider/clientcontroller/cosmwasm"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
+	"github.com/babylonlabs-io/finality-provider/itest/container"
+	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
-	"github.com/btcsuite/btcd/btcec/v2"
 	dbm "github.com/cosmos/cosmos-db"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zapcore"
-
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+const (
+	passphrase = "testpass"
+	hdPath     = ""
 )
 
 type BcdTestManager struct {
-	BabylonHandler    *e2eutils.BabylonNodeHandler
+	*base_test_manager.BaseTestManager
+	manager           *container.Manager
 	FpConfig          *fpcfg.Config
-	BBNClient         *bbncc.BabylonController
 	BcdHandler        *BcdNodeHandler
 	BcdConsumerClient *cwcc.CosmwasmConsumerController
 	StakingParams     *types.StakingParams
@@ -50,8 +58,8 @@ type BcdTestManager struct {
 	EOTSConfig        *eotsconfig.Config
 	Fpa               *service.FinalityProviderApp
 	EOTSClient        *client.EOTSManagerGRpcClient
-	CovenantPrivKeys  []*btcec.PrivateKey
 	baseDir           string
+	logger            *zap.Logger
 }
 
 func createLogger(t *testing.T, level zapcore.Level) *zap.Logger {
@@ -62,12 +70,14 @@ func createLogger(t *testing.T, level zapcore.Level) *zap.Logger {
 	return logger
 }
 
-func StartBcdTestManager(t *testing.T) *BcdTestManager {
-	// Setup consumer test manager
-	testDir, err := e2eutils.BaseDir("fpe2etest")
+func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
+	testDir, err := base_test_manager.TempDir(t, "fp-e2e-test-*")
 	require.NoError(t, err)
 
-	logger := createLogger(t, zapcore.ErrorLevel)
+	loggerConfig := zap.NewDevelopmentConfig()
+	loggerConfig.Level = zap.NewAtomicLevelAt(zap.ErrorLevel)
+	logger, err := loggerConfig.Build()
+	require.NoError(t, err)
 
 	// 1. generate covenant committee
 	covenantQuorum := 2
@@ -75,19 +85,52 @@ func StartBcdTestManager(t *testing.T) *BcdTestManager {
 	covenantPrivKeys, covenantPubKeys := e2eutils.GenerateCovenantCommittee(numCovenants, t)
 
 	// 2. prepare Babylon node
-	bh := e2eutils.NewBabylonNodeHandler(t, covenantQuorum, covenantPubKeys)
-	err = bh.Start()
+	manager, err := container.NewManager(t)
 	require.NoError(t, err)
+
+	// Create temp dir for babylon node
+	babylonDir, err := base_test_manager.TempDir(t, "babylon-test-*")
+	require.NoError(t, err)
+
+	// Start babylon node in docker
+	babylond, err := manager.RunBabylondResource(t, babylonDir, covenantQuorum, covenantPubKeys)
+	require.NoError(t, err)
+	require.NotNil(t, babylond)
+
+	keyDir := filepath.Join(babylonDir, "node0", "babylond")
 	fpHomeDir := filepath.Join(testDir, "fp-home")
-	cfg := e2eutils.DefaultFpConfig(bh.GetNodeDataDir(), fpHomeDir)
-	bc, err := bbncc.NewBabylonController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
-	require.NoError(t, err)
+	cfg := e2eutils.DefaultFpConfig(keyDir, fpHomeDir)
+
+	// Update ports with dynamically allocated ones from docker
+	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
+	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("localhost:%s", babylond.GetPort("9090/tcp"))
+
+	var bc ccapi.ClientController
+	require.Eventually(t, func() bool {
+		bbnCfg := fpcfg.BBNConfigToBabylonConfig(cfg.BabylonConfig)
+		bbnCl, err := bbnclient.New(&bbnCfg, logger)
+		if err != nil {
+			t.Logf("failed to create Babylon client: %v", err)
+			return false
+		}
+		bc, err = bbncc.NewBabylonController(bbnCl, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		if err != nil {
+			t.Logf("failed to create Babylon controller: %v", err)
+			return false
+		}
+		err = bc.Start()
+		if err != nil {
+			t.Logf("failed to start Babylon controller: %v", err)
+			return false
+		}
+		return true
+	}, 5*time.Second, e2eutils.EventuallyPollTime)
 
 	// 3. setup bcd node
 	wh := NewBcdNodeHandler(t)
 	err = wh.Start()
 	require.NoError(t, err)
-	cfg.CosmwasmConfig = config.DefaultCosmwasmConfig()
+	cfg.CosmwasmConfig = fpcfg.DefaultCosmwasmConfig()
 	cfg.CosmwasmConfig.KeyDirectory = wh.dataDir
 	// make random contract address for now to avoid validation errors, later we will update it with the correct address in the test
 	cfg.CosmwasmConfig.BtcStakingContractAddress = datagen.GenRandomAccount().GetAddress().String()
@@ -103,44 +146,51 @@ func StartBcdTestManager(t *testing.T) *BcdTestManager {
 		TxConfig:          tempApp.TxConfig(),
 		Amino:             tempApp.LegacyAmino(),
 	}
-	wcc, err := cwcc.NewCosmwasmConsumerController(cfg.CosmwasmConfig, encodingCfg, logger)
-	require.NoError(t, err)
+
+	var wcc *cwcc.CosmwasmConsumerController
+	require.Eventually(t, func() bool {
+		wcc, err = cwcc.NewCosmwasmConsumerController(cfg.CosmwasmConfig, encodingCfg, logger)
+		if err != nil {
+			t.Logf("failed to create Cosmwasm consumer controller: %v", err)
+			return false
+		}
+		return true
+	}, 5*time.Second, e2eutils.EventuallyPollTime)
 
 	// 4. prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
 	eotsCfg := eotsconfig.DefaultConfigWithHomePath(eotsHomeDir)
-	eh := e2eutils.NewEOTSServerHandler(t, logger, eotsCfg, eotsHomeDir)
-	eh.Start()
-	// wait for EOTS servers to start
-	// see https://github.com/babylonchain/finality-provider/pull/517
-	var eotsCli *client.EOTSManagerGRpcClient
-	require.Eventually(t, func() bool {
-		eotsCli, err = client.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress)
-		return err == nil
-	}, 5*time.Second, time.Second, "Failed to create EOTS clients")
+	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh.Start(ctx)
+	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener)
+	require.NoError(t, err)
 
 	// 5. prepare finality-provider
-	fpdb, err := cfg.DatabaseConfig.GetDbBackend()
+	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, wcc, eotsCli, fpdb, logger)
 	require.NoError(t, err)
 	err = fpApp.Start()
 	require.NoError(t, err)
 
-	// TODO: setup fp app after contract supports relevant queries
-
 	ctm := &BcdTestManager{
-		BabylonHandler:    bh,
+		BaseTestManager: &base_test_manager.BaseTestManager{
+			BBNClient:        bc.(*bbncc.BabylonController),
+			CovenantPrivKeys: covenantPrivKeys,
+		},
+		manager:           manager,
 		FpConfig:          cfg,
-		BBNClient:         bc,
 		BcdHandler:        wh,
 		BcdConsumerClient: wcc,
 		EOTSServerHandler: eh,
 		EOTSConfig:        eotsCfg,
 		Fpa:               fpApp,
 		EOTSClient:        eotsCli,
-		CovenantPrivKeys:  covenantPrivKeys,
 		baseDir:           testDir,
+		logger:            logger,
 	}
 
 	ctm.WaitForServicesStart(t)
@@ -173,73 +223,71 @@ func (ctm *BcdTestManager) WaitForServicesStart(t *testing.T) {
 func (ctm *BcdTestManager) Stop(t *testing.T) {
 	err := ctm.Fpa.Stop()
 	require.NoError(t, err)
-	err = ctm.BabylonHandler.Stop()
+	err = ctm.manager.ClearResources()
 	require.NoError(t, err)
-	ctm.EOTSServerHandler.Stop()
-	ctm.BcdHandler.Stop(t)
 	err = os.RemoveAll(ctm.baseDir)
 	require.NoError(t, err)
 }
 
-func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consumerId string, n int) []*service.FinalityProviderInstance {
+// CreateConsumerFinalityProviders creates finality providers for a consumer chain
+// and registers them in Babylon and consumer smart contract
+func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consumerId string) *service.FinalityProviderInstance {
 	app := ctm.Fpa
 	cfg := app.GetConfig()
 	keyName := cfg.BabylonConfig.Key
 
 	// register all finality providers
-	fpPKs := make([]*bbntypes.BIP340PubKey, 0, n)
-	for i := 0; i < n; i++ {
-		moniker := e2eutils.MonikerPrefix + consumerId + "-" + strconv.Itoa(i)
-		commission := sdkmath.LegacyZeroDec()
-		desc := e2eutils.NewDescription(moniker)
+	moniker := e2eutils.MonikerPrefix + consumerId + "-" + strconv.Itoa(0)
+	commission := sdkmath.LegacyZeroDec()
+	desc := e2eutils.NewDescription(moniker)
 
-		res, err := app.CreateFinalityProvider(keyName, consumerId, e2eutils.Passphrase, e2eutils.HdPath, nil, desc, &commission)
-		require.NoError(t, err)
-		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(res.FpInfo.BtcPkHex)
-		require.NoError(t, err)
-		fpPKs = append(fpPKs, fpPk)
-		_, err = app.RegisterFinalityProvider(fpPk.MarshalHex())
-		require.NoError(t, err)
-	}
+	eotsPk, err := ctm.EOTSClient.CreateKey(keyName, passphrase, hdPath)
+	require.NoError(t, err)
+	eotsPubKey, err := bbntypes.NewBIP340PubKey(eotsPk)
+	require.NoError(t, err)
 
-	for i := 0; i < n; i++ {
-		// start
-		err := app.StartHandlingFinalityProvider(fpPKs[i], e2eutils.Passphrase)
-		require.NoError(t, err)
-		fpIns, err := app.GetFinalityProviderInstance(fpPKs[i])
-		require.NoError(t, err)
-		require.True(t, fpIns.IsRunning())
-		require.NoError(t, err)
-	}
+	// inject fp in smart contract using admin
+	fpMsg := e2eutils.GenBtcStakingFpExecMsg(eotsPubKey.MarshalHex())
+	fpMsgBytes, err := json.Marshal(fpMsg)
+	require.NoError(t, err)
+	_, err = ctm.BcdConsumerClient.ExecuteContract(fpMsgBytes)
+	require.NoError(t, err)
 
-	// check finality providers on Babylon side
+	// register fp in Babylon
+	_, err = app.CreateFinalityProvider(keyName, consumerId, passphrase, eotsPubKey, desc, &commission)
+	require.NoError(t, err)
+
+	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
+
+	err = app.StartFinalityProvider(eotsPubKey, passphrase)
+	require.NoError(t, err)
+
+	fpIns, err := app.GetFinalityProviderInstance()
+	require.NoError(t, err)
+	require.True(t, fpIns.IsRunning())
+
+	// ensure finality providers are registered in smart contract
 	require.Eventually(t, func() bool {
-		fps, err := ctm.BBNClient.QueryConsumerFinalityProviders(consumerId)
+		consumerFpsResp, err := ctm.BcdConsumerClient.QueryFinalityProviders()
 		if err != nil {
-			t.Logf("failed to query finality providers from Babylon %s", err.Error())
+			t.Logf("failed to query finality providers from consumer contract: %s", err.Error())
 			return false
 		}
-
-		if len(fps) != n {
+		if consumerFpsResp == nil {
 			return false
 		}
-
-		for _, fp := range fps {
-			if !strings.Contains(fp.Description.Moniker, e2eutils.MonikerPrefix) {
-				return false
-			}
-			if !fp.Commission.Equal(sdkmath.LegacyZeroDec()) {
-				return false
-			}
+		if len(consumerFpsResp.Fps) != 1 {
+			return false
 		}
-
+		// verify each FP matches the expected public key
+		if consumerFpsResp.Fps[0].BtcPkHex != eotsPubKey.MarshalHex() {
+			return false
+		}
 		return true
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 
-	fpInsList := app.ListFinalityProviderInstancesForChain(consumerId)
-	require.Equal(t, n, len(fpInsList))
+	t.Logf("the consumer test manager is running with %v finality-provider(s)", 1)
 
-	t.Logf("the consumer test manager is running with %v finality-provider(s)", len(fpInsList))
-
-	return fpInsList
+	return fpIns
 }

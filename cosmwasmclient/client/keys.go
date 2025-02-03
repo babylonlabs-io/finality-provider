@@ -15,8 +15,9 @@ func (c *Client) GetAddr() (string, error) {
 func (c *Client) MustGetAddr() string {
 	addr, err := c.provider.Address()
 	if err != nil {
-		panic(fmt.Errorf("failed to get signer: %v", err))
+		panic(fmt.Errorf("failed to get signer: %w", err))
 	}
+
 	return addr
 }
 

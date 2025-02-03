@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	bcdRpcPort int = 3990
-	bcdP2pPort int = 3991
-	bcdChainID     = "bcd-test"
+	bcdRpcPort    int = 3990
+	bcdP2pPort    int = 3991
+	bcdChainID        = "bcd-test"
+	bcdConsumerID     = "09-localhost" // TODO: mock a real consumer ID
 )
 
 type BcdNodeHandler struct {
@@ -251,8 +252,9 @@ func bcdStartCmd(t *testing.T, testDir string) *exec.Cmd {
 		"--home", testDir,
 		"--rpc.laddr", fmt.Sprintf("tcp://0.0.0.0:%d", bcdRpcPort),
 		"--p2p.laddr", fmt.Sprintf("tcp://0.0.0.0:%d", bcdP2pPort),
-		"--log_level=trace",
-		"--trace",
+		// "--log_level=trace",
+		// "--trace",
+		"--log_level=debug",
 	}
 
 	f, err := os.Create(filepath.Join(testDir, "bcd.log"))

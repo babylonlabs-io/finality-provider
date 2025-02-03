@@ -8,7 +8,7 @@ import (
 	"github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcwallet/walletdb"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/lightningnetwork/lnd/signal"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
@@ -32,10 +32,12 @@ func CommandStart() *cobra.Command {
 	cmd.Flags().String(fpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
 	cmd.Flags().String(passphraseFlag, "", "The pass phrase used to decrypt the private key")
 	cmd.Flags().String(rpcListenerFlag, "", "The address that the RPC server listens to")
+	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
+
 	return cmd
 }
 
-func runStartCmd(ctx client.Context, cmd *cobra.Command, args []string) error {
+func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	homePath, err := filepath.Abs(ctx.HomeDir)
 	if err != nil {
 		return err
@@ -68,7 +70,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("invalid RPC listener address %s, %w", rpcListener, err)
 		}
-		cfg.RpcListener = rpcListener
+		cfg.RPCListener = rpcListener
 	}
 
 	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.LogLevel)
@@ -76,7 +78,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to initialize the logger: %w", err)
 	}
 
-	dbBackend, err := cfg.DatabaseConfig.GetDbBackend()
+	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
 	if err != nil {
 		return fmt.Errorf("failed to create db backend: %w", err)
 	}
@@ -90,14 +92,9 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to start app: %w", err)
 	}
 
-	// Hook interceptor for os signals.
-	shutdownInterceptor, err := signal.Intercept()
-	if err != nil {
-		return err
-	}
+	fpServer := service.NewFinalityProviderServer(cfg, logger, fpApp, dbBackend)
 
-	fpServer := service.NewFinalityProviderServer(cfg, logger, fpApp, dbBackend, shutdownInterceptor)
-	return fpServer.RunUntilShutdown()
+	return fpServer.RunUntilShutdown(cmd.Context())
 }
 
 // loadApp initialize an finality provider app based on config and flags set.
@@ -108,7 +105,7 @@ func loadApp(
 ) (*service.FinalityProviderApp, error) {
 	fpApp, err := service.NewFinalityProviderAppFromConfig(cfg, dbBackend, logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create finality-provider app: %v", err)
+		return nil, fmt.Errorf("failed to create finality-provider app: %w", err)
 	}
 
 	return fpApp, nil
@@ -119,23 +116,38 @@ func startApp(
 	fpApp *service.FinalityProviderApp,
 	fpPkStr, passphrase string,
 ) error {
-	// only start the app without starting any finality-provider instance
-	// as there might be no finality-provider registered yet
+	// only start the app without starting any finality provider instance
+	// this is needed for new finality provider registration or unjailing
+	// finality providers
 	if err := fpApp.Start(); err != nil {
-		return fmt.Errorf("failed to start the finality-provider app: %w", err)
+		return fmt.Errorf("failed to start the finality provider app: %w", err)
 	}
 
+	// fp instance will be started if public key is specified
 	if fpPkStr != "" {
 		// start the finality-provider instance with the given public key
 		fpPk, err := types.NewBIP340PubKeyFromHex(fpPkStr)
 		if err != nil {
-			return fmt.Errorf("invalid finality-provider public key %s: %w", fpPkStr, err)
+			return fmt.Errorf("invalid finality provider public key %s: %w", fpPkStr, err)
 		}
 
-		if err := fpApp.StartHandlingFinalityProvider(fpPk, passphrase); err != nil {
-			return fmt.Errorf("failed to start the finality-provider instance %s: %w", fpPkStr, err)
-		}
+		return fpApp.StartFinalityProvider(fpPk, passphrase)
 	}
 
-	return fpApp.StartHandlingAll()
+	storedFps, err := fpApp.GetFinalityProviderStore().GetAllStoredFinalityProviders()
+	if err != nil {
+		return err
+	}
+
+	if len(storedFps) == 1 {
+		return fpApp.StartFinalityProvider(types.NewBIP340PubKeyFromBTCPK(storedFps[0].BtcPk), passphrase)
+	}
+
+	if len(storedFps) > 1 {
+		return fmt.Errorf("%d finality providers found in DB. Please specify the EOTS public key", len(storedFps))
+	}
+
+	fpApp.Logger().Info("No finality providers found in DB. Waiting for registration.")
+
+	return nil
 }

@@ -26,6 +26,7 @@ func (c *QueryClient) ListCodes(pagination *sdkquerytypes.PageRequest) (*wasmtyp
 			Pagination: pagination,
 		}
 		resp, err = queryClient.Codes(ctx, req)
+
 		return err
 	})
 
@@ -41,6 +42,7 @@ func (c *QueryClient) ListContractsByCode(codeID uint64, pagination *sdkquerytyp
 			Pagination: pagination,
 		}
 		resp, err = queryClient.ContractsByCode(ctx, req)
+
 		return err
 	})
 
@@ -56,6 +58,7 @@ func (c *QueryClient) QuerySmartContractState(contractAddress string, queryData 
 			QueryData: wasmtypes.RawContractMessage(queryData),
 		}
 		resp, err = queryClient.SmartContractState(ctx, req)
+
 		return err
 	})
 

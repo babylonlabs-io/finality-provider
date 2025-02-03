@@ -17,8 +17,9 @@ import (
 func ToProviderMsgs(msgs []sdk.Msg) []pv.RelayerMessage {
 	relayerMsgs := []pv.RelayerMessage{}
 	for _, m := range msgs {
-		relayerMsgs = append(relayerMsgs, cosmos.NewCosmosMessage(m, func(signer string) {}))
+		relayerMsgs = append(relayerMsgs, cosmos.NewCosmosMessage(m, func(_ string) {}))
 	}
+
 	return relayerMsgs
 }
 
@@ -42,11 +43,13 @@ func (c *Client) SendMsgsToMempool(ctx context.Context, msgs []sdk.Msg) error {
 		})
 		if krErr != nil {
 			c.logger.Error("unrecoverable err when submitting the tx, skip retrying", zap.Error(krErr))
+
 			return retry.Unrecoverable(krErr)
 		}
+
 		return sendMsgErr
 	}, retry.Context(ctx), rtyAtt, rtyDel, rtyErr, retry.OnRetry(func(n uint, err error) {
-		c.logger.Debug("retrying", zap.Uint("attemp", n+1), zap.Uint("max_attempts", rtyAttNum), zap.Error(err))
+		c.logger.Debug("retrying", zap.Uint("attempt", n+1), zap.Uint("max_attempts", rtyAttNum), zap.Error(err))
 	})); err != nil {
 		return err
 	}
@@ -93,11 +96,13 @@ func (c *Client) ReliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedE
 		})
 		if krErr != nil {
 			c.logger.Error("unrecoverable err when submitting the tx, skip retrying", zap.Error(krErr))
+
 			return retry.Unrecoverable(krErr)
 		}
 		if sendMsgErr != nil {
 			if errorContained(sendMsgErr, unrecoverableErrors) {
 				c.logger.Error("unrecoverable err when submitting the tx, skip retrying", zap.Error(sendMsgErr))
+
 				return retry.Unrecoverable(sendMsgErr)
 			}
 			if errorContained(sendMsgErr, expectedErrors) {
@@ -106,13 +111,16 @@ func (c *Client) ReliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedE
 				// that the inside wg.Done will not be executed
 				wg.Done()
 				c.logger.Error("expected err when submitting the tx, skip retrying", zap.Error(sendMsgErr))
+
 				return nil
 			}
+
 			return sendMsgErr
 		}
+
 		return nil
 	}, retry.Context(ctx), rtyAtt, rtyDel, rtyErr, retry.OnRetry(func(n uint, err error) {
-		c.logger.Debug("retrying", zap.Uint("attemp", n+1), zap.Uint("max_attempts", rtyAttNum), zap.Error(err))
+		c.logger.Debug("retrying", zap.Uint("attempt", n+1), zap.Uint("max_attempts", rtyAttNum), zap.Error(err))
 	})); err != nil {
 		return nil, err
 	}
@@ -123,6 +131,7 @@ func (c *Client) ReliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedE
 		if errorContained(callbackErr, expectedErrors) {
 			return nil, nil
 		}
+
 		return nil, callbackErr
 	}
 

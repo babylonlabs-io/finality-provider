@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/babylonlabs-io/finality-provider/eotsmanager/proto";
+
+// SigningRecord represents a record of a signing operation.
+// it is keyed by (chain_id || public_key || height)
+message SigningRecord {
+  // msg is the message that the signature is signed over
+  bytes msg = 1;
+  // eots_sig is the eots signature
+  bytes eots_sig = 2;
+  // timestamp is the timestamp of the signing operation, in Unix seconds.
+  int64 timestamp = 3;
+}

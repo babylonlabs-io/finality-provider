@@ -4,12 +4,14 @@ import (
 	"context"
 	"os"
 
+	"github.com/babylonlabs-io/babylon/app/params"
+	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/std"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/babylonlabs-io/babylon/app"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 )
 
@@ -18,17 +20,15 @@ import (
 // and exists a value in the config that could be used, it will be set in the ctx.
 func PersistClientCtx(ctx client.Context) func(cmd *cobra.Command, _ []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
-		// TODO(verify): if it uses the default encoding config it fails to list keys! output:
-		// "xx" is not a valid name or address: unable to unmarshal item.Data:
-		// Bytes left over in UnmarshalBinaryLengthPrefixed, should read 10 more bytes but have 154
-		// [cosmos/cosmos-sdk@v0.50.6/crypto/keyring/keyring.go:973
-		tempApp := app.NewTmpBabylonApp()
+		encCfg := params.DefaultEncodingConfig()
+		std.RegisterInterfaces(encCfg.InterfaceRegistry)
+		bstypes.RegisterInterfaces(encCfg.InterfaceRegistry)
 
 		ctx = ctx.
-			WithCodec(tempApp.AppCodec()).
-			WithInterfaceRegistry(tempApp.InterfaceRegistry()).
-			WithTxConfig(tempApp.TxConfig()).
-			WithLegacyAmino(tempApp.LegacyAmino()).
+			WithCodec(encCfg.Codec).
+			WithInterfaceRegistry(encCfg.InterfaceRegistry).
+			WithTxConfig(encCfg.TxConfig).
+			WithLegacyAmino(encCfg.Amino).
 			WithInput(os.Stdin)
 
 		// ensure cmd context is not nil. Later it will be replaced
@@ -39,7 +39,6 @@ func PersistClientCtx(ctx client.Context) func(cmd *cobra.Command, _ []string) e
 		cmd.SetOut(cmd.OutOrStdout())
 		cmd.SetErr(cmd.ErrOrStderr())
 
-		ctx = ctx.WithCmdContext(cmd.Context())
 		if err := client.SetCmdClientContextHandler(ctx, cmd); err != nil {
 			return err
 		}
@@ -48,6 +47,7 @@ func PersistClientCtx(ctx client.Context) func(cmd *cobra.Command, _ []string) e
 		// check the config file exists
 		cfg, err := fpcfg.LoadConfig(ctx.HomeDir)
 		if err != nil {
+			//nolint:nilerr
 			return nil // if no conifg is found just stop.
 		}
 

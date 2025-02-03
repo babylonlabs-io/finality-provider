@@ -25,19 +25,16 @@ const (
 	defaultFinalityProviderKeyName     = "finality-provider"
 	DefaultRPCPort                     = 12581
 	defaultConfigFileName              = "fpd.conf"
-	defaultNumPubRand                  = 70000 // support running of 1 week with block production time as 10s
+	defaultNumPubRand                  = 10000 // support running of roughly 1 day with block production time as 10s
 	defaultNumPubRandMax               = 100000
-	defaultMinRandHeightGap            = 35000
+	defaultTimestampingDelayBlocks     = 6000 // 100 BTC blocks * 600s / 10s
 	defaultBatchSubmissionSize         = 1000
-	defaultStatusUpdateInterval        = 20 * time.Second
 	defaultRandomInterval              = 30 * time.Second
 	defaultSubmitRetryInterval         = 1 * time.Second
-	defaultSyncFpStatusInterval        = 30 * time.Second
 	defaultSignatureSubmissionInterval = 1 * time.Second
 	defaultMaxSubmissionRetries        = 20
 	defaultBitcoinNetwork              = "signet"
 	defaultDataDirname                 = "data"
-	defaultMaxNumFinalityProviders     = 3
 )
 
 var (
@@ -48,7 +45,7 @@ var (
 
 	defaultBTCNetParams       = chaincfg.SigNetParams
 	defaultEOTSManagerAddress = "127.0.0.1:" + strconv.Itoa(eotscfg.DefaultRPCPort)
-	DefaultRpcListener        = "127.0.0.1:" + strconv.Itoa(DefaultRPCPort)
+	DefaultRPCListener        = "127.0.0.1:" + strconv.Itoa(DefaultRPCPort)
 	DefaultDataDir            = DataDir(DefaultFpdDir)
 )
 
@@ -56,18 +53,15 @@ var (
 type Config struct {
 	LogLevel string `long:"loglevel" description:"Logging level for all subsystems" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal"`
 	// ChainType and ChainID (if any) of the chain config identify a consumer chain
-	ChainType                   string        `long:"chaintype" description:"the type of the consumer chain" choice:"babylon" choice:"OPStackL2" choice:"wasm"`
+	ChainType                   string        `long:"chaintype" description:"the type of the consumer chain" choice:"babylon"`
 	NumPubRand                  uint32        `long:"numPubRand" description:"The number of Schnorr public randomness for each commitment"`
 	NumPubRandMax               uint32        `long:"numpubrandmax" description:"The upper bound of the number of Schnorr public randomness for each commitment"`
-	MinRandHeightGap            uint32        `long:"minrandheightgap" description:"The minimum gap between the last committed rand height and the current Babylon block height"`
+	TimestampingDelayBlocks     uint32        `long:"timestampingdelayblocks" description:"The delay, measured in blocks, between a randomness commit submission and the randomness is BTC-timestamped"`
 	MaxSubmissionRetries        uint32        `long:"maxsubmissionretries" description:"The maximum number of retries to submit finality signature or public randomness"`
 	EOTSManagerAddress          string        `long:"eotsmanageraddress" description:"The address of the remote EOTS manager; Empty if the EOTS manager is running locally"`
 	BatchSubmissionSize         uint32        `long:"batchsubmissionsize" description:"The size of a batch in one submission"`
-	MaxNumFinalityProviders     uint32        `long:"maxnumfinalityproviders" description:"The maximum number of finality-provider instances running concurrently within the daemon"`
-	StatusUpdateInterval        time.Duration `long:"statusupdateinterval" description:"The interval between each update of finality-provider status"`
 	RandomnessCommitInterval    time.Duration `long:"randomnesscommitinterval" description:"The interval between each attempt to commit public randomness"`
 	SubmissionRetryInterval     time.Duration `long:"submissionretryinterval" description:"The interval between each attempt to submit finality signature or public randomness after a failure"`
-	SyncFpStatusInterval        time.Duration `long:"syncfpstatusinterval" description:"The duration of time that it should sync FP status with the client blockchain"`
 	SignatureSubmissionInterval time.Duration `long:"signaturesubmissioninterval" description:"The interval between each finality signature(s) submission"`
 
 	BitcoinNetwork string `long:"bitcoinnetwork" description:"Bitcoin network to run on" choise:"mainnet" choice:"regtest" choice:"testnet" choice:"simnet" choice:"signet"`
@@ -84,7 +78,7 @@ type Config struct {
 
 	CosmwasmConfig *CosmwasmConfig `group:"wasm" namespace:"wasm"`
 
-	RpcListener string `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
+	RPCListener string `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
 
 	Metrics *metrics.Config `group:"metrics" namespace:"metrics"`
 }
@@ -102,9 +96,8 @@ func DefaultConfigWithHome(homePath string) Config {
 		PollerConfig:                &pollerCfg,
 		NumPubRand:                  defaultNumPubRand,
 		NumPubRandMax:               defaultNumPubRandMax,
-		MinRandHeightGap:            defaultMinRandHeightGap,
+		TimestampingDelayBlocks:     defaultTimestampingDelayBlocks,
 		BatchSubmissionSize:         defaultBatchSubmissionSize,
-		StatusUpdateInterval:        defaultStatusUpdateInterval,
 		RandomnessCommitInterval:    defaultRandomInterval,
 		SubmissionRetryInterval:     defaultSubmitRetryInterval,
 		SignatureSubmissionInterval: defaultSignatureSubmissionInterval,
@@ -112,10 +105,8 @@ func DefaultConfigWithHome(homePath string) Config {
 		BitcoinNetwork:              defaultBitcoinNetwork,
 		BTCNetParams:                defaultBTCNetParams,
 		EOTSManagerAddress:          defaultEOTSManagerAddress,
-		RpcListener:                 DefaultRpcListener,
+		RPCListener:                 DefaultRPCListener,
 		Metrics:                     metrics.DefaultFpConfig(),
-		SyncFpStatusInterval:        defaultSyncFpStatusInterval,
-		MaxNumFinalityProviders:     defaultMaxNumFinalityProviders,
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -129,7 +120,7 @@ func DefaultConfig() Config {
 	return DefaultConfigWithHome(DefaultFpdDir)
 }
 
-func ConfigFile(homePath string) string {
+func CfgFile(homePath string) string {
 	return filepath.Join(homePath, defaultConfigFileName)
 }
 
@@ -156,7 +147,7 @@ func DataDir(homePath string) string {
 func LoadConfig(homePath string) (*Config, error) {
 	// The home directory is required to have a configuration file with a specific name
 	// under it.
-	cfgFile := ConfigFile(homePath)
+	cfgFile := CfgFile(homePath)
 	if !util.FileExists(cfgFile) {
 		return nil, fmt.Errorf("specified config file does "+
 			"not exist in %s", cfgFile)
@@ -194,9 +185,9 @@ func (cfg *Config) Validate() error {
 	}
 	cfg.BTCNetParams = btcNetConfig
 
-	_, err = net.ResolveTCPAddr("tcp", cfg.RpcListener)
+	_, err = net.ResolveTCPAddr("tcp", cfg.RPCListener)
 	if err != nil {
-		return fmt.Errorf("invalid RPC listener address %s, %w", cfg.RpcListener, err)
+		return fmt.Errorf("invalid RPC listener address %s, %w", cfg.RPCListener, err)
 	}
 
 	if cfg.Metrics == nil {
@@ -204,7 +195,11 @@ func (cfg *Config) Validate() error {
 	}
 
 	if err := cfg.Metrics.Validate(); err != nil {
-		return fmt.Errorf("invalid metrics config")
+		return fmt.Errorf("invalid metrics config: %w", err)
+	}
+
+	if err := cfg.PollerConfig.Validate(); err != nil {
+		return fmt.Errorf("invalid poller config: %w", err)
 	}
 
 	// All good, return the sanitized result.
@@ -212,7 +207,7 @@ func (cfg *Config) Validate() error {
 }
 
 // NetParamsBTC parses the BTC net params from config.
-func NetParamsBTC(btcNet string) (p chaincfg.Params, err error) {
+func NetParamsBTC(btcNet string) (chaincfg.Params, error) {
 	switch btcNet {
 	case "mainnet":
 		return chaincfg.MainNetParams, nil
@@ -225,6 +220,6 @@ func NetParamsBTC(btcNet string) (p chaincfg.Params, err error) {
 	case "signet":
 		return chaincfg.SigNetParams, nil
 	default:
-		return p, fmt.Errorf("invalid network: %v", btcNet)
+		return chaincfg.Params{}, fmt.Errorf("invalid network: %v", btcNet)
 	}
 }

@@ -20,6 +20,7 @@ func (prc *PubRandCommit) Validate() error {
 	if prc.NumPubRand < 1 {
 		return fmt.Errorf("NumPubRand must be >= 1, got %d", prc.NumPubRand)
 	}
+
 	return nil
 }
 
@@ -35,5 +36,6 @@ func GetPubRandCommitAndProofs(pubRandList []*btcec.FieldVal) ([]byte, []*merkle
 	for _, pr := range pubRandList {
 		prBytesList = append(prBytesList, bbn.NewSchnorrPubRandFromFieldVal(pr).MustMarshal())
 	}
+
 	return merkle.ProofsFromByteSlices(prBytesList)
 }
