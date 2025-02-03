@@ -56,7 +56,7 @@ from transitioning to the second phase.
 If you already have set up a key during Phase-1, please proceed to 
 [Adding Keys](#32-add-an-eots-key) to import your Phase-1 key.
 
-## 2. Install Finality Provider Toolset 
+## 2. Install Finality Provider Toolset
 <!-- TODO: check add in the correct tag for the testnet --> 
 
 The finality provider toolset requires [Golang 1.23](https://go.dev/dl)
@@ -72,13 +72,12 @@ go version
 
 Subsequently, clone the finality provider 
 [repository](https://github.com/babylonlabs-io/finality-provider) and checkout
-to the tag you want to install.
+to `v0.14.4`.
 
 ```shell 
 git clone https://github.com/babylonlabs-io/finality-provider.git
 cd finality-provider
-# Use the valid tag for the network
-git checkout <tag>
+git checkout v0.14.4
 ```
 
 ### 2.2. Install Finality Provider Toolset Binaries
@@ -103,15 +102,10 @@ Run the following command to verify the installation:
 
 ```shell 
 fpd version
+Version:       0.14.4
+Git Commit:    c8c41f0
+Git Timestamp: 2025-01-27T14:17:02Z
 ``` 
-
-The expected output should be:
-
-```shell
-# example output
-version: v0.11.0 
-commit: 7d37c88e9a33c0b6a86614f743e9426ce6e31d4a
-```
 
 If your shell cannot find the installed binaries, make sure `$GOPATH/bin` is in
 the `$PATH` of your shell. Use the following command to add it to your profile 
@@ -435,6 +429,14 @@ An example of the `--home` flag is `--home ./fpHome`.
 The command flags:
 - `start`: Runs the FPD daemon
 - `--home`: Specifies the directory for daemon data and configuration
+- `--eots-pk`: The finality provider instance that will be started identified
+  by the EOTS public key.
+
+It will start the finality provider daemon listening for registration and other
+operations. If there is already a finality provider created (described in a
+later [section](#51-create-finality-provider)), `fpd start` will also start
+the finality provider. If there are multiple finality providers created,
+`--eots-pk` is required.
 
 The daemon will establish a connection with the Babylon node and
 boot up its RPC server for executing CLI requests.
@@ -735,7 +737,7 @@ For a complete list of available metrics, see:
 - Finality Provider metrics: [fp_collectors.go](../metrics/fp_collectors.go)
 - EOTS metrics: [eots_collectors.go](../metrics/eots_collectors.go)
 
-### 5.6. Withdrawing Rewards
+### 5.7. Withdrawing Rewards
 
 When you are ready to withdraw your rewards, you have the option first to set
 the address to withdraw your rewards to.
