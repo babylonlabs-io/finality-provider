@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Improvements
 
 * [#314](https://github.com/babylonlabs-io/finality-provider/pull/314) nit: Dockerfile AS casing
+* [#320](https://github.com/babylonlabs-io/finality-provider/pull/320) chore: show `pubkey_hex` at `eotsd keys show` and `eotsd keys list`
 
 ## v0.15.0
 

@@ -62,9 +62,11 @@ func NewKeysCmd() *cobra.Command {
 						if err != nil {
 							return err
 						}
+
 						return printFromKey(cmd, r.Name, eotsPk)
 					}
 				}
+
 				return fmt.Errorf("key not found: %s", args[0])
 			}
 
