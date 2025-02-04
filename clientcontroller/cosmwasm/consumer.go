@@ -276,7 +276,7 @@ func (wc *CosmwasmConsumerController) QueryBlocks(startHeight, endHeight uint64,
 }
 
 func (wc *CosmwasmConsumerController) QueryBlock(height uint64) (*fptypes.BlockInfo, error) {
-	block, err := wc.cwClient.GetBlock(int64(height)) // #nosec G115
+	block, err := wc.cwClient.GetBlock(context.Background(), int64(height)) // #nosec G115
 	if err != nil {
 		return nil, err
 	}
@@ -573,31 +573,31 @@ func (wc *CosmwasmConsumerController) ExecuteContract(msgBytes []byte) (*babylon
 // QuerySmartContractState queries the smart contract state
 // NOTE: this function is only meant to be used in tests.
 func (wc *CosmwasmConsumerController) QuerySmartContractState(contractAddress string, queryData string) (*wasmdtypes.QuerySmartContractStateResponse, error) {
-	return wc.cwClient.QuerySmartContractState(contractAddress, queryData)
+	return wc.cwClient.QuerySmartContractState(context.Background(), contractAddress, queryData)
 }
 
 // StoreWasmCode stores the wasm code on the consumer chain
 // NOTE: this function is only meant to be used in tests.
 func (wc *CosmwasmConsumerController) StoreWasmCode(wasmFile string) error {
-	return wc.cwClient.StoreWasmCode(wasmFile)
+	return wc.cwClient.StoreWasmCode(context.Background(), wasmFile)
 }
 
 // InstantiateContract instantiates a contract with the given code id and init msg
 // NOTE: this function is only meant to be used in tests.
 func (wc *CosmwasmConsumerController) InstantiateContract(codeID uint64, initMsg []byte) error {
-	return wc.cwClient.InstantiateContract(codeID, initMsg)
+	return wc.cwClient.InstantiateContract(context.Background(), codeID, initMsg)
 }
 
 // GetLatestCodeID returns the latest wasm code id.
 // NOTE: this function is only meant to be used in tests.
 func (wc *CosmwasmConsumerController) GetLatestCodeID() (uint64, error) {
-	return wc.cwClient.GetLatestCodeID()
+	return wc.cwClient.GetLatestCodeID(context.Background())
 }
 
 // ListContractsByCode lists all contracts by wasm code id
 // NOTE: this function is only meant to be used in tests.
 func (wc *CosmwasmConsumerController) ListContractsByCode(codeID uint64, pagination *sdkquerytypes.PageRequest) (*wasmdtypes.QueryContractsByCodeResponse, error) {
-	return wc.cwClient.ListContractsByCode(codeID, pagination)
+	return wc.cwClient.ListContractsByCode(context.Background(), codeID, pagination)
 }
 
 // SetBtcStakingContractAddress updates the BtcStakingContractAddress in the configuration
@@ -615,7 +615,7 @@ func (wc *CosmwasmConsumerController) MustGetValidatorAddress() string {
 // GetCometNodeStatus gets the tendermint node status of the consumer chain
 // NOTE: this function is only meant to be used in tests.
 func (wc *CosmwasmConsumerController) GetCometNodeStatus() (*coretypes.ResultStatus, error) {
-	return wc.cwClient.GetStatus()
+	return wc.cwClient.GetStatus(context.Background())
 }
 
 // QueryIndexedBlock queries the indexed block at a given height

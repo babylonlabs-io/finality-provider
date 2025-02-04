@@ -1,7 +1,6 @@
 package query
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -62,12 +61,4 @@ func (c *QueryClient) Stop() error {
 
 func (c *QueryClient) IsRunning() bool {
 	return c.RPCClient.IsRunning()
-}
-
-// getQueryContext returns a context that uses the timeout from the config
-// (adapted from https://github.com/strangelove-ventures/lens/blob/v0.5.4/client/query/query_options.go#L29-L36)
-func (c *QueryClient) getQueryContext() (context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-
-	return ctx, cancel
 }

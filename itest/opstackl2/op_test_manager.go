@@ -91,7 +91,7 @@ func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTe
 	require.NoError(t, err)
 
 	// deploy finality gadget cw contract
-	opFinalityGadgetAddress := deployCwContract(t, cwClient)
+	opFinalityGadgetAddress := deployCwContract(t, cwClient, ctx)
 	t.Logf(log.Prefix("op-finality-gadget contract address: %s"), opFinalityGadgetAddress)
 
 	// register consumer chain to Babylon
@@ -328,14 +328,14 @@ func createConsumerFpConfig(
 	return cfg, opConsumerCfg
 }
 
-func deployCwContract(t *testing.T, cwClient *cwclient.Client) string {
+func deployCwContract(t *testing.T, cwClient *cwclient.Client, ctx context.Context) string {
 	// store op-finality-gadget contract
-	err := cwClient.StoreWasmCode(opFinalityGadgetContractPath)
+	err := cwClient.StoreWasmCode(ctx, opFinalityGadgetContractPath)
 	require.NoError(t, err)
 
 	var codeId uint64
 	require.Eventually(t, func() bool {
-		codeId, _ = cwClient.GetLatestCodeID()
+		codeId, _ = cwClient.GetLatestCodeID(ctx)
 		return codeId > 0
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 	require.Equal(t, uint64(1), codeId, "first deployed contract code_id should be 1")
@@ -348,12 +348,13 @@ func deployCwContract(t *testing.T, cwClient *cwclient.Client) string {
 	}
 	opFinalityGadgetInitMsgBytes, err := json.Marshal(opFinalityGadgetInitMsg)
 	require.NoError(t, err)
-	err = cwClient.InstantiateContract(codeId, opFinalityGadgetInitMsgBytes)
+	err = cwClient.InstantiateContract(ctx, codeId, opFinalityGadgetInitMsgBytes)
 	require.NoError(t, err)
 
 	var listContractsResponse *wasmtypes.QueryContractsByCodeResponse
 	require.Eventually(t, func() bool {
 		listContractsResponse, err = cwClient.ListContractsByCode(
+			ctx,
 			codeId,
 			&sdkquerytypes.PageRequest{},
 		)
@@ -459,6 +460,7 @@ func (ctm *OpL2ConsumerTestManager) delegateBTCAndWaitForActivation(t *testing.T
 func (ctm *OpL2ConsumerTestManager) queryCwContract(
 	t *testing.T,
 	queryMsg map[string]interface{},
+	ctx context.Context,
 ) *wasmtypes.QuerySmartContractStateResponse {
 	// create cosmwasm client
 	cwConfig := ctm.OpConsumerController.Cfg.ToCosmwasmConfig()
@@ -472,6 +474,7 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 	var queryResponse *wasmtypes.QuerySmartContractStateResponse
 	require.Eventually(t, func() bool {
 		queryResponse, err = cwClient.QuerySmartContractState(
+			ctx,
 			ctm.OpConsumerController.Cfg.OPFinalityGadgetAddress,
 			string(queryMsgBytes),
 		)

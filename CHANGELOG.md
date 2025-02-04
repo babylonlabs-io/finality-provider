@@ -39,6 +39,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
+* [#62](https://github.com/babylonlabs-io/finality-provider/pull/62) **Consumer chain support.**
+This PR contains a series of PRs on BTC staking integration, with support for OP stack chains and
+Cosmos chains.
 * [#314](https://github.com/babylonlabs-io/finality-provider/pull/314) nit: Dockerfile AS casing
 
 ## v0.15.0

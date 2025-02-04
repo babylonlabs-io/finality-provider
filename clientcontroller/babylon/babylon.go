@@ -53,22 +53,6 @@ func NewBabylonController(
 	btcParams *chaincfg.Params,
 	logger *zap.Logger,
 ) (*BabylonController, error) {
-	bbnConfig := fpcfg.BBNConfigToBabylonConfig(cfg)
-
-	bc, err := bbnclient.New(
-		&bbnConfig,
-		logger,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
-	}
-
-	// makes sure that the key in config really exists and is a valid bech32 addr
-	// to allow using MustGetTxSigner
-	if _, err := bc.GetAddr(); err != nil {
-		return nil, err
-	}
-
 	return &BabylonController{
 		bbnClient,
 		cfg,
