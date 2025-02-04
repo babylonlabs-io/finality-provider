@@ -324,10 +324,18 @@ func printFromKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey
 	var showMnemonic bool
 
 	if m := ctx.Value(mnemonicCtxKey); m != nil {
-		mnemonic = m.(string)
+		var ok bool
+		mnemonic, ok = m.(string)
+		if !ok {
+			return fmt.Errorf("mnemonic context value is not a string")
+		}
 	}
 	if sm := ctx.Value(mnemonicShowCtxKey); sm != nil {
-		showMnemonic = sm.(bool)
+		var ok bool
+		showMnemonic, ok = sm.(bool)
+		if !ok {
+			return fmt.Errorf("show mnemonic context value is not a bool")
+		}
 	}
 
 	return printCreatePubKeyHex(cmd, k, eotsPk, showMnemonic, mnemonic, clientCtx.OutputFormat)

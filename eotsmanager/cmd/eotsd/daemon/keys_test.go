@@ -91,5 +91,6 @@ func exec(t *testing.T, root *cobra.Command, args ...string) (*cobra.Command, er
 	root.SetArgs(args)
 	c, err := root.ExecuteC()
 	require.NoError(t, err)
+
 	return c, err
 }
