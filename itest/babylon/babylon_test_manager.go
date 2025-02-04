@@ -228,10 +228,14 @@ func (tm *TestManager) WaitForServicesStart(t *testing.T) {
 	t.Logf("Babylon node is started")
 }
 
-func StartManagerWithFinalityProvider(t *testing.T, ctx context.Context) (*TestManager, *service.FinalityProviderInstance) {
+func StartManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context) (*TestManager, []*service.FinalityProviderInstance) {
 	tm := StartManager(t, ctx)
 
-	runningFp := tm.AddFinalityProvider(t, ctx)
+	var runningFps []*service.FinalityProviderInstance
+	for i := 0; i < n; i++ {
+		fpIns := tm.AddFinalityProvider(t, ctx)
+		runningFps = append(runningFps, fpIns)
+	}
 
 	// Check finality providers on Babylon side
 	require.Eventually(t, func() bool {
@@ -241,12 +245,12 @@ func StartManagerWithFinalityProvider(t *testing.T, ctx context.Context) (*TestM
 			return false
 		}
 
-		return len(fps) == 1
+		return len(fps) == n
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	t.Logf("the test manager is running with a finality provider")
 
-	return tm, runningFp
+	return tm, runningFps
 }
 
 func (tm *TestManager) Stop(t *testing.T) {
