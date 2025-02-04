@@ -37,11 +37,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#314](https://github.com/babylonlabs-io/finality-provider/pull/314) nit: Dockerfile AS casing
+
+### Bug Fixes
+
+* [#316](https://github.com/babylonlabs-io/finality-provider/pull/316) fix: typo in config validation
+
 ## v0.15.0
 
 ### Bug Fixes
 
 * [#307](https://github.com/babylonlabs-io/finality-provider/pull/307) fix: increment fp_total_failed_votes
+* [#296](https://github.com/babylonlabs-io/finality-provider/pull/296) fix: edit finality provider      commission-rate
 
 ### Improvements
 
@@ -57,10 +66,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#302](https://github.com/babylonlabs-io/finality-provider/pull/302) Update pop commands to write to a file
 * [#301](https://github.com/babylonlabs-io/finality-provider/pull/301) chore: check tx index enabled
 * [#308](https://github.com/babylonlabs-io/finality-provider/issues/308) chore: bump babylon to v1.0.0-rc.4
-
-### Bug Fixes
-
-* [#296](https://github.com/babylonlabs-io/finality-provider/pull/296) fix: edit finality provider      commission-rate
 
 ## v0.14.3
 
