@@ -33,8 +33,43 @@ func NewKeysCmd() *cobra.Command {
 
 	// Find the "add" subcommand
 	addCmd := util.GetSubCommand(keysCmd, "add")
-	if addCmd == nil {
-		panic("failed to find keys add command")
+
+	if listCmd := util.GetSubCommand(keysCmd, "list"); listCmd != nil {
+		*listCmd = *CommandPrintAllKeys()
+	}
+
+	if showCmd := util.GetSubCommand(keysCmd, "show"); showCmd != nil {
+		showCmd.RunE = func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			// load eots keys
+			eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, args[0])
+			if err != nil {
+				// try by address
+				records, err := clientCtx.Keyring.List()
+				if err != nil {
+					return err
+				}
+				for _, r := range records {
+					addr, err := r.GetAddress()
+					if err != nil {
+						continue
+					}
+					if addr.String() == args[0] {
+						eotsPk, err = eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, r.Name)
+						if err != nil {
+							return err
+						}
+						return printFromKey(cmd, r.Name, eotsPk)
+					}
+				}
+				return fmt.Errorf("key not found: %s", args[0])
+			}
+
+			return printFromKey(cmd, args[0], eotsPk)
+		}
 	}
 
 	addCmd.Flags().String(rpcClientFlag, "", "The RPC address of a running eotsd to connect and save new key")
@@ -171,15 +206,43 @@ func CommandPrintAllKeys() *cobra.Command {
 		RunE:    runCommandPrintAllKeys,
 	}
 
+	flags.AddQueryFlagsToCmd(cmd)
+	flags.AddKeyringFlags(cmd.Flags())
 	cmd.Flags().String(flags.FlagHome, config.DefaultEOTSDir, "The path to the eotsd home directory")
 
 	return cmd
 }
 
 func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
+	homePath, err := getHomePath(cmd)
+	if err != nil {
+		return err
+	}
+
+	// Initialize keyring
+	backend, err := cmd.Flags().GetString("keyring-backend")
+	if err != nil {
+		return err
+	}
+
+	kr, err := eotsmanager.InitKeyring(homePath, backend, strings.NewReader(""))
+	if err != nil {
+		return fmt.Errorf("failed to init keyring: %w", err)
+	}
+
 	eotsKeys, err := getAllEOTSKeys(cmd)
 	if err != nil {
 		return err
+	}
+
+	records, err := kr.List()
+	if err != nil {
+		return err
+	}
+
+	keyMap := make(map[string]*cryptokeyring.Record)
+	for _, r := range records {
+		keyMap[r.Name] = r
 	}
 
 	for keyName, key := range eotsKeys {
@@ -188,7 +251,19 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 		eotsPk := types.NewBIP340PubKeyFromBTCPK(pk)
-		cmd.Printf("Key Name: %s, EOTS PK: %s\n", keyName, eotsPk.MarshalHex())
+
+		k, exists := keyMap[keyName]
+		if !exists {
+			continue
+		}
+
+		addr, err := k.GetAddress()
+		if err != nil {
+			return err
+		}
+
+		cmd.Printf("Key Name: %s\n Address: %s\nEOTS PK: %s\n\n",
+			keyName, addr.String(), eotsPk.MarshalHex())
 	}
 
 	return nil
@@ -245,8 +320,15 @@ func printFromKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey
 	}
 
 	ctx := cmd.Context()
-	mnemonic := ctx.Value(mnemonicCtxKey).(string) //nolint: forcetypeassert
-	showMnemonic := ctx.Value(mnemonicShowCtxKey).(bool)
+	var mnemonic string
+	var showMnemonic bool
+
+	if m := ctx.Value(mnemonicCtxKey); m != nil {
+		mnemonic = m.(string)
+	}
+	if sm := ctx.Value(mnemonicShowCtxKey); sm != nil {
+		showMnemonic = sm.(bool)
+	}
 
 	return printCreatePubKeyHex(cmd, k, eotsPk, showMnemonic, mnemonic, clientCtx.OutputFormat)
 }
@@ -256,7 +338,7 @@ func printCreatePubKeyHex(cmd *cobra.Command, k *cryptokeyring.Record, eotsPk *t
 	if err != nil {
 		return err
 	}
-	keyOutput := newKeyOutputWithPubKeyHex(out, eotsPk)
+	keyOutput := newKeyOutputWithPubKeyHex(out, eotsPk.MarshalHex())
 
 	switch outputFormat {
 	case flags.OutputFormatText:
@@ -290,10 +372,10 @@ func printCreatePubKeyHex(cmd *cobra.Command, k *cryptokeyring.Record, eotsPk *t
 	return nil
 }
 
-func newKeyOutputWithPubKeyHex(k keys.KeyOutput, eotsPk *types.BIP340PubKey) KeyOutputWithPubKeyHex {
+func newKeyOutputWithPubKeyHex(k keys.KeyOutput, eotsPk string) KeyOutputWithPubKeyHex {
 	return KeyOutputWithPubKeyHex{
 		KeyOutput: k,
-		PubKeyHex: eotsPk.MarshalHex(),
+		PubKeyHex: eotsPk,
 	}
 }
 
