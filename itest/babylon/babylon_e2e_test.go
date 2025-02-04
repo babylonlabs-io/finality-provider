@@ -63,7 +63,7 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 	}
 
 	// check the BTC delegation is active
-	_ = tm.WaitForNActiveDels(t, 1)
+	_ = tm.WaitForNActiveDels(t, n)
 
 	// check the last voted block is finalized
 	lastVotedHeight := tm.WaitForFpVoteCast(t, fps[0])
