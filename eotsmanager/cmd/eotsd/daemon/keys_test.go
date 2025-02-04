@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
-	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 )
 
@@ -30,31 +30,42 @@ func FuzzNewKeysCmd(f *testing.F) {
 		tDir := t.TempDir()
 		tempHome := filepath.Join(tDir, "homeeots")
 		homeFlagFilled := fmt.Sprintf("--%s=%s", sdkflags.FlagHome, tempHome)
-		rootCmdBuff := new(bytes.Buffer)
+		keyringBackendFlagFilled := fmt.Sprintf("--%s=%s", sdkflags.FlagKeyringBackend, keyring.BackendTest)
+
+		// Create separate buffers for stdout and stderr
+		stdoutBuf := new(bytes.Buffer)
+		stderrBuf := new(bytes.Buffer)
+
+		root.SetOut(stdoutBuf)
+		root.SetErr(stderrBuf)
+
 		defer func() {
 			err := os.RemoveAll(tempHome)
 			require.NoError(t, err)
 		}()
 
 		// Initialize the EOTS manager
-		_, _ = exec(t, root, rootCmdBuff, "init", homeFlagFilled)
+		_, _ = exec(t, root, "init", homeFlagFilled)
 
 		// Generate a random key name
 		keyName := testutil.GenRandomHexStr(r, 5)
 
-		// Execute the keys add command
-		keyringBackendFlagFilled := fmt.Sprintf("--%s=%s", sdkflags.FlagKeyringBackend, keyring.BackendTest)
-		_, _ = exec(t, root, rootCmdBuff, "keys", "add", keyName, homeFlagFilled, keyringBackendFlagFilled)
+		// Execute the keys add command with keyring backend
+		_, _ = exec(t, root, "keys", "add", keyName, homeFlagFilled, keyringBackendFlagFilled)
 
-		// Execute the keys list command
-		_, listOutput := exec(t, root, rootCmdBuff, "keys", "list", homeFlagFilled)
+		// Execute the keys list command with keyring backend
+		_, _ = exec(t, root, "keys", "list", homeFlagFilled, keyringBackendFlagFilled)
 
-		// Check if the added key is in the list
-		require.Contains(t, listOutput, keyName)
+		// Log output for debugging
+		t.Logf("Stdout: %q", stdoutBuf.String())
+		t.Logf("Stderr: %q", stderrBuf.String())
+
+		// Basic check - key name should be in output
+		require.Contains(t, stdoutBuf.String(), keyName, "List output should contain the key name")
 
 		// Load the EOTS manager and verify the key existence
-		eotsCfg := eotscfg.DefaultConfigWithHomePath(tempHome)
-		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
+		cfg := config.DefaultConfigWithHomePath(tempHome)
+		dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
 		defer func() {
 			err := dbBackend.Close()
@@ -64,29 +75,22 @@ func FuzzNewKeysCmd(f *testing.F) {
 		eotsManager, err := eotsmanager.NewLocalEOTSManager(tempHome, "test", dbBackend, zap.NewNop())
 		require.NoError(t, err, "Should be able to create EOTS manager")
 
+		// Verify the key exists and has correct BIP340 public key
 		pubKey, err := eotsManager.LoadBIP340PubKeyFromKeyName(keyName)
 		require.NoError(t, err, "Should be able to load public key")
 		require.NotNil(t, pubKey, "Public key should not be nil")
+
+		// Verify the public key is in the output
+		hexPk := pubKey.MarshalHex()
+		require.Contains(t, stdoutBuf.String(), hexPk, "List output should contain the BIP340 public key hex")
 	})
 }
 
-// exec executes a command based on the cmd passed, the args should only search for subcommands, not parent commands
-func exec(t *testing.T, root *cobra.Command, rootCmdBuf *bytes.Buffer, args ...string) (c *cobra.Command, output string) {
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetErr(buf)
+// exec executes a command based on the cmd passed
+func exec(t *testing.T, root *cobra.Command, args ...string) (*cobra.Command, error) {
 	root.SetArgs(args)
-
 	c, err := root.ExecuteC()
 	require.NoError(t, err)
 
-	outStr := buf.String()
-	if len(outStr) > 0 {
-		return c, outStr
-	}
-
-	_, err = buf.Write(rootCmdBuf.Bytes())
-	require.NoError(t, err)
-
-	return c, buf.String()
+	return c, err
 }
