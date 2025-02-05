@@ -121,6 +121,7 @@ func (bc *BabylonController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sd
 
 // RegisterFinalityProvider registers a finality provider via a MsgCreateFinalityProvider to Babylon
 // it returns tx hash and error
+// If chainID is empty, then it means the FP is a Babylon FP
 func (bc *BabylonController) RegisterFinalityProvider(
 	chainID string,
 	fpPk *btcec.PublicKey,
