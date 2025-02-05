@@ -221,7 +221,8 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 
 func (tm *TestManager) WaitForServicesStart(t *testing.T) {
 	require.Eventually(t, func() bool {
-		_, err := tm.BBNClient.QueryBestBlock()
+		_, err := tm.BBNClient.QueryBtcLightClientTip()
+
 		return err == nil
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
