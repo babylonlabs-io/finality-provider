@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cosmos/relayer/v2/relayer/chains/cosmos"
+	"github.com/babylonlabs-io/babylon/client/babylonclient"
 )
 
 // CosmwasmConfig defines configuration for the Babylon client
@@ -44,8 +44,8 @@ func (cfg *CosmwasmConfig) Validate() error {
 	return nil
 }
 
-func (cfg *CosmwasmConfig) ToCosmosProviderConfig() cosmos.CosmosProviderConfig {
-	return cosmos.CosmosProviderConfig{
+func (cfg *CosmwasmConfig) ToCosmosProviderConfig() babylonclient.CosmosProviderConfig {
+	return babylonclient.CosmosProviderConfig{
 		Key:            cfg.Key,
 		ChainID:        cfg.ChainID,
 		RPCAddr:        cfg.RPCAddr,

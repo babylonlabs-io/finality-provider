@@ -21,7 +21,6 @@ require (
 	github.com/cosmos/cosmos-sdk v0.50.11
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.7.0
-	github.com/cosmos/relayer/v2 v2.5.3
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
 	github.com/ethereum/go-ethereum v1.13.15
 	github.com/gogo/protobuf v1.3.3
@@ -29,7 +28,6 @@ require (
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/jsternberg/zap-logfmt v1.3.0
 	github.com/juju/fslock v0.0.0-20160525022230-4d5c94c67b4b
-	github.com/lightningnetwork/lnd v0.16.4-beta.rc1
 	github.com/lightningnetwork/lnd/kvdb v1.4.1
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/prometheus/client_golang v1.20.5
@@ -47,22 +45,12 @@ require (
 require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
-	github.com/VictoriaMetrics/fastcache v1.12.2 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.12.1 // indirect
-	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
-	github.com/crate-crypto/go-ipa v0.0.0-20240223125850-b1e8a79f509c // indirect
 	github.com/ethereum-optimism/superchain-registry/superchain v0.0.0-20240821192748-42bd03ba8313 // indirect
-	github.com/ethereum/go-verkle v0.1.1-0.20240306133620-7d920df305f0 // indirect
-	github.com/gofrs/flock v0.8.1 // indirect
-	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
-	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
@@ -268,7 +256,6 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/viper v1.19.0 // indirect
-	github.com/strangelove-ventures/cometbft-client v0.1.1 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/supranational/blst v0.3.11 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect

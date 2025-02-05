@@ -2,7 +2,6 @@ package types
 
 import (
 	"github.com/babylonlabs-io/babylon/client/babylonclient"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 // TxResponse handles the transaction response in the interface ConsumerController
@@ -13,7 +12,7 @@ type TxResponse struct {
 	Events []babylonclient.RelayerEvent
 }
 
-func NewBabylonTxResponse(resp *provider.RelayerTxResponse) *babylonclient.RelayerTxResponse {
+func NewBabylonTxResponse(resp *babylonclient.RelayerTxResponse) *babylonclient.RelayerTxResponse {
 	events := make([]babylonclient.RelayerEvent, len(resp.Events))
 	for i, event := range resp.Events {
 		events[i] = babylonclient.RelayerEvent{
