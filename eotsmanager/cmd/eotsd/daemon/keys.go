@@ -33,10 +33,17 @@ func NewKeysCmd() *cobra.Command {
 
 	// Find the "add" subcommand
 	addCmd := util.GetSubCommand(keysCmd, "add")
-
-	if listCmd := util.GetSubCommand(keysCmd, "list"); listCmd != nil {
-		*listCmd = *CommandPrintAllKeys()
+	if addCmd == nil {
+		panic("failed to find keys add command")
 	}
+
+	listCmd := util.GetSubCommand(keysCmd, "list")
+	if listCmd == nil {
+		panic("failed to find keys list command")
+	}
+
+	listCmd.RunE = runCommandPrintAllKeys
+	listCmd.Flags().StringP(flags.FlagOutput, "o", flags.OutputFormatText, "Output format (text|json)")
 
 	if showCmd := util.GetSubCommand(keysCmd, "show"); showCmd != nil {
 		showCmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -208,7 +215,6 @@ func CommandPrintAllKeys() *cobra.Command {
 		RunE:    runCommandPrintAllKeys,
 	}
 
-	flags.AddQueryFlagsToCmd(cmd)
 	flags.AddKeyringFlags(cmd.Flags())
 	cmd.Flags().String(flags.FlagHome, config.DefaultEOTSDir, "The path to the eotsd home directory")
 
@@ -247,6 +253,13 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 		keyMap[r.Name] = r
 	}
 
+	type keyInfo struct {
+		Name    string `json:"name"`
+		Address string `json:"address"`
+		EOTSPK  string `json:"eots_pk"`
+	}
+
+	var keys []keyInfo
 	for keyName, key := range eotsKeys {
 		pk, err := schnorr.ParsePubKey(key)
 		if err != nil {
@@ -264,10 +277,26 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		cmd.Printf("Key Name: %s\n Address: %s\nEOTS PK: %s\n\n",
-			keyName, addr.String(), eotsPk.MarshalHex())
+		keys = append(keys, keyInfo{
+			Name:    keyName,
+			Address: addr.String(),
+			EOTSPK:  eotsPk.MarshalHex(),
+		})
 	}
 
+	if cmd.Flag(flags.FlagOutput).Value.String() == flags.OutputFormatJSON {
+		bz, err := json.MarshalIndent(keys, "", "  ")
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(cmd.OutOrStdout(), string(bz))
+		return err
+	}
+
+	for _, k := range keys {
+		cmd.Printf("Key Name: %s\nAddress: %s\nEOTS PK: %s\n\n",
+			k.Name, k.Address, k.EOTSPK)
+	}
 	return nil
 }
 
