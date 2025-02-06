@@ -1,16 +1,16 @@
 package client
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
 
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
+	"github.com/babylonlabs-io/babylon/app/params"
+	"github.com/babylonlabs-io/babylon/client/babylonclient"
 	"github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
 	"github.com/babylonlabs-io/finality-provider/cosmwasmclient/query"
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
-	"github.com/cosmos/relayer/v2/relayer/chains/cosmos"
 	"go.uber.org/zap"
 )
 
@@ -18,7 +18,7 @@ type Client struct {
 	mu sync.Mutex
 	*query.QueryClient
 
-	provider *cosmos.CosmosProvider
+	provider *babylonclient.CosmosProvider
 	timeout  time.Duration
 	logger   *zap.Logger
 	cfg      *config.CosmwasmConfig
@@ -45,23 +45,21 @@ func New(cfg *config.CosmwasmConfig, chainName string, encodingCfg wasmdparams.E
 	}
 
 	provider, err := cfg.ToCosmosProviderConfig().NewProvider(
-		zapLogger,
 		"", // TODO: set home path
-		true,
 		chainName,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cosmos provider: %w", err)
 	}
 
-	cp, ok := provider.(*cosmos.CosmosProvider)
+	cp, ok := provider.(*babylonclient.CosmosProvider)
 	if !ok {
 		return nil, fmt.Errorf("failed to cast provider to CosmosProvider")
 	}
 	cp.PCfg.KeyDirectory = cfg.KeyDirectory
-	cp.Cdc = cosmos.Codec{
+	cp.Cdc = &params.EncodingConfig{
 		InterfaceRegistry: encodingCfg.InterfaceRegistry,
-		Marshaler:         encodingCfg.Codec,
+		Codec:             encodingCfg.Codec,
 		TxConfig:          encodingCfg.TxConfig,
 		Amino:             encodingCfg.Amino,
 	}
@@ -70,7 +68,7 @@ func New(cfg *config.CosmwasmConfig, chainName string, encodingCfg wasmdparams.E
 	// NOTE: this will create a RPC client. The RPC client will be used for
 	// submitting txs and making ad hoc queries. It won't create WebSocket
 	// connection with wasmd node
-	if err = cp.Init(context.Background()); err != nil {
+	if err = cp.Init(); err != nil {
 		return nil, fmt.Errorf("failed to initialize cosmos provider: %w", err)
 	}
 

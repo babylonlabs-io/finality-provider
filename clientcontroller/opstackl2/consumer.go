@@ -489,7 +489,7 @@ func (cc *OPStackL2ConsumerController) QueryLastPublicRandCommit(fpPk *btcec.Pub
 		return nil, fmt.Errorf("failed marshaling to JSON: %w", err)
 	}
 
-	stateResp, err := cc.CwClient.QuerySmartContractState(cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
+	stateResp, err := cc.CwClient.QuerySmartContractState(context.Background(), cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}

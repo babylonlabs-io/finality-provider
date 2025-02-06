@@ -97,7 +97,7 @@ func TestFinalitySigSubmission(t *testing.T) {
 	}
 
 	// query block_voters from finality gadget CW contract
-	queryResponse := ctm.queryCwContract(t, queryMsg)
+	queryResponse := ctm.queryCwContract(t, queryMsg, ctx)
 	var voters []string
 	err = json.Unmarshal(queryResponse.Data, &voters)
 	require.NoError(t, err)

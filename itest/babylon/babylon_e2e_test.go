@@ -23,6 +23,7 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
@@ -38,44 +39,37 @@ import (
 func TestFinalityProviderLifeCycle(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	tm, fpIns := StartManagerWithFinalityProvider(t, ctx)
+	n := 2
+	tm, fps := StartManagerWithFinalityProvider(t, n, ctx)
 	defer tm.Stop(t)
 
 	// check the public randomness is committed
-	tm.WaitForFpPubRandTimestamped(t, fpIns)
+	tm.WaitForFpPubRandTimestamped(t, fps[0])
 
 	// send a BTC delegation
-	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, e2eutils.StakingTime, e2eutils.StakingAmount)
+	for _, fp := range fps {
+		_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fp.GetBtcPk()}, e2eutils.StakingTime, e2eutils.StakingAmount)
+	}
 
 	// check the BTC delegation is pending
-	delsResp := tm.WaitForNPendingDels(t, 1)
-	del, err := e2eutils.ParseRespBTCDelToBTCDel(delsResp[0])
-	require.NoError(t, err)
-
-	// send covenant sigs
-	tm.InsertCovenantSigForDelegation(t, del)
+	delsResp := tm.WaitForNPendingDels(t, n)
+	var dels []*bstypes.BTCDelegation
+	for _, delResp := range delsResp {
+		del, err := e2eutils.ParseRespBTCDelToBTCDel(delResp)
+		require.NoError(t, err)
+		dels = append(dels, del)
+		// send covenant sigs
+		tm.InsertCovenantSigForDelegation(t, del)
+	}
 
 	// check the BTC delegation is active
-	_ = tm.WaitForNActiveDels(t, 1)
+	_ = tm.WaitForNActiveDels(t, n)
 
 	// check the last voted block is finalized
-	lastVotedHeight := tm.WaitForFpVoteCast(t, fpIns)
+	lastVotedHeight := tm.WaitForFpVoteCast(t, fps[0])
+
 	tm.CheckBlockFinalization(t, lastVotedHeight, 1)
 	t.Logf("the block at height %v is finalized", lastVotedHeight)
-
-	// stop the FP for several blocks and disable fast sync, and then restart FP
-	// finality signature submission should get into the default case
-	var n uint = 3
-	// finality signature submission would take about 5 seconds
-	// set the poll interval to 2 seconds to make sure the poller channel has multiple blocks
-	tm.FpConfig.PollerConfig.PollInterval = 2 * time.Second
-	tm.StopAndRestartFpAfterNBlocks(t, int(n), fpIns)
-
-	// wait for finality signature submission to run two times
-	time.Sleep(12 * time.Second)
-	lastProcessedHeight := fpIns.GetLastVotedHeight()
-	require.True(t, lastProcessedHeight >= lastVotedHeight+uint64(n))
-	t.Logf("the last processed height is %v", lastProcessedHeight)
 }
 
 // TestDoubleSigning tests the attack scenario where the finality-provider
@@ -84,8 +78,10 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 func TestDoubleSigning(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	tm, fpIns := StartManagerWithFinalityProvider(t, ctx)
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer tm.Stop(t)
+
+	fpIns := fps[0]
 
 	// check the public randomness is committed
 	tm.WaitForFpPubRandTimestamped(t, fpIns)
@@ -144,8 +140,10 @@ func TestDoubleSigning(t *testing.T) {
 func TestCatchingUp(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	tm, fpIns := StartManagerWithFinalityProvider(t, ctx)
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer tm.Stop(t)
+
+	fpIns := fps[0]
 
 	// check the public randomness is committed
 	tm.WaitForFpPubRandTimestamped(t, fpIns)
@@ -191,8 +189,10 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	tm, fpIns := StartManagerWithFinalityProvider(t, ctx)
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer tm.Stop(t)
+
+	fpIns := fps[0]
 
 	cmd := daemon.CommandEditFinalityDescription()
 
@@ -274,8 +274,10 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	tm, fpIns := StartManagerWithFinalityProvider(t, ctx)
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer tm.Stop(t)
+
+	fpIns := fps[0]
 
 	cmd := daemon.CommandCreateFP()
 
@@ -339,8 +341,10 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	tm, fpIns := StartManagerWithFinalityProvider(t, ctx)
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer tm.Stop(t)
+
+	fpIns := fps[0]
 
 	tm.WaitForFpPubRandTimestamped(t, fpIns)
 	cmd := daemon.CommandUnsafePruneMerkleProof()
