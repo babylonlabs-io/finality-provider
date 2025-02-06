@@ -290,6 +290,7 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 		_, err = fmt.Fprintln(cmd.OutOrStdout(), string(bz))
+
 		return err
 	}
 
@@ -297,6 +298,7 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 		cmd.Printf("Key Name: %s\nAddress: %s\nEOTS PK: %s\n\n",
 			k.Name, k.Address, k.EOTSPK)
 	}
+
 	return nil
 }
 
