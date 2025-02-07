@@ -27,6 +27,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -52,6 +53,7 @@ type TestManager struct {
 	baseDir           string
 	manager           *container.Manager
 	logger            *zap.Logger
+	babylond          *dockertest.Resource
 }
 
 func StartManager(t *testing.T, ctx context.Context) *TestManager {
@@ -140,6 +142,7 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 		baseDir:           testDir,
 		manager:           manager,
 		logger:            logger,
+		babylond:          babylond,
 	}
 
 	tm.WaitForServicesStart(t)
@@ -164,8 +167,8 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 	fpHomeDir := filepath.Join(tm.baseDir, fmt.Sprintf("fp-%s", datagen.GenRandomHexStr(r, 4)))
 	cfg := e2eutils.DefaultFpConfig(tm.baseDir, fpHomeDir)
 	cfg.BabylonConfig.Key = fpKeyName
-	cfg.BabylonConfig.RPCAddr = tm.FpConfig.BabylonConfig.RPCAddr
-	cfg.BabylonConfig.GRPCAddr = tm.FpConfig.BabylonConfig.GRPCAddr
+	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", tm.babylond.GetPort("26657/tcp"))
+	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", tm.babylond.GetPort("9090/tcp"))
 	fpBbnKeyInfo, err := testutil.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, cfg.BabylonConfig.Key, cfg.BabylonConfig.KeyringBackend, passphrase, hdPath, "")
 	require.NoError(t, err)
 
