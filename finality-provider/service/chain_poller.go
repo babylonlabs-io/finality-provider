@@ -207,16 +207,9 @@ func (cp *ChainPoller) pollChain() {
 		} else {
 			// start polling in the first iteration
 			blockToRetrieve := cp.NextHeight()
-			var blocks []*types.BlockInfo
-			var err error
-			if blockToRetrieve == latestBlockHeight {
-				var latestBlock *types.BlockInfo
-				latestBlock, err = cp.consumerCon.QueryBlock(latestBlockHeight)
-				blocks = []*types.BlockInfo{latestBlock}
-			} else {
-				blocks, err = cp.blocksWithRetry(blockToRetrieve, latestBlockHeight, cp.cfg.PollSize)
-			}
+			err := cp.tryPollChain(latestBlockHeight, blockToRetrieve)
 
+			// update the failed cycles
 			if err != nil {
 				failedCycles++
 				cp.logger.Debug(
@@ -229,26 +222,15 @@ func (cp *ChainPoller) pollChain() {
 			} else {
 				// no error and we got the header we wanted to get, bump the state and push
 				// notification about data
+				if failedCycles > 0 {
+					cp.logger.Debug(
+						"query the consumer chain for the block range success from an error",
+						zap.Uint32("current_failures", failedCycles),
+						zap.Uint64("start_height", blockToRetrieve),
+						zap.Uint64("end_height", latestBlockHeight),
+					)
+				}
 				failedCycles = 0
-				if len(blocks) == 0 {
-					continue
-				}
-
-				lb := blocks[len(blocks)-1]
-				cp.setNextHeight(lb.Height + 1)
-
-				cp.metrics.RecordLastPolledHeight(lb.Height)
-
-				cp.logger.Info("the poller retrieved the blocks from the consumer chain",
-					zap.Uint64("start_height", blockToRetrieve),
-					zap.Uint64("end_height", lb.Height))
-
-				// push the data to the channel
-				// Note: if the consumer is too slow -- the buffer is full
-				// the channel will block, and we will stop retrieving data from the node
-				for _, block := range blocks {
-					cp.blockInfoChan <- block
-				}
 			}
 		}
 
@@ -262,6 +244,49 @@ func (cp *ChainPoller) pollChain() {
 			return
 		}
 	}
+}
+
+func (cp *ChainPoller) tryPollChain(latestBlockHeight, blockToRetrieve uint64) error {
+	var blocks []*types.BlockInfo
+	var err error
+	if blockToRetrieve == latestBlockHeight {
+		var latestBlock *types.BlockInfo
+		latestBlock, err = cp.consumerCon.QueryBlock(latestBlockHeight)
+		blocks = []*types.BlockInfo{latestBlock}
+	} else {
+		blocks, err = cp.blocksWithRetry(blockToRetrieve, latestBlockHeight, cp.cfg.PollSize)
+	}
+
+	// find error need return
+	if err != nil {
+		return err
+	}
+
+	// no error and we got the header we wanted to get, bump the state and push
+	// notification about data
+	if len(blocks) == 0 {
+		// NOTE: when no found blocks, we need to wait PollInterval to
+		// await too much requests.
+		return nil
+	}
+
+	lb := blocks[len(blocks)-1]
+	cp.setNextHeight(lb.Height + 1)
+
+	cp.metrics.RecordLastPolledHeight(lb.Height)
+
+	cp.logger.Info("the poller retrieved the blocks from the consumer chain",
+		zap.Uint64("start_height", blockToRetrieve),
+		zap.Uint64("end_height", lb.Height))
+
+	// push the data to the channel
+	// Note: if the consumer is too slow -- the buffer is full
+	// the channel will block, and we will stop retrieving data from the node
+	for _, block := range blocks {
+		cp.blockInfoChan <- block
+	}
+
+	return nil
 }
 
 func (cp *ChainPoller) NextHeight() uint64 {
