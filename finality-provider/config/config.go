@@ -51,9 +51,8 @@ var (
 
 // Config is the main config for the fpd cli command
 type Config struct {
-	LogLevel string `long:"loglevel" description:"Logging level for all subsystems" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal"`
-	// ChainType and ChainID (if any) of the chain config identify a consumer chain
-	ChainType                   string        `long:"chaintype" description:"the type of the consumer chain" choice:"babylon"`
+	LogLevel                    string        `long:"loglevel" description:"Logging level for all subsystems" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal"`
+	ChainType                   string        `long:"chaintype" description:"the type of the consumer chain" choice:"babylon" choice:"OPStackL2" choice:"wasm"`
 	NumPubRand                  uint32        `long:"numPubRand" description:"The number of Schnorr public randomness for each commitment"`
 	NumPubRandMax               uint32        `long:"numpubrandmax" description:"The upper bound of the number of Schnorr public randomness for each commitment"`
 	TimestampingDelayBlocks     uint32        `long:"timestampingdelayblocks" description:"The delay, measured in blocks, between a randomness commit submission and the randomness is BTC-timestamped"`

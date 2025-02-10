@@ -36,6 +36,10 @@ func (c ChainPollerConfig) Validate() error {
 	}
 
 	if c.PollSize == 0 {
+		return fmt.Errorf("invalid pollsize: %d", c.PollSize)
+	}
+
+	if c.PollInterval == 0 {
 		return fmt.Errorf("invalid pollinterval: %d", c.PollInterval)
 	}
 
