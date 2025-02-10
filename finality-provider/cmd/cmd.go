@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"os"
 
 	"github.com/babylonlabs-io/babylon/app/params"
@@ -29,6 +30,10 @@ func PersistClientCtx(ctx client.Context) func(cmd *cobra.Command, _ []string) e
 			WithTxConfig(encCfg.TxConfig).
 			WithLegacyAmino(encCfg.Amino).
 			WithInput(os.Stdin)
+
+		// ensure cmd context is not nil. Later it will be replaced
+		// by SetCmdClientContextHandler
+		cmd.SetContext(context.Background())
 
 		// set the default command outputs
 		cmd.SetOut(cmd.OutOrStdout())

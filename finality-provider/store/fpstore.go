@@ -118,7 +118,7 @@ func (s *FinalityProviderStore) MustSetFpStatus(btcPk *btcec.PublicKey, status p
 // UpdateFpStatusFromVotingPower based on the current voting power of the finality provider
 // updates the status, if it has some voting power, sets to active
 func (s *FinalityProviderStore) UpdateFpStatusFromVotingPower(
-	vp uint64,
+	hasPower bool,
 	fp *StoredFinalityProvider,
 ) (proto.FinalityProviderStatus, error) {
 	if fp.Status == proto.FinalityProviderStatus_SLASHED {
@@ -126,8 +126,8 @@ func (s *FinalityProviderStore) UpdateFpStatusFromVotingPower(
 		return proto.FinalityProviderStatus_SLASHED, nil
 	}
 
-	if vp > 0 {
-		// voting power > 0 then set the status to ACTIVE
+	if hasPower {
+		// if the FP has voting power, then set the status to ACTIVE
 		return proto.FinalityProviderStatus_ACTIVE, s.SetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_ACTIVE)
 	}
 

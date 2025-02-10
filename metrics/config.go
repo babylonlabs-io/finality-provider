@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	defaultFpMetricsPort         = 2112
-	defaultEotsMetricsPort       = 2113
+	DefaultFpMetricsPort         = 2112
+	DefaultEotsMetricsPort       = 2113
 	defaultMetricsHost           = "127.0.0.1"
 	defaultMetricsUpdateInterval = 100 * time.Millisecond
 )
@@ -42,7 +42,7 @@ func (cfg *Config) Address() (string, error) {
 
 func DefaultFpConfig() *Config {
 	return &Config{
-		Port:           defaultFpMetricsPort,
+		Port:           DefaultFpMetricsPort,
 		Host:           defaultMetricsHost,
 		UpdateInterval: defaultMetricsUpdateInterval,
 	}
@@ -50,7 +50,7 @@ func DefaultFpConfig() *Config {
 
 func DefaultEotsConfig() *Config {
 	return &Config{
-		Port:           defaultEotsMetricsPort,
+		Port:           DefaultEotsMetricsPort,
 		Host:           defaultMetricsHost,
 		UpdateInterval: defaultMetricsUpdateInterval,
 	}

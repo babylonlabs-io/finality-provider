@@ -1,4 +1,4 @@
-package e2etest
+package e2e_utils
 
 import (
 	"context"
@@ -35,6 +35,10 @@ func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string) 
 		eotsServer: eotsServer,
 		cfg:        cfg,
 	}
+}
+
+func (eh *EOTSServerHandler) Config() *config.Config {
+	return eh.cfg
 }
 
 func (eh *EOTSServerHandler) Start(ctx context.Context) {

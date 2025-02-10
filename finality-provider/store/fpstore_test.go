@@ -183,7 +183,7 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			actStatus, err := fps.UpdateFpStatusFromVotingPower(tc.votingPowerOnChain, fp)
+			actStatus, err := fps.UpdateFpStatusFromVotingPower(tc.votingPowerOnChain > 0, fp)
 			if tc.expErr != nil {
 				require.EqualError(t, err, tc.expErr.Error())
 

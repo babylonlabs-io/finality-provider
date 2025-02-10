@@ -15,7 +15,6 @@ type ImageConfig struct {
 	BabylonVersion    string
 }
 
-//nolint:deadcode
 const (
 	dockerBabylondRepository = "babylonlabs/babylond"
 )

@@ -17,7 +17,8 @@ import (
 	"github.com/lightningnetwork/lnd/kvdb"
 	"go.uber.org/zap"
 
-	"github.com/babylonlabs-io/finality-provider/clientcontroller"
+	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
+	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -33,7 +34,8 @@ type FinalityProviderApp struct {
 	wg        sync.WaitGroup
 	quit      chan struct{}
 
-	cc           clientcontroller.ClientController
+	cc           ccapi.ClientController
+	consumerCon  ccapi.ConsumerController
 	kr           keyring.Keyring
 	fps          *store.FinalityProviderStore
 	pubRandStore *store.PubRandProofStore
@@ -41,6 +43,7 @@ type FinalityProviderApp struct {
 	logger       *zap.Logger
 	input        *strings.Reader
 
+	fpInsMu     sync.RWMutex // Protects fpIns
 	fpIns       *FinalityProviderInstance
 	eotsManager eotsmanager.EOTSManager
 
@@ -51,18 +54,23 @@ type FinalityProviderApp struct {
 	criticalErrChan                   chan *CriticalError
 }
 
+// NewFinalityProviderAppFromConfig creates a new FinalityProviderApp instance from the given configuration.
 func NewFinalityProviderAppFromConfig(
 	cfg *fpcfg.Config,
 	db kvdb.Backend,
 	logger *zap.Logger,
 ) (*FinalityProviderApp, error) {
-	cc, err := clientcontroller.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+	cc, err := fpcc.NewBabylonController(cfg, logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
+		return nil, fmt.Errorf("failed to create rpc client for the Babylon chain: %w", err)
+	}
+	if err := cc.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start rpc client for the Babylon chain: %w", err)
 	}
 
-	if err := cc.Start(); err != nil {
-		return nil, fmt.Errorf("failed to start rpc client for the consumer chain %s: %w", cfg.ChainType, err)
+	consumerCon, err := fpcc.NewConsumerController(cfg, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
 	}
 
 	// if the EOTSManagerAddress is empty, run a local EOTS manager;
@@ -74,12 +82,13 @@ func NewFinalityProviderAppFromConfig(
 
 	logger.Info("successfully connected to a remote EOTS manager", zap.String("address", cfg.EOTSManagerAddress))
 
-	return NewFinalityProviderApp(cfg, cc, em, db, logger)
+	return NewFinalityProviderApp(cfg, cc, consumerCon, em, db, logger)
 }
 
 func NewFinalityProviderApp(
 	config *fpcfg.Config,
-	cc clientcontroller.ClientController,
+	cc ccapi.ClientController,
+	consumerCon ccapi.ConsumerController,
 	em eotsmanager.EOTSManager,
 	db kvdb.Backend,
 	logger *zap.Logger,
@@ -108,13 +117,13 @@ func NewFinalityProviderApp(
 
 	return &FinalityProviderApp{
 		cc:                                cc,
+		consumerCon:                       consumerCon,
 		fps:                               fpStore,
 		pubRandStore:                      pubRandStore,
 		kr:                                kr,
 		config:                            config,
 		logger:                            logger,
 		input:                             input,
-		fpIns:                             nil,
 		eotsManager:                       em,
 		metrics:                           fpMetrics,
 		quit:                              make(chan struct{}),
@@ -126,6 +135,14 @@ func NewFinalityProviderApp(
 
 func (app *FinalityProviderApp) GetConfig() *fpcfg.Config {
 	return app.config
+}
+
+func (app *FinalityProviderApp) GetBabylonController() ccapi.ClientController {
+	return app.cc
+}
+
+func (app *FinalityProviderApp) GetConsumerController() ccapi.ConsumerController {
+	return app.consumerCon
 }
 
 func (app *FinalityProviderApp) GetFinalityProviderStore() *store.FinalityProviderStore {
@@ -173,6 +190,9 @@ func (app *FinalityProviderApp) ListAllFinalityProvidersInfo() ([]*proto.Finalit
 
 // GetFinalityProviderInstance returns the finality-provider instance with the given Babylon public key
 func (app *FinalityProviderApp) GetFinalityProviderInstance() (*FinalityProviderInstance, error) {
+	app.fpInsMu.RLock()
+	defer app.fpInsMu.RUnlock()
+
 	if app.fpIns == nil {
 		return nil, fmt.Errorf("finality provider does not exist")
 	}
@@ -207,21 +227,21 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 	}
 
 	for _, fp := range fps {
-		latestBlock, err := app.cc.QueryBestBlock()
+		latestBlockHeight, err := app.consumerCon.QueryLatestBlockHeight()
 		if err != nil {
 			return err
 		}
 
 		pkHex := fp.GetBIP340BTCPK().MarshalHex()
-		power, err := app.cc.QueryFinalityProviderVotingPower(fp.BtcPk, latestBlock.Height)
+		hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(fp.BtcPk, latestBlockHeight)
 		if err != nil {
 			return fmt.Errorf("failed to query voting power for finality provider %s at height %d: %w",
-				fp.GetBIP340BTCPK().MarshalHex(), latestBlock.Height, err)
+				fp.GetBIP340BTCPK().MarshalHex(), latestBlockHeight, err)
 		}
 
 		// power > 0 (slashed_height must > 0), set status to ACTIVE
 		oldStatus := fp.Status
-		if power > 0 {
+		if hasPower {
 			if oldStatus != proto.FinalityProviderStatus_ACTIVE {
 				fp.Status = proto.FinalityProviderStatus_ACTIVE
 				app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_ACTIVE)
@@ -229,13 +249,12 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 					"the finality-provider status is changed to ACTIVE",
 					zap.String("fp_btc_pk", pkHex),
 					zap.String("old_status", oldStatus.String()),
-					zap.Uint64("power", power),
 				)
 			}
 
 			continue
 		}
-		slashed, jailed, err := app.cc.QueryFinalityProviderSlashedOrJailed(fp.BtcPk)
+		slashed, jailed, err := app.consumerCon.QueryFinalityProviderSlashedOrJailed(fp.BtcPk)
 		if err != nil {
 			return err
 		}
@@ -386,8 +405,8 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 		}, nil
 	}
 
-	// 3. register the finality provider on the consumer chain
 	request := &CreateFinalityProviderRequest{
+		chainID:         chainID,
 		fpAddr:          fpAddr,
 		btcPubKey:       eotsPk,
 		pop:             pop,
@@ -496,9 +515,12 @@ func (app *FinalityProviderApp) startFinalityProviderInstance(
 	passphrase string,
 ) error {
 	pkHex := pk.MarshalHex()
+	app.fpInsMu.Lock()
+	defer app.fpInsMu.Unlock()
+
 	if app.fpIns == nil {
 		fpIns, err := NewFinalityProviderInstance(
-			pk, app.config, app.fps, app.pubRandStore, app.cc, app.eotsManager,
+			pk, app.config, app.fps, app.pubRandStore, app.cc, app.consumerCon, app.eotsManager,
 			app.metrics, passphrase, app.criticalErrChan, app.logger,
 		)
 		if err != nil {
@@ -515,6 +537,9 @@ func (app *FinalityProviderApp) startFinalityProviderInstance(
 }
 
 func (app *FinalityProviderApp) IsFinalityProviderRunning(fpPk *bbntypes.BIP340PubKey) bool {
+	app.fpInsMu.RLock()
+	defer app.fpInsMu.RUnlock()
+
 	if app.fpIns == nil {
 		return false
 	}
@@ -527,6 +552,9 @@ func (app *FinalityProviderApp) IsFinalityProviderRunning(fpPk *bbntypes.BIP340P
 }
 
 func (app *FinalityProviderApp) removeFinalityProviderInstance() error {
+	app.fpInsMu.Lock()
+	defer app.fpInsMu.Unlock()
+
 	fpi := app.fpIns
 	if fpi == nil {
 		return fmt.Errorf("the finality provider instance does not exist")
@@ -592,7 +620,7 @@ func (app *FinalityProviderApp) putFpFromResponse(fp *bstypes.FinalityProviderRe
 		return err
 	}
 
-	power, err := app.cc.QueryFinalityProviderVotingPower(btcPk, fp.Height)
+	hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(btcPk, fp.Height)
 	if err != nil {
 		return fmt.Errorf("failed to query voting power for finality provider %s: %w",
 			fp.BtcPk.MarshalHex(), err)
@@ -600,7 +628,7 @@ func (app *FinalityProviderApp) putFpFromResponse(fp *bstypes.FinalityProviderRe
 
 	var status proto.FinalityProviderStatus
 	switch {
-	case power > 0:
+	case hasPower:
 		status = proto.FinalityProviderStatus_ACTIVE
 	case fp.SlashedBtcHeight > 0:
 		status = proto.FinalityProviderStatus_SLASHED

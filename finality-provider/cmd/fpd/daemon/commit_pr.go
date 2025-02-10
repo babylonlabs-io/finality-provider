@@ -9,6 +9,7 @@ import (
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
@@ -19,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// CommandCommitPubRand returns the commit-pubrand command
+// CommandCommitPubRand returns the commit-pubrand command by connecting to the fpd daemon.
 func CommandCommitPubRand() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "unsafe-commit-pubrand [fp-eots-pk-hex] [target-height]",
@@ -29,14 +30,14 @@ func CommandCommitPubRand() *cobra.Command {
 WARNING: this can drain the finality provider's balance if the target height is too high.`,
 		Example: `fpd unsafe-commit-pubrand --home /home/user/.fpd [fp-eots-pk-hex] [target-height]`,
 		Args:    cobra.ExactArgs(2),
-		RunE:    runCommandCommitPubRand,
+		RunE:    fpcmd.RunEWithClientCtx(runCommandCommitPubRand),
 	}
 	cmd.Flags().Uint64("start-height", math.MaxUint64, "The block height to start committing pubrand from (optional)")
 
 	return cmd
 }
 
-func runCommandCommitPubRand(cmd *cobra.Command, args []string) error {
+func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []string) error {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
 		return err
@@ -51,8 +52,7 @@ func runCommandCommitPubRand(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get homePath from context like in start.go
-	clientCtx := client.GetClientContextFromCmd(cmd)
-	homePath, err := filepath.Abs(clientCtx.HomeDir)
+	homePath, err := filepath.Abs(ctx.HomeDir)
 	if err != nil {
 		return err
 	}
@@ -81,12 +81,16 @@ func runCommandCommitPubRand(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
-	cc, err := fpcc.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+	cc, err := fpcc.NewBabylonController(cfg, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create rpc client for the Babylon chain: %w", err)
 	}
 	if err := cc.Start(); err != nil {
 		return fmt.Errorf("failed to start client controller: %w", err)
+	}
+	consumerCon, err := fpcc.NewConsumerController(cfg, logger)
+	if err != nil {
+		return fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
 	}
 	em, err := eotsclient.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress)
 	if err != nil {
@@ -94,7 +98,7 @@ func runCommandCommitPubRand(cmd *cobra.Command, args []string) error {
 	}
 
 	fp, err := service.NewFinalityProviderInstance(
-		fpPk, cfg, fpStore, pubRandStore, cc, em, metrics.NewFpMetrics(), "",
+		fpPk, cfg, fpStore, pubRandStore, cc, consumerCon, em, metrics.NewFpMetrics(), "",
 		make(chan<- *service.CriticalError), logger)
 	if err != nil {
 		return fmt.Errorf("failed to create finality-provider %s instance: %w", fpPk.MarshalHex(), err)

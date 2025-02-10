@@ -28,15 +28,15 @@ func FuzzChainPoller_Start(f *testing.F) {
 		startHeight := currentHeight + 1
 		endHeight := startHeight + uint64(r.Int63n(10)+1)
 
-		ctl := gomock.NewController(t)
-		mockClientController := mocks.NewMockClientController(ctl)
-		mockClientController.EXPECT().Close().Return(nil).AnyTimes()
-		mockClientController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
-
 		currentBlockRes := &types.BlockInfo{
 			Height: endHeight,
 		}
-		mockClientController.EXPECT().QueryBestBlock().Return(currentBlockRes, nil).AnyTimes()
+		ctl := gomock.NewController(t)
+		mockConsumerController := mocks.NewMockConsumerController(ctl)
+		mockConsumerController.EXPECT().Close().Return(nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(endHeight, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryBlock(endHeight).Return(currentBlockRes, nil).AnyTimes()
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
 
 		for i := startHeight; i <= endHeight; i++ {
@@ -44,12 +44,12 @@ func FuzzChainPoller_Start(f *testing.F) {
 				Height: i,
 			}}
 
-			mockClientController.EXPECT().QueryBlocks(i, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
+			mockConsumerController.EXPECT().QueryBlocks(i, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
 		}
 
 		m := metrics.NewFpMetrics()
 		pollerCfg.PollInterval = 10 * time.Millisecond
-		poller := service.NewChainPoller(testutil.GetTestLogger(t), &pollerCfg, mockClientController, m)
+		poller := service.NewChainPoller(testutil.GetTestLogger(t), &pollerCfg, mockConsumerController, m)
 		err := poller.Start(startHeight)
 		require.NoError(t, err)
 		defer func() {

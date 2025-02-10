@@ -62,7 +62,7 @@ func (s *Server) RunUntilShutdown(ctx context.Context) error {
 	defer func() {
 		s.logger.Info("Closing database...")
 		if err := s.db.Close(); err != nil {
-			s.logger.Error(fmt.Sprintf("Failed to close database: %v", err)) // Log the error
+			s.logger.Error("Failed to close database", zap.Error(err))
 		} else {
 			s.logger.Info("Database closed")
 		}

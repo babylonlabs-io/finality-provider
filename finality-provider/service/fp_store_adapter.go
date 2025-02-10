@@ -12,9 +12,9 @@ import (
 )
 
 type fpState struct {
-	mu sync.Mutex
-	fp *store.StoredFinalityProvider
-	s  *store.FinalityProviderStore
+	mu  sync.Mutex
+	sfp *store.StoredFinalityProvider
+	s   *store.FinalityProviderStore
 }
 
 func newFpState(
@@ -22,44 +22,61 @@ func newFpState(
 	s *store.FinalityProviderStore,
 ) *fpState {
 	return &fpState{
-		fp: fp,
-		s:  s,
+		sfp: fp,
+		s:   s,
 	}
 }
 
-func (fps *fpState) getStoreFinalityProvider() *store.StoredFinalityProvider {
+func (fps *fpState) withLock(action func()) {
 	fps.mu.Lock()
 	defer fps.mu.Unlock()
 
-	return fps.fp
+	action()
 }
 
 func (fps *fpState) setStatus(s proto.FinalityProviderStatus) error {
 	fps.mu.Lock()
-	fps.fp.Status = s
+	fps.sfp.Status = s
 	fps.mu.Unlock()
 
-	return fps.s.SetFpStatus(fps.fp.BtcPk, s)
+	return fps.s.SetFpStatus(fps.sfp.BtcPk, s)
 }
 
 func (fps *fpState) setLastVotedHeight(height uint64) error {
 	fps.mu.Lock()
-	fps.fp.LastVotedHeight = height
+	fps.sfp.LastVotedHeight = height
 	fps.mu.Unlock()
 
-	return fps.s.SetFpLastVotedHeight(fps.fp.BtcPk, height)
+	return fps.s.SetFpLastVotedHeight(fps.sfp.BtcPk, height)
 }
 
 func (fp *FinalityProviderInstance) GetStoreFinalityProvider() *store.StoredFinalityProvider {
-	return fp.fpState.getStoreFinalityProvider()
+	var sfp *store.StoredFinalityProvider
+	fp.fpState.withLock(func() {
+		// Create a copy of the stored finality provider to prevent data races
+		sfpCopy := *fp.fpState.sfp
+		sfp = &sfpCopy
+	})
+
+	return sfp
 }
 
 func (fp *FinalityProviderInstance) GetBtcPkBIP340() *bbntypes.BIP340PubKey {
-	return fp.fpState.getStoreFinalityProvider().GetBIP340BTCPK()
+	var pk *bbntypes.BIP340PubKey
+	fp.fpState.withLock(func() {
+		pk = fp.fpState.sfp.GetBIP340BTCPK()
+	})
+
+	return pk
 }
 
 func (fp *FinalityProviderInstance) GetBtcPk() *btcec.PublicKey {
-	return fp.fpState.getStoreFinalityProvider().BtcPk
+	var pk *btcec.PublicKey
+	fp.fpState.withLock(func() {
+		pk = fp.fpState.sfp.BtcPk
+	})
+
+	return pk
 }
 
 func (fp *FinalityProviderInstance) GetBtcPkHex() string {
@@ -67,15 +84,30 @@ func (fp *FinalityProviderInstance) GetBtcPkHex() string {
 }
 
 func (fp *FinalityProviderInstance) GetStatus() proto.FinalityProviderStatus {
-	return fp.fpState.getStoreFinalityProvider().Status
+	var status proto.FinalityProviderStatus
+	fp.fpState.withLock(func() {
+		status = fp.fpState.sfp.Status
+	})
+
+	return status
 }
 
 func (fp *FinalityProviderInstance) GetLastVotedHeight() uint64 {
-	return fp.fpState.getStoreFinalityProvider().LastVotedHeight
+	var lastVotedHeight uint64
+	fp.fpState.withLock(func() {
+		lastVotedHeight = fp.fpState.sfp.LastVotedHeight
+	})
+
+	return lastVotedHeight
 }
 
 func (fp *FinalityProviderInstance) GetChainID() []byte {
-	return []byte(fp.fpState.getStoreFinalityProvider().ChainID)
+	var chainID string
+	fp.fpState.withLock(func() {
+		chainID = fp.fpState.sfp.ChainID
+	})
+
+	return []byte(chainID)
 }
 
 func (fp *FinalityProviderInstance) SetStatus(s proto.FinalityProviderStatus) error {
