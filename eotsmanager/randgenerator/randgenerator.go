@@ -24,9 +24,10 @@ func GenerateRandomness(key []byte, chainID []byte, height uint64) (*eots.Privat
 		digest.Write(append(append(sdk.Uint64ToBigEndian(height), chainID...), sdk.Uint64ToBigEndian(iteration)...))
 		randPre := digest.Sum(nil)
 
-		// increase iteration count and sample again until overflow does not
-		// happen. It is fine as the chance of overflow is very small (2^-128)
-		if overflow := randScalar.SetByteSlice(randPre); !overflow {
+		// increase iteration count and sample again until overflow or zero does not
+		// happen. It is fine as the chance of overflow or zero is very small (2^-128)
+		overflow := randScalar.SetByteSlice(randPre)
+		if !overflow && !randScalar.IsZero() {
 			break
 		}
 		iteration++
