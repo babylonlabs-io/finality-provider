@@ -396,6 +396,7 @@ func TestPrintEotsCmd(t *testing.T) {
 
 	cmd.SetArgs([]string{
 		"--home=" + tm.EOTSHomeDir,
+		"--keyring-backend=test",
 	})
 
 	var outputBuffer bytes.Buffer

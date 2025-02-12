@@ -217,6 +217,7 @@ func CommandPrintAllKeys() *cobra.Command {
 
 	flags.AddKeyringFlags(cmd.Flags())
 	cmd.Flags().String(flags.FlagHome, config.DefaultEOTSDir, "The path to the eotsd home directory")
+	cmd.Flags().String(flags.FlagOutput, flags.OutputFormatText, "Output format (text|json)")
 
 	return cmd
 }
@@ -284,11 +285,17 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 		})
 	}
 
-	if cmd.Flag(flags.FlagOutput).Value.String() == flags.OutputFormatJSON {
+	output, err := cmd.Flags().GetString(flags.FlagOutput)
+	if err != nil {
+		return err
+	}
+
+	if strings.EqualFold(output, flags.OutputFormatJSON) {
 		bz, err := json.MarshalIndent(keys, "", "  ")
 		if err != nil {
 			return err
 		}
+
 		_, err = fmt.Fprintln(cmd.OutOrStdout(), string(bz))
 
 		return err
