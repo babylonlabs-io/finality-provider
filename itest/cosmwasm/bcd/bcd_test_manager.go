@@ -134,6 +134,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	cfg.CosmwasmConfig.KeyDirectory = wh.dataDir
 	// make random contract address for now to avoid validation errors, later we will update it with the correct address in the test
 	cfg.CosmwasmConfig.BtcStakingContractAddress = datagen.GenRandomAccount().GetAddress().String()
+	cfg.CosmwasmConfig.BtcFinalityContractAddress = datagen.GenRandomAccount().GetAddress().String()
 	cfg.ChainType = fpcc.WasmConsumerChainType
 	cfg.CosmwasmConfig.AccountPrefix = "bbnc"
 	cfg.CosmwasmConfig.ChainID = bcdChainID
@@ -250,7 +251,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	fpMsg := e2eutils.GenBtcStakingFpExecMsg(eotsPubKey.MarshalHex())
 	fpMsgBytes, err := json.Marshal(fpMsg)
 	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteContract(fpMsgBytes)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(fpMsgBytes)
 	require.NoError(t, err)
 
 	// register fp in Babylon

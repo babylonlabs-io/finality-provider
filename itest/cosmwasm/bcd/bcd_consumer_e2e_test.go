@@ -48,11 +48,25 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(2), btcStakingContractWasmId)
 
+	// store btc finality contract
+	btcFinalityContractPath := "../../bytecode/btc_finality.wasm"
+	err = ctm.BcdConsumerClient.StoreWasmCode(btcFinalityContractPath)
+	require.NoError(t, err)
+	btcFinalityContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), btcFinalityContractWasmId)
+
 	// instantiate babylon contract with admin
 	btcStakingInitMsg := map[string]interface{}{
 		"admin": ctm.BcdConsumerClient.MustGetValidatorAddress(),
 	}
 	btcStakingInitMsgBytes, err := json.Marshal(btcStakingInitMsg)
+	require.NoError(t, err)
+
+	btcFinalityInitMsg := map[string]interface{}{
+		"admin": ctm.BcdConsumerClient.MustGetValidatorAddress(),
+	}
+	btcFinalityInitMsgBytes, err := json.Marshal(btcFinalityInitMsg)
 	require.NoError(t, err)
 	initMsg := map[string]interface{}{
 		"network":                         "regtest",
@@ -62,6 +76,8 @@ func TestConsumerFpLifecycle(t *testing.T) {
 		"notify_cosmos_zone":              false,
 		"btc_staking_code_id":             btcStakingContractWasmId,
 		"btc_staking_msg":                 btcStakingInitMsgBytes,
+		"btc_finality_code_id":            btcFinalityContractWasmId,
+		"btc_finality_msg":                btcFinalityInitMsgBytes,
 		"admin":                           ctm.BcdConsumerClient.MustGetValidatorAddress(),
 	}
 	initMsgBytes, err := json.Marshal(initMsg)
@@ -74,8 +90,16 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, resp.Contracts, 1)
 	btcStakingContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
-	// update the contract address in config because during setup we had used a random address which is not valid
+	// update the contract address
 	ctm.BcdConsumerClient.SetBtcStakingContractAddress(btcStakingContractAddr.String())
+
+	// get btc finality contract address
+	resp, err = ctm.BcdConsumerClient.ListContractsByCode(btcFinalityContractWasmId, &sdkquerytypes.PageRequest{})
+	require.NoError(t, err)
+	require.Len(t, resp.Contracts, 1)
+	btcFinalityContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+	// update the contract address
+	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddr.String())
 
 	// register consumer to babylon
 	_, err = ctm.BBNClient.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
@@ -104,7 +128,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
 	delMsgBytes, err := json.Marshal(delMsg)
 	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteContract(delMsgBytes)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(delMsgBytes)
 	require.NoError(t, err)
 
 	// query delegations in smart contract
