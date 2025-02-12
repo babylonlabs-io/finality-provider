@@ -10,7 +10,9 @@ import (
 	"testing"
 
 	"cosmossdk.io/errors"
+	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
 	"github.com/babylonlabs-io/babylon-sdk/x/babylon/client/cli"
+	appparams "github.com/babylonlabs-io/babylon/app/params"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
@@ -89,7 +91,8 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.Len(t, resp.Contracts, 1)
 	btcStakingContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
 	// update the contract address
-	ctm.BcdConsumerClient.SetBtcStakingContractAddress(btcStakingContractAddr.String())
+	btcStakingContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcStakingContractAddr)
+	ctm.BcdConsumerClient.SetBtcStakingContractAddress(btcStakingContractAddrStr)
 
 	// get btc finality contract address
 	resp, err = ctm.BcdConsumerClient.ListContractsByCode(btcFinalityContractWasmId, &sdkquerytypes.PageRequest{})
@@ -97,7 +100,8 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.Len(t, resp.Contracts, 1)
 	btcFinalityContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
 	// update the contract address
-	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddr.String())
+	btcFinalityContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcFinalityContractAddr)
+	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddrStr)
 
 	// register consumer to babylon
 	_, err = ctm.BBNClient.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
@@ -123,7 +127,10 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 
 	// inject delegation in smart contract using admin
+	// HACK: set account prefix to ensure the staker's address uses bbn prefix
+	appparams.SetAddressPrefixes()
 	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
+	bbnappparams.SetAddressPrefixes()
 	delMsgBytes, err := json.Marshal(delMsg)
 	require.NoError(t, err)
 	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(delMsgBytes)
