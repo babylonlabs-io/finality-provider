@@ -19,6 +19,7 @@ import (
 	wasmparams "github.com/CosmWasm/wasmd/app/params"
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	_ "github.com/babylonlabs-io/babylon-sdk/demo/app"
+	bbnsdktypes "github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -147,6 +148,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 		TxConfig:          tempApp.TxConfig(),
 		Amino:             tempApp.LegacyAmino(),
 	}
+	bbnsdktypes.RegisterInterfaces(encodingCfg.InterfaceRegistry)
 
 	var wcc *cwcc.CosmwasmConsumerController
 	require.Eventually(t, func() bool {

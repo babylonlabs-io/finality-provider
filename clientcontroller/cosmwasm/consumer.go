@@ -82,6 +82,10 @@ func (wc *CosmwasmConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedE
 	return bbnResp, nil
 }
 
+func (wc *CosmwasmConsumerController) GetClient() *cwcclient.Client {
+	return wc.cwClient
+}
+
 // CommitPubRandList commits a list of Schnorr public randomness via a MsgCommitPubRand to Babylon
 // it returns tx hash and error
 func (wc *CosmwasmConsumerController) CommitPubRandList(
@@ -188,7 +192,7 @@ func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 
 		execMsg := &wasmdtypes.MsgExecuteContract{
 			Sender:   wc.cwClient.MustGetAddr(),
-			Contract: sdk.MustAccAddressFromBech32(wc.cfg.BtcStakingContractAddress).String(),
+			Contract: sdk.MustAccAddressFromBech32(wc.cfg.BtcFinalityContractAddress).String(),
 			Msg:      msgBytes,
 		}
 		msgs = append(msgs, execMsg)
@@ -654,7 +658,7 @@ func (wc *CosmwasmConsumerController) QueryIndexedBlock(height uint64) (*Indexed
 	}
 
 	// Query the smart contract state
-	dataFromContract, err := wc.QuerySmartContractState(wc.cfg.BtcStakingContractAddress, string(queryMsgBytes))
+	dataFromContract, err := wc.QuerySmartContractState(wc.cfg.BtcFinalityContractAddress, string(queryMsgBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}

@@ -6,8 +6,11 @@ package e2etest_bcd
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
+	"cosmossdk.io/errors"
+	"github.com/babylonlabs-io/babylon-sdk/x/babylon/client/cli"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
@@ -56,33 +59,28 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(3), btcFinalityContractWasmId)
 
-	// instantiate babylon contract with admin
-	btcStakingInitMsg := map[string]interface{}{
-		"admin": ctm.BcdConsumerClient.MustGetValidatorAddress(),
-	}
-	btcStakingInitMsgBytes, err := json.Marshal(btcStakingInitMsg)
+	initMsg, err := cli.ParseInstantiateArgs(
+		[]string{
+			fmt.Sprintf("%d", babylonContractWasmId),
+			fmt.Sprintf("%d", btcStakingContractWasmId),
+			fmt.Sprintf("%d", btcFinalityContractWasmId),
+			"regtest",
+			"01020304",
+			"1",
+			"2",
+			"false",
+			fmt.Sprintf(`{"admin":"%s"}`, ctm.BcdConsumerClient.MustGetValidatorAddress()),
+			fmt.Sprintf(`{"admin":"%s"}`, ctm.BcdConsumerClient.MustGetValidatorAddress()),
+			"test-consumer",
+			"test-consumer-description",
+		},
+		"",
+		ctm.BcdConsumerClient.MustGetValidatorAddress(),
+		ctm.BcdConsumerClient.MustGetValidatorAddress(),
+	)
 	require.NoError(t, err)
-
-	btcFinalityInitMsg := map[string]interface{}{
-		"admin": ctm.BcdConsumerClient.MustGetValidatorAddress(),
-	}
-	btcFinalityInitMsgBytes, err := json.Marshal(btcFinalityInitMsg)
-	require.NoError(t, err)
-	initMsg := map[string]interface{}{
-		"network":                         "regtest",
-		"babylon_tag":                     "01020304",
-		"btc_confirmation_depth":          1,
-		"checkpoint_finalization_timeout": 2,
-		"notify_cosmos_zone":              false,
-		"btc_staking_code_id":             btcStakingContractWasmId,
-		"btc_staking_msg":                 btcStakingInitMsgBytes,
-		"btc_finality_code_id":            btcFinalityContractWasmId,
-		"btc_finality_msg":                btcFinalityInitMsgBytes,
-		"admin":                           ctm.BcdConsumerClient.MustGetValidatorAddress(),
-	}
-	initMsgBytes, err := json.Marshal(initMsg)
-	require.NoError(t, err)
-	err = ctm.BcdConsumerClient.InstantiateContract(babylonContractWasmId, initMsgBytes)
+	emptyErrs := []*errors.Error{}
+	_, err = ctm.BcdConsumerClient.GetClient().ReliablySendMsg(ctx, initMsg, emptyErrs, emptyErrs)
 	require.NoError(t, err)
 
 	// get btc staking contract address

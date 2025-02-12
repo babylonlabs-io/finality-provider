@@ -155,27 +155,6 @@ func bcdUpdateGenesisFile(homeDir string) error {
 		return fmt.Errorf("failed to update stake in genesis.json: %w", err)
 	}
 
-	// TODO: this is a hack to update babylon module params in bcd chain
-	//  this is needed to ensure tallying and block finalization works properly
-	babylonContractAddr := "bbnc14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9syx25zf"
-	btcStakingContractAddr := "bbnc1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqgn0kq0"
-
-	// Update babylon_contract_address
-	sedCmd2 := fmt.Sprintf("sed -i. 's/\"babylon_contract_address\": \"\"/\"babylon_contract_address\": \"%s\"/' %s", babylonContractAddr, genesisPath)
-	fmt.Println("Executing command:", sedCmd2)
-	_, err = common.RunCommand("sh", "-c", sedCmd2)
-	if err != nil {
-		return fmt.Errorf("failed to update babylon_contract_address in genesis.json: %w", err)
-	}
-
-	// Update btc_staking_contract_address
-	sedCmd3 := fmt.Sprintf("sed -i. 's/\"btc_staking_contract_address\": \"\"/\"btc_staking_contract_address\": \"%s\"/' %s", btcStakingContractAddr, genesisPath)
-	fmt.Println("Executing command:", sedCmd3)
-	_, err = common.RunCommand("sh", "-c", sedCmd3)
-	if err != nil {
-		return fmt.Errorf("failed to update btc_staking_contract_address in genesis.json: %w", err)
-	}
-
 	// Read and print the updated genesis.json to verify changes
 	content, err := os.ReadFile(genesisPath)
 	if err != nil {
