@@ -6,8 +6,13 @@ package e2etest_bcd
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
+	"cosmossdk.io/errors"
+	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
+	"github.com/babylonlabs-io/babylon-sdk/x/babylon/client/cli"
+	appparams "github.com/babylonlabs-io/babylon/app/params"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
@@ -48,25 +53,36 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(2), btcStakingContractWasmId)
 
-	// instantiate babylon contract with admin
-	btcStakingInitMsg := map[string]interface{}{
-		"admin": ctm.BcdConsumerClient.MustGetValidatorAddress(),
-	}
-	btcStakingInitMsgBytes, err := json.Marshal(btcStakingInitMsg)
+	// store btc finality contract
+	btcFinalityContractPath := "../../bytecode/btc_finality.wasm"
+	err = ctm.BcdConsumerClient.StoreWasmCode(btcFinalityContractPath)
 	require.NoError(t, err)
-	initMsg := map[string]interface{}{
-		"network":                         "regtest",
-		"babylon_tag":                     "01020304",
-		"btc_confirmation_depth":          1,
-		"checkpoint_finalization_timeout": 2,
-		"notify_cosmos_zone":              false,
-		"btc_staking_code_id":             btcStakingContractWasmId,
-		"btc_staking_msg":                 btcStakingInitMsgBytes,
-		"admin":                           ctm.BcdConsumerClient.MustGetValidatorAddress(),
-	}
-	initMsgBytes, err := json.Marshal(initMsg)
+	btcFinalityContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
 	require.NoError(t, err)
-	err = ctm.BcdConsumerClient.InstantiateContract(babylonContractWasmId, initMsgBytes)
+	require.Equal(t, uint64(3), btcFinalityContractWasmId)
+
+	initMsg, err := cli.ParseInstantiateArgs(
+		[]string{
+			fmt.Sprintf("%d", babylonContractWasmId),
+			fmt.Sprintf("%d", btcStakingContractWasmId),
+			fmt.Sprintf("%d", btcFinalityContractWasmId),
+			"regtest",
+			"01020304",
+			"1",
+			"2",
+			"false",
+			fmt.Sprintf(`{"admin":"%s"}`, ctm.BcdConsumerClient.MustGetValidatorAddress()),
+			fmt.Sprintf(`{"admin":"%s"}`, ctm.BcdConsumerClient.MustGetValidatorAddress()),
+			"test-consumer",
+			"test-consumer-description",
+		},
+		"",
+		ctm.BcdConsumerClient.MustGetValidatorAddress(),
+		ctm.BcdConsumerClient.MustGetValidatorAddress(),
+	)
+	require.NoError(t, err)
+	emptyErrs := []*errors.Error{}
+	_, err = ctm.BcdConsumerClient.GetClient().ReliablySendMsg(ctx, initMsg, emptyErrs, emptyErrs)
 	require.NoError(t, err)
 
 	// get btc staking contract address
@@ -74,8 +90,18 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, resp.Contracts, 1)
 	btcStakingContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
-	// update the contract address in config because during setup we had used a random address which is not valid
-	ctm.BcdConsumerClient.SetBtcStakingContractAddress(btcStakingContractAddr.String())
+	// update the contract address
+	btcStakingContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcStakingContractAddr)
+	ctm.BcdConsumerClient.SetBtcStakingContractAddress(btcStakingContractAddrStr)
+
+	// get btc finality contract address
+	resp, err = ctm.BcdConsumerClient.ListContractsByCode(btcFinalityContractWasmId, &sdkquerytypes.PageRequest{})
+	require.NoError(t, err)
+	require.Len(t, resp.Contracts, 1)
+	btcFinalityContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+	// update the contract address
+	btcFinalityContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcFinalityContractAddr)
+	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddrStr)
 
 	// register consumer to babylon
 	_, err = ctm.BBNClient.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
@@ -101,10 +127,13 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 
 	// inject delegation in smart contract using admin
+	// HACK: set account prefix to ensure the staker's address uses bbn prefix
+	appparams.SetAddressPrefixes()
 	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
+	bbnappparams.SetAddressPrefixes()
 	delMsgBytes, err := json.Marshal(delMsg)
 	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteContract(delMsgBytes)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(delMsgBytes)
 	require.NoError(t, err)
 
 	// query delegations in smart contract

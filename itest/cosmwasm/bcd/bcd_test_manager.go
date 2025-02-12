@@ -19,6 +19,7 @@ import (
 	wasmparams "github.com/CosmWasm/wasmd/app/params"
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	_ "github.com/babylonlabs-io/babylon-sdk/demo/app"
+	bbnsdktypes "github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -134,6 +135,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	cfg.CosmwasmConfig.KeyDirectory = wh.dataDir
 	// make random contract address for now to avoid validation errors, later we will update it with the correct address in the test
 	cfg.CosmwasmConfig.BtcStakingContractAddress = datagen.GenRandomAccount().GetAddress().String()
+	cfg.CosmwasmConfig.BtcFinalityContractAddress = datagen.GenRandomAccount().GetAddress().String()
 	cfg.ChainType = fpcc.WasmConsumerChainType
 	cfg.CosmwasmConfig.AccountPrefix = "bbnc"
 	cfg.CosmwasmConfig.ChainID = bcdChainID
@@ -146,6 +148,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 		TxConfig:          tempApp.TxConfig(),
 		Amino:             tempApp.LegacyAmino(),
 	}
+	bbnsdktypes.RegisterInterfaces(encodingCfg.InterfaceRegistry)
 
 	var wcc *cwcc.CosmwasmConsumerController
 	require.Eventually(t, func() bool {
@@ -250,7 +253,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	fpMsg := e2eutils.GenBtcStakingFpExecMsg(eotsPubKey.MarshalHex())
 	fpMsgBytes, err := json.Marshal(fpMsg)
 	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteContract(fpMsgBytes)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(fpMsgBytes)
 	require.NoError(t, err)
 
 	// register fp in Babylon

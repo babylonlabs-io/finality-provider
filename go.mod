@@ -1,15 +1,15 @@
 module github.com/babylonlabs-io/finality-provider
 
-go 1.23.1
+go 1.23.4
 
-toolchain go1.23.3
+toolchain go1.23.6
 
 require (
 	cosmossdk.io/errors v1.0.1
 	cosmossdk.io/math v1.4.0
 	github.com/avast/retry-go/v4 v4.5.1
 	github.com/babylonlabs-io/babylon v1.99.0-snapshot.250131
-	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20240814002132-55e711397a82
+	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250206070140-1b5d1ba72584
 	github.com/babylonlabs-io/finality-gadget v0.1.1
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
@@ -86,7 +86,7 @@ require (
 	github.com/aead/siphash v1.0.1 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.312 // indirect
-	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20240814002132-55e711397a82 // indirect
+	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250206070140-1b5d1ba72584
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bgentry/speakeasy v0.1.1-0.20220910012023-760eaf8b6816 // indirect
