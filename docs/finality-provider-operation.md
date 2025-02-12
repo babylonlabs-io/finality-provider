@@ -76,6 +76,18 @@ For production environments, you may want to consider using more robust hardware
 > 💡 **Note**: While these are the minimum requirements, operators may choose 
 > to use more powerful hardware for better performance and future-proofing.
 
+**Recovery and Backup**
+At the time of writing, the following assets **must not** be lost and should be 
+backed up frequently. Loss will lead to inability to submit transactions to the
+Babylon chain, which will in turn lead to FP jailing and halt BTC Staking reward
+accumulation.
+
+- The `keyring-` folder contains your Babylon keyring, used to submit public
+randomness and finality signatures to Babylon. 
+- The `fpd.db`
+
+The ability to recreate the `fpd.db` will be offered in the next few months.
+
 ## 3. Install Finality Provider Toolset
 
 The finality provider toolset requires [Golang 1.23](https://go.dev/dl)
@@ -881,3 +893,53 @@ This will withdraw **ALL** accumulated rewards to the address you set in the
 the rewards will be withdrawn to your finality provider address.
 
 Congratulations! You have successfully set up and operated a finality provider.
+
+## Recovery and Backup
+
+### Critical Assets
+
+The following assets **must** be backed up frequently to prevent loss of service or funds:
+
+For EOTS Manager:
+- **keyring-*** directory: Contains your EOTS private keys used for signing. Loss of these keys means:
+  - Unable to sign finality signatures
+  - Unable to recover your finality provider identity
+  - Permanent loss of your finality provider position
+- **eotsd.db**: Contains key mappings and metadata. While less critical, loss means:
+  - Need to re-register key mappings
+  - Temporary service interruption
+
+For Finality Provider:
+- **keyring-*** directory: Contains your Babylon account keys used for:
+  - Submitting finality signatures to Babylon
+  - Collecting rewards
+  - Managing your finality provider
+  - Loss means inability to operate until restored
+- **fpd.db**: Contains operational data including:
+  - Finality signatures
+  - Public randomness proofs
+  - Historical block data
+  - Loss leads to temporary service interruption
+
+### Backup Recommendations
+
+1. Regular Backups:
+   - Daily backup of keyring directories
+   - Weekly backup of full database files
+   - Store backups in encrypted format
+   - Keep multiple backup copies in separate locations
+
+2. Critical Times for Backup:
+   - After initial setup
+   - Before any major updates
+   - After key operations
+   - After configuration changes
+
+3. Recovery Testing:
+   - Regularly test recovery procedures
+   - Maintain documented recovery process
+   - Practice key restoration in test environment
+
+> 🔒 **Security Note**: While database files can be recreated, loss of private keys in the keyring directories is **irrecoverable** and will result in permanent loss of your finality provider position and accumulated rewards.
+
+> 💡 **Future Updates**: The ability to recreate the `fpd.db` from chain state will be offered in future releases, but keyring backup remains critical.
