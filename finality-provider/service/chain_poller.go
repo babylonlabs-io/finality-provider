@@ -115,7 +115,7 @@ func (cp *ChainPoller) blocksWithRetry(start, end uint64, limit uint32) ([]*type
 		// no need return error when just no found new blocks,
 		// the chain to poller may not produce new blocks.
 		if len(block) == 0 {
-			cp.logger.Warn(
+			cp.logger.Debug(
 				"no blocks found for range",
 				zap.Uint64("start_height", start),
 				zap.Uint64("end_height", end),
