@@ -40,9 +40,6 @@ type FinalityProviderInstance struct {
 	poller      *ChainPoller
 	metrics     *metrics.FpMetrics
 
-	// passphrase is used to unlock private keys
-	passphrase string
-
 	criticalErrChan chan<- *CriticalError
 
 	isStarted *atomic.Bool
@@ -62,7 +59,6 @@ func NewFinalityProviderInstance(
 	consumerCon ccapi.ConsumerController,
 	em eotsmanager.EOTSManager,
 	metrics *metrics.FpMetrics,
-	passphrase string,
 	errChan chan<- *CriticalError,
 	logger *zap.Logger,
 ) (*FinalityProviderInstance, error) {
@@ -75,7 +71,7 @@ func NewFinalityProviderInstance(
 		return nil, fmt.Errorf("the finality provider instance is already slashed")
 	}
 
-	return newFinalityProviderInstanceFromStore(sfp, cfg, s, prStore, cc, consumerCon, em, metrics, passphrase, errChan, logger)
+	return newFinalityProviderInstanceFromStore(sfp, cfg, s, prStore, cc, consumerCon, em, metrics, errChan, logger)
 }
 
 // Helper function to create FinalityProviderInstance from store data
@@ -88,7 +84,6 @@ func newFinalityProviderInstanceFromStore(
 	consumerCon ccapi.ConsumerController,
 	em eotsmanager.EOTSManager,
 	metrics *metrics.FpMetrics,
-	passphrase string,
 	errChan chan<- *CriticalError,
 	logger *zap.Logger,
 ) (*FinalityProviderInstance, error) {
@@ -100,7 +95,6 @@ func newFinalityProviderInstanceFromStore(
 		logger:          logger,
 		isStarted:       atomic.NewBool(false),
 		criticalErrChan: errChan,
-		passphrase:      passphrase,
 		em:              em,
 		cc:              cc,
 		consumerCon:     consumerCon,
@@ -722,7 +716,7 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 
 	eotsSignerFunc := func(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
 		msgToSign := getMsgToSignForVote(b.Height, b.Hash)
-		sig, err := fp.em.UnsafeSignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height, fp.passphrase)
+		sig, err := fp.em.UnsafeSignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign EOTS: %w", err)
 		}

@@ -13,6 +13,11 @@ import (
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/ory/dockertest/v3"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
@@ -25,11 +30,6 @@ import (
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
-	"github.com/btcsuite/btcd/btcec/v2"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/ory/dockertest/v3"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 const (
@@ -155,7 +155,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 
 	// Create EOTS key
 	eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
-	eotsPkBz, err := tm.EOTSClient.CreateKey(eotsKeyName, passphrase, hdPath)
+	eotsPkBz, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
 	require.NoError(t, err)
 	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
 	require.NoError(t, err)
@@ -199,13 +199,13 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 	// Create and register the finality provider
 	commission := sdkmath.LegacyZeroDec()
 	desc := newDescription(testMoniker)
-	_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, passphrase, eotsPk, desc, &commission)
+	_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, eotsPk, desc, &commission)
 	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	err = fpApp.StartFinalityProvider(eotsPk, passphrase)
+	err = fpApp.StartFinalityProvider(eotsPk)
 	require.NoError(t, err)
 
 	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb)
@@ -301,12 +301,6 @@ func (tm *TestManager) WaitForFpVoteCast(t *testing.T, fpIns *service.FinalityPr
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	return lastVotedHeight
-}
-
-func (tm *TestManager) GetFpPrivKey(t *testing.T, fpPk []byte) *btcec.PrivateKey {
-	record, err := tm.EOTSClient.KeyRecord(fpPk, passphrase)
-	require.NoError(t, err)
-	return record.PrivKey
 }
 
 func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *service.FinalityProviderInstance) {

@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
@@ -166,7 +165,7 @@ func startFinalityProviderAppWithRegisteredFp(
 	// create registered finality-provider
 	eotsKeyName := testutil.GenRandomHexStr(r, 4)
 	require.NoError(t, err)
-	eotsPkBz, err := em.CreateKey(eotsKeyName, passphrase, hdPath)
+	eotsPkBz, err := em.CreateKey(eotsKeyName)
 	require.NoError(t, err)
 	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
 	require.NoError(t, err)
@@ -174,15 +173,13 @@ func startFinalityProviderAppWithRegisteredFp(
 	fpStore := app.GetFinalityProviderStore()
 	keyName := datagen.GenRandomHexStr(r, 10)
 	chainID := datagen.GenRandomHexStr(r, 10)
-	input := strings.NewReader("")
 	kr, err := fpkr.CreateKeyring(
 		fpCfg.BabylonConfig.KeyDirectory,
 		fpCfg.BabylonConfig.ChainID,
 		fpCfg.BabylonConfig.KeyringBackend,
-		input,
 	)
 	require.NoError(t, err)
-	kc, err := fpkr.NewChainKeyringControllerWithKeyring(kr, keyName, input)
+	kc, err := fpkr.NewChainKeyringControllerWithKeyring(kr, keyName)
 	require.NoError(t, err)
 	keyInfo, err := kc.CreateChainKey("", "", "")
 	require.NoError(t, err)
@@ -196,7 +193,7 @@ func startFinalityProviderAppWithRegisteredFp(
 	)
 	require.NoError(t, err)
 	m := metrics.NewFpMetrics()
-	fpIns, err := service.NewFinalityProviderInstance(eotsPk, &fpCfg, fpStore, pubRandProofStore, cc, consumerCon, em, m, passphrase, make(chan *service.CriticalError), logger)
+	fpIns, err := service.NewFinalityProviderInstance(eotsPk, &fpCfg, fpStore, pubRandProofStore, cc, consumerCon, em, m, make(chan *service.CriticalError), logger)
 	require.NoError(t, err)
 
 	cleanUp := func() {

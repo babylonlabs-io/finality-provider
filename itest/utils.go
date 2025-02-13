@@ -1,19 +1,19 @@
 package e2e_utils
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
 	"testing"
 	"time"
 
-	"encoding/hex"
-
-	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/chaincfg"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
@@ -26,8 +26,6 @@ var (
 	FpNamePrefix          = "test-fp-"
 	MonikerPrefix         = "moniker-"
 	ChainID               = "chain-test"
-	Passphrase            = "testpass"
-	HdPath                = ""
 	WasmStake             = "ustake"  // Default staking token
 	WasmFee               = "ucosm"   // Default fee token
 	WasmMoniker           = "node001" // Default moniker

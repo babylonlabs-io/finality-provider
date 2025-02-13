@@ -7,17 +7,9 @@ option go_package = "github.com/babylonlabs-io/finality-provider/eotsmanager/pro
 service EOTSManager {
   rpc Ping (PingRequest) returns (PingResponse);
 
-  // CreateKey generates and saves an EOTS key
-  rpc CreateKey (CreateKeyRequest)
-      returns (CreateKeyResponse);
-
   // CreateRandomnessPairList returns a list of Schnorr randomness pairs
   rpc CreateRandomnessPairList (CreateRandomnessPairListRequest)
       returns (CreateRandomnessPairListResponse);
-
-  // KeyRecord returns the key record
-  rpc KeyRecord(KeyRecordRequest)
-      returns (KeyRecordResponse);
 
   // SignEOTS signs an EOTS with the EOTS private key and the relevant randomness
   rpc SignEOTS (SignEOTSRequest)
@@ -43,10 +35,8 @@ message PingResponse {}
 message CreateKeyRequest {
   // name is the identifier key in keyring
   string name = 1;
-  // passphrase is used to encrypt the EOTS key
-  string passphrase = 2;
   // hd_path is the hd path for private key derivation
-  string hd_path = 3;
+  string hd_path = 2;
 }
 
 message CreateKeyResponse {
@@ -63,27 +53,11 @@ message CreateRandomnessPairListRequest {
   uint64 start_height = 3;
   // num is the number of randomness pair list
   uint32 num = 4;
-  // passphrase is used to decrypt the EOTS key
-  string passphrase = 5;
 }
 
 message CreateRandomnessPairListResponse {
   // pub_rand_list is a list of Schnorr public randomness
   repeated bytes pub_rand_list = 1;
-}
-
-message KeyRecordRequest {
-  // uid is the identifier of an EOTS key, i.e., public key following BIP-340 spec
-  bytes uid = 1;
-  // passphrase is used to decrypt the EOTS key
-  string passphrase = 2;
-}
-
-message KeyRecordResponse {
-  // name is the identifier key in keyring
-  string name = 1;
-  // private_key is the private EOTS key encoded in secp256k1 spec
-  bytes private_key = 2;
 }
 
 message SignEOTSRequest {
@@ -95,8 +69,6 @@ message SignEOTSRequest {
   bytes msg = 3;
   // the block height which the EOTS signs
   uint64 height = 4;
-  // passphrase is used to decrypt the EOTS key
-  string passphrase = 5;
 }
 
 message SignEOTSResponse {
@@ -109,8 +81,6 @@ message SignSchnorrSigRequest {
   bytes uid = 1;
   // the message which the Schnorr signature signs
   bytes msg = 2;
-  // passphrase is used to decrypt the EOTS key
-  string passphrase = 3;
 }
 
 message SignSchnorrSigResponse {

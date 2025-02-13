@@ -101,7 +101,6 @@ func NewPopExportCmd() *cobra.Command {
 	f.String(sdkflags.FlagHome, config.DefaultEOTSDir, "EOTS home directory")
 	f.String(keyNameFlag, "", "EOTS key name")
 	f.String(eotsPkFlag, "", "EOTS public key of the finality-provider")
-	f.String(passphraseFlag, "", "EOTS passphrase used to decrypt the keyring")
 	f.String(sdkflags.FlagKeyringBackend, keyring.BackendTest, "EOTS backend of the keyring")
 
 	f.String(flagHomeBaby, "", "BABY home directory")
@@ -183,11 +182,6 @@ func validatePop(cmd *cobra.Command, args []string) error {
 }
 
 func exportPop(cmd *cobra.Command, _ []string) error {
-	eotsPassphrase, err := cmd.Flags().GetString(passphraseFlag)
-	if err != nil {
-		return err
-	}
-
 	eotsHomePath, eotsKeyName, eotsFpPubKeyStr, eotsKeyringBackend, err := eotsFlags(cmd)
 	if err != nil {
 		return err
@@ -211,7 +205,7 @@ func exportPop(cmd *cobra.Command, _ []string) error {
 
 	bbnAddrStr := bbnAddr.String()
 	hashOfMsgToSign := tmhash.Sum([]byte(bbnAddrStr))
-	schnorrSigOverBabyAddr, eotsPk, err := eotsSignMsg(eotsManager, eotsKeyName, eotsFpPubKeyStr, eotsPassphrase, hashOfMsgToSign)
+	schnorrSigOverBabyAddr, eotsPk, err := eotsSignMsg(eotsManager, eotsKeyName, eotsFpPubKeyStr, hashOfMsgToSign)
 	if err != nil {
 		return fmt.Errorf("failed to sign address %s: %w", bbnAddrStr, err)
 	}
@@ -572,7 +566,7 @@ func eotsPubKey(
 
 func eotsSignMsg(
 	eotsManager *eotsmanager.LocalEOTSManager,
-	keyName, fpPkStr, passphrase string,
+	keyName, fpPkStr string,
 	hashOfMsgToSign []byte,
 ) (*schnorr.Signature, *bbntypes.BIP340PubKey, error) {
 	if len(fpPkStr) > 0 {
@@ -580,7 +574,7 @@ func eotsSignMsg(
 		if err != nil {
 			return nil, nil, fmt.Errorf("invalid finality-provider public key %s: %w", fpPkStr, err)
 		}
-		signature, err := eotsManager.SignSchnorrSig(*fpPk, hashOfMsgToSign, passphrase)
+		signature, err := eotsManager.SignSchnorrSig(*fpPk, hashOfMsgToSign)
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to sign msg with pk %s: %w", fpPkStr, err)
 		}
@@ -588,7 +582,7 @@ func eotsSignMsg(
 		return signature, fpPk, nil
 	}
 
-	return eotsManager.SignSchnorrSigFromKeyname(keyName, passphrase, hashOfMsgToSign)
+	return eotsManager.SignSchnorrSigFromKeyname(keyName, hashOfMsgToSign)
 }
 
 func cmdCloseEots(

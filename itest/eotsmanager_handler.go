@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -13,9 +14,10 @@ import (
 )
 
 type EOTSServerHandler struct {
-	t          *testing.T
-	eotsServer *service.Server
-	cfg        *config.Config
+	t           *testing.T
+	eotsServer  *service.Server
+	eotsManager *eotsmanager.LocalEOTSManager
+	cfg         *config.Config
 }
 
 func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string) *EOTSServerHandler {
@@ -31,9 +33,10 @@ func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string) 
 	eotsServer := service.NewEOTSManagerServer(cfg, logger, eotsManager, dbBackend)
 
 	return &EOTSServerHandler{
-		t:          t,
-		eotsServer: eotsServer,
-		cfg:        cfg,
+		t:           t,
+		eotsServer:  eotsServer,
+		eotsManager: eotsManager,
+		cfg:         cfg,
 	}
 }
 
@@ -48,4 +51,14 @@ func (eh *EOTSServerHandler) Start(ctx context.Context) {
 func (eh *EOTSServerHandler) startServer(ctx context.Context) {
 	err := eh.eotsServer.RunUntilShutdown(ctx)
 	require.NoError(eh.t, err)
+}
+
+func (eh *EOTSServerHandler) CreateKey(name string) ([]byte, error) {
+	return eh.eotsManager.CreateKey(name)
+}
+
+func (eh *EOTSServerHandler) GetFPPrivKey(t *testing.T, fpPk []byte) *btcec.PrivateKey {
+	privKey, err := eh.eotsManager.KeyRecord(fpPk)
+	require.NoError(t, err)
+	return privKey.PrivKey
 }

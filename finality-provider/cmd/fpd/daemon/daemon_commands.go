@@ -111,7 +111,6 @@ Where finality-provider.json contains:
 	f.String(keyNameFlag, "", "The unique key name of the finality provider's Babylon account")
 	f.String(sdkflags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 	f.String(chainIDFlag, "", "The identifier of the consumer chain")
-	f.String(passphraseFlag, "", "The pass phrase used to encrypt the keys")
 	f.String(commissionRateFlag, "", "The commission rate for the finality provider, e.g., 0.05")
 	f.String(monikerFlag, "", "A human-readable name for the finality provider")
 	f.String(identityFlag, "", "An optional identity signature (ex. UPort or Keybase)")
@@ -189,7 +188,6 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		fp.keyName,
 		fp.chainID,
 		fp.eotsPK,
-		fp.passphrase,
 		fp.description,
 		&fp.commissionRate,
 	)
@@ -597,7 +595,6 @@ type parsedFinalityProvider struct {
 	keyName        string
 	chainID        string
 	eotsPK         string
-	passphrase     string
 	description    stakingtypes.Description
 	commissionRate math.LegacyDec
 }
@@ -668,7 +665,6 @@ func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProv
 		keyName:        fp.KeyName,
 		chainID:        fp.ChainID,
 		eotsPK:         fp.EotsPK,
-		passphrase:     fp.Passphrase,
 		description:    description,
 		commissionRate: commissionRate,
 	}, nil
@@ -709,11 +705,6 @@ func parseFinalityProviderFlags(cmd *cobra.Command, homeDir string) (*parsedFina
 		return nil, fmt.Errorf("chain-id cannot be empty")
 	}
 
-	passphrase, err := flags.GetString(passphraseFlag)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read flag %s: %w", passphraseFlag, err)
-	}
-
 	eotsPkHex, err := flags.GetString(fpEotsPkFlag)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read flag %s: %w", fpEotsPkFlag, err)
@@ -727,7 +718,6 @@ func parseFinalityProviderFlags(cmd *cobra.Command, homeDir string) (*parsedFina
 		keyName:        keyName,
 		chainID:        chainID,
 		eotsPK:         eotsPkHex,
-		passphrase:     passphrase,
 		description:    description,
 		commissionRate: commissionRate,
 	}, nil

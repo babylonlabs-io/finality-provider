@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -12,7 +11,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/codec"
 )
 
-func CreateKeyring(keyringDir string, chainID string, backend string, input *strings.Reader) (keyring.Keyring, error) {
+func CreateKeyring(keyringDir string, chainID string, backend string) (keyring.Keyring, error) {
 	ctx, err := CreateClientCtx(keyringDir, chainID)
 	if err != nil {
 		return nil, err
@@ -26,7 +25,7 @@ func CreateKeyring(keyringDir string, chainID string, backend string, input *str
 		ctx.ChainID,
 		backend,
 		ctx.KeyringDir,
-		input,
+		os.Stdin,
 		ctx.Codec,
 		ctx.KeyringOptions...)
 	if err != nil {

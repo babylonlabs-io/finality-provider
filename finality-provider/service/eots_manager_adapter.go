@@ -18,7 +18,6 @@ func (fp *FinalityProviderInstance) GetPubRandList(startHeight uint64, numPubRan
 		fp.GetChainID(),
 		startHeight,
 		numPubRand,
-		fp.passphrase,
 	)
 	if err != nil {
 		return nil, err
@@ -49,7 +48,7 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 	}
 
 	// sign the message hash using the finality-provider's BTC private key
-	return fp.em.SignSchnorrSig(fp.btcPk.MustMarshal(), hash, fp.passphrase)
+	return fp.em.SignSchnorrSig(fp.btcPk.MustMarshal(), hash)
 }
 
 func getMsgToSignForVote(blockHeight uint64, blockHash []byte) []byte {
@@ -59,7 +58,7 @@ func getMsgToSignForVote(blockHeight uint64, blockHash []byte) []byte {
 func (fp *FinalityProviderInstance) SignFinalitySig(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
 	// build proper finality signature request
 	msgToSign := getMsgToSignForVote(b.Height, b.Hash)
-	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height, fp.passphrase)
+	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign EOTS: %w", err)
 	}
