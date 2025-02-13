@@ -255,11 +255,19 @@ func (cp *ChainPoller) pollChain() {
 func (cp *ChainPoller) tryPollChain(latestBlockHeight, blockToRetrieve uint64) error {
 	var blocks []*types.BlockInfo
 	var err error
-	if blockToRetrieve == latestBlockHeight {
+
+	switch {
+	case blockToRetrieve > latestBlockHeight:
+		cp.logger.Debug(
+			"skipping block query as there is no new block",
+			zap.Uint64("next_height", blockToRetrieve),
+			zap.Uint64("latest_height", latestBlockHeight),
+		)
+	case blockToRetrieve == latestBlockHeight:
 		var latestBlock *types.BlockInfo
 		latestBlock, err = cp.consumerCon.QueryBlock(latestBlockHeight)
 		blocks = []*types.BlockInfo{latestBlock}
-	} else {
+	default:
 		blocks, err = cp.blocksWithRetry(blockToRetrieve, latestBlockHeight, cp.cfg.PollSize)
 	}
 
