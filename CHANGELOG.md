@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
+* [#333](https://github.com/babylonlabs-io/finality-provider/pull/333) poller: skip if no new block is polled
 * [#328](https://github.com/babylonlabs-io/finality-provider/pull/328) Fix small bias in EOTS private key generation
 
 ## v1.0.0-rc.1
