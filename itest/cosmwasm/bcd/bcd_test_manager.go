@@ -1,6 +1,3 @@
-//go:build e2e_bcd
-// +build e2e_bcd
-
 package e2etest_bcd
 
 import (
@@ -23,6 +20,12 @@ import (
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	dbm "github.com/cosmos/cosmos-db"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
@@ -36,16 +39,6 @@ import (
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
-	dbm "github.com/cosmos/cosmos-db"
-	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-)
-
-const (
-	passphrase = "testpass"
-	hdPath     = ""
 )
 
 type BcdTestManager struct {
@@ -244,7 +237,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	commission := sdkmath.LegacyZeroDec()
 	desc := e2eutils.NewDescription(moniker)
 
-	eotsPk, err := ctm.EOTSClient.CreateKey(keyName, passphrase, hdPath)
+	eotsPk, err := ctm.EOTSServerHandler.CreateKey(keyName)
 	require.NoError(t, err)
 	eotsPubKey, err := bbntypes.NewBIP340PubKey(eotsPk)
 	require.NoError(t, err)
@@ -257,13 +250,13 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	require.NoError(t, err)
 
 	// register fp in Babylon
-	_, err = app.CreateFinalityProvider(keyName, consumerId, passphrase, eotsPubKey, desc, &commission)
+	_, err = app.CreateFinalityProvider(keyName, consumerId, eotsPubKey, desc, &commission)
 	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	err = app.StartFinalityProvider(eotsPubKey, passphrase)
+	err = app.StartFinalityProvider(eotsPubKey)
 	require.NoError(t, err)
 
 	fpIns, err := app.GetFinalityProviderInstance()

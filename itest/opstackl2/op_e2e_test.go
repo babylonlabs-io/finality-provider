@@ -12,8 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/babylonlabs-io/finality-provider/testutil"
 )
 
 // TestPubRandCommitment tests the consumer controller's functions:

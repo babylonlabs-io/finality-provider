@@ -13,10 +13,11 @@ import (
 	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
 	"github.com/babylonlabs-io/babylon-sdk/x/babylon/client/cli"
 	appparams "github.com/babylonlabs-io/babylon/app/params"
-	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
+
+	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 )
 
 // TestConsumerFpLifecycle tests the consumer finality provider lifecycle
