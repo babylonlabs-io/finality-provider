@@ -519,6 +519,10 @@ func (wc *CosmwasmConsumerController) queryCometBestBlock() (*fptypes.BlockInfo,
 }
 
 func (wc *CosmwasmConsumerController) queryCometBlocksInRange(startHeight, endHeight uint64) ([]*fptypes.BlockInfo, error) {
+	if startHeight > endHeight {
+		return nil, fmt.Errorf("the startHeight %v should not be higher than the endHeight %v", startHeight, endHeight)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), wc.cfg.Timeout)
 	defer cancel()
 
