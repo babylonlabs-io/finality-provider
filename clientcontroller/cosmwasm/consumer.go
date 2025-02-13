@@ -192,7 +192,7 @@ func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 
 		execMsg := &wasmdtypes.MsgExecuteContract{
 			Sender:   wc.cwClient.MustGetAddr(),
-			Contract: sdk.MustAccAddressFromBech32(wc.cfg.BtcFinalityContractAddress).String(),
+			Contract: wc.cfg.BtcFinalityContractAddress,
 			Msg:      msgBytes,
 		}
 		msgs = append(msgs, execMsg)
