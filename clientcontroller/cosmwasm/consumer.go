@@ -192,7 +192,7 @@ func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 
 		execMsg := &wasmdtypes.MsgExecuteContract{
 			Sender:   wc.cwClient.MustGetAddr(),
-			Contract: sdk.MustAccAddressFromBech32(wc.cfg.BtcFinalityContractAddress).String(),
+			Contract: wc.cfg.BtcFinalityContractAddress,
 			Msg:      msgBytes,
 		}
 		msgs = append(msgs, execMsg)
@@ -519,6 +519,10 @@ func (wc *CosmwasmConsumerController) queryCometBestBlock() (*fptypes.BlockInfo,
 }
 
 func (wc *CosmwasmConsumerController) queryCometBlocksInRange(startHeight, endHeight uint64) ([]*fptypes.BlockInfo, error) {
+	if startHeight > endHeight {
+		return nil, fmt.Errorf("the startHeight %v should not be higher than the endHeight %v", startHeight, endHeight)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), wc.cfg.Timeout)
 	defer cancel()
 
