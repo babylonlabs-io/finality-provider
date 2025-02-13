@@ -116,7 +116,7 @@ func (cp *ChainPoller) blocksWithRetry(start, end uint64, limit uint32) ([]*type
 		// no need return error when just no found new blocks,
 		// the chain to poller may not produce new blocks.
 		if len(block) == 0 {
-			cp.logger.Warn(
+			cp.logger.Debug(
 				"no blocks found for range",
 				zap.Uint64("start_height", start),
 				zap.Uint64("end_height", end),
@@ -255,9 +255,17 @@ func (cp *ChainPoller) pollChain() {
 func (cp *ChainPoller) tryPollChain(latestBlock *types.BlockInfo, blockToRetrieve uint64) error {
 	var blocks []*types.BlockInfo
 	var err error
-	if blockToRetrieve == latestBlock.Height {
+
+	switch {
+	case blockToRetrieve > latestBlock.Height:
+		cp.logger.Debug(
+			"skipping block query as there is no new block",
+			zap.Uint64("next_height", blockToRetrieve),
+			zap.Uint64("latest_height", latestBlock.Height),
+		)
+	case blockToRetrieve == latestBlock.Height:
 		blocks = []*types.BlockInfo{latestBlock}
-	} else {
+	default:
 		blocks, err = cp.blocksWithRetry(blockToRetrieve, latestBlock.Height, cp.cfg.PollSize)
 	}
 
