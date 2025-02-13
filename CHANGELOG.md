@@ -37,7 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug Fixes
+
 * [#328](https://github.com/babylonlabs-io/finality-provider/pull/328) Fix small bias in EOTS private key generation
+* [#327](https://github.com/babylonlabs-io/finality-provider/pull/327) fix: no add failed cycles count when chain poller no found new blocks
 
 ## v1.0.0-rc.1
 
