@@ -25,7 +25,7 @@ gain an overall understanding of the finality provider.
    2. [Add an EOTS Key](#42-add-an-eots-key)
       1. [Create an EOTS key](#421-create-an-eots-key)
       2. [Import an existing EOTS key](#422-import-an-existing-eots-key)
-  4. [Starting the EOTS Daemon](#43-starting-the-eots-daemon)
+  3. [Starting the EOTS Daemon](#43-starting-the-eots-daemon)
 5. [Setting up the Finality Provider](#5-setting-up-the-finality-provider)
    1. [Initialize the Finality Provider Daemon](#51-initialize-the-finality-provider-daemon)
    2. [Add key for the Babylon account](#52-add-key-for-the-babylon-account)
@@ -72,9 +72,6 @@ Recommended specifications for running a Babylon Finality Provider:
 These are the minimum specifications for running a finality provider.
 Requirements may vary based on network activity and your operational needs. 
 For production environments, you may want to consider using more robust hardware.
-
-> 💡 **Note**: While these are the minimum requirements, operators may choose 
-> to use more powerful hardware for better performance and future-proofing.
 
 **Recovery and Backup**
 At the time of writing, the following assets **must not** be lost and should be 
@@ -634,7 +631,7 @@ Required parameters:
 > finality providers. This could lead to slashing.
 
 > We also highly recommend to finality providers to keep the same commission as 
-with phase-1
+> with phase-1
 
 Optional parameters: 
 - `--website`: Your finality provider's website 
