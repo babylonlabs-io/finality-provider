@@ -104,7 +104,6 @@ func (r *rpcServer) CreateFinalityProvider(
 	result, err := r.app.CreateFinalityProvider(
 		req.KeyName,
 		req.ChainId,
-		req.Passphrase,
 		eotsPk,
 		&description,
 		&commissionRate,
@@ -137,11 +136,6 @@ func (r *rpcServer) AddFinalitySignature(_ context.Context, req *proto.AddFinali
 
 		return res, nil
 	default:
-		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
-		if err != nil {
-			return nil, err
-		}
-
 		fpi, err := r.app.GetFinalityProviderInstance()
 		if err != nil {
 			return nil, err
@@ -169,30 +163,7 @@ func (r *rpcServer) AddFinalitySignature(_ context.Context, req *proto.AddFinali
 		// if privKey is not empty, then this BTC finality-provider
 		// has voted for a fork and will be slashed
 		if privKey != nil {
-			localPrivKey, err := r.app.getFpPrivKey(fpPk.MustMarshal())
-			if err != nil {
-				r.app.logger.Error(fmt.Sprintf("err get priv key %s", err.Error()))
-
-				return nil, err
-			}
-
 			res.ExtractedSkHex = privKey.Key.String()
-			localSkHex := localPrivKey.Key.String()
-			localSkNegateHex := localPrivKey.Key.Negate().String()
-			switch {
-			case res.ExtractedSkHex == localSkHex:
-				res.LocalSkHex = localSkHex
-			case res.ExtractedSkHex == localSkNegateHex:
-				res.LocalSkHex = localSkNegateHex
-			default:
-				msg := fmt.Sprintf(
-					"the finality-provider's BTC private key is extracted but does not match the local key,"+
-						" extracted: %s, local: %s, local-negated: %s",
-					res.ExtractedSkHex, localSkHex, localSkNegateHex,
-				)
-
-				return nil, errors.New(msg)
-			}
 		}
 
 		return res, nil

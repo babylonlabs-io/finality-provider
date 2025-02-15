@@ -14,8 +14,9 @@ import (
 	"strings"
 	"testing"
 
-	common "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/stretchr/testify/require"
+
+	common "github.com/babylonlabs-io/finality-provider/itest"
 )
 
 const (

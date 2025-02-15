@@ -49,7 +49,7 @@ func (c *FinalityProviderServiceGRpcClient) GetInfo(ctx context.Context) (*proto
 
 func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 	ctx context.Context,
-	keyName, chainID, eotsPkHex, passphrase string,
+	keyName, chainID, eotsPkHex string,
 	description types.Description,
 	commission *sdkmath.LegacyDec,
 ) (*proto.CreateFinalityProviderResponse, error) {
@@ -61,7 +61,6 @@ func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 	req := &proto.CreateFinalityProviderRequest{
 		KeyName:     keyName,
 		ChainId:     chainID,
-		Passphrase:  passphrase,
 		Description: descBytes,
 		Commission:  commission.String(),
 		EotsPkHex:   eotsPkHex,

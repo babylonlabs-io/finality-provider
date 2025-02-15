@@ -14,6 +14,14 @@ import (
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	"github.com/btcsuite/btcd/btcec/v2"
+	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
+	"github.com/ory/dockertest/v3"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	opcc "github.com/babylonlabs-io/finality-provider/clientcontroller/opstackl2"
@@ -29,13 +37,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/testutil/log"
 	"github.com/babylonlabs-io/finality-provider/types"
-	"github.com/btcsuite/btcd/btcec/v2"
-	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"github.com/ory/dockertest/v3"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -369,7 +370,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	babylonKeyName := babylonCfg.BabylonConfig.Key
 
 	// create and register Babylon FP
-	eotsPk, err := ctm.BabylonEOTSClient.CreateKey(babylonKeyName, passphrase, hdPath)
+	eotsPk, err := ctm.EOTSServerHandler.CreateKey(babylonKeyName)
 	require.NoError(t, err)
 	babylonFpPk, err := bbntypes.NewBIP340PubKey(eotsPk)
 	require.NoError(t, err)
@@ -386,7 +387,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	consumerKeyName := consumerCfg.OPStackL2Config.Key + "2"
 
 	// create and register consumer FP
-	consumerEotsPk, err := ctm.ConsumerEOTSClient.CreateKey(consumerKeyName, passphrase, hdPath)
+	consumerEotsPk, err := ctm.EOTSServerHandler.CreateKey(consumerKeyName)
 	require.NoError(t, err)
 	consumerFpPk, err := bbntypes.NewBIP340PubKey(consumerEotsPk)
 	require.NoError(t, err)
@@ -435,7 +436,7 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 
 	fpInstance, err := service.NewFinalityProviderInstance(
 		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.OpConsumerController, ctm.ConsumerEOTSClient,
-		metrics.NewFpMetrics(), "", make(chan<- *service.CriticalError), ctm.logger)
+		metrics.NewFpMetrics(), make(chan<- *service.CriticalError), ctm.logger)
 	require.NoError(t, err)
 	return fpInstance
 }

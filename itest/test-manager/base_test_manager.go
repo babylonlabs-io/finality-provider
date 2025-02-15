@@ -20,6 +20,14 @@ import (
 	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	ckpttypes "github.com/babylonlabs-io/babylon/x/checkpointing/types"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcutil"
+	"github.com/btcsuite/btcd/wire"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
@@ -30,13 +38,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/metrics"
-	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/btcsuite/btcd/btcutil"
-	"github.com/btcsuite/btcd/wire"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 type BaseTestManager struct {
@@ -625,7 +626,6 @@ func CreateAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProv
 	_, err := fpApp.CreateFinalityProvider(
 		keyName,
 		chainId,
-		e2eutils.Passphrase,
 		eotsPk,
 		desc,
 		&commission,
