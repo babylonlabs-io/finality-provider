@@ -9,7 +9,6 @@ import (
 	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -39,7 +38,6 @@ type FinalityProviderApp struct {
 	pubRandStore *store.PubRandProofStore
 	config       *fpcfg.Config
 	logger       *zap.Logger
-	input        *strings.Reader
 
 	fpIns       *FinalityProviderInstance
 	eotsManager eotsmanager.EOTSManager
@@ -93,12 +91,10 @@ func NewFinalityProviderApp(
 		return nil, fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
 
-	input := strings.NewReader("")
 	kr, err := fpkr.CreateKeyring(
 		config.BabylonConfig.KeyDirectory,
 		config.BabylonConfig.ChainID,
 		config.BabylonConfig.KeyringBackend,
-		input,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create keyring: %w", err)
@@ -113,7 +109,6 @@ func NewFinalityProviderApp(
 		kr:                                kr,
 		config:                            config,
 		logger:                            logger,
-		input:                             input,
 		fpIns:                             nil,
 		eotsManager:                       em,
 		metrics:                           fpMetrics,
@@ -186,10 +181,10 @@ func (app *FinalityProviderApp) Logger() *zap.Logger {
 
 // StartFinalityProvider starts a finality provider instance with the given EOTS public key
 // Note: this should be called right after the finality-provider is registered
-func (app *FinalityProviderApp) StartFinalityProvider(fpPk *bbntypes.BIP340PubKey, passphrase string) error {
+func (app *FinalityProviderApp) StartFinalityProvider(fpPk *bbntypes.BIP340PubKey) error {
 	app.logger.Info("starting finality provider", zap.String("pk", fpPk.MarshalHex()))
 
-	if err := app.startFinalityProviderInstance(fpPk, passphrase); err != nil {
+	if err := app.startFinalityProviderInstance(fpPk); err != nil {
 		return err
 	}
 
@@ -330,18 +325,18 @@ func (app *FinalityProviderApp) Stop() error {
 }
 
 func (app *FinalityProviderApp) CreateFinalityProvider(
-	keyName, chainID, passPhrase string,
+	keyName, chainID string,
 	eotsPk *bbntypes.BIP340PubKey,
 	description *stakingtypes.Description,
 	commission *sdkmath.LegacyDec,
 ) (*CreateFinalityProviderResult, error) {
 	// 1. check if the chain key exists
-	kr, err := fpkr.NewChainKeyringControllerWithKeyring(app.kr, keyName, app.input)
+	kr, err := fpkr.NewChainKeyringControllerWithKeyring(app.kr, keyName)
 	if err != nil {
 		return nil, err
 	}
 
-	fpAddr, err := kr.Address(passPhrase)
+	fpAddr, err := kr.Address()
 	if err != nil {
 		// the chain key does not exist, should create the chain key first
 		return nil, fmt.Errorf("the keyname %s does not exist, add the key first: %w", keyName, err)
@@ -351,7 +346,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 	if eotsPk == nil {
 		return nil, fmt.Errorf("eots pk cannot be nil")
 	}
-	pop, err := app.CreatePop(fpAddr, eotsPk, passPhrase)
+	pop, err := app.CreatePop(fpAddr, eotsPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proof-of-possession of the finality-provider: %w", err)
 	}
@@ -471,7 +466,7 @@ func (app *FinalityProviderApp) UnjailFinalityProvider(fpPk *bbntypes.BIP340PubK
 	}
 }
 
-func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntypes.BIP340PubKey, passphrase string) (*bstypes.ProofOfPossessionBTC, error) {
+func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntypes.BIP340PubKey) (*bstypes.ProofOfPossessionBTC, error) {
 	pop := &bstypes.ProofOfPossessionBTC{
 		BtcSigType: bstypes.BTCSigType_BIP340, // by default, we use BIP-340 encoding for BTC signature
 	}
@@ -481,7 +476,7 @@ func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntyp
 	// So we have to hash the address before signing
 	hash := tmhash.Sum(fpAddress.Bytes())
 
-	sig, err := app.eotsManager.SignSchnorrSig(fpPk.MustMarshal(), hash, passphrase)
+	sig, err := app.eotsManager.SignSchnorrSig(fpPk.MustMarshal(), hash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get schnorr signature from the EOTS manager: %w", err)
 	}
@@ -493,13 +488,12 @@ func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntyp
 
 func (app *FinalityProviderApp) startFinalityProviderInstance(
 	pk *bbntypes.BIP340PubKey,
-	passphrase string,
 ) error {
 	pkHex := pk.MarshalHex()
 	if app.fpIns == nil {
 		fpIns, err := NewFinalityProviderInstance(
 			pk, app.config, app.fps, app.pubRandStore, app.cc, app.eotsManager,
-			app.metrics, passphrase, app.criticalErrChan, app.logger,
+			app.metrics, app.criticalErrChan, app.logger,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create finality provider instance %s: %w", pkHex, err)
@@ -547,16 +541,6 @@ func (app *FinalityProviderApp) setFinalityProviderSlashed(fpi *FinalityProvider
 	if err := app.removeFinalityProviderInstance(); err != nil {
 		panic(fmt.Errorf("failed to terminate a slashed finality-provider %s: %w", fpi.GetBtcPkHex(), err))
 	}
-}
-
-// NOTE: this is not safe in production, so only used for testing purpose
-func (app *FinalityProviderApp) getFpPrivKey(fpPk []byte) (*btcec.PrivateKey, error) {
-	record, err := app.eotsManager.KeyRecord(fpPk, "")
-	if err != nil {
-		return nil, err
-	}
-
-	return record.PrivKey, nil
 }
 
 // putFpFromResponse creates or updates finality-provider in the local store

@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#337](https://github.com/babylonlabs-io/finality-provider/pull/337) Cleanup EOTS manager interfaces
+
 ### Bug Fixes
 
 * [#328](https://github.com/babylonlabs-io/finality-provider/pull/328) Fix small bias in EOTS private key generation

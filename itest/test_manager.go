@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
+
+	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 
 	"github.com/ory/dockertest/v3"
 
@@ -166,7 +167,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 
 	// create eots key
 	eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
-	eotsPkBz, err := tm.EOTSClient.CreateKey(eotsKeyName, passphrase, hdPath)
+	eotsPkBz, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
 	require.NoError(t, err)
 	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
 	require.NoError(t, err)
@@ -202,13 +203,13 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 	// create and register the finality provider
 	commission := sdkmath.LegacyZeroDec()
 	desc := newDescription(testMoniker)
-	_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, passphrase, eotsPk, desc, &commission)
+	_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, eotsPk, desc, &commission)
 	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	err = fpApp.StartFinalityProvider(eotsPk, passphrase)
+	err = fpApp.StartFinalityProvider(eotsPk)
 	require.NoError(t, err)
 
 	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb)
@@ -433,12 +434,6 @@ func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *
 
 	err = fpIns.Start()
 	require.NoError(t, err)
-}
-
-func (tm *TestManager) GetFpPrivKey(t *testing.T, fpPk []byte) *btcec.PrivateKey {
-	record, err := tm.EOTSClient.KeyRecord(fpPk, passphrase)
-	require.NoError(t, err)
-	return record.PrivKey
 }
 
 func (tm *TestManager) InsertCovenantSigForDelegation(t *testing.T, btcDel *bstypes.BTCDelegation) {

@@ -5,22 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
 	"github.com/babylonlabs-io/babylon/types"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager"
-	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
-	"github.com/babylonlabs-io/finality-provider/log"
-	"github.com/babylonlabs-io/finality-provider/util"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	cryptokeyring "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
+
+	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/log"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 type KeyOutputWithPubKeyHex struct {
@@ -110,7 +110,7 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 			return nil, err
 		}
 
-		kr, err := eotsmanager.InitKeyring(clientCtx.HomeDir, clientCtx.Keyring.Backend(), strings.NewReader(""))
+		kr, err := eotsmanager.InitKeyring(clientCtx.HomeDir, clientCtx.Keyring.Backend())
 		if err != nil {
 			return nil, fmt.Errorf("failed to init keyring: %w", err)
 		}
@@ -245,7 +245,7 @@ func printFromKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey
 	}
 
 	ctx := cmd.Context()
-	mnemonic := ctx.Value(mnemonicCtxKey).(string) //nolint: forcetypeassert
+	mnemonic := ctx.Value(mnemonicCtxKey).(string) // nolint: forcetypeassert
 	showMnemonic := ctx.Value(mnemonicShowCtxKey).(bool)
 
 	return printCreatePubKeyHex(cmd, k, eotsPk, showMnemonic, mnemonic, clientCtx.OutputFormat)

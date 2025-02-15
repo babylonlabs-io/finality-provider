@@ -30,7 +30,6 @@ func CommandStart() *cobra.Command {
 		RunE:    fpcmd.RunEWithClientCtx(runStartCmd),
 	}
 	cmd.Flags().String(fpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
-	cmd.Flags().String(passphraseFlag, "", "The pass phrase used to decrypt the private key")
 	cmd.Flags().String(rpcListenerFlag, "", "The address that the RPC server listens to")
 	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 
@@ -53,11 +52,6 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	rpcListener, err := flags.GetString(rpcListenerFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", rpcListenerFlag, err)
-	}
-
-	passphrase, err := flags.GetString(passphraseFlag)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", passphraseFlag, err)
 	}
 
 	cfg, err := fpcfg.LoadConfig(homePath)
@@ -88,7 +82,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load app: %w", err)
 	}
 
-	if err := startApp(fpApp, fpStr, passphrase); err != nil {
+	if err := startApp(fpApp, fpStr); err != nil {
 		return fmt.Errorf("failed to start app: %w", err)
 	}
 
@@ -114,7 +108,7 @@ func loadApp(
 // startApp starts the app and the handle of finality providers if needed based on flags.
 func startApp(
 	fpApp *service.FinalityProviderApp,
-	fpPkStr, passphrase string,
+	fpPkStr string,
 ) error {
 	// only start the app without starting any finality provider instance
 	// this is needed for new finality provider registration or unjailing
@@ -131,7 +125,7 @@ func startApp(
 			return fmt.Errorf("invalid finality provider public key %s: %w", fpPkStr, err)
 		}
 
-		return fpApp.StartFinalityProvider(fpPk, passphrase)
+		return fpApp.StartFinalityProvider(fpPk)
 	}
 
 	storedFps, err := fpApp.GetFinalityProviderStore().GetAllStoredFinalityProviders()
@@ -140,7 +134,7 @@ func startApp(
 	}
 
 	if len(storedFps) == 1 {
-		return fpApp.StartFinalityProvider(types.NewBIP340PubKeyFromBTCPK(storedFps[0].BtcPk), passphrase)
+		return fpApp.StartFinalityProvider(types.NewBIP340PubKeyFromBTCPK(storedFps[0].BtcPk))
 	}
 
 	if len(storedFps) > 1 {

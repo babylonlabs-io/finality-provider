@@ -7,6 +7,9 @@ import (
 	"strconv"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/spf13/cobra"
+
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -15,8 +18,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/log"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/util"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/spf13/cobra"
 )
 
 // CommandCommitPubRand returns the commit-pubrand command
@@ -94,7 +95,7 @@ func runCommandCommitPubRand(cmd *cobra.Command, args []string) error {
 	}
 
 	fp, err := service.NewFinalityProviderInstance(
-		fpPk, cfg, fpStore, pubRandStore, cc, em, metrics.NewFpMetrics(), "",
+		fpPk, cfg, fpStore, pubRandStore, cc, em, metrics.NewFpMetrics(),
 		make(chan<- *service.CriticalError), logger)
 	if err != nil {
 		return fmt.Errorf("failed to create finality-provider %s instance: %w", fpPk.MarshalHex(), err)

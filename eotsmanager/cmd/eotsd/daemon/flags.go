@@ -3,7 +3,6 @@ package daemon
 const (
 	keyNameFlag           = "key-name"
 	eotsPkFlag            = "eots-pk"
-	passphraseFlag        = "passphrase"
 	forceFlag             = "force"
 	rpcListenerFlag       = "rpc-listener"
 	rpcClientFlag         = "rpc-client"

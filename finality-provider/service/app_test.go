@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -96,7 +95,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		var eotsPk *bbntypes.BIP340PubKey
 		eotsKeyName := testutil.GenRandomHexStr(r, 4)
 		require.NoError(t, err)
-		eotsPkBz, err := em.CreateKey(eotsKeyName, passphrase, hdPath)
+		eotsPkBz, err := em.CreateKey(eotsKeyName)
 		require.NoError(t, err)
 		eotsPk, err = bbntypes.NewBIP340PubKey(eotsPkBz)
 		require.NoError(t, err)
@@ -117,7 +116,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 				testutil.ZeroCommissionRate(),
 				gomock.Any(),
 			).Return(&types.TxResponse{TxHash: txHash}, nil).AnyTimes()
-		res, err := app.CreateFinalityProvider(keyName, chainID, passphrase, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
+		res, err := app.CreateFinalityProvider(keyName, chainID, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
 		require.NoError(t, err)
 		require.Equal(t, txHash, res.TxHash)
 
@@ -240,7 +239,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
 
 		mockClientController.EXPECT().UnjailFinalityProvider(fpPk.MustToBTCPK()).Return(&types.TxResponse{TxHash: expectedTxHash}, nil)
-		err := app.StartFinalityProvider(fpPk, "")
+		err := app.StartFinalityProvider(fpPk)
 		require.NoError(t, err)
 		fpIns, err := app.GetFinalityProviderInstance()
 		require.NoError(t, err)
@@ -308,7 +307,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 		var eotsPk *bbntypes.BIP340PubKey
 		eotsKeyName := testutil.GenRandomHexStr(r, 4)
 		require.NoError(t, err)
-		eotsPkBz, err := em.CreateKey(eotsKeyName, passphrase, hdPath)
+		eotsPkBz, err := em.CreateKey(eotsKeyName)
 		require.NoError(t, err)
 		eotsPk, err = bbntypes.NewBIP340PubKey(eotsPkBz)
 		require.NoError(t, err)
@@ -335,7 +334,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 
 		mockClientController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(fpRes, nil).AnyTimes()
 
-		res, err := app.CreateFinalityProvider(keyName, chainID, passphrase, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
+		res, err := app.CreateFinalityProvider(keyName, chainID, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
 		require.NoError(t, err)
 		require.Equal(t, res.FpInfo.BtcPkHex, eotsPk.MarshalHex())
 
@@ -356,7 +355,6 @@ func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg
 	require.NoError(t, err)
 
 	// create finality-provider app with randomized config
-	input := strings.NewReader("")
 	require.NoError(t, err)
 	err = util.MakeDirectory(config.DataDir(homePath))
 	require.NoError(t, err)
@@ -374,12 +372,11 @@ func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg
 		cfg.BabylonConfig.KeyDirectory,
 		cfg.BabylonConfig.ChainID,
 		cfg.BabylonConfig.KeyringBackend,
-		input,
 	)
 	require.NoError(t, err)
-	kc, err := keyring.NewChainKeyringControllerWithKeyring(kr, keyName, input)
+	kc, err := keyring.NewChainKeyringControllerWithKeyring(kr, keyName)
 	require.NoError(t, err)
-	btcPkBytes, err := em.CreateKey(keyName, passphrase, hdPath)
+	btcPkBytes, err := em.CreateKey(keyName)
 	require.NoError(t, err)
 	btcPk, err := bbntypes.NewBIP340PubKey(btcPkBytes)
 	require.NoError(t, err)

@@ -2,7 +2,7 @@ package keyring
 
 import (
 	"fmt"
-	"strings"
+	"os"
 
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -23,8 +23,6 @@ const (
 type ChainKeyringController struct {
 	kr     keyring.Keyring
 	fpName string
-	// input is to send passphrase to kr
-	input *strings.Reader
 }
 
 func NewChainKeyringController(ctx client.Context, name, keyringBackend string) (*ChainKeyringController, error) {
@@ -36,12 +34,11 @@ func NewChainKeyringController(ctx client.Context, name, keyringBackend string) 
 		return nil, fmt.Errorf("the keyring backend should not be empty")
 	}
 
-	inputReader := strings.NewReader("")
 	kr, err := keyring.New(
 		ctx.ChainID,
 		keyringBackend,
 		ctx.KeyringDir,
-		inputReader,
+		os.Stdin,
 		ctx.Codec,
 		ctx.KeyringOptions...)
 	if err != nil {
@@ -51,11 +48,10 @@ func NewChainKeyringController(ctx client.Context, name, keyringBackend string) 
 	return &ChainKeyringController{
 		fpName: name,
 		kr:     kr,
-		input:  inputReader,
 	}, nil
 }
 
-func NewChainKeyringControllerWithKeyring(kr keyring.Keyring, name string, input *strings.Reader) (*ChainKeyringController, error) {
+func NewChainKeyringControllerWithKeyring(kr keyring.Keyring, name string) (*ChainKeyringController, error) {
 	if name == "" {
 		return nil, fmt.Errorf("the key name should not be empty")
 	}
@@ -63,7 +59,6 @@ func NewChainKeyringControllerWithKeyring(kr keyring.Keyring, name string, input
 	return &ChainKeyringController{
 		kr:     kr,
 		fpName: name,
-		input:  input,
 	}, nil
 }
 
@@ -91,8 +86,6 @@ func (kc *ChainKeyringController) CreateChainKey(passphrase, hdPath, mnemonic st
 		}
 	}
 
-	// we need to repeat the passphrase to mock the reentry
-	kc.input.Reset(passphrase + "\n" + passphrase)
 	record, err := kc.kr.NewAccount(kc.fpName, mnemonic, passphrase, hdPath, algo)
 	if err != nil {
 		return nil, err
@@ -128,29 +121,11 @@ func (kc *ChainKeyringController) CreatePop(fpAddr sdk.AccAddress, btcPrivKey *b
 }
 
 // Address returns the address from the keyring
-func (kc *ChainKeyringController) Address(passphrase string) (sdk.AccAddress, error) {
-	kc.input.Reset(passphrase)
+func (kc *ChainKeyringController) Address() (sdk.AccAddress, error) {
 	k, err := kc.kr.Key(kc.fpName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get address: %w", err)
 	}
 
 	return k.GetAddress()
-}
-
-func (kc *ChainKeyringController) GetChainPrivKey(passphrase string) (*sdksecp256k1.PrivKey, error) {
-	kc.input.Reset(passphrase)
-	k, err := kc.kr.Key(kc.fpName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get private key: %w", err)
-	}
-
-	privKeyCached := k.GetLocal().PrivKey.GetCachedValue()
-
-	switch v := privKeyCached.(type) {
-	case *sdksecp256k1.PrivKey:
-		return v, nil
-	default:
-		return nil, fmt.Errorf("unsupported key type in keyring")
-	}
 }
