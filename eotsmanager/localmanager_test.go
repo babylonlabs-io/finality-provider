@@ -18,11 +18,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/testutil"
 )
 
-var (
-	passphrase = "testpass"
-	hdPath     = ""
-)
-
 // FuzzCreateKey tests the creation of an EOTS key
 func FuzzCreateKey(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
@@ -43,18 +38,18 @@ func FuzzCreateKey(f *testing.F) {
 		lm, err := eotsmanager.NewLocalEOTSManager(homeDir, eotsCfg.KeyringBackend, dbBackend, zap.NewNop())
 		require.NoError(t, err)
 
-		fpPk, err := lm.CreateKey(fpName, passphrase, hdPath)
+		fpPk, err := lm.CreateKey(fpName)
 		require.NoError(t, err)
 
-		fpRecord, err := lm.KeyRecord(fpPk, passphrase)
+		fpRecord, err := lm.KeyRecord(fpPk)
 		require.NoError(t, err)
 		require.Equal(t, fpName, fpRecord.Name)
 
-		sig, err := lm.SignSchnorrSig(fpPk, datagen.GenRandomByteArray(r, 32), passphrase)
+		sig, err := lm.SignSchnorrSig(fpPk, datagen.GenRandomByteArray(r, 32))
 		require.NoError(t, err)
 		require.NotNil(t, sig)
 
-		_, err = lm.CreateKey(fpName, passphrase, hdPath)
+		_, err = lm.CreateKey(fpName)
 		require.ErrorIs(t, err, types.ErrFinalityProviderAlreadyExisted)
 	})
 }
@@ -77,18 +72,18 @@ func FuzzCreateRandomnessPairList(f *testing.F) {
 		lm, err := eotsmanager.NewLocalEOTSManager(homeDir, eotsCfg.KeyringBackend, dbBackend, zap.NewNop())
 		require.NoError(t, err)
 
-		fpPk, err := lm.CreateKey(fpName, passphrase, hdPath)
+		fpPk, err := lm.CreateKey(fpName)
 		require.NoError(t, err)
 
 		chainID := datagen.GenRandomByteArray(r, 10)
 		startHeight := datagen.RandomInt(r, 100)
 		num := r.Intn(10) + 1
-		pubRandList, err := lm.CreateRandomnessPairList(fpPk, chainID, startHeight, uint32(num), passphrase)
+		pubRandList, err := lm.CreateRandomnessPairList(fpPk, chainID, startHeight, uint32(num))
 		require.NoError(t, err)
 		require.Len(t, pubRandList, num)
 
 		for i := 0; i < num; i++ {
-			sig, err := lm.SignEOTS(fpPk, chainID, datagen.GenRandomByteArray(r, 32), startHeight+uint64(i), passphrase)
+			sig, err := lm.SignEOTS(fpPk, chainID, datagen.GenRandomByteArray(r, 32), startHeight+uint64(i))
 			require.NoError(t, err)
 			require.NotNil(t, sig)
 		}
@@ -120,13 +115,13 @@ func FuzzSignRecord(f *testing.F) {
 		for i := 0; i < numFps; i++ {
 			chainID := datagen.GenRandomByteArray(r, 10)
 			fpName := testutil.GenRandomHexStr(r, 4)
-			fpPk, err := lm.CreateKey(fpName, passphrase, hdPath)
+			fpPk, err := lm.CreateKey(fpName)
 			require.NoError(t, err)
-			pubRandList, err := lm.CreateRandomnessPairList(fpPk, chainID, startHeight, uint32(numRand), passphrase)
+			pubRandList, err := lm.CreateRandomnessPairList(fpPk, chainID, startHeight, uint32(numRand))
 			require.NoError(t, err)
 			require.Len(t, pubRandList, numRand)
 
-			sig, err := lm.SignEOTS(fpPk, chainID, msg, startHeight, passphrase)
+			sig, err := lm.SignEOTS(fpPk, chainID, msg, startHeight)
 			require.NoError(t, err)
 			require.NotNil(t, sig)
 
@@ -137,7 +132,7 @@ func FuzzSignRecord(f *testing.F) {
 			require.NoError(t, err)
 
 			// we expect return from db
-			sig2, err := lm.SignEOTS(fpPk, chainID, msg, startHeight, passphrase)
+			sig2, err := lm.SignEOTS(fpPk, chainID, msg, startHeight)
 			require.NoError(t, err)
 			require.Equal(t, sig, sig2)
 
@@ -145,7 +140,7 @@ func FuzzSignRecord(f *testing.F) {
 			require.NoError(t, err)
 
 			// same height diff msg
-			_, err = lm.SignEOTS(fpPk, chainID, datagen.GenRandomByteArray(r, 32), startHeight, passphrase)
+			_, err = lm.SignEOTS(fpPk, chainID, datagen.GenRandomByteArray(r, 32), startHeight)
 			require.ErrorIs(t, err, types.ErrDoubleSign)
 		}
 	})

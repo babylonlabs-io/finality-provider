@@ -50,21 +50,19 @@ message GetInfoResponse {
 message CreateFinalityProviderRequest {
     // key_name is the identifier key in keyring
     string key_name = 1;
-    // passphrase is used to encrypt the keys
-    string passphrase = 2;
     // chain_id is the identifier of the consumer chain that the finality provider is connected to
-    string chain_id = 3;
+    string chain_id = 2;
     // description defines the description terms for the finality provider
-    bytes description = 4;
+    bytes description = 3;
     // commission defines the commission rate for the finality provider
-    string commission = 5 [
+    string commission = 4 [
         (gogoproto.customtype) = "cosmossdk.io/math.LegacyDec",
         (gogoproto.nullable)   = false
     ];
     // eots_pk_hex it is the optional EOTS public key and used to ask for
     // the key record from the EOTS manager for the corresponding EOTS public key.
     // If this property is not set, it will create a new EOTS key.
-    string eots_pk_hex = 6;
+    string eots_pk_hex = 5;
 }
 
 message CreateFinalityProviderResponse {
@@ -89,8 +87,6 @@ message AddFinalitySignatureResponse {
     string tx_hash = 1;
     // the hex string of the extracted Bitcoin secp256k1 private key
     string extracted_sk_hex = 2;
-    // the hex string of the local Bitcoin secp256k1 private key
-    string local_sk_hex = 3;
 }
 
 message UnjailFinalityProviderRequest {
@@ -222,10 +218,8 @@ message SignMessageFromChainKeyRequest {
     bytes msg_to_sign = 1;
     // key_name is the identifier key in keyring
     string key_name = 2;
-    // passphrase is used to encrypt the keys
-    string passphrase = 3;
     // hd_path is the hd path for private key derivation
-    string hd_path = 4;
+    string hd_path = 3;
 }
 
 // SignMessageFromChainKeyResponse contains the signed message from the chain keyring.

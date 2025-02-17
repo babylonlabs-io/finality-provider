@@ -11,7 +11,6 @@ import (
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/proto"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/types"
 )
 
 var _ eotsmanager.EOTSManager = &EOTSManagerGRpcClient{}
@@ -50,23 +49,12 @@ func (c *EOTSManagerGRpcClient) Ping() error {
 	return nil
 }
 
-func (c *EOTSManagerGRpcClient) CreateKey(name, passphrase, hdPath string) ([]byte, error) {
-	req := &proto.CreateKeyRequest{Name: name, Passphrase: passphrase, HdPath: hdPath}
-	res, err := c.client.CreateKey(context.Background(), req)
-	if err != nil {
-		return nil, err
-	}
-
-	return res.Pk, nil
-}
-
-func (c *EOTSManagerGRpcClient) CreateRandomnessPairList(uid, chainID []byte, startHeight uint64, num uint32, passphrase string) ([]*btcec.FieldVal, error) {
+func (c *EOTSManagerGRpcClient) CreateRandomnessPairList(uid, chainID []byte, startHeight uint64, num uint32) ([]*btcec.FieldVal, error) {
 	req := &proto.CreateRandomnessPairListRequest{
 		Uid:         uid,
 		ChainId:     chainID,
 		StartHeight: startHeight,
 		Num:         num,
-		Passphrase:  passphrase,
 	}
 	res, err := c.client.CreateRandomnessPairList(context.Background(), req)
 	if err != nil {
@@ -93,29 +81,12 @@ func (c *EOTSManagerGRpcClient) SaveEOTSKeyName(pk *btcec.PublicKey, keyName str
 	return err
 }
 
-func (c *EOTSManagerGRpcClient) KeyRecord(uid []byte, passphrase string) (*types.KeyRecord, error) {
-	req := &proto.KeyRecordRequest{Uid: uid, Passphrase: passphrase}
-
-	res, err := c.client.KeyRecord(context.Background(), req)
-	if err != nil {
-		return nil, err
-	}
-
-	privKey, _ := btcec.PrivKeyFromBytes(res.PrivateKey)
-
-	return &types.KeyRecord{
-		Name:    res.Name,
-		PrivKey: privKey,
-	}, nil
-}
-
-func (c *EOTSManagerGRpcClient) SignEOTS(uid, chaiID, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error) {
+func (c *EOTSManagerGRpcClient) SignEOTS(uid, chaiID, msg []byte, height uint64) (*btcec.ModNScalar, error) {
 	req := &proto.SignEOTSRequest{
-		Uid:        uid,
-		ChainId:    chaiID,
-		Msg:        msg,
-		Height:     height,
-		Passphrase: passphrase,
+		Uid:     uid,
+		ChainId: chaiID,
+		Msg:     msg,
+		Height:  height,
 	}
 	res, err := c.client.SignEOTS(context.Background(), req)
 	if err != nil {
@@ -128,13 +99,12 @@ func (c *EOTSManagerGRpcClient) SignEOTS(uid, chaiID, msg []byte, height uint64,
 	return &s, nil
 }
 
-func (c *EOTSManagerGRpcClient) UnsafeSignEOTS(uid, chaiID, msg []byte, height uint64, passphrase string) (*btcec.ModNScalar, error) {
+func (c *EOTSManagerGRpcClient) UnsafeSignEOTS(uid, chaiID, msg []byte, height uint64) (*btcec.ModNScalar, error) {
 	req := &proto.SignEOTSRequest{
-		Uid:        uid,
-		ChainId:    chaiID,
-		Msg:        msg,
-		Height:     height,
-		Passphrase: passphrase,
+		Uid:     uid,
+		ChainId: chaiID,
+		Msg:     msg,
+		Height:  height,
 	}
 	res, err := c.client.UnsafeSignEOTS(context.Background(), req)
 	if err != nil {
@@ -147,8 +117,8 @@ func (c *EOTSManagerGRpcClient) UnsafeSignEOTS(uid, chaiID, msg []byte, height u
 	return &s, nil
 }
 
-func (c *EOTSManagerGRpcClient) SignSchnorrSig(uid, msg []byte, passphrase string) (*schnorr.Signature, error) {
-	req := &proto.SignSchnorrSigRequest{Uid: uid, Msg: msg, Passphrase: passphrase}
+func (c *EOTSManagerGRpcClient) SignSchnorrSig(uid, msg []byte) (*schnorr.Signature, error) {
+	req := &proto.SignSchnorrSigRequest{Uid: uid, Msg: msg}
 	res, err := c.client.SignSchnorrSig(context.Background(), req)
 	if err != nil {
 		return nil, err

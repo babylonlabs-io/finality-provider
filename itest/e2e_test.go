@@ -138,7 +138,7 @@ func TestDoubleSigning(t *testing.T) {
 	_, extractedKey, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b, false)
 	require.NoError(t, err)
 	require.NotNil(t, extractedKey)
-	localKey := tm.GetFpPrivKey(t, fpIns.GetBtcPkBIP340().MustMarshal())
+	localKey := tm.EOTSServerHandler.GetFPPrivKey(t, fpIns.GetBtcPkBIP340().MustMarshal())
 	require.True(t, localKey.Key.Equals(&extractedKey.Key) || localKey.Key.Negate().Equals(&extractedKey.Key))
 
 	t.Logf("the equivocation attack is successful")
@@ -294,7 +294,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 	cmd := daemon.CommandCreateFP()
 
 	eotsKeyName := "eots-key-2"
-	eotsPkBz, err := tm.EOTSClient.CreateKey(eotsKeyName, passphrase, hdPath)
+	eotsPkBz, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
 	require.NoError(t, err)
 	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
 	require.NoError(t, err)
@@ -390,7 +390,7 @@ func TestPrintEotsCmd(t *testing.T) {
 	expected := make(map[string]string)
 	for i := 0; i < r.Intn(10); i++ {
 		eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
-		ekey, err := tm.EOTSClient.CreateKey(eotsKeyName, passphrase, hdPath)
+		ekey, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
 		require.NoError(t, err)
 		pk, err := schnorr.ParsePubKey(ekey)
 		require.NoError(t, err)

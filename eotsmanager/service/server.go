@@ -33,7 +33,7 @@ type Server struct {
 }
 
 // NewEOTSManagerServer creates a new server with the given config.
-func NewEOTSManagerServer(cfg *config.Config, l *zap.Logger, em eotsmanager.EOTSManager, db kvdb.Backend) *Server {
+func NewEOTSManagerServer(cfg *config.Config, l *zap.Logger, em *eotsmanager.LocalEOTSManager, db kvdb.Backend) *Server {
 	return &Server{
 		cfg:       cfg,
 		logger:    l,
