@@ -43,7 +43,6 @@ func NewKeysCmd() *cobra.Command {
 	}
 
 	listCmd.RunE = runCommandPrintAllKeys
-	listCmd.Flags().StringP(flags.FlagOutput, "o", flags.OutputFormatText, "Output format (text|json)")
 
 	if showCmd := util.GetSubCommand(keysCmd, "show"); showCmd != nil {
 		showCmd.RunE = func(cmd *cobra.Command, args []string) error {
