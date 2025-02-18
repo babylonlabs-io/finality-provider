@@ -98,6 +98,11 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	}
 
 	for _, commit := range commitList {
+		// to bypass gosec check of overflow risk
+		if commit.NumPubRand > uint64(math.MaxUint32) {
+			return fmt.Errorf("NumPubRand %d exceeds maximum uint32 value", commit.NumPubRand)
+		}
+
 		pubRandList, err := em.CreateRandomnessPairList(fpPk.MustMarshal(), []byte(storedFp.ChainID), commit.StartHeight, uint32(commit.NumPubRand))
 		if err != nil {
 			return fmt.Errorf("failed to get randomness from height %d to height %d: %w", commit.StartHeight, commit.EndHeight(), err)
