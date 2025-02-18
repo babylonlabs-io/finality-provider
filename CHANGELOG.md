@@ -103,6 +103,7 @@ changes in messages and state
 ### Improvements
 
 * [#314](https://github.com/babylonlabs-io/finality-provider/pull/314) nit: Dockerfile AS casing
+* [#320](https://github.com/babylonlabs-io/finality-provider/pull/320) chore: show `pubkey_hex` at `eotsd keys show` and `eotsd keys list`
 
 ### Bug Fixes
 

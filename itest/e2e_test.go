@@ -20,6 +20,11 @@ import (
 	"time"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcec/v2/schnorr"
+	"github.com/stretchr/testify/require"
+
+	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -28,7 +33,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
-	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
@@ -401,22 +405,18 @@ func TestPrintEotsCmd(t *testing.T) {
 
 	cancel()
 
-	cmd := eotscmd.CommandPrintAllKeys()
-
-	defaultConfig := eotscfg.DefaultConfigWithHomePath(tm.EOTSHomeDir)
-	fileParser := goflags.NewParser(defaultConfig, goflags.Default)
-	err := goflags.NewIniParser(fileParser).WriteFile(eotscfg.CfgFile(tm.EOTSHomeDir), goflags.IniIncludeDefaults)
-	require.NoError(t, err)
-
+	cmd := eotscmd.NewKeysCmd()
 	cmd.SetArgs([]string{
+		"list",
 		"--home=" + tm.EOTSHomeDir,
+		"--keyring-backend=test",
 	})
 
 	var outputBuffer bytes.Buffer
 	cmd.SetOut(&outputBuffer)
 	cmd.SetErr(&outputBuffer)
 
-	err = cmd.Execute()
+	err := cmd.Execute()
 	require.NoError(t, err)
 
 	output := outputBuffer.String()
