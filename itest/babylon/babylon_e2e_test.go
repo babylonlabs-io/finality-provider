@@ -18,7 +18,6 @@ import (
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-	"github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/require"
 
 	sdkmath "cosmossdk.io/math"
@@ -26,7 +25,6 @@ import (
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
-	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
