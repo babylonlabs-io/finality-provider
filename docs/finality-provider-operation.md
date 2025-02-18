@@ -25,7 +25,7 @@ gain an overall understanding of the finality provider.
    2. [Add an EOTS Key](#42-add-an-eots-key)
       1. [Create an EOTS key](#421-create-an-eots-key)
       2. [Import an existing EOTS key](#422-import-an-existing-eots-key)
-  3. [Starting the EOTS Daemon](#43-starting-the-eots-daemon)
+   3. [Starting the EOTS Daemon](#43-starting-the-eots-daemon)
 5. [Setting up the Finality Provider](#5-setting-up-the-finality-provider)
    1. [Initialize the Finality Provider Daemon](#51-initialize-the-finality-provider-daemon)
    2. [Add key for the Babylon account](#52-add-key-for-the-babylon-account)
@@ -39,6 +39,12 @@ gain an overall understanding of the finality provider.
    5. [Slashing](#65-slashing)
    6. [Prometheus Metrics](#66-prometheus-metrics)
    7. [Withdrawing Rewards](#67-withdrawing-rewards)
+7. [Recover fpd.db](#7-recovery-and-backup)
+   1. [Critical assets](#71-critical-assets)
+   2. [Backup recommendations](#72-backup-recommendations)
+   3. [Recover fpd.db](#73-recover-fpddb)
+      1. [Recover local status of a finality provider](#731-recover-local-status-of-a-finality-provider)
+      2. [Recover public randomness proof](#732-recover-public-randomness-proof)
 
 ## 1. A note about Phase-1 Finality Providers
 
@@ -891,9 +897,9 @@ the rewards will be withdrawn to your finality provider address.
 
 Congratulations! You have successfully set up and operated a finality provider.
 
-## Recovery and Backup
+## 7. Recovery and Backup
 
-### Critical Assets
+### 7.1 Critical Assets
 
 The following assets **must** be backed up frequently to prevent loss of service or funds:
 
@@ -913,12 +919,10 @@ For Finality Provider:
   - Managing your finality provider
   - Loss means inability to operate until restored
 - **fpd.db**: Contains operational data including:
-  - Finality signatures
   - Public randomness proofs
-  - Historical block data
-  - Loss leads to temporary service interruption
+  - State info of the finality provider
 
-### Backup Recommendations
+### 7.2 Backup Recommendations
 
 1. Regular Backups:
    - Daily backup of keyring directories
@@ -939,4 +943,43 @@ For Finality Provider:
 
 > 🔒 **Security Note**: While database files can be recreated, loss of private keys in the keyring directories is **irrecoverable** and will result in permanent loss of your finality provider position and accumulated rewards.
 
-> 💡 **Future Updates**: The ability to recreate the `fpd.db` from chain state will be offered in future releases, but keyring backup remains critical.
+### 7.3 Recover fpd.db
+
+The `fpd.db` file contains both the finality provider's running status and the
+public randomness merkle proof. Either information is compromised will lead
+to service halt, but they are recoverable.
+
+#### 7.3.1 Recover local status of a finality provider
+
+The local status of a finality provider is defined as follows:
+
+```go
+type StoredFinalityProvider struct {
+	FPAddr          string
+	BtcPk           *btcec.PublicKey
+	Description     *stakingtypes.Description
+	Commission      *sdkmath.LegacyDec
+	ChainID         string
+	LastVotedHeight uint64
+	Status          proto.FinalityProviderStatus
+}
+```
+
+It can be recovered by downloading the finality provider's info from the
+Babylon chain. Specifically, this can be achieved by repeating the
+[creation process](#61-create-finality-provider). The `create-finality-provider`
+cmd will download the info of the finality provider locally if it is already
+registered on Babylon.
+
+#### 7.3.2 Recover public randomness proof
+
+Every finality vote must contain the public randomness proof to prove that the
+randomness used in the signature is already committed on Babylon. Loss of
+public randomness proof leads to direct failure of the vote submission.
+
+To recover the public randomness proof, you need to run the
+`fpd recover-rand-proof --start-height` where `start-height` is the height from
+which you want to recover from as some proof for old height do not need to be
+recovered. The command will recover the proof from the `start-height` to
+the latest committed height on Babylon. If `start-height` is not specified,
+it will recover all the proof until the latest committed height on Babylon.

@@ -12,6 +12,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -413,4 +415,60 @@ func TestPrintEotsCmd(t *testing.T) {
 		require.Contains(t, output, keyName)
 		require.Contains(t, output, eotsPK)
 	}
+}
+
+func TestRecoverRandProofCmd(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
+	defer tm.Stop(t)
+
+	fpIns := fps[0]
+
+	// check the public randomness is committed
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
+
+	// send a BTC delegation
+	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, e2eutils.StakingTime, e2eutils.StakingAmount)
+
+	// check the BTC delegation is pending
+	delsResp := tm.WaitForNPendingDels(t, 1)
+	del, err := e2eutils.ParseRespBTCDelToBTCDel(delsResp[0])
+	require.NoError(t, err)
+
+	// send covenant sigs
+	tm.InsertCovenantSigForDelegation(t, del)
+
+	// check the BTC delegation is active
+	_ = tm.WaitForNActiveDels(t, 1)
+
+	// check the last voted block is finalized
+	lastVotedHeight := tm.WaitForFpVoteCast(t, fpIns)
+	tm.CheckBlockFinalization(t, lastVotedHeight, 1)
+	t.Logf("the block at height %v is finalized", lastVotedHeight)
+
+	finalizedBlock := tm.WaitForNFinalizedBlocks(t, 1)
+
+	// delete the db file
+	dbPath := filepath.Join(config.DataDir(tm.baseDir), config.DefaultDBName)
+	err = os.Remove(dbPath)
+	require.NoError(t, err)
+
+	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(finalizedBlock, false)
+	require.Error(t, err)
+
+	// run the cmd
+	cmd := daemon.CommandRecoverProof()
+	cmd.SetArgs([]string{
+		"--home=" + tm.baseDir,
+	})
+
+	// assert db exists
+	_, err = os.Stat(dbPath)
+	require.NoError(t, err)
+
+	res, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(finalizedBlock, false)
+	require.NoError(t, err)
+	require.Nil(t, extractedKey)
+	require.Empty(t, res)
 }
