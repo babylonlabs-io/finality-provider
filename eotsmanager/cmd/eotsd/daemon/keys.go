@@ -43,6 +43,9 @@ func NewKeysCmd() *cobra.Command {
 		panic("failed to find keys list command")
 	}
 
+	// Add home flag to root command so all subcommands inherit it
+	keysCmd.PersistentFlags().String(flags.FlagHome, config.DefaultEOTSDir, "The path to the eotsd home directory")
+
 	listCmd.RunE = runCommandPrintAllKeys
 
 	if showCmd := util.GetSubCommand(keysCmd, "show"); showCmd != nil {
@@ -202,24 +205,6 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 	}
 
 	return eotsPk, nil
-}
-
-// CommandPrintAllKeys prints all EOTS keys
-func CommandPrintAllKeys() *cobra.Command {
-	var cmd = &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"ls"},
-		Short:   "Print all EOTS key names and public keys mapping from database.",
-		Example: `eotsd list --home=/path/to/cfg`,
-		Args:    cobra.NoArgs,
-		RunE:    runCommandPrintAllKeys,
-	}
-
-	flags.AddKeyringFlags(cmd.Flags())
-	cmd.Flags().String(flags.FlagHome, config.DefaultEOTSDir, "The path to the eotsd home directory")
-	cmd.Flags().String(flags.FlagOutput, flags.OutputFormatText, "Output format (text|json)")
-
-	return cmd
 }
 
 func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
