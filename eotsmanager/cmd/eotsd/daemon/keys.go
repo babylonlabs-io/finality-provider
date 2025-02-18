@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
@@ -35,6 +36,52 @@ func NewKeysCmd() *cobra.Command {
 	addCmd := util.GetSubCommand(keysCmd, "add")
 	if addCmd == nil {
 		panic("failed to find keys add command")
+	}
+
+	listCmd := util.GetSubCommand(keysCmd, "list")
+	if listCmd == nil {
+		panic("failed to find keys list command")
+	}
+
+	// Add home flag to root command so all subcommands inherit it
+	keysCmd.PersistentFlags().String(flags.FlagHome, config.DefaultEOTSDir, "The path to the eotsd home directory")
+
+	listCmd.RunE = runCommandPrintAllKeys
+
+	if showCmd := util.GetSubCommand(keysCmd, "show"); showCmd != nil {
+		showCmd.RunE = func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			// load eots keys
+			eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, args[0])
+			if err != nil {
+				// try by address
+				records, err := clientCtx.Keyring.List()
+				if err != nil {
+					return err
+				}
+				for _, r := range records {
+					addr, err := r.GetAddress()
+					if err != nil {
+						continue
+					}
+					if addr.String() == args[0] {
+						eotsPk, err = eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, r.Name)
+						if err != nil {
+							return err
+						}
+
+						return printFromKey(cmd, r.Name, eotsPk)
+					}
+				}
+
+				return fmt.Errorf("key not found: %s", args[0])
+			}
+
+			return printFromKey(cmd, args[0], eotsPk)
+		}
 	}
 
 	addCmd.Flags().String(rpcClientFlag, "", "The RPC address of a running eotsd to connect and save new key")
@@ -160,35 +207,88 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 	return eotsPk, nil
 }
 
-// CommandPrintAllKeys prints all EOTS keys
-func CommandPrintAllKeys() *cobra.Command {
-	var cmd = &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"ls"},
-		Short:   "Print all EOTS key names and public keys mapping from database.",
-		Example: `eotsd list --home=/path/to/cfg`,
-		Args:    cobra.NoArgs,
-		RunE:    runCommandPrintAllKeys,
+func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
+	homePath, err := getHomePath(cmd)
+	if err != nil {
+		return err
 	}
 
-	cmd.Flags().String(flags.FlagHome, config.DefaultEOTSDir, "The path to the eotsd home directory")
+	// Initialize keyring
+	backend, err := cmd.Flags().GetString("keyring-backend")
+	if err != nil {
+		return err
+	}
 
-	return cmd
-}
+	kr, err := eotsmanager.InitKeyring(homePath, backend)
+	if err != nil {
+		return fmt.Errorf("failed to init keyring: %w", err)
+	}
 
-func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 	eotsKeys, err := getAllEOTSKeys(cmd)
 	if err != nil {
 		return err
 	}
 
+	records, err := kr.List()
+	if err != nil {
+		return err
+	}
+
+	keyMap := make(map[string]*cryptokeyring.Record)
+	for _, r := range records {
+		keyMap[r.Name] = r
+	}
+
+	type keyInfo struct {
+		Name    string `json:"name"`
+		Address string `json:"address"`
+		EOTSPK  string `json:"eots_pk"`
+	}
+
+	var keys []keyInfo
 	for keyName, key := range eotsKeys {
 		pk, err := schnorr.ParsePubKey(key)
 		if err != nil {
 			return err
 		}
 		eotsPk := types.NewBIP340PubKeyFromBTCPK(pk)
-		cmd.Printf("Key Name: %s, EOTS PK: %s\n", keyName, eotsPk.MarshalHex())
+
+		k, exists := keyMap[keyName]
+		if !exists {
+			continue
+		}
+
+		addr, err := k.GetAddress()
+		if err != nil {
+			return err
+		}
+
+		keys = append(keys, keyInfo{
+			Name:    keyName,
+			Address: addr.String(),
+			EOTSPK:  eotsPk.MarshalHex(),
+		})
+	}
+
+	output, err := cmd.Flags().GetString(flags.FlagOutput)
+	if err != nil {
+		return err
+	}
+
+	if strings.EqualFold(output, flags.OutputFormatJSON) {
+		bz, err := json.MarshalIndent(keys, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		_, err = fmt.Fprintln(cmd.OutOrStdout(), string(bz))
+
+		return err
+	}
+
+	for _, k := range keys {
+		cmd.Printf("Key Name: %s\nAddress: %s\nEOTS PK: %s\n\n",
+			k.Name, k.Address, k.EOTSPK)
 	}
 
 	return nil
@@ -245,8 +345,23 @@ func printFromKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey
 	}
 
 	ctx := cmd.Context()
-	mnemonic := ctx.Value(mnemonicCtxKey).(string) // nolint: forcetypeassert
-	showMnemonic := ctx.Value(mnemonicShowCtxKey).(bool)
+	var mnemonic string
+	var showMnemonic bool
+
+	if m := ctx.Value(mnemonicCtxKey); m != nil {
+		var ok bool
+		mnemonic, ok = m.(string)
+		if !ok {
+			return fmt.Errorf("mnemonic context value is not a string")
+		}
+	}
+	if sm := ctx.Value(mnemonicShowCtxKey); sm != nil {
+		var ok bool
+		showMnemonic, ok = sm.(bool)
+		if !ok {
+			return fmt.Errorf("show mnemonic context value is not a bool")
+		}
+	}
 
 	return printCreatePubKeyHex(cmd, k, eotsPk, showMnemonic, mnemonic, clientCtx.OutputFormat)
 }
@@ -256,7 +371,7 @@ func printCreatePubKeyHex(cmd *cobra.Command, k *cryptokeyring.Record, eotsPk *t
 	if err != nil {
 		return err
 	}
-	keyOutput := newKeyOutputWithPubKeyHex(out, eotsPk)
+	keyOutput := newKeyOutputWithPubKeyHex(out, eotsPk.MarshalHex())
 
 	switch outputFormat {
 	case flags.OutputFormatText:
@@ -290,10 +405,10 @@ func printCreatePubKeyHex(cmd *cobra.Command, k *cryptokeyring.Record, eotsPk *t
 	return nil
 }
 
-func newKeyOutputWithPubKeyHex(k keys.KeyOutput, eotsPk *types.BIP340PubKey) KeyOutputWithPubKeyHex {
+func newKeyOutputWithPubKeyHex(k keys.KeyOutput, eotsPk string) KeyOutputWithPubKeyHex {
 	return KeyOutputWithPubKeyHex{
 		KeyOutput: k,
-		PubKeyHex: eotsPk.MarshalHex(),
+		PubKeyHex: eotsPk,
 	}
 }
 
