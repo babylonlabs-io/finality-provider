@@ -388,14 +388,9 @@ func TestPrintEotsCmd(t *testing.T) {
 
 	cancel()
 
-	cmd := eotscmd.CommandPrintAllKeys()
-
-	defaultConfig := eotscfg.DefaultConfigWithHomePath(tm.EOTSHomeDir)
-	fileParser := flags.NewParser(defaultConfig, flags.Default)
-	err := flags.NewIniParser(fileParser).WriteFile(eotscfg.CfgFile(tm.EOTSHomeDir), flags.IniIncludeDefaults)
-	require.NoError(t, err)
-
+	cmd := eotscmd.NewKeysCmd()
 	cmd.SetArgs([]string{
+		"list",
 		"--home=" + tm.EOTSHomeDir,
 		"--keyring-backend=test",
 	})
@@ -404,7 +399,7 @@ func TestPrintEotsCmd(t *testing.T) {
 	cmd.SetOut(&outputBuffer)
 	cmd.SetErr(&outputBuffer)
 
-	err = cmd.Execute()
+	err := cmd.Execute()
 	require.NoError(t, err)
 
 	output := outputBuffer.String()

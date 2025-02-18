@@ -234,7 +234,7 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	kr, err := eotsmanager.InitKeyring(homePath, backend, strings.NewReader(""))
+	kr, err := eotsmanager.InitKeyring(homePath, backend)
 	if err != nil {
 		return fmt.Errorf("failed to init keyring: %w", err)
 	}
