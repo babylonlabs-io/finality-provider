@@ -29,7 +29,7 @@ import (
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -448,27 +448,44 @@ func TestRecoverRandProofCmd(t *testing.T) {
 	t.Logf("the block at height %v is finalized", lastVotedHeight)
 
 	finalizedBlock := tm.WaitForNFinalizedBlocks(t, 1)
+	fpCfg := fpIns.GetConfig()
 
 	// delete the db file
-	dbPath := filepath.Join(config.DataDir(tm.baseDir), config.DefaultDBName)
+	dbPath := filepath.Join(fpCfg.DatabaseConfig.DBPath, fpCfg.DatabaseConfig.DBFileName)
 	err = os.Remove(dbPath)
 	require.NoError(t, err)
+	fpdb, err := fpCfg.DatabaseConfig.GetDBBackend()
+	require.NoError(t, err)
+	pubRandStore, err := store.NewPubRandProofStore(fpdb)
+	require.NoError(t, err)
+	_, err = pubRandStore.GetPubRandProof([]byte(testChainID), fpIns.GetBtcPkBIP340().MustMarshal(), finalizedBlock.Height)
+	require.ErrorIs(t, err, store.ErrPubRandProofNotFound)
 
-	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(finalizedBlock, false)
-	require.Error(t, err)
+	fpCfg.EOTSManagerAddress = tm.EOTSServerHandler.Config().RPCListener
+	fpHomePath := filepath.Dir(fpCfg.DatabaseConfig.DBPath)
+	fileParser := flags.NewParser(fpCfg, flags.Default)
+	err = flags.NewIniParser(fileParser).WriteFile(cfg.CfgFile(fpHomePath), flags.IniIncludeDefaults)
+	require.NoError(t, err)
 
 	// run the cmd
 	cmd := daemon.CommandRecoverProof()
 	cmd.SetArgs([]string{
-		"--home=" + tm.baseDir,
+		fpIns.GetBtcPkHex(),
+		"--home=" + fpHomePath,
+		"--chain-id=" + testChainID,
 	})
+	err = cmd.Execute()
+	require.NoError(t, err)
 
 	// assert db exists
 	_, err = os.Stat(dbPath)
 	require.NoError(t, err)
 
-	res, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(finalizedBlock, false)
+	fpdb, err = fpCfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
-	require.Nil(t, extractedKey)
-	require.Empty(t, res)
+
+	pubRandStore, err = store.NewPubRandProofStore(fpdb)
+	require.NoError(t, err)
+	_, err = pubRandStore.GetPubRandProof([]byte(testChainID), fpIns.GetBtcPkBIP340().MustMarshal(), finalizedBlock.Height)
+	require.NoError(t, err)
 }

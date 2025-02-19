@@ -8,6 +8,7 @@ import (
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
@@ -30,12 +31,23 @@ func CommandRecoverProof() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		RunE:    fpcmd.RunEWithClientCtx(runCommandRecoverProof),
 	}
-	cmd.Flags().Uint64("start-height", math.MaxUint64, "The block height from which the proof is recovered from (optional)")
+	cmd.Flags().Uint64("start-height", 1, "The block height from which the proof is recovered from (optional)")
+	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
+	cmd.Flags().String(flags.FlagChainID, "", "The consumer identifier")
 
 	return cmd
 }
 
 func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []string) error {
+	chainID, err := cmd.Flags().GetString(flags.FlagChainID)
+	if err != nil {
+		return fmt.Errorf("failed to read chain id flag: %w", err)
+	}
+
+	if chainID == "" {
+		return fmt.Errorf("please specify chain-id")
+	}
+
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
 		return err
@@ -67,16 +79,6 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to create db backend: %w", err)
 	}
 
-	fpStore, err := store.NewFinalityProviderStore(db)
-	if err != nil {
-		return fmt.Errorf("failed to initiate finality provider store: %w", err)
-	}
-
-	storedFp, err := fpStore.GetFinalityProvider(fpPk.MustToBTCPK())
-	if err != nil {
-		return fmt.Errorf("failed to load fp %s from db: %w", fpPk.MarshalHex(), err)
-	}
-
 	pubRandStore, err := store.NewPubRandProofStore(db)
 	if err != nil {
 		return fmt.Errorf("failed to initiate public randomness store: %w", err)
@@ -103,7 +105,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 			return fmt.Errorf("NumPubRand %d exceeds maximum uint32 value", commit.NumPubRand)
 		}
 
-		pubRandList, err := em.CreateRandomnessPairList(fpPk.MustMarshal(), []byte(storedFp.ChainID), commit.StartHeight, uint32(commit.NumPubRand))
+		pubRandList, err := em.CreateRandomnessPairList(fpPk.MustMarshal(), []byte(chainID), commit.StartHeight, uint32(commit.NumPubRand))
 		if err != nil {
 			return fmt.Errorf("failed to get randomness from height %d to height %d: %w", commit.StartHeight, commit.EndHeight(), err)
 		}
@@ -114,7 +116,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		}
 
 		// store them to database
-		if err := pubRandStore.AddPubRandProofList(fpPk.MustMarshal(), []byte(storedFp.ChainID), commit.StartHeight, commit.NumPubRand, proofList); err != nil {
+		if err := pubRandStore.AddPubRandProofList([]byte(chainID), fpPk.MustMarshal(), commit.StartHeight, commit.NumPubRand, proofList); err != nil {
 			return fmt.Errorf("failed to save public randomness to DB: %w", err)
 		}
 	}

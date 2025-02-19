@@ -500,20 +500,16 @@ func (bc *BabylonConsumerController) QueryPublicRandCommitList(fpPk *btcec.Publi
 		if err := commit.Validate(); err != nil {
 			return nil, err
 		}
-		pagination.Key = res.Pagination.NextKey
 
-		commitStartHeight := commit.StartHeight
-		commitEndHeight := commit.EndHeight()
-
-		if startHeight > commitEndHeight {
-			continue
+		if startHeight <= commit.EndHeight() {
+			commitList = append(commitList, commit)
 		}
 
-		commitList = append(commitList, commit)
-
-		if startHeight >= commitStartHeight {
+		if res.Pagination == nil || res.Pagination.NextKey == nil {
 			break
 		}
+
+		pagination.Key = res.Pagination.NextKey
 	}
 
 	return commitList, nil
