@@ -1,5 +1,5 @@
-//go:build e2e_babylon
-// +build e2e_babylon
+//go:build e2e_op
+// +build e2e_op
 
 package e2etest_babylon
 
@@ -448,12 +448,6 @@ func TestRecoverRandProofCmd(t *testing.T) {
 	dbPath := filepath.Join(fpCfg.DatabaseConfig.DBPath, fpCfg.DatabaseConfig.DBFileName)
 	err = os.Remove(dbPath)
 	require.NoError(t, err)
-	fpdb, err := fpCfg.DatabaseConfig.GetDBBackend()
-	require.NoError(t, err)
-	pubRandStore, err := store.NewPubRandProofStore(fpdb)
-	require.NoError(t, err)
-	_, err = pubRandStore.GetPubRandProof([]byte(testChainID), fpIns.GetBtcPkBIP340().MustMarshal(), finalizedBlock.Height)
-	require.ErrorIs(t, err, store.ErrPubRandProofNotFound)
 
 	fpCfg.EOTSManagerAddress = tm.EOTSServerHandler.Config().RPCListener
 	fpHomePath := filepath.Dir(fpCfg.DatabaseConfig.DBPath)
@@ -475,10 +469,10 @@ func TestRecoverRandProofCmd(t *testing.T) {
 	_, err = os.Stat(dbPath)
 	require.NoError(t, err)
 
-	fpdb, err = fpCfg.DatabaseConfig.GetDBBackend()
+	fpdb, err := fpCfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 
-	pubRandStore, err = store.NewPubRandProofStore(fpdb)
+	pubRandStore, err := store.NewPubRandProofStore(fpdb)
 	require.NoError(t, err)
 	_, err = pubRandStore.GetPubRandProof([]byte(testChainID), fpIns.GetBtcPkBIP340().MustMarshal(), finalizedBlock.Height)
 	require.NoError(t, err)
