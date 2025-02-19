@@ -19,7 +19,7 @@ import (
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-	"github.com/jessevdk/go-flags"
+	goflags "github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/require"
 
 	sdkmath "cosmossdk.io/math"
@@ -393,8 +393,8 @@ func TestPrintEotsCmd(t *testing.T) {
 	cmd := eotscmd.CommandPrintAllKeys()
 
 	defaultConfig := eotscfg.DefaultConfigWithHomePath(tm.EOTSHomeDir)
-	fileParser := flags.NewParser(defaultConfig, flags.Default)
-	err := flags.NewIniParser(fileParser).WriteFile(eotscfg.CfgFile(tm.EOTSHomeDir), flags.IniIncludeDefaults)
+	fileParser := goflags.NewParser(defaultConfig, goflags.Default)
+	err := goflags.NewIniParser(fileParser).WriteFile(eotscfg.CfgFile(tm.EOTSHomeDir), goflags.IniIncludeDefaults)
 	require.NoError(t, err)
 
 	cmd.SetArgs([]string{
@@ -463,8 +463,8 @@ func TestRecoverRandProofCmd(t *testing.T) {
 
 	fpCfg.EOTSManagerAddress = tm.EOTSServerHandler.Config().RPCListener
 	fpHomePath := filepath.Dir(fpCfg.DatabaseConfig.DBPath)
-	fileParser := flags.NewParser(fpCfg, flags.Default)
-	err = flags.NewIniParser(fileParser).WriteFile(cfg.CfgFile(fpHomePath), flags.IniIncludeDefaults)
+	fileParser := goflags.NewParser(fpCfg, goflags.Default)
+	err = goflags.NewIniParser(fileParser).WriteFile(cfg.CfgFile(fpHomePath), goflags.IniIncludeDefaults)
 	require.NoError(t, err)
 
 	// run the cmd

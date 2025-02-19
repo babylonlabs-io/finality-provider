@@ -943,11 +943,11 @@ For Finality Provider:
 
 > 🔒 **Security Note**: While database files can be recreated, loss of private keys in the keyring directories is **irrecoverable** and will result in permanent loss of your finality provider position and accumulated rewards.
 
-### 7.3 Recover fpd.db
+### 7.3 Recover finality-provider.db
 
-The `fpd.db` file contains both the finality provider's running status and the
-public randomness merkle proof. Either information is compromised will lead
-to service halt, but they are recoverable.
+The `finality-provider.db` file contains both the finality provider's running
+status and the public randomness merkle proof. Either information loss
+compromised will lead to service halt, but they are recoverable.
 
 #### 7.3.1 Recover local status of a finality provider
 
