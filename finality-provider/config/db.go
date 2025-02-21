@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	defaultDBName = "finality-provider.db"
+	DefaultDBName = "finality-provider.db"
 )
 
 type DBConfig struct {
@@ -47,7 +47,7 @@ func DefaultDBConfig() *DBConfig {
 func DefaultDBConfigWithHomePath(homePath string) *DBConfig {
 	return &DBConfig{
 		DBPath:            DataDir(homePath),
-		DBFileName:        defaultDBName,
+		DBFileName:        DefaultDBName,
 		NoFreelistSync:    true,
 		AutoCompact:       false,
 		AutoCompactMinAge: kvdb.DefaultBoltAutoCompactMinAge,

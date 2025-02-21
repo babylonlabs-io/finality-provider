@@ -656,7 +656,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 		uint64(numPubRand),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w", err)
+		return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w\nplease recover the randomness proof from db", err)
 	}
 
 	// sign blocks

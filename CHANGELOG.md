@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Improvements
 
 * [#337](https://github.com/babylonlabs-io/finality-provider/pull/337) Cleanup EOTS manager interfaces
+* [#351](https://github.com/babylonlabs-io/finality-provider/pull/351) Add recover proof cmd
 
 ### Bug Fixes
 
