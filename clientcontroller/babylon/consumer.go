@@ -463,3 +463,54 @@ func (bc *BabylonConsumerController) UnjailFinalityProvider(fpPk *btcec.PublicKe
 
 	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }
+
+// QueryPublicRandCommitList returns the public randomness commitments list from the startHeight to the last commit
+// the returned commits are ordered in the accenting order of the start height
+func (bc *BabylonConsumerController) QueryPublicRandCommitList(fpPk *btcec.PublicKey, startHeight uint64) ([]*types.PubRandCommit, error) {
+	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+
+	pagination := &sdkquery.PageRequest{
+		Limit:   1,
+		Reverse: false,
+	}
+
+	commitList := make([]*types.PubRandCommit, 0)
+
+	for {
+		res, err := bc.bbnClient.QueryClient.ListPubRandCommit(fpBtcPk.MarshalHex(), pagination)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query committed public randomness: %w", err)
+		}
+
+		if len(res.PubRandCommitMap) == 0 {
+			// expected when there is no PR commit at all
+			return nil, nil
+		}
+		if len(res.PubRandCommitMap) > 1 {
+			return nil, fmt.Errorf("expected length to be 1, but get :%d", len(res.PubRandCommitMap))
+		}
+		var commit *types.PubRandCommit
+		for height, commitRes := range res.PubRandCommitMap {
+			commit = &types.PubRandCommit{
+				StartHeight: height,
+				NumPubRand:  commitRes.NumPubRand,
+				Commitment:  commitRes.Commitment,
+			}
+		}
+		if err := commit.Validate(); err != nil {
+			return nil, err
+		}
+
+		if startHeight <= commit.EndHeight() {
+			commitList = append(commitList, commit)
+		}
+
+		if res.Pagination == nil || res.Pagination.NextKey == nil {
+			break
+		}
+
+		pagination.Key = res.Pagination.NextKey
+	}
+
+	return commitList, nil
+}
