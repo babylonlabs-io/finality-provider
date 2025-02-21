@@ -12,6 +12,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -21,12 +22,13 @@ import (
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-	"github.com/jessevdk/go-flags"
+	goflags "github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/require"
 
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
+	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
@@ -402,8 +404,8 @@ func TestPrintEotsCmd(t *testing.T) {
 	cmd := eotscmd.CommandPrintAllKeys()
 
 	defaultConfig := eotscfg.DefaultConfigWithHomePath(tm.EOTSHomeDir)
-	fileParser := flags.NewParser(defaultConfig, flags.Default)
-	err := flags.NewIniParser(fileParser).WriteFile(eotscfg.CfgFile(tm.EOTSHomeDir), flags.IniIncludeDefaults)
+	fileParser := goflags.NewParser(defaultConfig, goflags.Default)
+	err := goflags.NewIniParser(fileParser).WriteFile(eotscfg.CfgFile(tm.EOTSHomeDir), goflags.IniIncludeDefaults)
 	require.NoError(t, err)
 
 	cmd.SetArgs([]string{
@@ -424,4 +426,71 @@ func TestPrintEotsCmd(t *testing.T) {
 		require.Contains(t, output, keyName)
 		require.Contains(t, output, eotsPK)
 	}
+}
+
+func TestRecoverRandProofCmd(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
+	defer tm.Stop(t)
+
+	fpIns := fps[0]
+
+	// check the public randomness is committed
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
+
+	// send a BTC delegation
+	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, stakingTime, stakingAmount)
+
+	// check the BTC delegation is pending
+	delsResp := tm.WaitForNPendingDels(t, 1)
+	del, err := ParseRespBTCDelToBTCDel(delsResp[0])
+	require.NoError(t, err)
+
+	// send covenant sigs
+	tm.InsertCovenantSigForDelegation(t, del)
+
+	// check the BTC delegation is active
+	_ = tm.WaitForNActiveDels(t, 1)
+
+	// check the last voted block is finalized
+	lastVotedHeight := tm.WaitForFpVoteCast(t, fpIns)
+	tm.CheckBlockFinalization(t, lastVotedHeight, 1)
+	t.Logf("the block at height %v is finalized", lastVotedHeight)
+
+	finalizedBlock := tm.WaitForNFinalizedBlocks(t, 1)
+	fpCfg := fpIns.GetConfig()
+
+	// delete the db file
+	dbPath := filepath.Join(fpCfg.DatabaseConfig.DBPath, fpCfg.DatabaseConfig.DBFileName)
+	err = os.Remove(dbPath)
+	require.NoError(t, err)
+
+	fpCfg.EOTSManagerAddress = tm.EOTSServerHandler.Config().RPCListener
+	fpHomePath := filepath.Dir(fpCfg.DatabaseConfig.DBPath)
+	fileParser := goflags.NewParser(fpCfg, goflags.Default)
+	err = goflags.NewIniParser(fileParser).WriteFile(cfg.CfgFile(fpHomePath), goflags.IniIncludeDefaults)
+	require.NoError(t, err)
+
+	// run the cmd
+	cmd := daemon.CommandRecoverProof()
+	cmd.SetArgs([]string{
+		fpIns.GetBtcPkHex(),
+		"--home=" + fpHomePath,
+		"--chain-id=" + testChainID,
+	})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	// assert db exists
+	_, err = os.Stat(dbPath)
+	require.NoError(t, err)
+
+	fpdb, err := fpCfg.DatabaseConfig.GetDBBackend()
+	require.NoError(t, err)
+
+	pubRandStore, err := store.NewPubRandProofStore(fpdb)
+	require.NoError(t, err)
+	_, err = pubRandStore.GetPubRandProof([]byte(testChainID), fpIns.GetBtcPkBIP340().MustMarshal(), finalizedBlock[0].Height)
+	require.NoError(t, err)
 }
