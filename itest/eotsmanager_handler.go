@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -27,6 +28,11 @@ func NewEOTSServerHandler(t *testing.T, cfg *config.Config, eotsHomeDir string) 
 	loggerConfig.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
 	logger, err := loggerConfig.Build()
 	require.NoError(t, err)
+
+	fileParser := flags.NewParser(cfg, flags.Default)
+	err = flags.NewIniParser(fileParser).WriteFile(config.CfgFile(eotsHomeDir), flags.IniIncludeComments|flags.IniIncludeDefaults)
+	require.NoError(t, err)
+
 	eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, cfg.KeyringBackend, dbBackend, logger)
 	require.NoError(t, err)
 
