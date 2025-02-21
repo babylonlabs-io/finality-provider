@@ -983,3 +983,5 @@ which you want to recover from as some proof for old height do not need to be
 recovered. The command will recover the proof from the `start-height` to
 the latest committed height on Babylon. If `start-height` is not specified,
 it will recover all the proof until the latest committed height on Babylon.
+Note that `fpd` needs to be stopped before recovering the proof as otherwise,
+the database file might be locked.

@@ -1,5 +1,5 @@
-//go:build e2e_op
-// +build e2e_op
+//go:build e2e_babylon
+// +build e2e_babylon
 
 package e2etest_babylon
 
