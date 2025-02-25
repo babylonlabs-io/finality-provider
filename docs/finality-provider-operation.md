@@ -888,6 +888,9 @@ This will withdraw **ALL** accumulated rewards to the address you set in the
 `set-withdraw-addr` command if you set one. If no withdrawal address was set,
 the rewards will be withdrawn to your finality provider address.
 
+
+Congratulations! You have successfully set up and operated a finality provider.
+
 ### 6.7. Query Rewards
 
 You can query the reward gauges of a given stakeholder address.
@@ -898,9 +901,6 @@ fpd reward-gauges <address>
 
 Parameters:
 - `<address>`: The Babylon address of the stakeholder in bech32 string.
-
-
-Congratulations! You have successfully set up and operated a finality provider.
 
 ## 7. Recovery and Backup
 
