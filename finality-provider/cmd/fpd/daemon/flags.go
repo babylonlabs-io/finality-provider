@@ -18,6 +18,8 @@ const (
 	websiteFlag                 = "website"
 	securityContactFlag         = "security-contact"
 	detailsFlag                 = "details"
+
+	// flags for commission
 	commissionRateFlag          = "commission-rate"
 	commissionMaxRateFlag       = "commission-max-rate"
 	commissionMaxChangeRateFlag = "commission-max-change-rate"
