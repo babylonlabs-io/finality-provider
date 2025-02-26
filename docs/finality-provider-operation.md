@@ -38,7 +38,7 @@ gain an overall understanding of the finality provider.
    4. [Slashing](#64-slashing)
    5. [Prometheus Metrics](#65-prometheus-metrics)
    6. [Withdrawing Rewards](#66-withdrawing-rewards)
-   7. [Query Rewards](#67-query-rewards)
+      1. [Query Rewards](#661-query-rewards)
 7. [Recover fpd.db](#7-recovery-and-backup)
    1. [Critical assets](#71-critical-assets)
    2. [Backup recommendations](#72-backup-recommendations)
@@ -888,10 +888,9 @@ This will withdraw **ALL** accumulated rewards to the address you set in the
 `set-withdraw-addr` command if you set one. If no withdrawal address was set,
 the rewards will be withdrawn to your finality provider address.
 
-
 Congratulations! You have successfully set up and operated a finality provider.
 
-### 6.7. Query Rewards
+#### 6.6.1 Query Rewards
 
 You can query the reward gauges of a given stakeholder address.
 
