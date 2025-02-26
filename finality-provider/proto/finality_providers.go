@@ -2,7 +2,11 @@ package proto
 
 import (
 	"fmt"
+	"time"
 
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+
+	"cosmossdk.io/math"
 	bbn "github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -43,4 +47,12 @@ func NewFinalityProviderInfo(sfp *FinalityProvider) (*FinalityProviderInfo, erro
 		LastVotedHeight: sfp.LastVotedHeight,
 		Status:          sfp.Status.String(),
 	}, nil
+}
+
+func NewCommissionInfoWithTime(maxRate, maxChangeRate math.LegacyDec, updatedAt time.Time) *CommissionInfo {
+	return &CommissionInfo{
+		MaxRate:       maxRate.String(),
+		MaxChangeRate: maxChangeRate.String(),
+		UpdateTime:    timestamppb.New(updatedAt),
+	}
 }
