@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	"github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/stretchr/testify/require"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -42,12 +43,14 @@ func FuzzFinalityProvidersStore(f *testing.F) {
 		fpAddr, err := sdk.AccAddressFromBech32(fp.FPAddr)
 		require.NoError(t, err)
 
+		commInfo := fp.GetCommissionInfo()
+		commRates := types.NewCommissionRates(*fp.Commission, commInfo.MaxRate, commInfo.MaxChangeRate)
 		// create the fp for the first time
 		err = vs.CreateFinalityProvider(
 			fpAddr,
 			fp.BtcPk,
 			fp.Description,
-			fp.Commission,
+			commRates,
 			fp.ChainID,
 		)
 		require.NoError(t, err)
@@ -58,7 +61,7 @@ func FuzzFinalityProvidersStore(f *testing.F) {
 			fpAddr,
 			fp.BtcPk,
 			fp.Description,
-			fp.Commission,
+			commRates,
 			fp.ChainID,
 		)
 		require.ErrorIs(t, err, fpstore.ErrDuplicateFinalityProvider)
@@ -169,12 +172,14 @@ func TestUpdateFpStatusFromVotingPower(t *testing.T) {
 			t.Parallel()
 			fp := testutil.GenRandomFinalityProvider(r, t)
 			fp.Status = tc.fpStoredStatus
+			commInfo := fp.GetCommissionInfo()
+			commRates := types.NewCommissionRates(*fp.Commission, commInfo.MaxRate, commInfo.MaxChangeRate)
 			if tc.expErr == nil {
 				err = fps.CreateFinalityProvider(
 					sdk.MustAccAddressFromBech32(fp.FPAddr),
 					fp.BtcPk,
 					fp.Description,
-					fp.Commission,
+					commRates,
 					fp.ChainID,
 				)
 				require.NoError(t, err)

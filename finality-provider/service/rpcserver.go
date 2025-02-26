@@ -86,7 +86,7 @@ func (r *rpcServer) CreateFinalityProvider(
 	_ context.Context,
 	req *proto.CreateFinalityProviderRequest,
 ) (*proto.CreateFinalityProviderResponse, error) {
-	commissionRate, err := sdkmath.LegacyNewDecFromStr(req.Commission)
+	commissionRates, err := req.GetCommissionRates()
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (r *rpcServer) CreateFinalityProvider(
 		req.ChainId,
 		eotsPk,
 		&description,
-		&commissionRate,
+		commissionRates,
 	)
 
 	if err != nil {

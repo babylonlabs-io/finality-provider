@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -12,6 +13,7 @@ import (
 	"github.com/lightningnetwork/lnd/kvdb"
 	pm "google.golang.org/protobuf/proto"
 
+	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 )
 
@@ -46,7 +48,7 @@ func (s *FinalityProviderStore) CreateFinalityProvider(
 	fpAddr sdk.AccAddress,
 	btcPk *btcec.PublicKey,
 	description *stakingtypes.Description,
-	commission *sdkmath.LegacyDec,
+	commission bstypes.CommissionRates,
 	chainID string,
 ) error {
 	desBytes, err := description.Marshal()
@@ -54,12 +56,13 @@ func (s *FinalityProviderStore) CreateFinalityProvider(
 		return fmt.Errorf("invalid description: %w", err)
 	}
 	fp := &proto.FinalityProvider{
-		FpAddr:      fpAddr.String(),
-		BtcPk:       schnorr.SerializePubKey(btcPk),
-		Description: desBytes,
-		Commission:  commission.String(),
-		ChainId:     chainID,
-		Status:      proto.FinalityProviderStatus_REGISTERED,
+		FpAddr:         fpAddr.String(),
+		BtcPk:          schnorr.SerializePubKey(btcPk),
+		Description:    desBytes,
+		Commission:     commission.Rate.String(),
+		ChainId:        chainID,
+		Status:         proto.FinalityProviderStatus_REGISTERED,
+		CommissionInfo: proto.NewCommissionInfoWithTime(commission.MaxRate, commission.MaxChangeRate, time.Now().UTC()),
 	}
 
 	return s.createFinalityProviderInternal(fp)
