@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc"
@@ -51,7 +50,7 @@ func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 	ctx context.Context,
 	keyName, chainID, eotsPkHex string,
 	description types.Description,
-	commission *sdkmath.LegacyDec,
+	commission *proto.CommissionRates,
 ) (*proto.CreateFinalityProviderResponse, error) {
 	descBytes, err := description.Marshal()
 	if err != nil {
@@ -62,7 +61,7 @@ func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 		KeyName:     keyName,
 		ChainId:     chainID,
 		Description: descBytes,
-		Commission:  commission.String(),
+		Commission:  commission,
 		EotsPkHex:   eotsPkHex,
 	}
 

@@ -123,7 +123,7 @@ func (bc *BabylonController) RegisterFinalityProvider(
 	chainID string,
 	fpPk *btcec.PublicKey,
 	pop []byte,
-	commission *sdkmath.LegacyDec,
+	commission btcstakingtypes.CommissionRates,
 	description []byte,
 ) (*types.TxResponse, error) {
 	var bbnPop btcstakingtypes.ProofOfPossessionBTC
