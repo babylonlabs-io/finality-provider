@@ -32,13 +32,13 @@ gain an overall understanding of the finality provider.
     3. [Configure Your Finality Provider](#53-configure-your-finality-provider)
     4. [Starting the Finality Provider Daemon](#54-starting-the-finality-provider-daemon)
 6. [Finality Provider Operation](#6-finality-provider-operations)
-    1. [Create Finality Provider](#61-create-finality-provider)
-    2. [Editing your finality provider](#62-editing-your-finality-provider)
-    3. [Withdrawing Rewards](#63-withdrawing-rewards)
-    4. [Jailing and Unjailing](#64-jailing-and-unjailing)
-    5. [Slashing](#65-slashing)
-    6. [Prometheus Metrics](#66-prometheus-metrics)
-    7. [Withdrawing Rewards](#67-withdrawing-rewards)
+   1. [Create Finality Provider](#61-create-finality-provider)
+   2. [Editing your finality provider](#62-editing-your-finality-provider)
+   3. [Jailing and Unjailing](#63-jailing-and-unjailing)
+   4. [Slashing](#64-slashing)
+   5. [Prometheus Metrics](#65-prometheus-metrics)
+   6. [Withdrawing Rewards](#66-withdrawing-rewards)
+      1. [Query Rewards](#661-query-rewards)
 7. [Recover fpd.db](#7-recovery-and-backup)
     1. [Critical assets](#71-critical-assets)
     2. [Backup recommendations](#72-backup-recommendations)
@@ -773,14 +773,7 @@ edited successfully:
 fpd finality-provider-info <hex-string-of-eots-public-key>
 ```
 
-### 6.3. Withdrawing Rewards
-
-As a participant in the Finality Provider Program, you will earn rewards that
-can be withdrawn. The functionality for withdrawing rewards is currently under
-development and will be available soon. Further updates will be provided once
-this feature is implemented.
-
-### 6.4. Jailing and Unjailing
+### 6.3. Jailing and Unjailing
 
 When jailed, the following happens to a finality provider:
 - Their voting power becomes `0`
@@ -807,7 +800,7 @@ Parameters:
 If unjailing is successful, you may start running the finality provider by
 `fpd start --eots-pk <hex-string-of-eots-public-key>`.
 
-### 6.5. Slashing
+### 6.4. Slashing
 
 **Slashing occurs** when a finality provider **double signs**, meaning that the
 finality provider signs conflicting blocks at the same height. This results in
@@ -817,7 +810,7 @@ removal from the active set.
 > ⚠️ **Critical**: Slashing is irreversible and results in
 > permanent removal from the network.
 
-### 6.6. Prometheus Metrics
+### 6.5. Prometheus Metrics
 
 The finality provider exposes Prometheus metrics for monitoring your
 finality provider. The metrics endpoint is configurable in `fpd.conf`:
@@ -848,7 +841,7 @@ For a complete list of available metrics, see:
 - Finality Provider metrics: [fp_collectors.go](../metrics/fp_collectors.go)
 - EOTS metrics: [eots_collectors.go](../metrics/eots_collectors.go)
 
-### 6.7. Withdrawing Rewards
+### 6.6. Withdrawing Rewards
 
 When you are ready to withdraw your rewards, you have the option first to set
 the address to withdraw your rewards to.
@@ -896,6 +889,17 @@ This will withdraw **ALL** accumulated rewards to the address you set in the
 the rewards will be withdrawn to your finality provider address.
 
 Congratulations! You have successfully set up and operated a finality provider.
+
+#### 6.6.1 Query Rewards
+
+You can query the reward gauges of a given stakeholder address.
+
+```shell
+fpd reward-gauges <address>
+```
+
+Parameters:
+- `<address>`: The Babylon address of the stakeholder in bech32 string.
 
 ## 7. Recovery and Backup
 
