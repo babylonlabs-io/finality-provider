@@ -67,7 +67,8 @@ func NewCommissionRates(rate, maxRate, maxChangeRate math.LegacyDec) *Commission
 	}
 }
 
-func (req *CreateFinalityProviderRequest) GetCommissionRates() (rates btcstktypes.CommissionRates, err error) {
+func (req *CreateFinalityProviderRequest) GetCommissionRates() (btcstktypes.CommissionRates, error) {
+	rates := btcstktypes.CommissionRates{}
 	if req.Commission == nil {
 		return rates, errors.New("nil Commission in request. Cannot get CommissionRates")
 	}
@@ -84,7 +85,6 @@ func (req *CreateFinalityProviderRequest) GetCommissionRates() (rates btcstktype
 	if err != nil {
 		return rates, fmt.Errorf("invalid commission max change rate: %w", err)
 	}
-	rates = btcstktypes.NewCommissionRates(rate, maxRate, maxChangeRate)
 
-	return rates, nil
+	return btcstktypes.NewCommissionRates(rate, maxRate, maxChangeRate), nil
 }
