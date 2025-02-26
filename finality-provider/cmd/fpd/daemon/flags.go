@@ -13,10 +13,12 @@ const (
 	upToHeight           = "up-to-height"
 
 	// flags for description
-	monikerFlag         = "moniker"
-	identityFlag        = "identity"
-	websiteFlag         = "website"
-	securityContactFlag = "security-contact"
-	detailsFlag         = "details"
-	commissionRateFlag  = "commission-rate"
+	monikerFlag                 = "moniker"
+	identityFlag                = "identity"
+	websiteFlag                 = "website"
+	securityContactFlag         = "security-contact"
+	detailsFlag                 = "details"
+	commissionRateFlag          = "commission-rate"
+	commissionMaxRateFlag       = "commission-max-rate"
+	commissionMaxChangeRateFlag = "commission-max-change-rate"
 )

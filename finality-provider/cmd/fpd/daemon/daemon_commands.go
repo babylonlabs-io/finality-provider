@@ -93,7 +93,9 @@ Where finality-provider.json contains:
   "keyName": "The unique key name of the finality provider's Babylon account",
   "chainID": "The identifier of the consumer chain",
   "passphrase": "The pass phrase used to encrypt the keys",
-  "commissionRate": "The commission rate for the finality provider, e.g., 0.05"",
+  "commissionRate": "The initial commission rate for the finality provider, e.g., 0.05",
+  "commissionMaxRate": "The maximum commission rate percentage for the finality provider, e.g., 0.20",
+  "commissionMaxChangeRate": "The maximum commission change rate percentage (per day) for the finality provider, e.g., 0.01",
   "moniker": ""A human-readable name for the finality provider",
   "identity": "A optional identity signature",
   "website": "Validator's (optional) website",
@@ -111,7 +113,9 @@ Where finality-provider.json contains:
 	f.String(keyNameFlag, "", "The unique key name of the finality provider's Babylon account")
 	f.String(sdkflags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 	f.String(chainIDFlag, "", "The identifier of the consumer chain")
-	f.String(commissionRateFlag, "", "The commission rate for the finality provider, e.g., 0.05")
+	f.String(commissionRateFlag, "", "The initial commission rate for the finality provider, e.g., 0.05")
+	f.String(commissionMaxRateFlag, "", "The maximum commission rate percentage for the finality provider, e.g., 0.20")
+	f.String(commissionMaxChangeRateFlag, "", "The maximum commission change rate percentage (per day) for the finality provider, e.g., 0.01")
 	f.String(monikerFlag, "", "A human-readable name for the finality provider")
 	f.String(identityFlag, "", "An optional identity signature (ex. UPort or Keybase)")
 	f.String(websiteFlag, "", "An optional website link")
@@ -134,6 +138,12 @@ Where finality-provider.json contains:
 				return err
 			}
 			if err := cmd.MarkFlagRequired(commissionRateFlag); err != nil {
+				return err
+			}
+			if err := cmd.MarkFlagRequired(commissionMaxRateFlag); err != nil {
+				return err
+			}
+			if err := cmd.MarkFlagRequired(commissionMaxChangeRateFlag); err != nil {
 				return err
 			}
 			if err := cmd.MarkFlagRequired(fpEotsPkFlag); err != nil {
@@ -189,7 +199,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		fp.chainID,
 		fp.eotsPK,
 		fp.description,
-		&fp.commissionRate,
+		fp.commissionRates,
 	)
 	if err != nil {
 		return err
@@ -592,25 +602,27 @@ func loadKeyName(homeDir string, cmd *cobra.Command) (string, error) {
 }
 
 type parsedFinalityProvider struct {
-	keyName        string
-	chainID        string
-	eotsPK         string
-	description    stakingtypes.Description
-	commissionRate math.LegacyDec
+	keyName         string
+	chainID         string
+	eotsPK          string
+	description     stakingtypes.Description
+	commissionRates *proto.CommissionRates
 }
 
 func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProvider, error) {
 	type internalFpJSON struct {
-		KeyName          string `json:"keyName"`
-		ChainID          string `json:"chainID"`
-		Passphrase       string `json:"passphrase"`
-		CommissionRate   string `json:"commissionRate"`
-		Moniker          string `json:"moniker"`
-		Identity         string `json:"identity"`
-		Website          string `json:"website"`
-		SecurityContract string `json:"securityContract"`
-		Details          string `json:"details"`
-		EotsPK           string `json:"eotsPK"`
+		KeyName                 string `json:"keyName"`
+		ChainID                 string `json:"chainID"`
+		Passphrase              string `json:"passphrase"`
+		CommissionRate          string `json:"commissionRate"`
+		CommissionMaxRate       string `json:"commissionMaxRate"`
+		CommissionMaxChangeRate string `json:"commissionMaxChangeRate"`
+		Moniker                 string `json:"moniker"`
+		Identity                string `json:"identity"`
+		Website                 string `json:"website"`
+		SecurityContract        string `json:"securityContract"`
+		Details                 string `json:"details"`
+		EotsPK                  string `json:"eotsPK"`
 	}
 
 	// #nosec G304 - The log file path is provided by the user and not externally
@@ -647,13 +659,21 @@ func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProv
 		return nil, fmt.Errorf("commissionRate is required")
 	}
 
+	if fp.CommissionMaxRate == "" {
+		return nil, fmt.Errorf("CommissionMaxRate is required")
+	}
+
+	if fp.CommissionMaxChangeRate == "" {
+		return nil, fmt.Errorf("CommissionMaxChangeRate is required")
+	}
+
 	if fp.EotsPK == "" {
 		return nil, fmt.Errorf("eotsPK is required")
 	}
 
-	commissionRate, err := math.LegacyNewDecFromStr(fp.CommissionRate)
+	commRates, err := getCommissionRates(fp.CommissionRate, fp.CommissionMaxRate, fp.CommissionMaxChangeRate)
 	if err != nil {
-		return nil, fmt.Errorf("invalid commission rate: %w", err)
+		return nil, err
 	}
 
 	description, err := stakingtypes.NewDescription(fp.Moniker, fp.Identity, fp.Website, fp.SecurityContract, fp.Details).EnsureLength()
@@ -662,11 +682,11 @@ func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProv
 	}
 
 	return &parsedFinalityProvider{
-		keyName:        fp.KeyName,
-		chainID:        fp.ChainID,
-		eotsPK:         fp.EotsPK,
-		description:    description,
-		commissionRate: commissionRate,
+		keyName:         fp.KeyName,
+		chainID:         fp.ChainID,
+		eotsPK:          fp.EotsPK,
+		description:     description,
+		commissionRates: commRates,
 	}, nil
 }
 
@@ -677,9 +697,20 @@ func parseFinalityProviderFlags(cmd *cobra.Command, homeDir string) (*parsedFina
 	if err != nil {
 		return nil, fmt.Errorf("failed to read flag %s: %w", commissionRateFlag, err)
 	}
-	commissionRate, err := math.LegacyNewDecFromStr(commissionRateStr)
+
+	commissionMaxRateStr, err := flags.GetString(commissionMaxRateFlag)
 	if err != nil {
-		return nil, fmt.Errorf("invalid commission rate: %w", err)
+		return nil, fmt.Errorf("failed to read flag %s: %w", commissionMaxRateFlag, err)
+	}
+
+	commissionMaxChangeRateStr, err := flags.GetString(commissionMaxChangeRateFlag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read flag %s: %w", commissionMaxChangeRateFlag, err)
+	}
+
+	commRates, err := getCommissionRates(commissionRateStr, commissionMaxRateStr, commissionMaxChangeRateStr)
+	if err != nil {
+		return nil, err
 	}
 
 	description, err := getDescriptionFromFlags(flags)
@@ -715,10 +746,28 @@ func parseFinalityProviderFlags(cmd *cobra.Command, homeDir string) (*parsedFina
 	}
 
 	return &parsedFinalityProvider{
-		keyName:        keyName,
-		chainID:        chainID,
-		eotsPK:         eotsPkHex,
-		description:    description,
-		commissionRate: commissionRate,
+		keyName:         keyName,
+		chainID:         chainID,
+		eotsPK:          eotsPkHex,
+		description:     description,
+		commissionRates: commRates,
 	}, nil
+}
+
+// getCommissionRates is a helper function to get the commission rates fields
+// from string to LegacyDec.
+func getCommissionRates(rateStr, maxRateStr, maxChangeRateStr string) (*proto.CommissionRates, error) {
+	rate, err := math.LegacyNewDecFromStr(rateStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid commission rate: %w", err)
+	}
+	maxRate, err := math.LegacyNewDecFromStr(maxRateStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid commission max rate: %w", err)
+	}
+	maxRateChange, err := math.LegacyNewDecFromStr(maxRateStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid commission max change rate: %w", err)
+	}
+	return proto.NewCommissionRates(rate, maxRate, maxRateChange), nil
 }
