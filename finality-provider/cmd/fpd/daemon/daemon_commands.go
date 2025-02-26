@@ -765,9 +765,10 @@ func getCommissionRates(rateStr, maxRateStr, maxChangeRateStr string) (*proto.Co
 	if err != nil {
 		return nil, fmt.Errorf("invalid commission max rate: %w", err)
 	}
-	maxRateChange, err := math.LegacyNewDecFromStr(maxRateStr)
+	maxRateChange, err := math.LegacyNewDecFromStr(maxChangeRateStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid commission max change rate: %w", err)
 	}
+	
 	return proto.NewCommissionRates(rate, maxRate, maxRateChange), nil
 }

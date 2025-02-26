@@ -84,6 +84,7 @@ func (req *CreateFinalityProviderRequest) GetCommissionRates() (rates btcstktype
 	if err != nil {
 		return rates, fmt.Errorf("invalid commission max change rate: %w", err)
 	}
+	rates = btcstktypes.NewCommissionRates(rate, maxRate, maxChangeRate)
 
-	return btcstktypes.NewCommissionRates(rate, maxRate, maxChangeRate), nil
+	return rates, nil
 }

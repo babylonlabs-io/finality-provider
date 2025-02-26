@@ -71,6 +71,7 @@ func GenRandomFinalityProvider(r *rand.Rand, t *testing.T) *store.StoredFinality
 
 	commRates := ZeroCommissionRate()
 	zeroRate := commRates.Rate
+
 	return &store.StoredFinalityProvider{
 		FPAddr:      fpAddr.String(),
 		ChainID:     "chain-test",
