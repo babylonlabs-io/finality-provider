@@ -42,6 +42,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#335](https://github.com/babylonlabs-io/finality-provider/pull/335) chore: fix CosmWasm controller
 * [#331](https://github.com/babylonlabs-io/finality-provider/pull/331) Bump Cosmos integration dependencies
 * [#351](https://github.com/babylonlabs-io/finality-provider/pull/351) Add recover proof cmd
+* [#358](https://github.com/babylonlabs-io/finality-provider/pull/358) Bump Babylon dependency and add changes related to `x/btcstaking` module
+changes in messages and state
 
 ### Bug Fixes
 
