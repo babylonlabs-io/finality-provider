@@ -12,6 +12,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/lightningnetwork/lnd/kvdb"
 	pm "google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
@@ -258,7 +259,7 @@ func (s *FinalityProviderStore) GetAllStoredFinalityProviders() ([]*StoredFinali
 	return storedFps, nil
 }
 
-// SetFpDescription updates description of finality provider
+// SetFpDescription updates description and commission rate (if changed) of finality provider
 func (s *FinalityProviderStore) SetFpDescription(btcPk *btcec.PublicKey, desc *stakingtypes.Description, rate *sdkmath.LegacyDec) error {
 	setDescription := func(fp *proto.FinalityProvider) error {
 		descBytes, err := desc.Marshal()
@@ -267,7 +268,10 @@ func (s *FinalityProviderStore) SetFpDescription(btcPk *btcec.PublicKey, desc *s
 		}
 
 		fp.Description = descBytes
-		fp.Commission = rate.String()
+		if rate != nil {
+			fp.Commission = rate.String()
+			fp.CommissionInfo.UpdateTime = timestamppb.New(time.Now().UTC())
+		}
 
 		return nil
 	}

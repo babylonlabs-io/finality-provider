@@ -48,6 +48,7 @@ func protoFpToStoredFinalityProvider(fp *proto.FinalityProvider) (*StoredFinalit
 		ChainID:         fp.ChainId,
 		LastVotedHeight: fp.LastVotedHeight,
 		Status:          fp.Status,
+		CommissionInfo:  fp.CommissionInfo,
 	}, nil
 }
 
@@ -69,6 +70,7 @@ func (sfp *StoredFinalityProvider) ToFinalityProviderInfo() *proto.FinalityProvi
 		Commission:      sfp.Commission.String(),
 		LastVotedHeight: sfp.LastVotedHeight,
 		Status:          sfp.Status.String(),
+		CommissionInfo:  sfp.CommissionInfo,
 	}
 }
 

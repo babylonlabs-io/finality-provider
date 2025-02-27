@@ -73,6 +73,8 @@ func FuzzFinalityProvidersStore(f *testing.F) {
 		actualFp, err := vs.GetFinalityProvider(fp.BtcPk)
 		require.NoError(t, err)
 		require.Equal(t, fp.BtcPk, actualFp.BtcPk)
+		require.Equal(t, fp.CommissionInfo.MaxRate, actualFp.CommissionInfo.MaxRate)
+		require.Equal(t, fp.CommissionInfo.MaxChangeRate, actualFp.CommissionInfo.MaxChangeRate)
 
 		_, randomBtcPk, err := datagen.GenRandomBTCKeyPair(r)
 		require.NoError(t, err)
