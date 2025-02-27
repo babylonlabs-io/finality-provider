@@ -194,7 +194,6 @@ func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
 		Addr:        bc.MustGetTxSigner(),
 		BtcPk:       fpPubKey.MustMarshal(),
 		Description: desc,
-		Commission:  fpRes.FinalityProvider.Commission,
 	}
 
 	if rate != nil {

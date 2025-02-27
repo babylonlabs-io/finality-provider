@@ -132,14 +132,6 @@ func (c *FinalityProviderServiceGRpcClient) QueryFinalityProviderInfo(ctx contex
 // EditFinalityProvider - edit the finality provider data.
 func (c *FinalityProviderServiceGRpcClient) EditFinalityProvider(
 	ctx context.Context, fpPk *bbntypes.BIP340PubKey, desc *proto.Description, rate string) error {
-	if rate == "" {
-		currentProvider, err := c.QueryFinalityProviderInfo(ctx, fpPk)
-		if err != nil {
-			return fmt.Errorf("failed to get current provider info: %w", err)
-		}
-		rate = currentProvider.FinalityProvider.Commission
-	}
-
 	req := &proto.EditFinalityProviderRequest{BtcPk: fpPk.MarshalHex(), Description: desc, Commission: rate}
 
 	_, err := c.client.EditFinalityProvider(ctx, req)
