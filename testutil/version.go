@@ -65,6 +65,7 @@ func GetBabylonCommitHash() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return getFullCommit(modName, version)
 }
 
@@ -84,7 +85,7 @@ func getFullCommit(modName, version string) (string, error) {
 		cmd := exec.Command("go", "env", "GOMODCACHE")
 		out, err := cmd.Output()
 		if err != nil {
-			return "", fmt.Errorf("failed to get GOMODCACHE: %v", err)
+			return "", fmt.Errorf("failed to get GOMODCACHE: %w", err)
 		}
 		modCache = strings.TrimSpace(string(out))
 	}
@@ -95,13 +96,13 @@ func getFullCommit(modName, version string) (string, error) {
 	// Read the .info file
 	data, err := os.ReadFile(infoFile)
 	if err != nil {
-		return "", fmt.Errorf("failed to read .info file: %v", err)
+		return "", fmt.Errorf("failed to read .info file: %w", err)
 	}
 
 	// Parse JSON to extract commit hash
 	var modInfo ModuleInfo
 	if err := json.Unmarshal(data, &modInfo); err != nil {
-		return "", fmt.Errorf("failed to parse JSON: %v", err)
+		return "", fmt.Errorf("failed to parse JSON: %w", err)
 	}
 
 	if modInfo.Origin.Hash == "" {
