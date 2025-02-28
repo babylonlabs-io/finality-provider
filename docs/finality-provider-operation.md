@@ -38,6 +38,7 @@ gain an overall understanding of the finality provider.
    4. [Slashing](#64-slashing)
    5. [Prometheus Metrics](#65-prometheus-metrics)
    6. [Withdrawing Rewards](#66-withdrawing-rewards)
+      1. [Query Rewards](#661-query-rewards)
 7. [Recover fpd.db](#7-recovery-and-backup)
    1. [Critical assets](#71-critical-assets)
    2. [Backup recommendations](#72-backup-recommendations)
@@ -888,6 +889,17 @@ This will withdraw **ALL** accumulated rewards to the address you set in the
 the rewards will be withdrawn to your finality provider address.
 
 Congratulations! You have successfully set up and operated a finality provider.
+
+#### 6.6.1 Query Rewards
+
+You can query the reward gauges of a given stakeholder address.
+
+```shell
+fpd reward-gauges <address>
+```
+
+Parameters:
+- `<address>`: The Babylon address of the stakeholder in bech32 string.
 
 ## 7. Recovery and Backup
 
