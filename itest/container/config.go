@@ -21,7 +21,13 @@ const (
 
 // NewImageConfig returns ImageConfig needed for running e2e test.
 func NewImageConfig(t *testing.T) ImageConfig {
-	babylondVersion, err := testutil.GetBabylonVersion()
+	// NOTE: currently there's no tag for the latest API breaking changes
+	// on babylon node. Because of this, we're using the commit hash instead of
+	// the version tag. There's a docker image pushed to the registry with every PR
+	// merged to main.
+	// TODO on creation of the v1rc7 tag (or other useful tag for these tests), we should use the GetBabylonVersion() back again
+	// babylondVersion, err := testutil.GetBabylonVersion()
+	babylondVersion, err := testutil.GetBabylonCommitHash()
 	require.NoError(t, err)
 	return ImageConfig{
 		BabylonRepository: dockerBabylondRepository,

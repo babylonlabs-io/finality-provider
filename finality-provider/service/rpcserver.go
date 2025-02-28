@@ -86,7 +86,7 @@ func (r *rpcServer) CreateFinalityProvider(
 	_ context.Context,
 	req *proto.CreateFinalityProviderRequest,
 ) (*proto.CreateFinalityProviderResponse, error) {
-	commissionRate, err := sdkmath.LegacyNewDecFromStr(req.Commission)
+	commissionRates, err := req.GetCommissionRates()
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (r *rpcServer) CreateFinalityProvider(
 		req.ChainId,
 		eotsPk,
 		&description,
-		&commissionRate,
+		commissionRates,
 	)
 
 	if err != nil {
@@ -207,9 +207,14 @@ func (r *rpcServer) EditFinalityProvider(_ context.Context, req *proto.EditFinal
 		return nil, err
 	}
 
-	rate, err := sdkmath.LegacyNewDecFromStr(req.Commission)
-	if err != nil {
-		return nil, err
+	// Commission can be nil (case when commission == "")
+	var rate *sdkmath.LegacyDec
+	if req.Commission != "" {
+		value, err := sdkmath.LegacyNewDecFromStr(req.Commission)
+		if err != nil {
+			return nil, err
+		}
+		rate = &value
 	}
 
 	descBytes, err := protobuf.Marshal(req.Description)
@@ -218,7 +223,7 @@ func (r *rpcServer) EditFinalityProvider(_ context.Context, req *proto.EditFinal
 	}
 
 	fpPub := fpPk.MustToBTCPK()
-	updatedMsg, err := r.app.cc.EditFinalityProvider(fpPub, &rate, descBytes)
+	updatedMsg, err := r.app.cc.EditFinalityProvider(fpPub, rate, descBytes)
 	if err != nil {
 		return nil, err
 	}

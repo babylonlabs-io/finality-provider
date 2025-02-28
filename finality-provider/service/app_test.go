@@ -328,6 +328,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 			SlashedBtcHeight:     rndFp.SlashedBtcHeight,
 			Jailed:               rndFp.Jailed,
 			HighestVotedHeight:   rndFp.HighestVotedHeight,
+			CommissionInfo:       rndFp.CommissionInfo,
 		}}
 
 		mockBabylonController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(fpRes, nil).AnyTimes()

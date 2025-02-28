@@ -123,7 +123,7 @@ func (bc *BabylonController) RegisterFinalityProvider(
 	chainID string,
 	fpPk *btcec.PublicKey,
 	pop []byte,
-	commission *sdkmath.LegacyDec,
+	commission btcstakingtypes.CommissionRates,
 	description []byte,
 ) (*types.TxResponse, error) {
 	var bbnPop btcstakingtypes.ProofOfPossessionBTC
@@ -194,7 +194,6 @@ func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
 		Addr:        bc.MustGetTxSigner(),
 		BtcPk:       fpPubKey.MustMarshal(),
 		Description: desc,
-		Commission:  fpRes.FinalityProvider.Commission,
 	}
 
 	if rate != nil {

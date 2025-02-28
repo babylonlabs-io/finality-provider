@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/crypto/eots"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
@@ -15,6 +17,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
 
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 
@@ -66,12 +69,20 @@ func GenRandomFinalityProvider(r *rand.Rand, t *testing.T) *store.StoredFinality
 	fpAddr, err := sdk.AccAddressFromBech32(datagen.GenRandomAccount().Address)
 	require.NoError(t, err)
 
+	commRates := ZeroCommissionRate()
+	zeroRate := commRates.Rate
+
 	return &store.StoredFinalityProvider{
 		FPAddr:      fpAddr.String(),
 		ChainID:     "chain-test",
 		BtcPk:       bip340PK.MustToBTCPK(),
 		Description: RandomDescription(r),
-		Commission:  ZeroCommissionRate(),
+		Commission:  &zeroRate,
+		CommissionInfo: &proto.CommissionInfo{
+			MaxRate:       commRates.MaxRate.String(),
+			MaxChangeRate: commRates.MaxChangeRate.String(),
+			UpdateTime:    timestamppb.New(time.Now().Add(-25 * time.Hour).UTC()),
+		},
 	}
 }
 

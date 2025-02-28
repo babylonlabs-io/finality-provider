@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
@@ -204,7 +203,6 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 		securityContactFlag  = "security-contact"
 		detailsFlag          = "details"
 		fpdDaemonAddressFlag = "daemon-address"
-		commissionRateFlag   = "commission-rate"
 	)
 
 	moniker := "test-moniker"
@@ -212,8 +210,9 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	securityContact := "test@test.com"
 	details := "Test details"
 	identity := "test-identity"
-	commissionRateStr := "0.3"
 
+	// don't try to edit commission because need to wait
+	// 24hs after creation to edit the commission rate
 	args := []string{
 		fpIns.GetBtcPkHex(),
 		"--" + fpdDaemonAddressFlag, fpIns.GetConfig().RPCListener,
@@ -222,7 +221,6 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 		"--" + securityContactFlag, securityContact,
 		"--" + detailsFlag, details,
 		"--" + identityFlag, identity,
-		"--" + commissionRateFlag, commissionRateStr,
 	}
 
 	cmd.SetArgs(args)
@@ -234,15 +232,11 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	gotFp, err := tm.BBNClient.QueryFinalityProvider(fpIns.GetBtcPk())
 	require.NoError(t, err)
 
-	rate, err := sdkmath.LegacyNewDecFromStr(commissionRateStr)
-	require.NoError(t, err)
-
 	require.Equal(t, gotFp.FinalityProvider.Description.Moniker, moniker)
 	require.Equal(t, gotFp.FinalityProvider.Description.Website, website)
 	require.Equal(t, gotFp.FinalityProvider.Description.Identity, identity)
 	require.Equal(t, gotFp.FinalityProvider.Description.Details, details)
 	require.Equal(t, gotFp.FinalityProvider.Description.SecurityContact, securityContact)
-	require.Equal(t, gotFp.FinalityProvider.Commission, &rate)
 
 	moniker = "test2-moniker"
 	args = []string{
@@ -268,7 +262,6 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	require.Equal(t, updateFpDesc.Identity, oldDesc.Identity)
 	require.Equal(t, updateFpDesc.Details, oldDesc.Details)
 	require.Equal(t, updateFpDesc.SecurityContact, oldDesc.SecurityContact)
-	require.Equal(t, updatedFp.FinalityProvider.Commission, &rate)
 }
 
 func TestFinalityProviderCreateCmd(t *testing.T) {
@@ -289,27 +282,31 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 	require.NoError(t, err)
 
 	data := struct {
-		KeyName          string `json:"keyName"`
-		ChainID          string `json:"chainID"`
-		Passphrase       string `json:"passphrase"`
-		CommissionRate   string `json:"commissionRate"`
-		Moniker          string `json:"moniker"`
-		Identity         string `json:"identity"`
-		Website          string `json:"website"`
-		SecurityContract string `json:"securityContract"`
-		Details          string `json:"details"`
-		EotsPK           string `json:"eotsPK"`
+		KeyName                 string `json:"keyName"`
+		ChainID                 string `json:"chainID"`
+		Passphrase              string `json:"passphrase"`
+		CommissionRate          string `json:"commissionRate"`
+		CommissionMaxRate       string `json:"commissionMaxRate"`
+		CommissionMaxChangeRate string `json:"commissionMaxChangeRate"`
+		Moniker                 string `json:"moniker"`
+		Identity                string `json:"identity"`
+		Website                 string `json:"website"`
+		SecurityContract        string `json:"securityContract"`
+		Details                 string `json:"details"`
+		EotsPK                  string `json:"eotsPK"`
 	}{
-		KeyName:          fpIns.GetConfig().BabylonConfig.Key,
-		ChainID:          testChainID,
-		Passphrase:       passphrase,
-		CommissionRate:   "0.10",
-		Moniker:          "some moniker",
-		Identity:         "F123456789ABCDEF",
-		Website:          "https://fp.example.com",
-		SecurityContract: "https://fp.example.com/security",
-		Details:          "This is a highly secure and reliable fp.",
-		EotsPK:           eotsPk.MarshalHex(),
+		KeyName:                 fpIns.GetConfig().BabylonConfig.Key,
+		ChainID:                 testChainID,
+		Passphrase:              passphrase,
+		CommissionRate:          "0.10",
+		CommissionMaxRate:       "0.20",
+		CommissionMaxChangeRate: "0.01",
+		Moniker:                 "some moniker",
+		Identity:                "F123456789ABCDEF",
+		Website:                 "https://fp.example.com",
+		SecurityContract:        "https://fp.example.com/security",
+		Details:                 "This is a highly secure and reliable fp.",
+		EotsPK:                  eotsPk.MarshalHex(),
 	}
 
 	file, err := os.Create(fmt.Sprintf("%s/%s", t.TempDir(), "finality-provider.json"))
