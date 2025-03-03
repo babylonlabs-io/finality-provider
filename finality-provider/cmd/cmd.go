@@ -8,6 +8,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/std"
+	"github.com/cosmos/cosmos-sdk/x/auth/types"
+	incentivetypes "github.com/babylonlabs-io/babylon/x/incentive/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -22,13 +24,16 @@ func PersistClientCtx(ctx client.Context) func(cmd *cobra.Command, _ []string) e
 		encCfg := params.DefaultEncodingConfig()
 		std.RegisterInterfaces(encCfg.InterfaceRegistry)
 		bstypes.RegisterInterfaces(encCfg.InterfaceRegistry)
+		incentivetypes.RegisterInterfaces(encCfg.InterfaceRegistry)
+		types.RegisterInterfaces(encCfg.InterfaceRegistry)
 
 		ctx = ctx.
 			WithCodec(encCfg.Codec).
 			WithInterfaceRegistry(encCfg.InterfaceRegistry).
 			WithTxConfig(encCfg.TxConfig).
 			WithLegacyAmino(encCfg.Amino).
-			WithInput(os.Stdin)
+			WithInput(os.Stdin).
+			WithAccountRetriever(types.AccountRetriever{})
 
 		// set the default command outputs
 		cmd.SetOut(cmd.OutOrStdout())
