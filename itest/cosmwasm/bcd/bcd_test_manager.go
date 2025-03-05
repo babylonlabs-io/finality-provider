@@ -14,7 +14,6 @@ import (
 	"time"
 
 	sdklogs "cosmossdk.io/log"
-	sdkmath "cosmossdk.io/math"
 	wasmapp "github.com/CosmWasm/wasmd/app"
 	wasmparams "github.com/CosmWasm/wasmd/app/params"
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
@@ -237,7 +236,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 
 	// register all finality providers
 	moniker := e2eutils.MonikerPrefix + consumerId + "-" + strconv.Itoa(0)
-	commission := sdkmath.LegacyZeroDec()
+	commission := testutil.ZeroCommissionRate()
 	desc := e2eutils.NewDescription(moniker)
 
 	eotsPk, err := ctm.EOTSServerHandler.CreateKey(keyName)
@@ -253,7 +252,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	require.NoError(t, err)
 
 	// register fp in Babylon
-	_, err = app.CreateFinalityProvider(keyName, consumerId, eotsPubKey, desc, &commission)
+	_, err = app.CreateFinalityProvider(keyName, consumerId, eotsPubKey, desc, commission)
 	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
