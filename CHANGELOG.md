@@ -39,8 +39,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
-* [#335](https://github.com/babylonlabs-io/finality-provider/pull/335) chore: fix CosmWasm controller
 * [#331](https://github.com/babylonlabs-io/finality-provider/pull/331) Bump Cosmos integration dependencies
+* [#335](https://github.com/babylonlabs-io/finality-provider/pull/335) chore: fix CosmWasm controller
+
+## v1.0.0-rc.2
+
+### Improvements
+
+* [#337](https://github.com/babylonlabs-io/finality-provider/pull/337) Cleanup EOTS manager interfaces
 * [#351](https://github.com/babylonlabs-io/finality-provider/pull/351) Add recover proof cmd
 * [#356](https://github.com/babylonlabs-io/finality-provider/pull/356) Add finality provider `reward-gauges` query cmd
 
@@ -48,7 +54,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 * [#333](https://github.com/babylonlabs-io/finality-provider/pull/333) poller: skip if no new block is polled
 * [#328](https://github.com/babylonlabs-io/finality-provider/pull/328) Fix small bias in EOTS private key generation
-* [#337](https://github.com/babylonlabs-io/finality-provider/pull/337) Cleanup EOTS manager interfaces
+* [#327](https://github.com/babylonlabs-io/finality-provider/pull/327) fix: no add failed cycles count when chain poller no found new blocks
+* [#231](https://github.com/babylonlabs-io/finality-provider/pull/231) fix: withdrawal cli for rewards fp
 
 ## v1.0.0-rc.1
 
@@ -133,7 +140,6 @@ verifies if there is a eots client running
 
 * [#199](https://github.com/babylonlabs-io/finality-provider/pull/199) EOTS signing for multiple finality providers
 * [#203](https://github.com/babylonlabs-io/finality-provider/pull/203) fpd cli: Withdraw rewards and set withdraw addr
-* [#231](https://github.com/babylonlabs-io/finality-provider/pull/231) fix: withdrawal cli for rewards fp
 
 ## v0.13.0
 
