@@ -110,7 +110,7 @@ func TestHMACAuthDisabled(t *testing.T) {
 	})
 	ctx := metadata.NewIncomingContext(context.Background(), md)
 
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(_ context.Context, req interface{}) (interface{}, error) {
 		return req, nil
 	}
 
@@ -137,7 +137,7 @@ func TestMissingHMACHeader(t *testing.T) {
 	md := metadata.New(map[string]string{})
 	ctx := metadata.NewIncomingContext(context.Background(), md)
 
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(_ context.Context, req interface{}) (interface{}, error) {
 		return req, nil
 	}
 

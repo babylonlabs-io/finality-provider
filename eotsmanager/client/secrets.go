@@ -25,7 +25,7 @@ func GetSecretValue(reference string) (string, error) {
 	case strings.HasPrefix(reference, GCPPrefix) && strings.Contains(reference, "/secrets/"):
 		return getGCPSecret(reference)
 	case strings.HasPrefix(reference, AzurePrefix) && strings.Contains(reference, ".vault.azure.net/secrets/"):
-		return getAWSSecret(reference)
+		return getAzureSecret(reference)
 	default:
 		return reference, nil
 	}

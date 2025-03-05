@@ -16,6 +16,7 @@ import (
 )
 
 func TestHMACGeneration(t *testing.T) {
+	t.Parallel()
 	testKey := "test-hmac-key"
 	testReq := &proto.SignEOTSRequest{
 		Uid:     []byte("test-uid"),
@@ -32,7 +33,7 @@ func TestHMACGeneration(t *testing.T) {
 	expectedHMAC := base64.StdEncoding.EncodeToString(h.Sum(nil))
 
 	var capturedMD metadata.MD
-	fakeInvoker := func(ctx context.Context, _ string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+	fakeInvoker := func(ctx context.Context, _ string, _, _ interface{}, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
 		md, ok := metadata.FromOutgoingContext(ctx)
 		require.True(t, ok)
 		capturedMD = md
