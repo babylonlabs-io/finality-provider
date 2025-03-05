@@ -83,7 +83,26 @@ func (s *Server) RunUntilShutdown(ctx context.Context) error {
 		_ = lis.Close()
 	}()
 
-	grpcServer := grpc.NewServer()
+	// Get HMAC key from config or environment variable for cloud providers
+	// TODO: Make this a requirement by mainnet and error
+	hmacKey := s.cfg.HMACKey
+	if hmacKey == "" {
+		var err error
+		hmacKey, err = GetHMACKey()
+		if err != nil {
+			s.logger.Warn("HMAC key not configured. Authentication will not be enabled.", zap.Error(err))
+		}
+	}
+
+	var opts []grpc.ServerOption
+	if hmacKey != "" {
+		s.logger.Info("HMAC authentication enabled for gRPC server")
+		opts = append(opts, grpc.UnaryInterceptor(HMACUnaryServerInterceptor(hmacKey)))
+	} else {
+		s.logger.Warn("HMAC authentication not enabled. This is insecure.")
+	}
+
+	grpcServer := grpc.NewServer(opts...)
 	defer grpcServer.Stop()
 
 	if err := s.rpcServer.RegisterWithGrpcServer(grpcServer); err != nil {

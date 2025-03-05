@@ -21,7 +21,24 @@ type EOTSManagerGRpcClient struct {
 }
 
 func NewEOTSManagerGRpcClient(remoteAddr string) (*EOTSManagerGRpcClient, error) {
-	conn, err := grpc.NewClient(remoteAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// Get HMAC key from environment variable or cloud secret manager
+	hmacKey, err := GetHMACKeyWithCloudSupport()
+	if err != nil {
+		// Log warning and continue without HMAC authentication
+		// TODO: Make this a requirement by mainnet and return error
+		fmt.Printf("Warning: HMAC key not configured. Authentication will not be enabled: %v\n", err)
+	}
+
+	dialOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	// Add HMAC interceptor if key is available
+	if hmacKey != "" {
+		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(HMACUnaryClientInterceptor(hmacKey)))
+	}
+
+	conn, err := grpc.NewClient(remoteAddr, dialOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build gRPC connection to %s: %w", remoteAddr, err)
 	}

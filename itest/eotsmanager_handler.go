@@ -2,6 +2,7 @@ package e2e_utils
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -10,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/service"
 )
@@ -67,4 +69,15 @@ func (eh *EOTSServerHandler) GetFPPrivKey(t *testing.T, fpPk []byte) *btcec.Priv
 	privKey, err := eh.eotsManager.KeyRecord(fpPk)
 	require.NoError(t, err)
 	return privKey.PrivKey
+}
+
+// SetHMACKey sets the HMAC key in the environment for the EOTS server
+func (eh *EOTSServerHandler) SetHMACKey(hmacKey string) error {
+	if err := os.Setenv(client.HMACKeyEnvVar, hmacKey); err != nil {
+		return err
+	}
+
+	eh.cfg.HMACKey = hmacKey
+
+	return nil
 }
