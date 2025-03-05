@@ -5,9 +5,10 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/service"
 	"os"
 	"testing"
+
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/service"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -72,7 +73,6 @@ func TestHMACVerification(t *testing.T) {
 }
 
 func TestHMACKeyRetrieval(t *testing.T) {
-	t.Parallel()
 	originalKey := os.Getenv(client.HMACKeyEnvVar)
 	defer t.Setenv(client.HMACKeyEnvVar, originalKey)
 
@@ -153,7 +153,6 @@ func TestMissingHMACHeader(t *testing.T) {
 }
 
 func TestConfigHMACKey(t *testing.T) {
-	t.Parallel()
 	testKey := "config-hmac-key"
 	cfg := &config.Config{
 		HMACKey: testKey,
