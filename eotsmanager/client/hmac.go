@@ -27,6 +27,7 @@ func GetHMACKey() (string, error) {
 	if key == "" {
 		return "", fmt.Errorf("HMAC_KEY environment variable not set")
 	}
+
 	return key, nil
 }
 

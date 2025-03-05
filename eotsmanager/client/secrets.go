@@ -19,14 +19,16 @@ const (
 // GetSecretValue retrieves a secret value from various sources based on the reference format
 func GetSecretValue(reference string) (string, error) {
 	// If it's a reference to a cloud secret manager, fetch the secret
-	if strings.HasPrefix(reference, AWSPrefix) {
+	switch {
+	case strings.HasPrefix(reference, AWSPrefix):
 		return getAWSSecret(reference)
-	} else if strings.HasPrefix(reference, GCPPrefix) && strings.Contains(reference, "/secrets/") {
+	case strings.HasPrefix(reference, GCPPrefix) && strings.Contains(reference, "/secrets/"):
 		return getGCPSecret(reference)
-	} else if strings.HasPrefix(reference, AzurePrefix) && strings.Contains(reference, ".vault.azure.net/secrets/") {
-		return getAzureSecret(reference)
+	case strings.HasPrefix(reference, AzurePrefix) && strings.Contains(reference, ".vault.azure.net/secrets/"):
+		return getAWSSecret(reference)
+	default:
+		return reference, nil
 	}
-	return reference, nil
 }
 
 // GetHMACKeyWithCloudSupport gets the HMAC key from environment or cloud secret managers
@@ -50,12 +52,12 @@ func getAWSSecret(arn string) (string, error) {
 func getGCPSecret(secretName string) (string, error) {
 	// TODO: Needs to be implemented
 	// NOTE: https://cloud.google.com/secret-manager/docs/reference/libraries#client-libraries-install-go
-	return "", fmt.Errorf("Google Cloud Secret Manager integration not implemented: %s", secretName)
+	return "", fmt.Errorf("google cloud secret Manager integration not implemented: %s", secretName)
 }
 
 // getAzureSecret gets the secret from Azure Key Vault
 func getAzureSecret(secretURI string) (string, error) {
 	// TODO: Needs to be implemented
 	// NOTE: https://learn.microsoft.com/en-us/azure/key-vault/secrets/quick-create-go?tabs=azure-cli
-	return "", fmt.Errorf("Azure Key Vault integration not implemented: %s", secretURI)
+	return "", fmt.Errorf("azure key vault integration not implemented: %s", secretURI)
 }

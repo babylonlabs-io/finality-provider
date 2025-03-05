@@ -1,10 +1,11 @@
-package service
+package service_test
 
 import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/service"
 	"os"
 	"testing"
 
@@ -21,6 +22,7 @@ import (
 )
 
 func TestHMACVerification(t *testing.T) {
+	t.Parallel()
 	testKey := "test-hmac-key"
 	testReq := &proto.SignEOTSRequest{
 		Uid:     []byte("test-uid"),
@@ -40,11 +42,11 @@ func TestHMACVerification(t *testing.T) {
 	})
 	ctx := metadata.NewIncomingContext(context.Background(), md)
 
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(_ context.Context, req interface{}) (interface{}, error) {
 		return req, nil
 	}
 
-	interceptor := HMACUnaryServerInterceptor(testKey)
+	interceptor := service.HMACUnaryServerInterceptor(testKey)
 	_, err = interceptor(
 		ctx,
 		testReq,
@@ -70,11 +72,12 @@ func TestHMACVerification(t *testing.T) {
 }
 
 func TestHMACKeyRetrieval(t *testing.T) {
+	t.Parallel()
 	originalKey := os.Getenv(client.HMACKeyEnvVar)
-	defer os.Setenv(client.HMACKeyEnvVar, originalKey)
+	defer t.Setenv(client.HMACKeyEnvVar, originalKey)
 
 	testKey := "test-hmac-secret-key"
-	os.Setenv(client.HMACKeyEnvVar, testKey)
+	t.Setenv(client.HMACKeyEnvVar, testKey)
 
 	key, err := client.GetHMACKey()
 	require.NoError(t, err)
@@ -87,6 +90,7 @@ func TestHMACKeyRetrieval(t *testing.T) {
 }
 
 func TestHMACAuthDisabled(t *testing.T) {
+	t.Parallel()
 	testReq := &proto.SignEOTSRequest{
 		Uid:     []byte("test-uid"),
 		ChainId: []byte("test-chain"),
@@ -110,7 +114,7 @@ func TestHMACAuthDisabled(t *testing.T) {
 		return req, nil
 	}
 
-	interceptor := HMACUnaryServerInterceptor("")
+	interceptor := service.HMACUnaryServerInterceptor("")
 	_, err = interceptor(
 		ctx,
 		testReq,
@@ -121,6 +125,7 @@ func TestHMACAuthDisabled(t *testing.T) {
 }
 
 func TestMissingHMACHeader(t *testing.T) {
+	t.Parallel()
 	testKey := "test-hmac-key"
 	testReq := &proto.SignEOTSRequest{
 		Uid:     []byte("test-uid"),
@@ -136,7 +141,7 @@ func TestMissingHMACHeader(t *testing.T) {
 		return req, nil
 	}
 
-	interceptor := HMACUnaryServerInterceptor(testKey)
+	interceptor := service.HMACUnaryServerInterceptor(testKey)
 	_, err := interceptor(
 		ctx,
 		testReq,
@@ -148,6 +153,7 @@ func TestMissingHMACHeader(t *testing.T) {
 }
 
 func TestConfigHMACKey(t *testing.T) {
+	t.Parallel()
 	testKey := "config-hmac-key"
 	cfg := &config.Config{
 		HMACKey: testKey,
@@ -155,14 +161,11 @@ func TestConfigHMACKey(t *testing.T) {
 	require.Equal(t, testKey, cfg.HMACKey)
 
 	originalKey := os.Getenv(client.HMACKeyEnvVar)
-	defer os.Setenv(client.HMACKeyEnvVar, originalKey)
+	defer t.Setenv(client.HMACKeyEnvVar, originalKey)
 
 	envKey := "env-hmac-key"
-	os.Setenv(client.HMACKeyEnvVar, envKey)
+	t.Setenv(client.HMACKeyEnvVar, envKey)
 
-	cfg = &config.Config{
-		HMACKey: "",
-	}
 	key, err := client.GetHMACKey()
 	require.NoError(t, err)
 	require.Equal(t, envKey, key)
