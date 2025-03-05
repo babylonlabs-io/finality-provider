@@ -33,16 +33,17 @@ gain an overall understanding of the finality provider.
    4. [Starting the Finality Provider Daemon](#54-starting-the-finality-provider-daemon)
 6. [Finality Provider Operation](#6-finality-provider-operations)
    1. [Create Finality Provider](#61-create-finality-provider)
-   2. [Editing your finality provider](#62-editing-your-finality-provider)
-   3. [Jailing and Unjailing](#63-jailing-and-unjailing)
-   4. [Slashing](#64-slashing)
-   5. [Prometheus Metrics](#65-prometheus-metrics)
-   6. [Withdrawing Rewards](#66-withdrawing-rewards)
-      1. [Query Rewards](#661-query-rewards)
-7. [Recover fpd.db](#7-recovery-and-backup)
+   2. [Statuses of Finality Provider](#62-statuses-of-finality-provider)
+   3. [Editing your finality provider](#63-editing-your-finality-provider)
+   4. [Jailing and Unjailing](#64-jailing-and-unjailing)
+   5. [Slashing](#65-slashing)
+   6. [Prometheus Metrics](#66-prometheus-metrics)
+   7. [Rewards](#67-rewards)
+      1. [Querying Rewards](#671-querying-rewards)
+7. [Recovery and backup](#7-recovery-and-backup)
    1. [Critical assets](#71-critical-assets)
    2. [Backup recommendations](#72-backup-recommendations)
-   3. [Recover fpd.db](#73-recover-fpddb)
+   3. [Recover finality-provider db](#73-recover-finality-provider-db)
       1. [Recover local status of a finality provider](#731-recover-local-status-of-a-finality-provider)
       2. [Recover public randomness proof](#732-recover-public-randomness-proof)
 
@@ -61,7 +62,7 @@ Not transitioning your Phase-1 finality provider prevents your Phase-1 delegatio
 from transitioning to the second phase.
 
 If you already have set up a key during Phase-1, please proceed to
-[Adding Keys](#32-add-an-eots-key) to import your Phase-1 key.
+[Adding Keys](#42-add-an-eots-key) to import your Phase-1 key.
 
 ## 2. System Requirements
 
@@ -85,11 +86,14 @@ backed up frequently. Loss will lead to inability to submit transactions to the
 Babylon chain, which will in turn lead to FP jailing and halt BTC Staking reward
 accumulation.
 
-* The `keyring-` folder contains your Babylon keyring, used to submit public
-randomness and finality signatures to Babylon.
-* The `fpd.db`
+* The `keyring-xx` folder contains your Babylon keyring, used to submit public
+  randomness and finality signatures to Babylon.
+* The `finality-provider.db` contains essential operational data
+  including finality signatures, public randomness proofs, and state information.
+  Loss will prevent voting until recovered.
 
-The ability to recreate the `fpd.db` will be offered in the next few months.
+The ability to recreate the `finality-provider.db` will be offered in the next
+few months.
 
 ## 3. Install Finality Provider Toolset
 
@@ -662,7 +666,6 @@ Optional parameters:
 * `--daemon-address`: RPC address of the finality provider daemon
   (default: `127.0.0.1:12581`)
 
-
 Alternatively, you can create a finality provider by providing a JSON file
 with the finality provider details, similar to the following:
 
@@ -723,7 +726,7 @@ The response includes:
   transaction, which you can use to verify the success of the transaction
   on the Babylon chain.
 
-### 6.2 Statues of Finality Provider
+### 6.2. Statuses of Finality Provider
 
 Once the finality provider has been created, it will have the `REGISTERED` status.
 
@@ -891,10 +894,9 @@ Parameters:
 
 * `<address>`: The Babylon address of the stakeholder in bech32 string.
 
-#### 6.7.2 Withdrawing Rewards
+#### 6.8 Recover local status of a finality provider
 
-When rewards are ready to be withdraw your rewards, ther is an option to first
-set the address to withdraw your rewards to.
+To recover the local status of a finality provider, use the following command:
 
 ```shell
 fpd set-withdraw-addr <new-address> --from <registered-bbn-address>
@@ -992,7 +994,7 @@ For Finality Provider:
 > keys in the keyring directories is **irrecoverable** and will result in
 > permanent loss of your finality provider position and accumulated rewards.
 
-### 7.3 Recover finality-provider.db
+### 7.3 Recover finality-provider db
 
 The `finality-provider.db` file contains both the finality provider's running
 status and the public randomness merkle proof. Either information loss
