@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/btcstaking"
 	txformat "github.com/babylonlabs-io/babylon/btctxformatter"
 	asig "github.com/babylonlabs-io/babylon/crypto/schnorr-adaptor-signature"
@@ -38,6 +37,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/metrics"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 )
 
 type BaseTestManager struct {
@@ -88,7 +88,7 @@ func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.Publ
 	stakerAddr := tm.BBNClient.GetKeyAddress()
 
 	// proof-of-possession
-	pop, err := bstypes.NewPoPBTC(stakerAddr, delBtcPrivKey)
+	pop, err := datagen.NewPoPBTC(stakerAddr, delBtcPrivKey)
 	require.NoError(t, err)
 
 	// create and insert BTC headers which include the staking tx to get staking tx info
@@ -620,7 +620,7 @@ func CreateAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProv
 	fpCfg := fpApp.GetConfig()
 	keyName := fpCfg.BabylonConfig.Key
 	moniker := fmt.Sprintf("%s-%s", chainId, e2eutils.MonikerPrefix)
-	commission := sdkmath.LegacyZeroDec()
+	commission := testutil.ZeroCommissionRate()
 	desc := e2eutils.NewDescription(moniker)
 
 	_, err := fpApp.CreateFinalityProvider(
@@ -628,7 +628,7 @@ func CreateAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProv
 		chainId,
 		eotsPk,
 		desc,
-		&commission,
+		commission,
 	)
 	require.NoError(t, err)
 }
