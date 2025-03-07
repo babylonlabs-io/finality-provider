@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+* [#358](https://github.com/babylonlabs-io/finality-provider/pull/358) Bump Babylon dependency and add changes related to `x/btcstaking` module
+
 ## v1.0.0-rc.2
 
 ### Improvements
@@ -44,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#337](https://github.com/babylonlabs-io/finality-provider/pull/337) Cleanup EOTS manager interfaces
 * [#351](https://github.com/babylonlabs-io/finality-provider/pull/351) Add recover proof cmd
 * [#356](https://github.com/babylonlabs-io/finality-provider/pull/356) Add finality provider `reward-gauges` query cmd
+changes in messages and state
 
 ### Bug Fixes
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -20,7 +19,7 @@ type CreateFinalityProviderRequest struct {
 	btcPubKey       *bbntypes.BIP340PubKey
 	pop             *btcstakingtypes.ProofOfPossessionBTC
 	description     *stakingtypes.Description
-	commission      *sdkmath.LegacyDec
+	commission      btcstakingtypes.CommissionRates
 	errResponse     chan error
 	successResponse chan *RegisterFinalityProviderResponse
 }
