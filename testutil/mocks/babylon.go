@@ -8,6 +8,8 @@ import (
 	reflect "reflect"
 
 	math "cosmossdk.io/math"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+
 	types "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	types0 "github.com/babylonlabs-io/babylon/x/finality/types"
 	types1 "github.com/babylonlabs-io/finality-provider/types"
@@ -250,7 +252,7 @@ func (mr *MockClientControllerMockRecorder) QueryLatestFinalizedBlocks(count int
 }
 
 // RegisterFinalityProvider mocks base method.
-func (m *MockClientController) RegisterFinalityProvider(fpPk *btcec.PublicKey, pop []byte, commission *math.LegacyDec, description []byte) (*types1.TxResponse, error) {
+func (m *MockClientController) RegisterFinalityProvider(fpPk *btcec.PublicKey, pop []byte, commission btcstakingtypes.CommissionRates, description []byte) (*types1.TxResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegisterFinalityProvider", fpPk, pop, commission, description)
 	ret0, _ := ret[0].(*types1.TxResponse)

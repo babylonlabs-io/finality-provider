@@ -330,6 +330,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 			SlashedBtcHeight:     rndFp.SlashedBtcHeight,
 			Jailed:               rndFp.Jailed,
 			HighestVotedHeight:   rndFp.HighestVotedHeight,
+			CommissionInfo:       rndFp.CommissionInfo,
 		}}
 
 		mockClientController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(fpRes, nil).AnyTimes()

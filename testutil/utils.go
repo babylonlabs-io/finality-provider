@@ -7,16 +7,15 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"github.com/golang/mock/gomock"
 
+	btcstktypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/babylonlabs-io/finality-provider/testutil/mocks"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 const TestPubRandNum = 25
 
-func ZeroCommissionRate() *sdkmath.LegacyDec {
-	zeroCom := sdkmath.LegacyZeroDec()
-
-	return &zeroCom
+func ZeroCommissionRate() btcstktypes.CommissionRates {
+	return btcstktypes.NewCommissionRates(sdkmath.LegacyZeroDec(), sdkmath.LegacyOneDec(), sdkmath.LegacyOneDec())
 }
 
 func PrepareMockedClientController(t *testing.T, r *rand.Rand, startHeight, currentHeight, finalityActivationBlkHeight uint64) *mocks.MockClientController {

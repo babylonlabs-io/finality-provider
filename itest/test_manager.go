@@ -18,7 +18,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/itest/container"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 
-	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/btcstaking"
 	txformat "github.com/babylonlabs-io/babylon/btctxformatter"
 	asig "github.com/babylonlabs-io/babylon/crypto/schnorr-adaptor-signature"
@@ -201,9 +200,9 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 	require.NoError(t, err)
 
 	// create and register the finality provider
-	commission := sdkmath.LegacyZeroDec()
+	commission := testutil.ZeroCommissionRate()
 	desc := newDescription(testMoniker)
-	_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, eotsPk, desc, &commission)
+	_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
 	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
@@ -694,7 +693,7 @@ func (tm *TestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.PublicKe
 	stakerAddr := tm.BBNClient.GetKeyAddress()
 
 	// proof-of-possession
-	pop, err := bstypes.NewPoPBTC(stakerAddr, delBtcPrivKey)
+	pop, err := datagen.NewPoPBTC(stakerAddr, delBtcPrivKey)
 	require.NoError(t, err)
 
 	// create and insert BTC headers which include the staking tx to get staking tx info
