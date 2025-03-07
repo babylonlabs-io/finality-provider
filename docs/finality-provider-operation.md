@@ -927,7 +927,7 @@ fpd withdraw-reward <type> --from <registered-bbn-address>
 Parameters:
 
 * `<type>`: The type of reward to withdraw (one of `finality_provider`,
-  `btc_delegation`)
+  `btc_staker`)
 * `--from`: The finality provider's registered Babylon address.
 * `--keyring-backend`: The keyring backend to use.
 * `--home`: The home directory for the finality provider.
