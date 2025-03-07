@@ -1022,6 +1022,8 @@ Babylon chain. Specifically, this can be achieved by repeating the
 cmd will download the info of the finality provider locally if it is already
 registered on Babylon.
 
+Example command : `fpd create-finality-provider --chain-id bbn-test-5 --moniker Your-Finality-Provider-Moniker --commission-rate TheRateWhichYouRegistered --key-name "finality-provider" --eots-pk your-eots-pk-whichyouregistered`
+
 #### 7.3.2 Recover public randomness proof
 
 Every finality vote must contain the public randomness proof to prove that the
@@ -1036,3 +1038,5 @@ the latest committed height on Babylon. If `start-height` is not specified,
 it will recover all the proof until the latest committed height on Babylon.
 Note that `fpd` needs to be stopped before recovering the proof as otherwise,
 the database file might be locked.
+
+Example command : `fpd recover-rand-proof --chain-id bbn-test-5 your-eots-pk`
