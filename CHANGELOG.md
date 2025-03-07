@@ -37,8 +37,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v1.0.0-rc.3
+
+### Improvements
+
 * [#358](https://github.com/babylonlabs-io/finality-provider/pull/358) Bump Babylon dependency and add changes related to `x/btcstaking` module
 changes in messages and state
+
+### Bug Fixes
+
+* [#368](https://github.com/babylonlabs-io/finality-provider/pull/368) fix: fpd config validate
 
 ## v1.0.0-rc.2
 
