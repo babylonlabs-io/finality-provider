@@ -33,6 +33,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"go.uber.org/zap"
+
+	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 )
 
 const (
@@ -241,7 +243,12 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 		msgs = append(msgs, execMsg)
 	}
 
-	res, err := cc.reliablySendMsgs(msgs, nil, nil)
+	expectedErrs := []*sdkErr.Error{
+		finalitytypes.ErrDuplicatedFinalitySig,
+		finalitytypes.ErrSigHeightOutdated,
+	}
+
+	res, err := cc.reliablySendMsgs(msgs, expectedErrs, nil)
 	if err != nil {
 		return nil, err
 	}
