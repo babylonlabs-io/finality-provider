@@ -83,7 +83,7 @@ func (mr *MockClientControllerMockRecorder) QueryFinalityProvider(fpPk interface
 }
 
 // RegisterFinalityProvider mocks base method.
-func (m *MockClientController) RegisterFinalityProvider(chainID string, fpPk *btcec.PublicKey, pop []byte, commission *math.LegacyDec, description []byte) (*types0.TxResponse, error) {
+func (m *MockClientController) RegisterFinalityProvider(chainID string, fpPk *btcec.PublicKey, pop []byte, commission types.CommissionRates, description []byte) (*types0.TxResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegisterFinalityProvider", chainID, fpPk, pop, commission, description)
 	ret0, _ := ret[0].(*types0.TxResponse)

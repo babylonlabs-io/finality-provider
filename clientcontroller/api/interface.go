@@ -21,7 +21,7 @@ type ClientController interface {
 		chainID string,
 		fpPk *btcec.PublicKey,
 		pop []byte,
-		commission *math.LegacyDec,
+		commission btcstakingtypes.CommissionRates,
 		description []byte,
 	) (*types.TxResponse, error)
 

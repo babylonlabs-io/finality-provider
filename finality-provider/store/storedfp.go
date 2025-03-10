@@ -5,6 +5,7 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	bbn "github.com/babylonlabs-io/babylon/types"
+	btcstktypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -20,6 +21,7 @@ type StoredFinalityProvider struct {
 	ChainID         string
 	LastVotedHeight uint64
 	Status          proto.FinalityProviderStatus
+	CommissionInfo  *proto.CommissionInfo
 }
 
 func protoFpToStoredFinalityProvider(fp *proto.FinalityProvider) (*StoredFinalityProvider, error) {
@@ -46,6 +48,7 @@ func protoFpToStoredFinalityProvider(fp *proto.FinalityProvider) (*StoredFinalit
 		ChainID:         fp.ChainId,
 		LastVotedHeight: fp.LastVotedHeight,
 		Status:          fp.Status,
+		CommissionInfo:  fp.CommissionInfo,
 	}, nil
 }
 
@@ -67,5 +70,14 @@ func (sfp *StoredFinalityProvider) ToFinalityProviderInfo() *proto.FinalityProvi
 		Commission:      sfp.Commission.String(),
 		LastVotedHeight: sfp.LastVotedHeight,
 		Status:          sfp.Status.String(),
+		CommissionInfo:  sfp.CommissionInfo,
 	}
+}
+
+func (sfp *StoredFinalityProvider) GetCommissionInfo() *btcstktypes.CommissionInfo {
+	return btcstktypes.NewCommissionInfoWithTime(
+		sdkmath.LegacyMustNewDecFromStr(sfp.CommissionInfo.MaxRate),
+		sdkmath.LegacyMustNewDecFromStr(sfp.CommissionInfo.MaxChangeRate),
+		sfp.CommissionInfo.UpdateTime.AsTime(),
+	)
 }
