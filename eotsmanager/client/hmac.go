@@ -61,7 +61,7 @@ func HMACUnaryClientInterceptor(hmacKey string) grpc.UnaryClientInterceptor {
 		// Generate HMAC using SHA-256
 		h := hmac.New(sha256.New, []byte(hmacKey))
 		h.Write(data)
-		signature := base64.StdEncoding.EncodeToString(h.Sum(nil))
+		hmacString := base64.StdEncoding.EncodeToString(h.Sum(nil))
 
 		// Add HMAC to the context metadata
 		md, ok := metadata.FromOutgoingContext(ctx)
@@ -69,7 +69,7 @@ func HMACUnaryClientInterceptor(hmacKey string) grpc.UnaryClientInterceptor {
 			md = metadata.New(nil)
 		}
 		md = md.Copy()
-		md.Set(HMACHeaderKey, signature)
+		md.Set(HMACHeaderKey, hmacString)
 		ctx = metadata.NewOutgoingContext(ctx, md)
 
 		return invoker(ctx, method, req, reply, cc, opts...)
