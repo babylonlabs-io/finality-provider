@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
+* [#372](https://github.com/babylonlabs-io/finality-provider/pull/372) Add expected errors to finality vote sending. 
 * [#335](https://github.com/babylonlabs-io/finality-provider/pull/335) chore: fix CosmWasm controller
 * [#331](https://github.com/babylonlabs-io/finality-provider/pull/331) Bump Cosmos integration dependencies
 * [#351](https://github.com/babylonlabs-io/finality-provider/pull/351) Add recover proof cmd
