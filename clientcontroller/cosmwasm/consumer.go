@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"sort"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/babylonlabs-io/babylon/client/babylonclient"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cwcclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -198,7 +200,12 @@ func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 		msgs = append(msgs, execMsg)
 	}
 
-	res, err := wc.reliablySendMsgs(msgs, nil, nil)
+	expectedErrs := []*sdkErr.Error{
+		finalitytypes.ErrDuplicatedFinalitySig,
+		finalitytypes.ErrSigHeightOutdated,
+	}
+
+	res, err := wc.reliablySendMsgs(msgs, expectedErrs, nil)
 	if err != nil {
 		return nil, err
 	}
