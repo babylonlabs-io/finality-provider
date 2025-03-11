@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/cometbft/cometbft/crypto/tmhash"
@@ -346,7 +345,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 	keyName, chainID string,
 	eotsPk *bbntypes.BIP340PubKey,
 	description *stakingtypes.Description,
-	commission *sdkmath.LegacyDec,
+	commission bstypes.CommissionRates,
 ) (*CreateFinalityProviderResult, error) {
 	// 1. check if the chain key exists
 	kr, err := fpkr.NewChainKeyringControllerWithKeyring(app.kr, keyName)
@@ -580,7 +579,18 @@ func (app *FinalityProviderApp) putFpFromResponse(fp *bstypes.FinalityProviderRe
 			if err != nil {
 				return fmt.Errorf("err converting fp addr: %w", err)
 			}
-			if err := app.fps.CreateFinalityProvider(addr, btcPk, fp.Description, fp.Commission, chainID); err != nil {
+
+			if fp.Commission == nil {
+				return errors.New("nil Commission in FinalityProviderResponse")
+			}
+
+			if fp.CommissionInfo == nil {
+				return errors.New("nil CommissionInfo in FinalityProviderResponse")
+			}
+
+			commRates := bstypes.NewCommissionRates(*fp.Commission, fp.CommissionInfo.MaxRate, fp.CommissionInfo.MaxChangeRate)
+
+			if err := app.fps.CreateFinalityProvider(addr, btcPk, fp.Description, commRates, chainID); err != nil {
 				return fmt.Errorf("failed to save finality-provider: %w", err)
 			}
 
