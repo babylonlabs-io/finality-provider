@@ -17,7 +17,6 @@ The following gRPC methods exposed by EOTSD *require* HMAC authentication:
 *   **`SignEOTS`**
 *   **`SignSchnorrSig`**
 *   **`CreateRandomnessPairList`**
-*   **`SaveEOTSKeyName`**
 
 The following gRPC method does *not* require HMAC authentication:
 
