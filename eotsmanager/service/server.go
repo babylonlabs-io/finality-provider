@@ -88,7 +88,7 @@ func (s *Server) RunUntilShutdown(ctx context.Context) error {
 	hmacKey := s.cfg.HMACKey
 	if hmacKey == "" {
 		var err error
-		hmacKey, err = GetHMACKey()
+		hmacKey, err = GetHMACKeyFromEnv()
 		if err != nil {
 			s.logger.Warn("HMAC key not configured. Authentication will not be enabled.", zap.Error(err))
 		}

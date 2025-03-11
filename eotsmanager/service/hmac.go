@@ -18,8 +18,8 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 )
 
-// GetHMACKey retrieves the HMAC key from the environment variable
-func GetHMACKey() (string, error) {
+// GetHMACKeyFromEnv retrieves the HMAC key from the environment variable
+func GetHMACKeyFromEnv() (string, error) {
 	key := os.Getenv(client.HMACKeyEnvVar)
 	if key == "" {
 		return "", fmt.Errorf("HMAC_KEY environment variable not set")
@@ -29,7 +29,7 @@ func GetHMACKey() (string, error) {
 }
 
 // HMACUnaryServerInterceptor creates a gRPC server interceptor that verifies HMAC signatures
-// on incoming requests. It bypasses authentication for the Ping method.
+// on incoming requests. It bypasses authentication for the Ping method and SaveEOTSKeyName.
 func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -37,9 +37,10 @@ func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
-		// Skip authentication for Ping method
+		// Skip authentication for Ping method and SaveEOTSKeyName (local key management)
 		// NOTE: we should disable hmac on pings to allow for health checks
-		if strings.HasSuffix(info.FullMethod, "/Ping") {
+		// NOTE: SaveEOTSKeyName is a local key management operation that doesn't require HMAC
+		if strings.HasSuffix(info.FullMethod, "/Ping") || strings.HasSuffix(info.FullMethod, "/SaveEOTSKeyName") {
 			return handler(ctx, req)
 		}
 
