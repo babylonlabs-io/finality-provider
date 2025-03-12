@@ -474,3 +474,38 @@ func TestRecoverRandProofCmd(t *testing.T) {
 	_, err = pubRandStore.GetPubRandProof([]byte(testChainID), fpIns.GetBtcPkBIP340().MustMarshal(), finalizedBlock.Height)
 	require.NoError(t, err)
 }
+
+func TestSigHeightOutdated(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
+	defer tm.Stop(t)
+
+	fpIns := fps[0]
+
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
+
+	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, e2eutils.StakingTime, e2eutils.StakingAmount)
+
+	delsResp := tm.WaitForNPendingDels(t, 1)
+	del, err := e2eutils.ParseRespBTCDelToBTCDel(delsResp[0])
+	require.NoError(t, err)
+
+	tm.InsertCovenantSigForDelegation(t, del)
+
+	_ = tm.WaitForNActiveDels(t, 1)
+
+	lastVotedHeight := tm.WaitForFpVoteCast(t, fpIns)
+	tm.CheckBlockFinalization(t, lastVotedHeight, 1)
+	t.Logf("the block at height %v is finalized", lastVotedHeight)
+
+	finalizedBlock := tm.WaitForNFinalizedBlocks(t, 1)
+
+	res, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(finalizedBlock, false)
+
+	require.NoError(t, err)
+	require.Nil(t, extractedKey)
+	require.Empty(t, res)
+
+	t.Logf("Finality signature for already finalized block at height %d was properly handled", finalizedBlock.Height)
+}

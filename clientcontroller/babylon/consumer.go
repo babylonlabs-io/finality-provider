@@ -166,6 +166,7 @@ func (bc *BabylonConsumerController) SubmitFinalitySig(
 
 	expectedErrs := []*sdkErr.Error{
 		finalitytypes.ErrDuplicatedFinalitySig,
+		finalitytypes.ErrSigHeightOutdated,
 	}
 
 	res, err := bc.reliablySendMsg(msg, expectedErrs, unrecoverableErrs)
@@ -219,6 +220,7 @@ func (bc *BabylonConsumerController) SubmitBatchFinalitySigs(
 
 	expectedErrs := []*sdkErr.Error{
 		finalitytypes.ErrDuplicatedFinalitySig,
+		finalitytypes.ErrSigHeightOutdated,
 	}
 
 	res, err := bc.reliablySendMsgs(msgs, expectedErrs, unrecoverableErrs)
