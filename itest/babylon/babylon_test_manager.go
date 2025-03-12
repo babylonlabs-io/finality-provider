@@ -149,7 +149,7 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	return tm
 }
 
-func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *service.FinalityProviderInstance {
+func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hmacKey ...string) *service.FinalityProviderInstance {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
 	// Create EOTS key
@@ -168,6 +168,14 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 	cfg.BabylonConfig.Key = fpKeyName
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", tm.babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", tm.babylond.GetPort("9090/tcp"))
+
+	// Set HMAC key if provided
+	if len(hmacKey) > 0 && hmacKey[0] != "" {
+		cfg.HMACKey = hmacKey[0]
+		// Set the environment variable for the client
+		os.Setenv(client.HMACKeyEnvVar, hmacKey[0])
+	}
+
 	fpBbnKeyInfo, err := testutil.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, cfg.BabylonConfig.Key, cfg.BabylonConfig.KeyringBackend, passphrase, hdPath, "")
 	require.NoError(t, err)
 
@@ -231,12 +239,18 @@ func (tm *TestManager) WaitForServicesStart(t *testing.T) {
 	t.Logf("Babylon node is started")
 }
 
-func StartManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context) (*TestManager, []*service.FinalityProviderInstance) {
+func StartManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context, hmacKey ...string) (*TestManager, []*service.FinalityProviderInstance) {
 	tm := StartManager(t, ctx)
 
 	var runningFps []*service.FinalityProviderInstance
 	for i := 0; i < n; i++ {
-		fpIns := tm.AddFinalityProvider(t, ctx)
+		// Pass the HMAC key if provided
+		var fpIns *service.FinalityProviderInstance
+		if len(hmacKey) > 0 && hmacKey[0] != "" {
+			fpIns = tm.AddFinalityProvider(t, ctx, hmacKey[0])
+		} else {
+			fpIns = tm.AddFinalityProvider(t, ctx)
+		}
 		runningFps = append(runningFps, fpIns)
 	}
 
