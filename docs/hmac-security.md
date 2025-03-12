@@ -102,7 +102,7 @@ Double-check that they are identical, including any leading or trailing whitespa
    - If using fpd.conf, make sure the hmackey is set correctly, and that no HMAC_KEY environment variable with 
    an incorrect value is present (as it will be ignored if hmackey is set).
 
-3. Logs: Check the logs of both FPD and EOTSD for error messages related to HMAC. Look for "invalid HMAC signature."
+3. Logs: Check the logs of both FPD and EOTSD for error messages related to HMAC. Look for "invalid HMAC."
 
 4. Connectivity: Use the Ping method (which bypasses HMAC) to test basic network connectivity between FPD and EOTSD.
 

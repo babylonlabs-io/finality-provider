@@ -143,7 +143,7 @@ func TestHMACMismatch(t *testing.T) {
 	msgToSign := []byte("test message for signing")
 	_, err = altClient.SignSchnorrSig([]byte(eotsKeyName), msgToSign)
 	require.Error(t, err, "SignSchnorrSig should fail with mismatched HMAC keys")
-	require.Contains(t, err.Error(), "invalid HMAC signature", "Expected HMAC authentication error during SignSchnorrSig")
+	require.Contains(t, err.Error(), "invalid HMAC", "Expected HMAC authentication error during SignSchnorrSig")
 
 	// Switch back to the correct HMAC key to verify the operation works properly
 	os.Setenv(client.HMACKeyEnvVar, serverHmacKey)
@@ -152,7 +152,7 @@ func TestHMACMismatch(t *testing.T) {
 	defer correctClient.Close()
 
 	_, err = correctClient.SignSchnorrSig([]byte(eotsKeyName), msgToSign)
-	require.NotContains(t, err.Error(), "invalid HMAC signature", "Should not get HMAC authentication error with correct key")
+	require.NotContains(t, err.Error(), "invalid HMAC", "Should not get HMAC authentication error with correct key")
 
 	t.Logf("Successfully verified HMAC authentication: operations fail with wrong key but work with correct key")
 }

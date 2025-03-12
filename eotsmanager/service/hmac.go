@@ -73,7 +73,7 @@ func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 
 		// Compare HMACs using constant-time comparison to avoid timing attacks
 		if !hmac.Equal([]byte(receivedHMAC), []byte(expectedHMAC)) {
-			return nil, status.Errorf(codes.Unauthenticated, "invalid HMAC signature")
+			return nil, status.Errorf(codes.Unauthenticated, "invalid HMAC")
 		}
 
 		return handler(ctx, req)
