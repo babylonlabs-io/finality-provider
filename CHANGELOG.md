@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
+* [#374](https://github.com/babylonlabs-io/finality-provider/pull/374) Check HMAC excluded methods by full proto names.
 * [#364](https://github.com/babylonlabs-io/finality-provider/pull/364) HMAC authentication service between fpd and eotsd.
 * [#335](https://github.com/babylonlabs-io/finality-provider/pull/335) chore: fix CosmWasm controller
 * [#331](https://github.com/babylonlabs-io/finality-provider/pull/331) Bump Cosmos integration dependencies
