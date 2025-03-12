@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"strings"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -37,10 +36,11 @@ func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
-		// Skip authentication for Ping method and SaveEOTSKeyName (local key management)
+		// Skip authentication for specific methods using exact matching
 		// NOTE: we should disable hmac on pings to allow for health checks
 		// NOTE: SaveEOTSKeyName is a local key management operation that doesn't require HMAC
-		if strings.HasSuffix(info.FullMethod, "/Ping") || strings.HasSuffix(info.FullMethod, "/SaveEOTSKeyName") {
+		switch info.FullMethod {
+		case "/proto.EOTSManager/Ping", "/proto.EOTSManager/SaveEOTSKeyName":
 			return handler(ctx, req)
 		}
 

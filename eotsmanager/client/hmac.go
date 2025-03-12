@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"strings"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -31,8 +30,8 @@ func GetHMACKey() (string, error) {
 	return key, nil
 }
 
-// HMACUnaryClientInterceptor creates a gRPC client interceptor that adds HMAC signatures
-// to outgoing requests. It bypasses authentication for the Ping method.
+// HMACUnaryClientInterceptor creates a gRPC client interceptor that adds HMAC
+// to outgoing requests. It bypasses authentication for the Ping and SaveEOTSKeyName methods.
 func HMACUnaryClientInterceptor(hmacKey string) grpc.UnaryClientInterceptor {
 	return func(
 		ctx context.Context,
@@ -42,9 +41,11 @@ func HMACUnaryClientInterceptor(hmacKey string) grpc.UnaryClientInterceptor {
 		invoker grpc.UnaryInvoker,
 		opts ...grpc.CallOption,
 	) error {
-		// Skip authentication for Ping method
-		// NOTE: we should disable hmac on pings to allow for health checks
-		if strings.HasSuffix(method, "/Ping") {
+		// Skip authentication for specific methods using exact matching
+		// NOTE: We should disable hmac on pings to allow for health checks
+		// NOTE: SaveEOTSKeyName is a local key management operation that doesn't require HMAC
+		switch method {
+		case "/proto.EOTSManager/Ping", "/proto.EOTSManager/SaveEOTSKeyName":
 			return invoker(ctx, method, req, reply, cc, opts...)
 		}
 
