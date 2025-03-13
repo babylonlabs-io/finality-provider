@@ -39,15 +39,10 @@ func generateHMACKey() (string, error) {
 }
 
 // startManagerWithHMAC starts a test manager with finality providers configured with HMAC
-func startManagerWithHMAC(t *testing.T, n int, ctx context.Context) (*TestManager, []*service.FinalityProviderInstance, func()) {
-	defaultHmacKey, err := generateDefaultHMACKey()
-	require.NoError(t, err)
+func startManagerWithHMAC(t *testing.T, n int, ctx context.Context) (*TestManager, []*service.FinalityProviderInstance) {
+	defaultHmacKey := "TestHMACKey"
 
 	tm := StartManager(t, ctx, defaultHmacKey, defaultHmacKey)
-
-	cleanup := func() {
-		tm.Stop(t)
-	}
 
 	var runningFps []*service.FinalityProviderInstance
 	for i := 0; i < n; i++ {
@@ -64,7 +59,7 @@ func startManagerWithHMAC(t *testing.T, n int, ctx context.Context) (*TestManage
 		return len(fps) == n
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
-	return tm, runningFps, cleanup
+	return tm, runningFps
 }
 
 // TestHMACFinalityProviderLifeCycle tests the whole life cycle of a finality-provider with HMAC enabled
@@ -73,8 +68,7 @@ func TestHMACFinalityProviderLifeCycle(t *testing.T) {
 	ctx := context.Background()
 	n := 2
 
-	tm, fps, cleanup := startManagerWithHMAC(t, n, ctx)
-	defer cleanup()
+	tm, fps := startManagerWithHMAC(t, n, ctx)
 
 	tm.WaitForFpPubRandTimestamped(t, fps[0])
 

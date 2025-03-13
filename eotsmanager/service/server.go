@@ -139,13 +139,3 @@ func (s *Server) startGrpcListen(grpcServer *grpc.Server, listeners []net.Listen
 	// Wait for gRPC servers to be up running.
 	wg.Wait()
 }
-
-// GetLogger returns the server's logger
-func (s *Server) GetLogger() *zap.Logger {
-	return s.logger
-}
-
-// GetDB returns the server's database
-func (s *Server) GetDB() kvdb.Backend {
-	return s.db
-}

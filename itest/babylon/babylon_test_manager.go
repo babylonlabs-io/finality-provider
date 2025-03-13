@@ -162,12 +162,6 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 	return tm
 }
 
-// generateDefaultHMACKey generates a consistent HMAC key for testing
-func generateDefaultHMACKey() (string, error) {
-	// Use a fixed key for testing to ensure consistency
-	return "TestHMACKey123456789012345678901234567890", nil
-}
-
 func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hmacKey ...string) *service.FinalityProviderInstance {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
