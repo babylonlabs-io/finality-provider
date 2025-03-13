@@ -10,15 +10,11 @@ import (
 	"time"
 
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
+	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/ory/dockertest/v3"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
-	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
@@ -29,6 +25,10 @@ import (
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/ory/dockertest/v3"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 const (
@@ -122,6 +122,11 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	eotsCfg := eotsconfig.DefaultConfigWithHomePath(eotsHomeDir)
 	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+
+	// By default, don't set HMAC key to ensure original tests aren't affected by
+	// flaky environment variable setting
+	eotsCfg.HMACKey = ""
+
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
@@ -149,6 +154,32 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	return tm
 }
 
+// generateDefaultHMACKey generates a consistent HMAC key for testing
+func generateDefaultHMACKey() (string, error) {
+	// Use a fixed key for testing to ensure consistency
+	return "TestHMACKey123456789012345678901234567890", nil
+}
+
+// StartManagerWithHMAC starts a test manager with HMAC authentication enabled
+func StartManagerWithHMAC(t *testing.T, ctx context.Context) *TestManager {
+	tm := StartManager(t, ctx)
+
+	hmacKey, err := generateDefaultHMACKey()
+	require.NoError(t, err)
+
+	err = os.Setenv(client.HMACKeyEnvVar, hmacKey)
+	require.NoError(t, err)
+	err = tm.EOTSServerHandler.SetHMACKey(hmacKey)
+	require.NoError(t, err)
+
+	// Use t.Cleanup to ensure the environment variable is unset when the test completes
+	t.Cleanup(func() {
+		os.Unsetenv(client.HMACKeyEnvVar)
+	})
+
+	return tm
+}
+
 func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hmacKey ...string) *service.FinalityProviderInstance {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
@@ -172,8 +203,6 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	// Set HMAC key if provided
 	if len(hmacKey) > 0 && hmacKey[0] != "" {
 		cfg.HMACKey = hmacKey[0]
-		// Set the environment variable for the client
-		os.Setenv(client.HMACKeyEnvVar, hmacKey[0])
 	}
 
 	fpBbnKeyInfo, err := testutil.CreateChainKey(cfg.BabylonConfig.KeyDirectory, cfg.BabylonConfig.ChainID, cfg.BabylonConfig.Key, cfg.BabylonConfig.KeyringBackend, passphrase, hdPath, "")
@@ -242,9 +271,11 @@ func (tm *TestManager) WaitForServicesStart(t *testing.T) {
 func StartManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context, hmacKey ...string) (*TestManager, []*service.FinalityProviderInstance) {
 	tm := StartManager(t, ctx)
 
+	// Note: We're no longer overriding the HMAC key here since StartManager already sets it
+
 	var runningFps []*service.FinalityProviderInstance
 	for i := 0; i < n; i++ {
-		// Pass the HMAC key if provided
+		// Pass the HMAC key if provided, otherwise don't use HMAC
 		var fpIns *service.FinalityProviderInstance
 		if len(hmacKey) > 0 && hmacKey[0] != "" {
 			fpIns = tm.AddFinalityProvider(t, ctx, hmacKey[0])

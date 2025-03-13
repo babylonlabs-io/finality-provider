@@ -16,7 +16,7 @@ import (
 const (
 	// HMACKeyEnvVar is the environment variable name for the HMAC key
 	HMACKeyEnvVar = "HMAC_KEY"
-	// HMACHeaderKey is the metadata key for the HMAC signature
+	// HMACHeaderKey is the metadata key for the HMAC
 	HMACHeaderKey = "X-FPD-HMAC"
 )
 

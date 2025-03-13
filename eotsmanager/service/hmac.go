@@ -27,7 +27,7 @@ func GetHMACKeyFromEnv() (string, error) {
 	return key, nil
 }
 
-// HMACUnaryServerInterceptor creates a gRPC server interceptor that verifies HMAC signatures
+// HMACUnaryServerInterceptor creates a gRPC server interceptor that verifies HMAC
 // on incoming requests. It bypasses authentication for the Ping method and SaveEOTSKeyName.
 func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 	return func(
@@ -52,7 +52,7 @@ func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 		// Get HMAC from metadata
 		values := md.Get(client.HMACHeaderKey)
 		if len(values) == 0 {
-			return nil, status.Errorf(codes.Unauthenticated, "HMAC signature not provided")
+			return nil, status.Errorf(codes.Unauthenticated, "HMAC not provided")
 		}
 		receivedHMAC := values[0]
 
