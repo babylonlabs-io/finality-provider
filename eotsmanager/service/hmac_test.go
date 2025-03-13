@@ -5,7 +5,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"os"
 	"testing"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/service"
@@ -70,23 +69,6 @@ func TestHMACVerification(t *testing.T) {
 	)
 	require.Error(t, err)
 	require.Equal(t, codes.Unauthenticated, status.Code(err))
-}
-
-func TestHMACKeyRetrieval(t *testing.T) {
-	originalKey := os.Getenv(client.HMACKeyEnvVar)
-	defer t.Setenv(client.HMACKeyEnvVar, originalKey)
-
-	testKey := "test-hmac-secret-key"
-	t.Setenv(client.HMACKeyEnvVar, testKey)
-
-	key, err := client.GetHMACKey()
-	require.NoError(t, err)
-	require.Equal(t, testKey, key)
-
-	os.Unsetenv(client.HMACKeyEnvVar)
-	_, err = client.GetHMACKey()
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "environment variable not set")
 }
 
 func TestHMACAuthDisabled(t *testing.T) {
@@ -158,14 +140,4 @@ func TestConfigHMACKey(t *testing.T) {
 		HMACKey: testKey,
 	}
 	require.Equal(t, testKey, cfg.HMACKey)
-
-	originalKey := os.Getenv(client.HMACKeyEnvVar)
-	defer t.Setenv(client.HMACKeyEnvVar, originalKey)
-
-	envKey := "env-hmac-key"
-	t.Setenv(client.HMACKeyEnvVar, envKey)
-
-	key, err := client.GetHMACKey()
-	require.NoError(t, err)
-	require.Equal(t, envKey, key)
 }

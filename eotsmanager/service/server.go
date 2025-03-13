@@ -83,15 +83,10 @@ func (s *Server) RunUntilShutdown(ctx context.Context) error {
 		_ = lis.Close()
 	}()
 
-	// Get HMAC key from config or environment variable for cloud providers
-	// TODO: Make this a requirement by mainnet and error
+	// Get HMAC key from config
 	hmacKey := s.cfg.HMACKey
 	if hmacKey == "" {
-		var err error
-		hmacKey, err = GetHMACKeyFromEnv()
-		if err != nil {
-			s.logger.Warn("HMAC key not configured. Authentication will not be enabled.", zap.Error(err))
-		}
+		s.logger.Warn("HMAC key not configured in config. Authentication will not be enabled.")
 	}
 
 	var opts []grpc.ServerOption
@@ -143,4 +138,14 @@ func (s *Server) startGrpcListen(grpcServer *grpc.Server, listeners []net.Listen
 
 	// Wait for gRPC servers to be up running.
 	wg.Wait()
+}
+
+// GetLogger returns the server's logger
+func (s *Server) GetLogger() *zap.Logger {
+	return s.logger
+}
+
+// GetDB returns the server's database
+func (s *Server) GetDB() kvdb.Backend {
+	return s.db
 }

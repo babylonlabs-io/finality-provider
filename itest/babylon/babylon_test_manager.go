@@ -55,7 +55,7 @@ type TestManager struct {
 	babylond          *dockertest.Resource
 }
 
-func StartManager(t *testing.T, ctx context.Context) *TestManager {
+func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacKey string) *TestManager {
 	testDir, err := base_test_manager.TempDir(t, "fp-e2e-test-*")
 	require.NoError(t, err)
 
@@ -123,14 +123,22 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	// By default, don't set HMAC key to ensure original tests aren't affected by
-	// flaky environment variable setting
-	eotsCfg.HMACKey = ""
+	// Set HMAC key for EOTS server if provided
+	if eotsHmacKey != "" {
+		eotsCfg.HMACKey = eotsHmacKey
+		t.Logf("Using EOTS server HMAC key: %s", eotsHmacKey)
+	}
+
+	// Set HMAC key for finality provider client if provided
+	if fpHmacKey != "" {
+		cfg.HMACKey = fpHmacKey
+		t.Logf("Using FP client HMAC key: %s", fpHmacKey)
+	}
 
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener)
+	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, fpHmacKey)
 	require.NoError(t, err)
 
 	tm := &TestManager{
@@ -158,26 +166,6 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 func generateDefaultHMACKey() (string, error) {
 	// Use a fixed key for testing to ensure consistency
 	return "TestHMACKey123456789012345678901234567890", nil
-}
-
-// StartManagerWithHMAC starts a test manager with HMAC authentication enabled
-func StartManagerWithHMAC(t *testing.T, ctx context.Context) *TestManager {
-	tm := StartManager(t, ctx)
-
-	hmacKey, err := generateDefaultHMACKey()
-	require.NoError(t, err)
-
-	err = os.Setenv(client.HMACKeyEnvVar, hmacKey)
-	require.NoError(t, err)
-	err = tm.EOTSServerHandler.SetHMACKey(hmacKey)
-	require.NoError(t, err)
-
-	// Use t.Cleanup to ensure the environment variable is unset when the test completes
-	t.Cleanup(func() {
-		os.Unsetenv(client.HMACKeyEnvVar)
-	})
-
-	return tm
 }
 
 func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hmacKey ...string) *service.FinalityProviderInstance {
@@ -223,7 +211,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	require.NoError(t, err)
 
 	// Create and start finality provider app
-	eotsCli, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.Config().RPCListener)
+	eotsCli, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.Config().RPCListener, tm.EOTSServerHandler.Config().HMACKey)
 	require.NoError(t, err)
 	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
@@ -269,9 +257,14 @@ func (tm *TestManager) WaitForServicesStart(t *testing.T) {
 }
 
 func StartManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context, hmacKey ...string) (*TestManager, []*service.FinalityProviderInstance) {
-	tm := StartManager(t, ctx)
-
-	// Note: We're no longer overriding the HMAC key here since StartManager already sets it
+	// If HMAC key is provided, use it for both server and client
+	var tm *TestManager
+	if len(hmacKey) > 0 && hmacKey[0] != "" {
+		// Use the same key for both EOTS server and FP client for simplicity
+		tm = StartManager(t, ctx, hmacKey[0], hmacKey[0])
+	} else {
+		tm = StartManager(t, ctx, "", "")
+	}
 
 	var runningFps []*service.FinalityProviderInstance
 	for i := 0; i < n; i++ {

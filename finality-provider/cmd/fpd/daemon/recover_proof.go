@@ -90,7 +90,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
 
-	em, err := eotsclient.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress)
+	em, err := eotsclient.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress, cfg.HMACKey)
 	if err != nil {
 		return fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}

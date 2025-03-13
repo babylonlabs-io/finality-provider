@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"os"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -14,24 +13,12 @@ import (
 )
 
 const (
-	// HMACKeyEnvVar is the environment variable name for the HMAC key
-	HMACKeyEnvVar = "HMAC_KEY"
 	// HMACHeaderKey is the metadata key for the HMAC
 	HMACHeaderKey = "X-FPD-HMAC"
 )
 
-// GetHMACKey retrieves the HMAC key from the environment variable
-func GetHMACKey() (string, error) {
-	key := os.Getenv(HMACKeyEnvVar)
-	if key == "" {
-		return "", fmt.Errorf("HMAC_KEY environment variable not set")
-	}
-
-	return key, nil
-}
-
 // HMACUnaryClientInterceptor creates a gRPC client interceptor that adds HMAC
-// to outgoing requests. It bypasses authentication for the Ping and SaveEOTSKeyName methods.
+// to outgoing requests. It skips adding HMAC for the Ping method and SaveEOTSKeyName.
 func HMACUnaryClientInterceptor(hmacKey string) grpc.UnaryClientInterceptor {
 	return func(
 		ctx context.Context,
@@ -42,37 +29,49 @@ func HMACUnaryClientInterceptor(hmacKey string) grpc.UnaryClientInterceptor {
 		opts ...grpc.CallOption,
 	) error {
 		// Skip authentication for specific methods using exact matching
-		// NOTE: We should disable hmac on pings to allow for health checks
+		// NOTE: we should disable hmac on pings to allow for health checks
 		// NOTE: SaveEOTSKeyName is a local key management operation that doesn't require HMAC
 		switch method {
 		case "/proto.EOTSManager/Ping", "/proto.EOTSManager/SaveEOTSKeyName":
 			return invoker(ctx, method, req, reply, cc, opts...)
 		}
 
+		// If HMAC key is empty, skip authentication
+		if hmacKey == "" {
+			fmt.Printf("HMAC authentication disabled for client: empty HMAC key\n")
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}
+
 		msg, ok := req.(proto.Message)
 		if !ok {
-			return invoker(ctx, method, req, reply, cc, opts...)
+			fmt.Printf("HMAC generation failed: request is not a protobuf message\n")
+			return fmt.Errorf("request is not a protobuf message")
 		}
 
 		data, err := proto.Marshal(msg)
 		if err != nil {
-			return err
+			fmt.Printf("HMAC generation failed: failed to marshal request: %v\n", err)
+			return fmt.Errorf("failed to marshal request: %v", err)
 		}
 
 		// Generate HMAC using SHA-256
 		h := hmac.New(sha256.New, []byte(hmacKey))
 		h.Write(data)
-		hmacString := base64.StdEncoding.EncodeToString(h.Sum(nil))
+		hmacValue := base64.StdEncoding.EncodeToString(h.Sum(nil))
 
-		// Add HMAC to the context metadata
+		// Add HMAC to outgoing context
 		md, ok := metadata.FromOutgoingContext(ctx)
 		if !ok {
 			md = metadata.New(nil)
+		} else {
+			md = md.Copy()
 		}
-		md = md.Copy()
-		md.Set(HMACHeaderKey, hmacString)
-		ctx = metadata.NewOutgoingContext(ctx, md)
+		md.Set(HMACHeaderKey, hmacValue)
+		newCtx := metadata.NewOutgoingContext(ctx, md)
 
-		return invoker(ctx, method, req, reply, cc, opts...)
+		fmt.Printf("HMAC added to client request for method: %s\n", method)
+		fmt.Printf("  HMAC value: %s\n", hmacValue)
+
+		return invoker(newCtx, method, req, reply, cc, opts...)
 	}
 }

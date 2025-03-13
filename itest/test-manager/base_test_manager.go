@@ -579,7 +579,7 @@ func StartEotsManagers(
 		var eotsCli *eotsclient.EOTSManagerGRpcClient
 		var err error
 		require.Eventually(t, func() bool {
-			eotsCli, err = eotsclient.NewEOTSManagerGRpcClient(fpCfgs[i].EOTSManagerAddress)
+			eotsCli, err = eotsclient.NewEOTSManagerGRpcClient(fpCfgs[i].EOTSManagerAddress, fpCfgs[i].HMACKey)
 			if err != nil {
 				t.Logf("Error creating EOTS client: %v", err)
 

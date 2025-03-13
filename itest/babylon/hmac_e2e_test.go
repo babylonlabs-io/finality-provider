@@ -7,19 +7,13 @@ import (
 	"context"
 	cryptorand "crypto/rand"
 	"encoding/base64"
-	"fmt"
-	"math/rand"
-	"os"
 	"testing"
-	"time"
 
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	btcec "github.com/btcsuite/btcd/btcec/v2"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
 
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 )
@@ -46,13 +40,14 @@ func generateHMACKey() (string, error) {
 
 // startManagerWithHMAC starts a test manager with finality providers configured with HMAC
 func startManagerWithHMAC(t *testing.T, n int, ctx context.Context) (*TestManager, []*service.FinalityProviderInstance, func()) {
-	tm := StartManagerWithHMAC(t, ctx)
-
 	defaultHmacKey, err := generateDefaultHMACKey()
 	require.NoError(t, err)
-	t.Logf("Using HMAC key: %s", defaultHmacKey)
 
-	cleanup := func() {}
+	tm := StartManager(t, ctx, defaultHmacKey, defaultHmacKey)
+
+	cleanup := func() {
+		tm.Stop(t)
+	}
 
 	var runningFps []*service.FinalityProviderInstance
 	for i := 0; i < n; i++ {
@@ -66,11 +61,8 @@ func startManagerWithHMAC(t *testing.T, n int, ctx context.Context) (*TestManage
 			t.Logf("failed to query finality providers from Babylon %s", err.Error())
 			return false
 		}
-
 		return len(fps) == n
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
-
-	t.Logf("the test manager is running with finality providers using HMAC authentication")
 
 	return tm, runningFps, cleanup
 }
@@ -82,7 +74,6 @@ func TestHMACFinalityProviderLifeCycle(t *testing.T) {
 	n := 2
 
 	tm, fps, cleanup := startManagerWithHMAC(t, n, ctx)
-	defer tm.Stop(t)
 	defer cleanup()
 
 	tm.WaitForFpPubRandTimestamped(t, fps[0])
@@ -114,56 +105,23 @@ func TestHMACMismatch(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	originalHmacKey := os.Getenv(client.HMACKeyEnvVar)
-	t.Cleanup(func() {
-		if originalHmacKey != "" {
-			os.Setenv(client.HMACKeyEnvVar, originalHmacKey)
-		} else {
-			os.Unsetenv(client.HMACKeyEnvVar)
-		}
-	})
+	eotsHmacKey := "server-hmac-key-for-testing"
+	fpHmacKey := "client-hmac-key-for-testing-different"
 
-	// Generate two different HMAC keys
-	serverHmacKey, err := generateHMACKey()
-	require.NoError(t, err)
-	clientHmacKey, err := generateHMACKey()
-	require.NoError(t, err)
-	t.Logf("Using server HMAC key: %s", serverHmacKey)
-	t.Logf("Using client HMAC key: %s", clientHmacKey)
-
-	os.Setenv(client.HMACKeyEnvVar, serverHmacKey)
-
-	tm := StartManager(t, ctx)
+	tm := StartManager(t, ctx, eotsHmacKey, fpHmacKey)
 	defer tm.Stop(t)
 
-	err = tm.EOTSClient.Ping()
-	require.NoError(t, err, "Ping should always work since authentication is disabled for it")
+	require.Equal(t, eotsHmacKey, tm.EOTSServerHandler.Config().HMACKey, "HMAC key should be set in the server config")
+	require.Equal(t, fpHmacKey, tm.FpConfig.HMACKey, "HMAC key should be set in the FP config")
 
-	r := rand.New(rand.NewSource(time.Now().Unix()))
-	eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
-
-	os.Setenv(client.HMACKeyEnvVar, clientHmacKey)
-
-	altClient, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.Config().RPCListener)
-	require.NoError(t, err, "Creating client should succeed since Ping is used for initial connection and doesn't require auth")
-	defer altClient.Close()
-
-	err = altClient.Ping()
-	require.NoError(t, err, "Ping should work with any HMAC key")
-
-	msgToSign := []byte("test message for signing")
-	_, err = altClient.SignSchnorrSig([]byte(eotsKeyName), msgToSign)
-	require.Error(t, err, "SignSchnorrSig should fail with mismatched HMAC keys")
-	require.Contains(t, err.Error(), "invalid HMAC", "Expected HMAC authentication error during SignSchnorrSig")
-
-	// Switch back to the correct HMAC key to verify the operation works properly
-	os.Setenv(client.HMACKeyEnvVar, serverHmacKey)
-	correctClient, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.Config().RPCListener)
+	eotsKeyName := "test-key-hmac-mismatch"
+	eotsPkBytes, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
 	require.NoError(t, err)
-	defer correctClient.Close()
 
-	_, err = correctClient.SignSchnorrSig([]byte(eotsKeyName), msgToSign)
-	require.NotContains(t, err.Error(), "invalid HMAC", "Should not get HMAC authentication error with correct key")
+	msgToSign := []byte("test message for signing that is")
+	_, err = tm.EOTSClient.SignSchnorrSig(eotsPkBytes, msgToSign)
+	require.Error(t, err, "SignSchnorrSig should fail with mismatched HMAC keys")
+	require.Contains(t, err.Error(), "Unauthenticated", "Expected HMAC authentication error during SignSchnorrSig")
 
-	t.Logf("Successfully verified HMAC authentication: operations fail with wrong key but work with correct key")
+	t.Logf("Successfully verified HMAC authentication: operation failed with authentication error: %v", err)
 }
