@@ -163,7 +163,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener)
+	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
 	require.NoError(t, err)
 
 	// 5. prepare finality-provider
