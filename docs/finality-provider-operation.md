@@ -831,15 +831,22 @@ Parameters:
 If unjailing is successful, you may start running the finality provider by
 `fpd start --eots-pk <hex-string-of-eots-public-key>`.
 
-### 6.5. Slashing
+### 6.5. Slashing and Anti-slashing
 
 **Slashing occurs** when a finality provider **double signs**, meaning that the
 finality provider signs conflicting blocks at the same height. This results in
 the extraction of the finality provider's private key and their immediate
-removal from the active set.
+removal from the active set. For details about how the slashing works in the
+BTC staking protocol, please refer to our [light paper](https://docs.babylonlabs.io/papers/btc_staking_litepaper(EN).pdf).
 
 > ⚠️ **Critical**: Slashing is irreversible and results in
 > permanent removal from the network.
+
+Apart from malicious behavior, honest finality providers face [slashing risks](https://cubist.dev/blog/slashing-risks-you-need-to-think-about-when-restaking)
+due to factors like hardware failures or software bugs.
+Therefore, a proper slashing protection mechanism is required.
+For details about how our built-in anti-slashing works, please refer to
+our technical document [Slashing Protection](../docs/slashing-protection.md).
 
 ### 6.6. Prometheus Metrics
 
@@ -959,6 +966,7 @@ For EOTS Manager:
 * **eotsd.db**: Contains key mappings and metadata. While less critical, loss means:
   * Need to re-register key mappings
   * Temporary service interruption
+  * Loss of anti-slashing protection
 
 For Finality Provider:
 
@@ -967,9 +975,10 @@ For Finality Provider:
   * Collecting rewards
   * Managing your finality provider
   * Loss means inability to operate until restored
-* **fpd.db**: Contains operational data including:
+* **finality-provider.db**: Contains operational data including:
   * Public randomness proofs
   * State info of the finality provider
+  * Loss of anti-slashing protection
 
 ### 7.2 Backup Recommendations
 
@@ -1029,7 +1038,8 @@ randomness used in the signature is already committed on Babylon. Loss of
 public randomness proof leads to direct failure of the vote submission.
 
 To recover the public randomness proof, you need to run the
-`fpd recover-rand-proof --start-height` where `start-height` is the height from
+`fpd recover-rand-proof [eots-pk-hex] --start-height`
+where `start-height` is the height from
 which you want to recover from as some proof for old height do not need to be
 recovered. The command will recover the proof from the `start-height` to
 the latest committed height on Babylon. If `start-height` is not specified,

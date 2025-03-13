@@ -114,6 +114,7 @@ For detailed technical information about the finality provider's internal operat
 * [Core Heuristics](./docs/fp-core.md)
 * [Public Randomness Commits](./docs/commit-pub-rand.md)
 * [Finality Votes submission](./docs/send-finality-vote.md)
+* [Slashing Protection](./docs/slashing-protection.md)
 
 ## Overview of Keys for Finality Provider and EOTS Manager
 
