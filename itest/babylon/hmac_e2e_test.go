@@ -114,6 +114,15 @@ func TestHMACMismatch(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
+	originalHmacKey := os.Getenv(client.HMACKeyEnvVar)
+	t.Cleanup(func() {
+		if originalHmacKey != "" {
+			os.Setenv(client.HMACKeyEnvVar, originalHmacKey)
+		} else {
+			os.Unsetenv(client.HMACKeyEnvVar)
+		}
+	})
+
 	// Generate two different HMAC keys
 	serverHmacKey, err := generateHMACKey()
 	require.NoError(t, err)
