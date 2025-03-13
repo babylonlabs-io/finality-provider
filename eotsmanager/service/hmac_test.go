@@ -135,6 +135,7 @@ func TestMissingHMACHeader(t *testing.T) {
 }
 
 func TestConfigHMACKey(t *testing.T) {
+	t.Parallel()
 	testKey := "config-hmac-key"
 	cfg := &config.Config{
 		HMACKey: testKey,

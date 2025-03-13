@@ -30,18 +30,21 @@ func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 		// NOTE: SaveEOTSKeyName is a local key management operation that doesn't require HMAC
 		switch info.FullMethod {
 		case "/proto.EOTSManager/Ping", "/proto.EOTSManager/SaveEOTSKeyName":
+
 			return handler(ctx, req)
 		}
 
 		// If HMAC key is empty, skip authentication
 		if hmacKey == "" {
 			fmt.Printf("HMAC authentication disabled: empty HMAC key\n")
+
 			return handler(ctx, req)
 		}
 
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
 			fmt.Printf("HMAC authentication failed: metadata not provided\n")
+
 			return nil, status.Errorf(codes.Unauthenticated, "metadata is not provided")
 		}
 
@@ -49,6 +52,7 @@ func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 		values := md.Get(client.HMACHeaderKey)
 		if len(values) == 0 {
 			fmt.Printf("HMAC authentication failed: HMAC header not provided\n")
+
 			return nil, status.Errorf(codes.Unauthenticated, "HMAC not provided")
 		}
 		receivedHMAC := values[0]
@@ -56,12 +60,14 @@ func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 		msg, ok := req.(proto.Message)
 		if !ok {
 			fmt.Printf("HMAC authentication failed: request is not a protobuf message\n")
+
 			return nil, status.Errorf(codes.Internal, "request is not a protobuf message")
 		}
 
 		data, err := proto.Marshal(msg)
 		if err != nil {
 			fmt.Printf("HMAC authentication failed: failed to marshal request: %v\n", err)
+
 			return nil, status.Errorf(codes.Internal, "failed to marshal request: %v", err)
 		}
 
@@ -76,10 +82,12 @@ func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 			fmt.Printf("  Method: %s\n", info.FullMethod)
 			fmt.Printf("  Expected: %s\n", expectedHMAC)
 			fmt.Printf("  Received: %s\n", receivedHMAC)
+
 			return nil, status.Errorf(codes.Unauthenticated, "invalid HMAC")
 		}
 
 		fmt.Printf("HMAC authentication succeeded for method: %s\n", info.FullMethod)
+
 		return handler(ctx, req)
 	}
 }

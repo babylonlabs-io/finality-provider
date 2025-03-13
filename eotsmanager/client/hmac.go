@@ -33,6 +33,7 @@ func HMACUnaryClientInterceptor(hmacKey string) grpc.UnaryClientInterceptor {
 		// NOTE: SaveEOTSKeyName is a local key management operation that doesn't require HMAC
 		switch method {
 		case "/proto.EOTSManager/Ping", "/proto.EOTSManager/SaveEOTSKeyName":
+
 			return invoker(ctx, method, req, reply, cc, opts...)
 		}
 
@@ -45,13 +46,14 @@ func HMACUnaryClientInterceptor(hmacKey string) grpc.UnaryClientInterceptor {
 		msg, ok := req.(proto.Message)
 		if !ok {
 			fmt.Printf("HMAC generation failed: request is not a protobuf message\n")
+
 			return fmt.Errorf("request is not a protobuf message")
 		}
 
 		data, err := proto.Marshal(msg)
 		if err != nil {
 			fmt.Printf("HMAC generation failed: failed to marshal request: %v\n", err)
-			return fmt.Errorf("failed to marshal request: %v", err)
+			return fmt.Errorf("failed to marshal request: %w", err)
 		}
 
 		// Generate HMAC using SHA-256
