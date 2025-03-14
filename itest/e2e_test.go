@@ -382,7 +382,7 @@ func TestPrintEotsCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	tm := StartManager(t, ctx)
+	tm := StartManager(t, ctx, "", "")
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	defer tm.Stop(t)
 
