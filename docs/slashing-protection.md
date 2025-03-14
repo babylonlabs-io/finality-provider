@@ -1,7 +1,7 @@
 # Slashing Protection on Finality Provider
 
 In the BTC staking protocol, finality providers operate the
-Finality Provider Daemon (`fpd`) to send finality votes to Babylon.
+Finality Provider Daemon (`fpd`) to send finality votes to Babylon Genesis.
 If a finality provider re-uses the same committed randomness
 to sign two conflicting blocks on the same height,
 their EOTS private key is exposed, leading to the slashing
@@ -27,7 +27,7 @@ in effective, and the state will recover after restarting the service.
 ### Finality provider daemon protection
 
 **Requirement**:
-- The Babylon node the daemon connects to is trusted and responsive.
+- The Babylon Genesis node the daemon connects to is trusted and responsive.
 - The `finality-provider.db` file is not compromised.
 
 The finality provider daemon ensures that it will never initiate
@@ -71,7 +71,7 @@ Note that the mechanism shown above is not comprehensive in the sense that
 it is still possible that the assumptions listed at the beginning
 of the section do not hold, and the assurance might be broken.
 One common example is that, during software upgrade,
-the Babylon node might not be responsive. In this case, if the `fpd` is
+the Babylon Genesis node might not be responsive. In this case, if the `fpd` is
 restarted, it might send duplicate signing requests as the previous ones were
 not processed.
 
@@ -110,3 +110,17 @@ For each EOTS signing request, the following checks are performed:
 The local storage of the EOTS manager should be backed up periodically, and
 corruption checks should be performed before the signing service starts.
 Pruning of old records can be done with configurable retention policies.
+
+### Operation Recommendation
+
+Detailed operations of the finality provider program stack can be found in
+[Finality Provider Operation](./finality-provider-operation.md). Here
+we list security tips specifically for preventing double-sign:
+- Operate your own the Babylon Genesis RPC node or use a trusted RPC service
+- Ensure secure communication with the RPC node
+- The keyring files or the mnemonic phrases should be backup and kept safe
+- Operate `fpd` and `eotsd` in separate machines connected in a secure
+network (config `EOTSManagerAddress` in `fpd.conf`)
+- Set up HMAC for authentication between the two daemons.
+Details in [HMAC Security](./hmac-security.md)
+- Backup the db files for both daemons periodically (one-hour interval is recommended)
