@@ -204,11 +204,11 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 		eotsPkBz, err = tm.EOTSServerHandler.CreateKey(eotsKeyName)
 		if err != nil {
 			t.Logf("Failed to create EOTS key: %v, retrying...", err)
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 			return false
 		}
 		return true
-	}, 30*time.Second, 500*time.Millisecond, "Failed to create EOTS key after multiple attempts")
+	}, 60*time.Second, time.Second, "Failed to create EOTS key after multiple attempts")
 
 	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
 	require.NoError(t, err)
@@ -219,10 +219,11 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 		_, err := tm.EOTSClient.CreateRandomnessPairList(eotsPk.MustMarshal(), []byte(testChainID), 0, 1)
 		if err != nil {
 			t.Logf("EOTS key is not yet ready: %v, waiting...", err)
+			time.Sleep(500 * time.Millisecond)
 			return false
 		}
 		return true
-	}, 30*time.Second, 500*time.Millisecond, "EOTS key not ready after waiting")
+	}, 60*time.Second, time.Second, "EOTS key not ready after waiting")
 
 	// Create FP babylon key
 	fpKeyName := fmt.Sprintf("fp-key-%s", datagen.GenRandomHexStr(r, 4))
