@@ -111,16 +111,18 @@ The local storage of the EOTS manager should be backed up periodically, and
 corruption checks should be performed before the signing service starts.
 Pruning of old records can be done with configurable retention policies.
 
-### Operation Recommendation
+### Operation Recommendations
 
-Detailed operations of the finality provider program stack can be found in
-[Finality Provider Operation](./finality-provider-operation.md). Here
-we list security tips specifically for preventing double-sign:
-- Operate your own the Babylon Genesis RPC node or use a trusted RPC service
-- Ensure secure communication with the RPC node
-- The keyring files or the mnemonic phrases should be backup and kept safe
+Detailed specifications on the secure operation of the finality provider
+program stack can be found in
+the [Finality Provider Operation](./finality-provider-operation.md) document.
+Here, we list security tips specifically for preventing double-sign:
+- Operate your own Babylon Genesis RPC node and securely connect with it
+  to ensure a trustless setup
+- The keyring files or the mnemonic phrases should be backed up and kept safe
 - Operate `fpd` and `eotsd` in separate machines connected in a secure
-network (config `EOTSManagerAddress` in `fpd.conf`)
+  network (config `EOTSManagerAddress` in `fpd.conf`)
 - Set up HMAC for authentication between the two daemons.
-Details in [HMAC Security](./hmac-security.md)
-- Backup the db files for both daemons periodically (one-hour interval is recommended)
+  Details in [HMAC Security](./hmac-security.md)
+- Backup the db files for both daemons periodically
+  (one-hour interval is recommended)
