@@ -1,25 +1,32 @@
 # Slashing Protection on Finality Provider
 
-In the BTC staking protocol, finality providers run a
+In the BTC staking protocol, finality providers operate the
 Finality Provider Daemon (`fpd`) to send finality votes to Babylon.
-If a finality provider signs two conflicting blocks (same committed
-randomness but different block hash), all its delegations will be slashed.
-Apart from malicious behavior, honest finality providers face [slashing risks](https://cubist.dev/blog/slashing-risks-you-need-to-think-about-when-restaking)
+If a finality provider re-uses the same committed randomness
+to sign two conflicting blocks on the same height,
+their EOTS private key is exposed, leading to the slashing
+of their delegations.
+Apart from malicious behavior, honest finality providers face
+[slashing risks](https://cubist.dev/blog/slashing-risks-you-need-to-think-about-when-restaking)
 due to factors like hardware failures or software bugs.
-Therefore, a proper slashing protection mechanism is required.
+To combat these risks, the finality provider program stack employs
+an anti-slashing protection mechanism.
 
-Recall that in our system, a finality provider needs to run two daemons:
-1. The finality provider daemon (fpd), which connects to the Babylon node
-   and initiates EOTS signing requests upon a new block to finalize
-2. The EOTS manager daemon (eotsd), which manages the EOTS key and responds to
-   signing requests from the finality provider daemon
+Recall that in our system, the finality provider operation stack involves
+two daemons:
+1. The EOTS manager daemon (`eotsd`) manages the EOTS key and responds to
+   signing requests from the finality provider daemon.
+2. The finality provider daemon (`fpd`) connects to the Babylon Genesis node
+   and initiates EOTS signing requests upon a new block to finalize.
 
 The two daemons have different responsibilities to prevent double-signing.
-The protections from the two daemons are complementary to each other.
+The anti-slashing protections of the two daemons are complementary to each other.
+Even if the db file of one daemon is compromised, the protection is still
+in effective, and the state will recover after restarting the service.
 
 ### Finality provider daemon protection
 
-**Assumption**:
+**Requirement**:
 - The Babylon node the daemon connects to is trusted and responsive.
 - The `finality-provider.db` file is not compromised.
 
@@ -39,9 +46,12 @@ will be missed and voted blocks will not be polled again. The bootstrapping
 process is as follows:
 
 1. Query consumer chain for:
-   - `lastFinalizedHeight` (defaults to `0` if no blocks are finalized)
-   - `finalityActivationHeight`
-   - `highestVotedHeight` (defaults to `0` if no votes exist)
+   - `lastFinalizedHeight` (defaults to `0` if no blocks are finalized): the
+   latest finalized height,
+   - `finalityActivationHeight`: the height after which the finality is
+   activated, defined as the finality parameters,
+   - `highestVotedHeight` (defaults to `0` if no votes exist): the highest
+   height for which the given finality provider has ever voted.
 
 2. If local state is empty or broken:
    - Set `lastVotedHeight = lastFinalizedHeight`
@@ -52,9 +62,6 @@ process is as follows:
      - Note: this is possible if `highestVotedHeight` has not been updated due to
        execution delay.
    - If `lastVotedHeight < highestVotedHeight`
-     - Query consumer chain for whether the fp has voted for any blocks
-       in between `[lastVotedHeight + 1, highestVotedHeight)`
-     - Send votes if there are any missed blocks
      - `startHeight = highestVotedHeight + 1`
      - Note: this is possible due to bugs or if the local state is tampered with
 
@@ -73,7 +80,7 @@ in the next section.
 
 ### EOTS manager daemon protection
 
-**Assumption**:
+**Requirement**:
 - The `eots.db` file is not compromised.
 
 The EOTS manager daemon ensures that EOTS signatures will not be signed
