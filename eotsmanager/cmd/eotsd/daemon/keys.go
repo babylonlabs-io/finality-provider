@@ -152,7 +152,7 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 	}
 
 	if len(rpcListener) > 0 {
-		client, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener)
+		client, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, "")
 		if err != nil {
 			return nil, err
 		}

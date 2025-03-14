@@ -20,13 +20,13 @@ type EOTSManagerGRpcClient struct {
 	conn   *grpc.ClientConn
 }
 
-func NewEOTSManagerGRpcClient(remoteAddr string) (*EOTSManagerGRpcClient, error) {
-	// Get HMAC key from environment variable or cloud secret manager
-	hmacKey, err := GetHMACKeyWithCloudSupport()
+// NewEOTSManagerGRpcClient creates a new EOTS manager gRPC client
+// The hmacKey parameter is used for authentication with the EOTS manager server
+func NewEOTSManagerGRpcClient(remoteAddr string, hmacKey string) (*EOTSManagerGRpcClient, error) {
+	processedHmacKey, err := ProcessHMACKey(hmacKey)
 	if err != nil {
 		// Log warning and continue without HMAC authentication
-		// TODO: Make this a requirement by mainnet and return error
-		fmt.Printf("Warning: HMAC key not configured. Authentication will not be enabled: %v\n", err)
+		fmt.Printf("Warning: Failed to process HMAC key: %v\n", err)
 	}
 
 	dialOpts := []grpc.DialOption{
@@ -34,8 +34,10 @@ func NewEOTSManagerGRpcClient(remoteAddr string) (*EOTSManagerGRpcClient, error)
 	}
 
 	// Add HMAC interceptor if key is available
-	if hmacKey != "" {
-		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(HMACUnaryClientInterceptor(hmacKey)))
+	if processedHmacKey != "" {
+		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(HMACUnaryClientInterceptor(processedHmacKey)))
+	} else {
+		fmt.Printf("Warning: HMAC key not configured. Authentication will not be enabled.\n")
 	}
 
 	conn, err := grpc.NewClient(remoteAddr, dialOpts...)

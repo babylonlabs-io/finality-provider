@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -18,6 +17,10 @@ const (
 
 // GetSecretValue retrieves a secret value from various sources based on the reference format
 func GetSecretValue(reference string) (string, error) {
+	if reference == "" {
+		return "", nil
+	}
+
 	// If it's a reference to a cloud secret manager, fetch the secret
 	switch {
 	case strings.HasPrefix(reference, AWSPrefix):
@@ -31,14 +34,13 @@ func GetSecretValue(reference string) (string, error) {
 	}
 }
 
-// GetHMACKeyWithCloudSupport gets the HMAC key from environment or cloud secret managers
-func GetHMACKeyWithCloudSupport() (string, error) {
-	keyRef := os.Getenv(HMACKeyEnvVar)
-	if keyRef == "" {
-		return "", fmt.Errorf("HMAC_KEY environment variable not set")
+// ProcessHMACKey processes the HMAC key, handling cloud secret references if needed
+func ProcessHMACKey(hmacKey string) (string, error) {
+	if hmacKey == "" {
+		return "", nil
 	}
 
-	return GetSecretValue(keyRef)
+	return GetSecretValue(hmacKey)
 }
 
 // getAWSSecret gets a secret from AWS secrets manager
@@ -56,8 +58,8 @@ func getGCPSecret(secretName string) (string, error) {
 }
 
 // getAzureSecret gets the secret from Azure Key Vault
-func getAzureSecret(secretURI string) (string, error) {
+func getAzureSecret(secretName string) (string, error) {
 	// TODO: Needs to be implemented
-	// NOTE: https://learn.microsoft.com/en-us/azure/key-vault/secrets/quick-create-go?tabs=azure-cli
-	return "", fmt.Errorf("azure key vault integration not implemented: %s", secretURI)
+	// NOTE: https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets
+	return "", fmt.Errorf("azure key vault integration not implemented: %s", secretName)
 }

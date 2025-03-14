@@ -83,15 +83,10 @@ func (s *Server) RunUntilShutdown(ctx context.Context) error {
 		_ = lis.Close()
 	}()
 
-	// Get HMAC key from config or environment variable for cloud providers
-	// TODO: Make this a requirement by mainnet and error
+	// Get HMAC key from config
 	hmacKey := s.cfg.HMACKey
 	if hmacKey == "" {
-		var err error
-		hmacKey, err = GetHMACKeyFromEnv()
-		if err != nil {
-			s.logger.Warn("HMAC key not configured. Authentication will not be enabled.", zap.Error(err))
-		}
+		s.logger.Warn("HMAC key not configured in config. Authentication will not be enabled.")
 	}
 
 	var opts []grpc.ServerOption
