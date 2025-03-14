@@ -83,20 +83,6 @@ func TestDoubleSigning(t *testing.T) {
 
 	fpIns := fps[0]
 
-	require.Eventually(t, func() bool {
-		_, err := tm.EOTSClient.CreateRandomnessPairList(
-			fpIns.GetBtcPkBIP340().MustMarshal(),
-			[]byte(testChainID),
-			1,
-			1,
-		)
-		if err != nil {
-			t.Logf("Key not ready yet for randomness generation: %v", err)
-			return false
-		}
-		return true
-	}, 30*time.Second, 500*time.Millisecond, "EOTS key not ready for randomness generation")
-
 	// check the public randomness is committed
 	tm.WaitForFpPubRandTimestamped(t, fpIns)
 

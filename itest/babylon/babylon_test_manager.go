@@ -149,24 +149,6 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 
-	require.Eventually(t, func() bool {
-		eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, fpHmacKey)
-		if err != nil {
-			t.Logf("Failed to connect to EOTS server: %v, retrying...", err)
-			return false
-		}
-
-		err = eotsCli.Ping()
-		if err != nil {
-			t.Logf("Failed to ping EOTS server: %v, retrying...", err)
-			eotsCli.Close()
-			return false
-		}
-
-		eotsCli.Close()
-		return true
-	}, 30*time.Second, 500*time.Millisecond, "EOTS server not responsive after waiting")
-
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, fpHmacKey)
 	require.NoError(t, err)
@@ -195,41 +177,14 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hmacKey ...string) *service.FinalityProviderInstance {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
-	// Create EOTS key
 	eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
-	var eotsPkBz []byte
-	var err error
-
-	require.Eventually(t, func() bool {
-		eotsPkBz, err = tm.EOTSServerHandler.CreateKey(eotsKeyName)
-		if err != nil {
-			t.Logf("Failed to create EOTS key: %v, retrying...", err)
-			time.Sleep(500 * time.Millisecond)
-			return false
-		}
-		return true
-	}, 60*time.Second, time.Second, "Failed to create EOTS key after multiple attempts")
+	eotsPkBz, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
+	require.NoError(t, err)
 
 	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
 	require.NoError(t, err)
 
 	t.Logf("the EOTS key is created: %s", eotsPk.MarshalHex())
-
-	// Verify key is ready by attempting to create randomness pairs with increasing backoff
-	backoff := 500 * time.Millisecond
-	maxBackoff := 5 * time.Second
-	require.Eventually(t, func() bool {
-		_, err := tm.EOTSClient.CreateRandomnessPairList(eotsPk.MustMarshal(), []byte(testChainID), 0, 1)
-		if err != nil {
-			t.Logf("EOTS key is not yet ready: %v, waiting %v...", err, backoff)
-			time.Sleep(backoff)
-			if backoff < maxBackoff {
-				backoff *= 2
-			}
-			return false
-		}
-		return true
-	}, 60*time.Second, time.Second, "EOTS key not ready after waiting")
 
 	// Create FP babylon key
 	fpKeyName := fmt.Sprintf("fp-key-%s", datagen.GenRandomHexStr(r, 4))
@@ -276,15 +231,8 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	commission := testutil.ZeroCommissionRate()
 	desc := newDescription(testMoniker)
 
-	require.Eventually(t, func() bool {
-		_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
-		if err != nil {
-			t.Logf("Failed to create finality provider: %v, retrying...", err)
-			time.Sleep(200 * time.Millisecond)
-			return false
-		}
-		return true
-	}, 30*time.Second, 500*time.Millisecond, "Failed to create finality provider after multiple attempts")
+	_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
+	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
@@ -348,23 +296,6 @@ func StartManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context, 
 
 		return len(fps) == n
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
-
-	for i, fp := range runningFps {
-		t.Logf("Verifying key for finality provider %d (%s)", i, fp.GetBtcPkHex())
-		require.Eventually(t, func() bool {
-			_, err := tm.EOTSClient.CreateRandomnessPairList(
-				fp.GetBtcPkBIP340().MustMarshal(),
-				[]byte(testChainID),
-				1,
-				1,
-			)
-			if err != nil {
-				t.Logf("Key %s not ready yet: %v", fp.GetBtcPkBIP340().MarshalHex(), err)
-				return false
-			}
-			return true
-		}, 30*time.Second, 500*time.Millisecond, "EOTS key not ready after startup")
-	}
 
 	t.Logf("the test manager is running with a finality provider")
 
