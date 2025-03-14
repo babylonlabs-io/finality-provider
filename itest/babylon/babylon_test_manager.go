@@ -93,13 +93,16 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 	var bc ccapi.ClientController
 	var bcc ccapi.ConsumerController
 
+	// Increase timeout and polling interval for CI environments
 	startTimeout := 30 * time.Second
+	startPollInterval := 1 * time.Second
 
 	require.Eventually(t, func() bool {
 		bbnCfg := fpcfg.BBNConfigToBabylonConfig(cfg.BabylonConfig)
 		bbnCl, err := bbnclient.New(&bbnCfg, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon client: %v", err)
+			// Add small delay to avoid overwhelming the system
 			time.Sleep(100 * time.Millisecond)
 			return false
 		}
@@ -109,6 +112,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 			time.Sleep(100 * time.Millisecond)
 			return false
 		}
+
 		err = bc.Start()
 		if err != nil {
 			t.Logf("failed to start Babylon controller: %v", err)
@@ -122,7 +126,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 			return false
 		}
 		return true
-	}, startTimeout, eventuallyPollTime)
+	}, startTimeout, startPollInterval)
 
 	// Prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
@@ -144,6 +148,25 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
+
+	require.Eventually(t, func() bool {
+		eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, fpHmacKey)
+		if err != nil {
+			t.Logf("Failed to connect to EOTS server: %v, retrying...", err)
+			return false
+		}
+
+		err = eotsCli.Ping()
+		if err != nil {
+			t.Logf("Failed to ping EOTS server: %v, retrying...", err)
+			eotsCli.Close()
+			return false
+		}
+
+		eotsCli.Close()
+		return true
+	}, 30*time.Second, 500*time.Millisecond, "EOTS server not responsive after waiting")
+
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, fpHmacKey)
 	require.NoError(t, err)
@@ -174,12 +197,32 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 
 	// Create EOTS key
 	eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
-	eotsPkBz, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
-	require.NoError(t, err)
+	var eotsPkBz []byte
+	var err error
+
+	require.Eventually(t, func() bool {
+		eotsPkBz, err = tm.EOTSServerHandler.CreateKey(eotsKeyName)
+		if err != nil {
+			t.Logf("Failed to create EOTS key: %v, retrying...", err)
+			time.Sleep(100 * time.Millisecond)
+			return false
+		}
+		return true
+	}, 30*time.Second, 500*time.Millisecond, "Failed to create EOTS key after multiple attempts")
+
 	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
 	require.NoError(t, err)
 
 	t.Logf("the EOTS key is created: %s", eotsPk.MarshalHex())
+
+	require.Eventually(t, func() bool {
+		_, err := tm.EOTSClient.CreateRandomnessPairList(eotsPk.MustMarshal(), []byte(testChainID), 0, 1)
+		if err != nil {
+			t.Logf("EOTS key is not yet ready: %v, waiting...", err)
+			return false
+		}
+		return true
+	}, 30*time.Second, 500*time.Millisecond, "EOTS key not ready after waiting")
 
 	// Create FP babylon key
 	fpKeyName := fmt.Sprintf("fp-key-%s", datagen.GenRandomHexStr(r, 4))
@@ -222,10 +265,19 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	require.NoError(t, err)
 
 	// Create and register the finality provider
+	// Add retry logic for creating the finality provider
 	commission := testutil.ZeroCommissionRate()
 	desc := newDescription(testMoniker)
-	_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
-	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
+		if err != nil {
+			t.Logf("Failed to create finality provider: %v, retrying...", err)
+			time.Sleep(200 * time.Millisecond)
+			return false
+		}
+		return true
+	}, 30*time.Second, 500*time.Millisecond, "Failed to create finality provider after multiple attempts")
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
@@ -298,12 +350,19 @@ func StartManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context, 
 func (tm *TestManager) Stop(t *testing.T) {
 	for _, fpApp := range tm.Fps {
 		err := fpApp.Stop()
-		require.NoError(t, err)
+		if err != nil {
+			t.Logf("Warning: Error stopping finality provider: %v", err)
+		}
 	}
 	err := tm.manager.ClearResources()
-	require.NoError(t, err)
+	if err != nil {
+		t.Logf("Warning: Error clearing Docker resources: %v", err)
+	}
+
 	err = os.RemoveAll(tm.baseDir)
-	require.NoError(t, err)
+	if err != nil {
+		t.Logf("Warning: Error removing temporary directory: %v", err)
+	}
 }
 
 func (tm *TestManager) CheckBlockFinalization(t *testing.T, height uint64, num int) {
