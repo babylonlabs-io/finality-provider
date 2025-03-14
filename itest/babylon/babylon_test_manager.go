@@ -342,6 +342,23 @@ func StartManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context, 
 		return len(fps) == n
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
+	for i, fp := range runningFps {
+		t.Logf("Verifying key for finality provider %d (%s)", i, fp.GetBtcPkHex())
+		require.Eventually(t, func() bool {
+			_, err := tm.EOTSClient.CreateRandomnessPairList(
+				fp.GetBtcPkBIP340().MustMarshal(),
+				[]byte(testChainID),
+				1,
+				1,
+			)
+			if err != nil {
+				t.Logf("Key %s not ready yet: %v", fp.GetBtcPkBIP340().MarshalHex(), err)
+				return false
+			}
+			return true
+		}, 30*time.Second, 500*time.Millisecond, "EOTS key not ready after startup")
+	}
+
 	t.Logf("the test manager is running with a finality provider")
 
 	return tm, runningFps
