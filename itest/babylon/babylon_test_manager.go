@@ -215,23 +215,17 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 
 	t.Logf("the EOTS key is created: %s", eotsPk.MarshalHex())
 
-	// Ensure key is properly saved in EOTS server
-	require.Eventually(t, func() bool {
-		err := tm.EOTSClient.SaveEOTSKeyName(eotsPk.MustToBTCPK(), eotsKeyName)
-		if err != nil {
-			t.Logf("Failed to save EOTS key name: %v, retrying...", err)
-			time.Sleep(500 * time.Millisecond)
-			return false
-		}
-		return true
-	}, 60*time.Second, time.Second, "Failed to save EOTS key name")
-
-	// Verify key is ready by attempting to create randomness pairs
+	// Verify key is ready by attempting to create randomness pairs with increasing backoff
+	backoff := 500 * time.Millisecond
+	maxBackoff := 5 * time.Second
 	require.Eventually(t, func() bool {
 		_, err := tm.EOTSClient.CreateRandomnessPairList(eotsPk.MustMarshal(), []byte(testChainID), 0, 1)
 		if err != nil {
-			t.Logf("EOTS key is not yet ready: %v, waiting...", err)
-			time.Sleep(500 * time.Millisecond)
+			t.Logf("EOTS key is not yet ready: %v, waiting %v...", err, backoff)
+			time.Sleep(backoff)
+			if backoff < maxBackoff {
+				backoff *= 2
+			}
 			return false
 		}
 		return true
