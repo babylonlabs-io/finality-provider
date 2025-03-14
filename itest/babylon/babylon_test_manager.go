@@ -33,7 +33,7 @@ import (
 
 const (
 	eventuallyWaitTimeOut = 5 * time.Minute
-	eventuallyPollTime    = 500 * time.Millisecond
+	eventuallyPollTime    = 1 * time.Second
 
 	testMoniker = "test-moniker"
 	testChainID = "chain-test"
@@ -92,30 +92,37 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 
 	var bc ccapi.ClientController
 	var bcc ccapi.ConsumerController
+
+	startTimeout := 30 * time.Second
+
 	require.Eventually(t, func() bool {
 		bbnCfg := fpcfg.BBNConfigToBabylonConfig(cfg.BabylonConfig)
 		bbnCl, err := bbnclient.New(&bbnCfg, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon client: %v", err)
+			time.Sleep(100 * time.Millisecond)
 			return false
 		}
 		bc, err = bbncc.NewBabylonController(bbnCl, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon controller: %v", err)
+			time.Sleep(100 * time.Millisecond)
 			return false
 		}
 		err = bc.Start()
 		if err != nil {
 			t.Logf("failed to start Babylon controller: %v", err)
+			time.Sleep(200 * time.Millisecond)
 			return false
 		}
 		bcc, err = bbncc.NewBabylonConsumerController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon consumer controller: %v", err)
+			time.Sleep(100 * time.Millisecond)
 			return false
 		}
 		return true
-	}, 5*time.Second, eventuallyPollTime)
+	}, startTimeout, eventuallyPollTime)
 
 	// Prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
