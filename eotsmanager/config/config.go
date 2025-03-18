@@ -90,7 +90,7 @@ func (cfg *Config) Validate() error {
 	if cfg.KeyringBackend == "" {
 		return fmt.Errorf("the keyring backend should not be empty")
 	} else if cfg.KeyringBackend != "test" {
-		return fmt.Errorf("the keyring backend should be test")
+		return fmt.Errorf(`the keyring backend should be "test"`)
 	}
 
 	if cfg.Metrics == nil {
