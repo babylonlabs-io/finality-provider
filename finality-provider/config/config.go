@@ -185,6 +185,10 @@ func (cfg *Config) Validate() error {
 	}
 	cfg.BTCNetParams = btcNetConfig
 
+	if cfg.BabylonConfig.KeyringBackend != "test" {
+		return fmt.Errorf(`the keyring backend should be "test"`)
+	}
+
 	_, err = net.ResolveTCPAddr("tcp", cfg.RPCListener)
 	if err != nil {
 		return fmt.Errorf("invalid RPC listener address %s, %w", cfg.RPCListener, err)

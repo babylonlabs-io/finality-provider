@@ -11,13 +11,14 @@ const (
 	checkDoubleSignFlag  = "check-double-sign"
 	fromFile             = "from-file"
 	upToHeight           = "up-to-height"
+	keyringBackendFlag   = "keyring-backend"
 
 	// flags for description
-	monikerFlag                 = "moniker"
-	identityFlag                = "identity"
-	websiteFlag                 = "website"
-	securityContactFlag         = "security-contact"
-	detailsFlag                 = "details"
+	monikerFlag         = "moniker"
+	identityFlag        = "identity"
+	websiteFlag         = "website"
+	securityContactFlag = "security-contact"
+	detailsFlag         = "details"
 
 	// flags for commission
 	commissionRateFlag          = "commission-rate"
