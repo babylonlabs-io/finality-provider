@@ -38,17 +38,33 @@ func CommandKeys() *cobra.Command {
 
 		// var cfg *config.Config
 		// if the flag is empty then use the file
+		var cfg *config.Config
 		if keyringBackend == "" {
-			_, err := config.LoadConfig(clientCtx.HomeDir)
+			cfg, err = config.LoadConfig(clientCtx.HomeDir)
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
 
+			if cfg.BabylonConfig.KeyringBackend != "test" {
+				return fmt.Errorf(`the keyring backend should be "test"`)
+			}
+
 		} else {
 			fmt.Printf("flag KeyringBackend: %s\n", keyringBackend)
-
 			if keyringBackend != "test" {
 				return fmt.Errorf(`the keyring backend should be "test"`)
+			} else {
+				cfg, err = config.LoadConfig(clientCtx.HomeDir)
+				if err != nil {
+					return fmt.Errorf("failed to load config: %w", err)
+				}
+				cfg.BabylonConfig.KeyringBackend = keyringBackend
+			}
+
+			fmt.Printf("cfg: %+v\n", cfg)
+
+			if err := config.SaveConfig(cfg, clientCtx.HomeDir); err != nil {
+				return fmt.Errorf("failed to save config: %w", err)
 			}
 		}
 
