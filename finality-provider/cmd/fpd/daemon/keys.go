@@ -13,7 +13,6 @@ import (
 // CommandKeys returns the keys group command and updates the add command to do a
 // post run action to update the config if exists.
 func CommandKeys() *cobra.Command {
-
 	keysCmd := keys.Commands()
 	keyAddCmd := util.GetSubCommand(keysCmd, "add")
 	if keyAddCmd == nil {
@@ -46,19 +45,16 @@ func CommandKeys() *cobra.Command {
 			if cfg.BabylonConfig.KeyringBackend != "test" {
 				return fmt.Errorf(`the keyring backend should be "test"`)
 			}
-
 		} else {
 			fmt.Printf("flag KeyringBackend: %s\n", keyringBackend)
 			if keyringBackend != "test" {
 				return fmt.Errorf(`the keyring backend should be "test"`)
-			} else {
-				cfg, err = config.LoadConfig(clientCtx.HomeDir)
-				if err != nil {
-					return fmt.Errorf("failed to load config: %w", err)
-				}
-				cfg.BabylonConfig.KeyringBackend = keyringBackend
 			}
-
+			cfg, err = config.LoadConfig(clientCtx.HomeDir)
+			if err != nil {
+				return fmt.Errorf("failed to load config: %w", err)
+			}
+			cfg.BabylonConfig.KeyringBackend = keyringBackend
 			if err := config.SaveConfig(cfg, clientCtx.HomeDir); err != nil {
 				return fmt.Errorf("failed to save config: %w", err)
 			}
