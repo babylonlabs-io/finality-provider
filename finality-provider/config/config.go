@@ -225,17 +225,14 @@ func NetParamsBTC(btcNet string) (chaincfg.Params, error) {
 }
 
 func SaveConfig(cfg *Config, filePath string) error {
-	// Create a new parser
-
 	cfgFile := CfgFile(filePath)
+
 	if !util.FileExists(cfgFile) {
 		return fmt.Errorf("specified config file does "+
 			"not exist in %s", cfgFile)
 	}
 
 	parser := flags.NewParser(cfg, flags.Default)
-
-	// Serialize the configuration to an INI format
 	iniParser := flags.NewIniParser(parser)
 	err := iniParser.WriteFile(cfgFile, flags.IniIncludeDefaults)
 	if err != nil {

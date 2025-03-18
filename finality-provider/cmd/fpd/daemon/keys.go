@@ -36,8 +36,6 @@ func CommandKeys() *cobra.Command {
 			return fmt.Errorf("failed to get context: %w", err)
 		}
 
-		// var cfg *config.Config
-		// if the flag is empty then use the file
 		var cfg *config.Config
 		if keyringBackend == "" {
 			cfg, err = config.LoadConfig(clientCtx.HomeDir)
@@ -60,8 +58,6 @@ func CommandKeys() *cobra.Command {
 				}
 				cfg.BabylonConfig.KeyringBackend = keyringBackend
 			}
-
-			fmt.Printf("cfg: %+v\n", cfg)
 
 			if err := config.SaveConfig(cfg, clientCtx.HomeDir); err != nil {
 				return fmt.Errorf("failed to save config: %w", err)
