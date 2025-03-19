@@ -117,6 +117,8 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	// update ports with the dynamically allocated ones from docker
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", babylond.GetPort("9090/tcp"))
+	cfg.BabylonConfig.GasAdjustment = 2
+	cfg.BabylonConfig.GasPrices = "2ubbn"
 
 	bbnCfg := fpcfg.BBNConfigToBabylonConfig(cfg.BabylonConfig)
 	bbnCl, err := bbnclient.New(&bbnCfg, logger)
