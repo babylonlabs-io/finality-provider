@@ -8,7 +8,7 @@ require (
 	cosmossdk.io/errors v1.0.1
 	cosmossdk.io/math v1.5.0
 	github.com/avast/retry-go/v4 v4.5.1
-	github.com/babylonlabs-io/babylon v1.0.0-rc.7
+	github.com/babylonlabs-io/babylon v1.0.0-rc.8
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
 	github.com/btcsuite/btcd/btcutil v1.1.6
@@ -63,7 +63,7 @@ require (
 	github.com/99designs/keyring v1.2.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/CosmWasm/wasmd v0.54.0 // indirect
-	github.com/CosmWasm/wasmvm/v2 v2.2.1 // indirect
+	github.com/CosmWasm/wasmvm/v2 v2.2.3 // indirect
 	github.com/DataDog/datadog-go v3.2.0+incompatible // indirect
 	github.com/DataDog/zstd v1.5.5 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
@@ -104,7 +104,7 @@ require (
 	github.com/cosmos/ibc-go/modules/apps/callbacks v0.2.1-0.20231113120333-342c00b0f8bd // indirect
 	github.com/cosmos/ibc-go/modules/capability v1.0.1 // indirect
 	github.com/cosmos/ibc-go/modules/light-clients/08-wasm v0.0.0-20240429153234-e1e6da7e4ead // indirect
-	github.com/cosmos/ibc-go/v8 v8.6.1 // indirect
+	github.com/cosmos/ibc-go/v8 v8.7.0 // indirect
 	github.com/cosmos/ics23/go v0.11.0 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.14.0 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
@@ -246,7 +246,7 @@ require (
 	github.com/spf13/viper v1.19.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/supranational/blst v0.3.11 // indirect
+	github.com/supranational/blst v0.3.14 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tendermint/go-amino v0.16.0 // indirect
 	github.com/tidwall/btree v1.7.0 // indirect
