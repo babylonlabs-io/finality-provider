@@ -11,7 +11,6 @@ const (
 	checkDoubleSignFlag  = "check-double-sign"
 	fromFile             = "from-file"
 	upToHeight           = "up-to-height"
-	keyringBackendFlag   = "keyring-backend"
 
 	// flags for description
 	monikerFlag         = "moniker"

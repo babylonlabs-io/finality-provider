@@ -87,6 +87,10 @@ func (cfg *Config) Validate() error {
 		return fmt.Errorf("invalid RPC listener address %s, %w", cfg.RPCListener, err)
 	}
 
+	if cfg.KeyringBackend == "" {
+		return fmt.Errorf("the keyring backend should not be empty")
+	}
+
 	if cfg.Metrics == nil {
 		return fmt.Errorf("empty metrics config")
 	}
