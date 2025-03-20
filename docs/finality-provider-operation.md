@@ -15,46 +15,37 @@ For conceptual understanding, see our [Technical Documentation](./fp-core.md).
 Please review the [high-level explainer](../README.md) before proceeding to
 gain an overall understanding of the finality provider.
 
-- [Finality Provider Operation](#finality-provider-operation)
-  - [1. A note about Phase-1 Finality Providers](#1-a-note-about-phase-1-finality-providers)
-  - [2. System Requirements](#2-system-requirements)
-  - [3. Install Finality Provider Toolset](#3-install-finality-provider-toolset)
-    - [3.1. Clone the Finality Provider Repository](#31-clone-the-finality-provider-repository)
-    - [3.2. Install Finality Provider Toolset Binaries](#32-install-finality-provider-toolset-binaries)
-    - [3.3. Verify Installation](#33-verify-installation)
-  - [4. Setting up the EOTS Daemon](#4-setting-up-the-eots-daemon)
-    - [4.1. Initialize the EOTS Daemon](#41-initialize-the-eots-daemon)
-    - [4.2. Add an EOTS Key](#42-add-an-eots-key)
-      - [4.2.1. Create an EOTS key](#421-create-an-eots-key)
-      - [4.2.2. Import an existing EOTS key](#422-import-an-existing-eots-key)
-      - [Option 1: Using your mnemonic phrase](#option-1-using-your-mnemonic-phrase)
-      - [Option 2: Using your `.asc` file](#option-2-using-your-asc-file)
-      - [Option 3: Using a File System Backup](#option-3-using-a-file-system-backup)
-      - [Verify the Key Import](#verify-the-key-import)
-    - [4.3. Starting the EOTS Daemon](#43-starting-the-eots-daemon)
-  - [5. Setting up the Finality Provider](#5-setting-up-the-finality-provider)
-    - [5.1. Initialize the Finality Provider Daemon](#51-initialize-the-finality-provider-daemon)
-    - [5.2. Add key for the Babylon account](#52-add-key-for-the-babylon-account)
-    - [5.3. Configure Your Finality Provider](#53-configure-your-finality-provider)
-    - [5.4. Starting the Finality Provider Daemon](#54-starting-the-finality-provider-daemon)
-    - [5.5. Interaction with the EOTS Manager](#55-interaction-with-the-eots-manager)
-  - [6. Finality Provider Operations](#6-finality-provider-operations)
-    - [6.1 Create Finality Provider](#61-create-finality-provider)
-    - [6.2. Statuses of Finality Provider](#62-statuses-of-finality-provider)
-    - [6.3. Editing your finality provider](#63-editing-your-finality-provider)
-    - [6.4. Jailing and Unjailing](#64-jailing-and-unjailing)
-    - [6.5. Slashing and Anti-slashing](#65-slashing-and-anti-slashing)
-    - [6.6. Prometheus Metrics](#66-prometheus-metrics)
-      - [Core Metrics](#core-metrics)
-    - [6.7 Rewards](#67-rewards)
-      - [6.7.1 Querying Rewards](#671-querying-rewards)
-      - [6.8 Recover local status of a finality provider](#68-recover-local-status-of-a-finality-provider)
-  - [7. Recovery and Backup](#7-recovery-and-backup)
-    - [7.1 Critical Assets](#71-critical-assets)
-    - [7.2 Backup Recommendations](#72-backup-recommendations)
-    - [7.3 Recover finality-provider db](#73-recover-finality-provider-db)
-      - [7.3.1 Recover local status of a finality provider](#731-recover-local-status-of-a-finality-provider)
-      - [7.3.2 Recover public randomness proof](#732-recover-public-randomness-proof)
+## Table of Contents
+
+1. [A note about Phase-1 Finality Providers](#1-a-note-about-phase-1-finality-providers)
+2. [System Requirements](#2-system-requirements)
+3. [Install Finality Provider Toolset](#3-install-finality-provider-toolset)
+4. [Setting up the EOTS Daemon](#4-setting-up-the-eots-daemon)
+   1. [Initialize the EOTS Daemon](#41-initialize-the-eots-daemon)
+   2. [Add an EOTS Key](#42-add-an-eots-key)
+      1. [Create an EOTS key](#421-create-an-eots-key)
+      2. [Import an existing EOTS key](#422-import-an-existing-eots-key)
+   3. [Starting the EOTS Daemon](#43-starting-the-eots-daemon)
+5. [Setting up the Finality Provider](#5-setting-up-the-finality-provider)
+   1. [Initialize the Finality Provider Daemon](#51-initialize-the-finality-provider-daemon)
+   2. [Add key for the Babylon account](#52-add-key-for-the-babylon-account)
+   3. [Configure Your Finality Provider](#53-configure-your-finality-provider)
+   4. [Starting the Finality Provider Daemon](#54-starting-the-finality-provider-daemon)
+6. [Finality Provider Operation](#6-finality-provider-operations)
+   1. [Create Finality Provider](#61-create-finality-provider)
+   2. [Statuses of Finality Provider](#62-statuses-of-finality-provider)
+   3. [Editing your finality provider](#63-editing-your-finality-provider)
+   4. [Jailing and Unjailing](#64-jailing-and-unjailing)
+   5. [Slashing](#65-slashing-and-anti-slashing)
+   6. [Prometheus Metrics](#66-prometheus-metrics)
+   7. [Rewards](#67-rewards)
+      1. [Querying Rewards](#671-querying-rewards)
+7. [Recovery and backup](#7-recovery-and-backup)
+   1. [Critical assets](#71-critical-assets)
+   2. [Backup recommendations](#72-backup-recommendations)
+   3. [Recover finality-provider db](#73-recover-finality-provider-db)
+      1. [Recover local status of a finality provider](#731-recover-local-status-of-a-finality-provider)
+      2. [Recover public randomness proof](#732-recover-public-randomness-proof)
 
 ## 1. A note about Phase-1 Finality Providers
 
@@ -1052,13 +1043,13 @@ randomness used in the signature is already committed on Babylon. Loss of
 public randomness proof leads to direct failure of the vote submission.
 
 To recover the public randomness proof, the following steps should be followed:
-1. Ensure the fpd is stopped.
+1. Ensure the `fpd` is stopped.
 2. Unjail your finality provider if needed.
 3. Run the recovery command
 `fpd recover-rand-proof [eots-pk-hex] --start-height [height-to-recover] --chain-id [chain-id]`
 where `start-height` is the height from which you want to recover from. If
 the `start-height` is not specified, the command will recover all the proofs
-from the first commit on Babylon, which incurrs longer time for recovery.
+from the first commit on Babylon, which incurs longer time for recovery.
 The `chain-id` must be specified exactly the same as the `chain-id` used when
 creating the finality provider.
 4. Restart the finality provider
