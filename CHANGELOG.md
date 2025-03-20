@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#372](https://github.com/babylonlabs-io/finality-provider/pull/372) Add expected errors to finality vote sending.
+
 ## v1.0.0-rc.4
 
 ### Improvements
