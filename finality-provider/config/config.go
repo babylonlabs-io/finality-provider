@@ -202,6 +202,10 @@ func (cfg *Config) Validate() error {
 		return fmt.Errorf("invalid poller config: %w", err)
 	}
 
+	if cfg.BabylonConfig.KeyringBackend != "test" {
+		return fmt.Errorf("the keyring backend should be test")
+	}
+
 	// All good, return the sanitized result.
 	return nil
 }
@@ -222,22 +226,4 @@ func NetParamsBTC(btcNet string) (chaincfg.Params, error) {
 	default:
 		return chaincfg.Params{}, fmt.Errorf("invalid network: %v", btcNet)
 	}
-}
-
-func SaveConfig(cfg *Config, filePath string) error {
-	cfgFile := CfgFile(filePath)
-
-	if !util.FileExists(cfgFile) {
-		return fmt.Errorf("specified config file does "+
-			"not exist in %s", cfgFile)
-	}
-
-	parser := flags.NewParser(cfg, flags.Default)
-	iniParser := flags.NewIniParser(parser)
-	err := iniParser.WriteFile(cfgFile, flags.IniIncludeDefaults)
-	if err != nil {
-		return fmt.Errorf("failed to write config to file: %w", err)
-	}
-
-	return nil
 }
