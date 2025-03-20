@@ -60,7 +60,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	}
 
 	if cfg.BabylonConfig.KeyringBackend != "test" {
-		return fmt.Errorf("the keyring backend should be test")
+		return fmt.Errorf("the keyring backend in config must be `test` for automatic signing, got %s", cfg.BabylonConfig.KeyringBackend)
 	}
 
 	if rpcListener != "" {
