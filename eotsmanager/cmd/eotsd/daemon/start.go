@@ -38,6 +38,10 @@ func startFn(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load config at %s: %w", homePath, err)
 	}
 
+	if cfg.KeyringBackend != "test" {
+		return fmt.Errorf("the keyring backend in config must be `test` for automatic signing, got %s", cfg.KeyringBackend)
+	}
+
 	rpcListener, err := cmd.Flags().GetString(rpcListenerFlag)
 	if err != nil {
 		return fmt.Errorf("failed to get RPC listener flag: %w", err)
