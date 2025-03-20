@@ -202,10 +202,6 @@ func (cfg *Config) Validate() error {
 		return fmt.Errorf("invalid poller config: %w", err)
 	}
 
-	if cfg.BabylonConfig.KeyringBackend != "test" {
-		return fmt.Errorf("the keyring backend should be test")
-	}
-
 	// All good, return the sanitized result.
 	return nil
 }

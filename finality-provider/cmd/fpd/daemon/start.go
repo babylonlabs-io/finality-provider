@@ -32,7 +32,6 @@ func CommandStart() *cobra.Command {
 	cmd.Flags().String(fpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
 	cmd.Flags().String(rpcListenerFlag, "", "The address that the RPC server listens to")
 	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
-	cmd.Flags().String(keyringBackendFlag, "", "The keyring backend to use")
 
 	return cmd
 }
@@ -55,18 +54,13 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", rpcListenerFlag, err)
 	}
 
-	keyringBackend, err := flags.GetString(keyringBackendFlag)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", keyringBackendFlag, err)
-	}
-
-	if keyringBackend != "" && keyringBackend != "test" {
-		return fmt.Errorf("the keyring backend should be test")
-	}
-
 	cfg, err := fpcfg.LoadConfig(homePath)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	if cfg.BabylonConfig.KeyringBackend != "test" {
+		return fmt.Errorf("the keyring backend should be test")
 	}
 
 	if rpcListener != "" {
