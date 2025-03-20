@@ -59,6 +59,10 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
+	if cfg.BabylonConfig.KeyringBackend != "test" {
+		return fmt.Errorf("the keyring backend in config must be `test` for automatic signing, got %s", cfg.BabylonConfig.KeyringBackend)
+	}
+
 	if rpcListener != "" {
 		_, err := net.ResolveTCPAddr("tcp", rpcListener)
 		if err != nil {

@@ -57,6 +57,7 @@ changes in messages and state
 ### Bug Fixes
 
 * [#368](https://github.com/babylonlabs-io/finality-provider/pull/368) fix: fpd config validate
+* [#382](https://github.com/babylonlabs-io/finality-provider/pull/382) chore: enforcing keyring-backend test in `fpd start` and `eotsd start`
 
 ## v1.0.0-rc.2
 
