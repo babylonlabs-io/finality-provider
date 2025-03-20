@@ -15,37 +15,46 @@ For conceptual understanding, see our [Technical Documentation](./fp-core.md).
 Please review the [high-level explainer](../README.md) before proceeding to
 gain an overall understanding of the finality provider.
 
-## Table of Contents
-
-1. [A note about Phase-1 Finality Providers](#1-a-note-about-phase-1-finality-providers)
-2. [System Requirements](#2-system-requirements)
-3. [Install Finality Provider Toolset](#3-install-finality-provider-toolset)
-4. [Setting up the EOTS Daemon](#4-setting-up-the-eots-daemon)
-   1. [Initialize the EOTS Daemon](#41-initialize-the-eots-daemon)
-   2. [Add an EOTS Key](#42-add-an-eots-key)
-      1. [Create an EOTS key](#421-create-an-eots-key)
-      2. [Import an existing EOTS key](#422-import-an-existing-eots-key)
-   3. [Starting the EOTS Daemon](#43-starting-the-eots-daemon)
-5. [Setting up the Finality Provider](#5-setting-up-the-finality-provider)
-   1. [Initialize the Finality Provider Daemon](#51-initialize-the-finality-provider-daemon)
-   2. [Add key for the Babylon account](#52-add-key-for-the-babylon-account)
-   3. [Configure Your Finality Provider](#53-configure-your-finality-provider)
-   4. [Starting the Finality Provider Daemon](#54-starting-the-finality-provider-daemon)
-6. [Finality Provider Operation](#6-finality-provider-operations)
-   1. [Create Finality Provider](#61-create-finality-provider)
-   2. [Statuses of Finality Provider](#62-statuses-of-finality-provider)
-   3. [Editing your finality provider](#63-editing-your-finality-provider)
-   4. [Jailing and Unjailing](#64-jailing-and-unjailing)
-   5. [Slashing](#65-slashing)
-   6. [Prometheus Metrics](#66-prometheus-metrics)
-   7. [Rewards](#67-rewards)
-      1. [Querying Rewards](#671-querying-rewards)
-7. [Recovery and backup](#7-recovery-and-backup)
-   1. [Critical assets](#71-critical-assets)
-   2. [Backup recommendations](#72-backup-recommendations)
-   3. [Recover finality-provider db](#73-recover-finality-provider-db)
-      1. [Recover local status of a finality provider](#731-recover-local-status-of-a-finality-provider)
-      2. [Recover public randomness proof](#732-recover-public-randomness-proof)
+- [Finality Provider Operation](#finality-provider-operation)
+  - [1. A note about Phase-1 Finality Providers](#1-a-note-about-phase-1-finality-providers)
+  - [2. System Requirements](#2-system-requirements)
+  - [3. Install Finality Provider Toolset](#3-install-finality-provider-toolset)
+    - [3.1. Clone the Finality Provider Repository](#31-clone-the-finality-provider-repository)
+    - [3.2. Install Finality Provider Toolset Binaries](#32-install-finality-provider-toolset-binaries)
+    - [3.3. Verify Installation](#33-verify-installation)
+  - [4. Setting up the EOTS Daemon](#4-setting-up-the-eots-daemon)
+    - [4.1. Initialize the EOTS Daemon](#41-initialize-the-eots-daemon)
+    - [4.2. Add an EOTS Key](#42-add-an-eots-key)
+      - [4.2.1. Create an EOTS key](#421-create-an-eots-key)
+      - [4.2.2. Import an existing EOTS key](#422-import-an-existing-eots-key)
+      - [Option 1: Using your mnemonic phrase](#option-1-using-your-mnemonic-phrase)
+      - [Option 2: Using your `.asc` file](#option-2-using-your-asc-file)
+      - [Option 3: Using a File System Backup](#option-3-using-a-file-system-backup)
+      - [Verify the Key Import](#verify-the-key-import)
+    - [4.3. Starting the EOTS Daemon](#43-starting-the-eots-daemon)
+  - [5. Setting up the Finality Provider](#5-setting-up-the-finality-provider)
+    - [5.1. Initialize the Finality Provider Daemon](#51-initialize-the-finality-provider-daemon)
+    - [5.2. Add key for the Babylon account](#52-add-key-for-the-babylon-account)
+    - [5.3. Configure Your Finality Provider](#53-configure-your-finality-provider)
+    - [5.4. Starting the Finality Provider Daemon](#54-starting-the-finality-provider-daemon)
+    - [5.5. Interaction with the EOTS Manager](#55-interaction-with-the-eots-manager)
+  - [6. Finality Provider Operations](#6-finality-provider-operations)
+    - [6.1 Create Finality Provider](#61-create-finality-provider)
+    - [6.2. Statuses of Finality Provider](#62-statuses-of-finality-provider)
+    - [6.3. Editing your finality provider](#63-editing-your-finality-provider)
+    - [6.4. Jailing and Unjailing](#64-jailing-and-unjailing)
+    - [6.5. Slashing and Anti-slashing](#65-slashing-and-anti-slashing)
+    - [6.6. Prometheus Metrics](#66-prometheus-metrics)
+      - [Core Metrics](#core-metrics)
+    - [6.7 Rewards](#67-rewards)
+      - [6.7.1 Querying Rewards](#671-querying-rewards)
+      - [6.8 Recover local status of a finality provider](#68-recover-local-status-of-a-finality-provider)
+  - [7. Recovery and Backup](#7-recovery-and-backup)
+    - [7.1 Critical Assets](#71-critical-assets)
+    - [7.2 Backup Recommendations](#72-backup-recommendations)
+    - [7.3 Recover finality-provider db](#73-recover-finality-provider-db)
+      - [7.3.1 Recover local status of a finality provider](#731-recover-local-status-of-a-finality-provider)
+      - [7.3.2 Recover public randomness proof](#732-recover-public-randomness-proof)
 
 ## 1. A note about Phase-1 Finality Providers
 
@@ -398,10 +407,9 @@ fpd init --home <path>
 If `fpd.conf` already exists `init` will not succeed, if the operator wishes to
 overwrite the config file they need to use `--force`.
 
-<!--- TODO: this should be removed prior to the launch -->
-> ⚡ Running this command may return the message
-> `service injective.evm.v1beta1.Msg does not have cosmos.msg.v1.service proto annotation`,
-> which is expected and can be ignored.
+> ⚡ Running this command with `--force` will overwrite the existing config file.
+> Please ensure you have a backup of the existing config file before running
+> this command.
 
 **Home directory structure:**
 
@@ -413,11 +421,11 @@ overwrite the config file they need to use `--force`.
   * RPC listener settings
   * Metrics configuration
 
-* **fpd.db**: A LevelDB database that stores:
+* **finality-provider.db**: A LevelDB database that stores:
   * Finality provider registration data
   * Finality signatures
   * Public randomness proofs
-  * Historical block data
+  * Last voted block height
 
 * **keyring-*** directory: Contains the keyring data where:
   * Babylon account private keys are stored
@@ -435,7 +443,7 @@ overwrite the config file they need to use `--force`.
 ├── config/
 │   └── fpd.conf       # Configuration file for the finality provider
 ├── data/
-│   └── fpd.db         # Database containing finality provider data
+│   └── finality-provider.db         # Database containing finality provider data
 ├── keyring-*/         # Directory containing Babylon account keys
 └── logs/
     └── fpd.log        # Log file for the finality provider daemon
@@ -506,8 +514,7 @@ RPCListener = 127.0.0.1:12581
 [babylon]
 Key = <finality-provider-key-name-signer> # the key you used above
 ChainID = bbn-test-5 # chain ID of the Babylon chain
-RPCAddr = http://127.0.0.1:26657
-GRPCAddr = https://127.0.0.1:9090
+RPCAddr = http://127.0.0.1:26657 # Your Babylon node's RPC endpoint
 KeyDirectory = <path> # The `--home` path to the directory where the keyring is stored
 ```
 
@@ -530,12 +537,19 @@ Configuration parameters explained:
 * `Key`: Your Babylon key name from Step 2
 * `ChainID`: The Babylon network chain ID
 * `RPCAddr`: Your Babylon node's RPC endpoint
-* `GRPCAddr`: Your Babylon node's GRPC endpoint
 * `KeyDirectory`: Path to your keyring directory (same as `--home` path)
 
 Please verify the `chain-id` and other network parameters from the official
 [Babylon Networks
 repository](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/).
+
+Another notable configurable parameter is `NumPubRand`, which is the number of
+public randomness that will be generated and submitted in one commit to Babylon
+Genesis. This value is set to `50,000` by default, which is sufficient for
+roughly 5 days of usage with block production time at `10s`.
+Larger values can be set to tolerate longer down times with larger size of
+merkle proofs for each randomness, resulting in higher gas fees when submitting
+future finality signatures and larger storage requirements.
 
 ### 5.4. Starting the Finality Provider Daemon
 
@@ -1037,12 +1051,11 @@ Every finality vote must contain the public randomness proof to prove that the
 randomness used in the signature is already committed on Babylon. Loss of
 public randomness proof leads to direct failure of the vote submission.
 
-To recover the public randomness proof, you need to run the
-`fpd recover-rand-proof [eots-pk-hex] --start-height`
-where `start-height` is the height from
-which you want to recover from as some proof for old height do not need to be
-recovered. The command will recover the proof from the `start-height` to
-the latest committed height on Babylon. If `start-height` is not specified,
-it will recover all the proof until the latest committed height on Babylon.
-Note that `fpd` needs to be stopped before recovering the proof as otherwise,
-the database file might be locked.
+To recover the public randomness proof, the following steps should be followed:
+1. Ensure the fpd is stopped.
+2. Unjail your finality provider if needed.
+3. Run the recovery command `fpd recover-rand-proof [eots-pk-hex] --start-height`
+where `start-height` is the height from which you want to recover from. If
+the `start-height` is not specified, the command will recover all the proofs
+from the first commit on Babylon, which incurrs longer time for recovery.
+4. Restart the finality provider
