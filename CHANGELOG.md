@@ -41,6 +41,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 * [#372](https://github.com/babylonlabs-io/finality-provider/pull/372) Add expected errors to finality vote sending.
 
+## v1.0.0-rc.4
+
+### Improvements
+
+* [#390](https://github.com/babylonlabs-io/finality-provider/pull/390) Bump Babylon to v1.0.0-rc.8
+
 ## v1.0.0-rc.3
 
 ### Improvements
