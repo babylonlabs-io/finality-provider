@@ -1054,8 +1054,11 @@ public randomness proof leads to direct failure of the vote submission.
 To recover the public randomness proof, the following steps should be followed:
 1. Ensure the fpd is stopped.
 2. Unjail your finality provider if needed.
-3. Run the recovery command `fpd recover-rand-proof [eots-pk-hex] --start-height`
+3. Run the recovery command
+`fpd recover-rand-proof [eots-pk-hex] --start-height [height-to-recover] --chain-id [chain-id]`
 where `start-height` is the height from which you want to recover from. If
 the `start-height` is not specified, the command will recover all the proofs
 from the first commit on Babylon, which incurrs longer time for recovery.
+The `chain-id` must be specified exactly the same as the `chain-id` used when
+creating the finality provider.
 4. Restart the finality provider
