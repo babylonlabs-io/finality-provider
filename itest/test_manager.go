@@ -142,7 +142,7 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener)
+	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
 	require.NoError(t, err)
 
 	tm := &TestManager{
@@ -188,7 +188,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 	require.NoError(t, err)
 
 	// create and start finality provider app
-	eotsCli, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.cfg.RPCListener)
+	eotsCli, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.cfg.RPCListener, "")
 	require.NoError(t, err)
 	cc, err := fpcc.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, tm.logger)
 	require.NoError(t, err)

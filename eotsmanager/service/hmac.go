@@ -5,10 +5,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"fmt"
-	"os"
-	"strings"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -18,17 +14,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 )
 
-// GetHMACKeyFromEnv retrieves the HMAC key from the environment variable
-func GetHMACKeyFromEnv() (string, error) {
-	key := os.Getenv(client.HMACKeyEnvVar)
-	if key == "" {
-		return "", fmt.Errorf("HMAC_KEY environment variable not set")
-	}
-
-	return key, nil
-}
-
-// HMACUnaryServerInterceptor creates a gRPC server interceptor that verifies HMAC signatures
+// HMACUnaryServerInterceptor creates a gRPC server interceptor that verifies HMAC
 // on incoming requests. It bypasses authentication for the Ping method and SaveEOTSKeyName.
 func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 	return func(
@@ -37,10 +23,17 @@ func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
-		// Skip authentication for Ping method and SaveEOTSKeyName (local key management)
+		// Skip authentication for specific methods using exact matching
 		// NOTE: we should disable hmac on pings to allow for health checks
 		// NOTE: SaveEOTSKeyName is a local key management operation that doesn't require HMAC
-		if strings.HasSuffix(info.FullMethod, "/Ping") || strings.HasSuffix(info.FullMethod, "/SaveEOTSKeyName") {
+		switch info.FullMethod {
+		case "/proto.EOTSManager/Ping", "/proto.EOTSManager/SaveEOTSKeyName":
+
+			return handler(ctx, req)
+		}
+
+		// If HMAC key is empty, skip authentication
+		if hmacKey == "" {
 			return handler(ctx, req)
 		}
 
@@ -52,7 +45,7 @@ func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 		// Get HMAC from metadata
 		values := md.Get(client.HMACHeaderKey)
 		if len(values) == 0 {
-			return nil, status.Errorf(codes.Unauthenticated, "HMAC signature not provided")
+			return nil, status.Errorf(codes.Unauthenticated, "HMAC not provided")
 		}
 		receivedHMAC := values[0]
 
@@ -73,7 +66,7 @@ func HMACUnaryServerInterceptor(hmacKey string) grpc.UnaryServerInterceptor {
 
 		// Compare HMACs using constant-time comparison to avoid timing attacks
 		if !hmac.Equal([]byte(receivedHMAC), []byte(expectedHMAC)) {
-			return nil, status.Errorf(codes.Unauthenticated, "invalid HMAC signature")
+			return nil, status.Errorf(codes.Unauthenticated, "invalid HMAC")
 		}
 
 		return handler(ctx, req)
