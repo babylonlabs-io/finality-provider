@@ -59,14 +59,15 @@ message CreateFinalityProviderRequest {
     string chain_id = 2;
     // description defines the description terms for the finality provider
     bytes description = 3;
-    // DEPRECATED: commission rate as Dec. Replaced with CommissionRates in field 6
+    // DEPRECATED: commission rate as Dec. Replaced with CommissionRates in
+    // field 6
     reserved 4;
     // eots_pk_hex it is the optional EOTS public key and used to ask for
     // the key record from the EOTS manager for the corresponding EOTS public
     // key. If this property is not set, it will create a new EOTS key.
     string eots_pk_hex = 5;
     // commission defines the commission rate for the finality provider
-    CommissionRates commission = 6 [(gogoproto.nullable) = false];    
+    CommissionRates commission = 6 [(gogoproto.nullable) = false];
 }
 
 // CommissionRates defines the initial commission rates to be used for creating
@@ -200,6 +201,9 @@ message FinalityProviderInfo {
     // commission_info contains information details of the finality provider
     // commission.
     CommissionInfo commission_info = 8;
+    // chain_id is the identifier of the consumer chain that the finality
+    // provider connected to
+    string chain_id = 9;
 }
 
 // CommissionInfo defines the information related to the commission of
