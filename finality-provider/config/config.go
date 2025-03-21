@@ -19,14 +19,14 @@ import (
 
 const (
 	defaultChainType                   = "babylon"
-	defaultLogLevel                    = zapcore.InfoLevel
+	defaultLogLevel                    = zapcore.DebugLevel
 	defaultLogDirname                  = "logs"
 	defaultLogFilename                 = "fpd.log"
 	defaultFinalityProviderKeyName     = "finality-provider"
 	DefaultRPCPort                     = 12581
 	defaultConfigFileName              = "fpd.conf"
-	defaultNumPubRand                  = 10000 // support running of roughly 1 day with block production time as 10s
-	defaultNumPubRandMax               = 100000
+	defaultNumPubRand                  = 50000 // support running of roughly 5 days with block production time as 10s
+	defaultNumPubRandMax               = 500000
 	defaultTimestampingDelayBlocks     = 6000 // 100 BTC blocks * 600s / 10s
 	defaultBatchSubmissionSize         = 1000
 	defaultRandomInterval              = 30 * time.Second

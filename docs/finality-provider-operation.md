@@ -36,7 +36,7 @@ gain an overall understanding of the finality provider.
    2. [Statuses of Finality Provider](#62-statuses-of-finality-provider)
    3. [Editing your finality provider](#63-editing-your-finality-provider)
    4. [Jailing and Unjailing](#64-jailing-and-unjailing)
-   5. [Slashing](#65-slashing)
+   5. [Slashing](#65-slashing-and-anti-slashing)
    6. [Prometheus Metrics](#66-prometheus-metrics)
    7. [Rewards](#67-rewards)
       1. [Querying Rewards](#671-querying-rewards)
@@ -398,10 +398,9 @@ fpd init --home <path>
 If `fpd.conf` already exists `init` will not succeed, if the operator wishes to
 overwrite the config file they need to use `--force`.
 
-<!--- TODO: this should be removed prior to the launch -->
-> ⚡ Running this command may return the message
-> `service injective.evm.v1beta1.Msg does not have cosmos.msg.v1.service proto annotation`,
-> which is expected and can be ignored.
+> ⚡ Running this command with `--force` will overwrite the existing config file.
+> Please ensure you have a backup of the existing config file before running
+> this command.
 
 **Home directory structure:**
 
@@ -413,11 +412,11 @@ overwrite the config file they need to use `--force`.
   * RPC listener settings
   * Metrics configuration
 
-* **fpd.db**: A LevelDB database that stores:
+* **finality-provider.db**: A LevelDB database that stores:
   * Finality provider registration data
   * Finality signatures
   * Public randomness proofs
-  * Historical block data
+  * Last voted block height
 
 * **keyring-*** directory: Contains the keyring data where:
   * Babylon account private keys are stored
@@ -435,7 +434,7 @@ overwrite the config file they need to use `--force`.
 ├── config/
 │   └── fpd.conf       # Configuration file for the finality provider
 ├── data/
-│   └── fpd.db         # Database containing finality provider data
+│   └── finality-provider.db         # Database containing finality provider data
 ├── keyring-*/         # Directory containing Babylon account keys
 └── logs/
     └── fpd.log        # Log file for the finality provider daemon
@@ -506,8 +505,7 @@ RPCListener = 127.0.0.1:12581
 [babylon]
 Key = <finality-provider-key-name-signer> # the key you used above
 ChainID = bbn-test-5 # chain ID of the Babylon chain
-RPCAddr = http://127.0.0.1:26657
-GRPCAddr = https://127.0.0.1:9090
+RPCAddr = http://127.0.0.1:26657 # Your Babylon node's RPC endpoint
 KeyDirectory = <path> # The `--home` path to the directory where the keyring is stored
 ```
 
@@ -530,12 +528,19 @@ Configuration parameters explained:
 * `Key`: Your Babylon key name from Step 2
 * `ChainID`: The Babylon network chain ID
 * `RPCAddr`: Your Babylon node's RPC endpoint
-* `GRPCAddr`: Your Babylon node's GRPC endpoint
 * `KeyDirectory`: Path to your keyring directory (same as `--home` path)
 
 Please verify the `chain-id` and other network parameters from the official
 [Babylon Networks
 repository](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/).
+
+Another notable configurable parameter is `NumPubRand`, which is the number of
+public randomness that will be generated and submitted in one commit to Babylon
+Genesis. This value is set to `50,000` by default, which is sufficient for
+roughly 5 days of usage with block production time at `10s`.
+Larger values can be set to tolerate longer down times with larger size of
+merkle proofs for each randomness, resulting in higher gas fees when submitting
+future finality signatures and larger storage requirements.
 
 ### 5.4. Starting the Finality Provider Daemon
 
@@ -1037,12 +1042,14 @@ Every finality vote must contain the public randomness proof to prove that the
 randomness used in the signature is already committed on Babylon. Loss of
 public randomness proof leads to direct failure of the vote submission.
 
-To recover the public randomness proof, you need to run the
-`fpd recover-rand-proof [eots-pk-hex] --start-height`
-where `start-height` is the height from
-which you want to recover from as some proof for old height do not need to be
-recovered. The command will recover the proof from the `start-height` to
-the latest committed height on Babylon. If `start-height` is not specified,
-it will recover all the proof until the latest committed height on Babylon.
-Note that `fpd` needs to be stopped before recovering the proof as otherwise,
-the database file might be locked.
+To recover the public randomness proof, the following steps should be followed:
+1. Ensure the `fpd` is stopped.
+2. Unjail your finality provider if needed.
+3. Run the recovery command
+`fpd recover-rand-proof [eots-pk-hex] --start-height [height-to-recover] --chain-id [chain-id]`
+where `start-height` is the height from which you want to recover from. If
+the `start-height` is not specified, the command will recover all the proofs
+from the first commit on Babylon, which incurs longer time for recovery.
+The `chain-id` must be specified exactly the same as the `chain-id` used when
+creating the finality provider.
+4. Restart the finality provider

@@ -71,6 +71,7 @@ func (sfp *StoredFinalityProvider) ToFinalityProviderInfo() *proto.FinalityProvi
 		LastVotedHeight: sfp.LastVotedHeight,
 		Status:          sfp.Status.String(),
 		CommissionInfo:  sfp.CommissionInfo,
+		ChainId:         sfp.ChainID,
 	}
 }
 

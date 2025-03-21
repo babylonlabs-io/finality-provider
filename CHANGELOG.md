@@ -46,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#331](https://github.com/babylonlabs-io/finality-provider/pull/331) Bump Cosmos integration dependencies
 * [#335](https://github.com/babylonlabs-io/finality-provider/pull/335) chore: fix CosmWasm controller
 * [#358](https://github.com/babylonlabs-io/finality-provider/pull/358) Bump Babylon dependency and add changes related to `x/btcstaking` module
+* [#391](https://github.com/babylonlabs-io/finality-provider/pull/391) Improve config and operation doc
 * [#382](https://github.com/babylonlabs-io/finality-provider/pull/382) chore: enforcing keyring-backend test in `fpd start` and `eotsd start`
 
 ## v1.0.0-rc.2
