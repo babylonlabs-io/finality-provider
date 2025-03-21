@@ -40,7 +40,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Improvements
 
 * [#374](https://github.com/babylonlabs-io/finality-provider/pull/374) HMAC proto match and remove env requirement.
-* [#372](https://github.com/babylonlabs-io/finality-provider/pull/372) Add expected errors to finality vote sending. 
 * [#364](https://github.com/babylonlabs-io/finality-provider/pull/364) HMAC authentication service between fpd and eotsd.
 * [#372](https://github.com/babylonlabs-io/finality-provider/pull/372) Add expected errors to finality vote sending.
 
