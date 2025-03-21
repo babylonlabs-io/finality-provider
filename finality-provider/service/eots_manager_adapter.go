@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"os"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -9,8 +10,22 @@ import (
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
+
+// InitEOTSManagerClient initializes an EOTS manager client with HMAC authentication
+func InitEOTSManagerClient(address string, hmacKey string) (eotsmanager.EOTSManager, error) {
+	// If HMAC key is provided in config, set it in environment for the client to use
+	if hmacKey != "" {
+		if err := os.Setenv(client.HMACKeyEnvVar, hmacKey); err != nil {
+			return nil, fmt.Errorf("failed to set HMAC_KEY environment variable: %w", err)
+		}
+	}
+
+	return client.NewEOTSManagerGRpcClient(address)
+}
 
 func (fp *FinalityProviderInstance) getPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
 	pubRandList, err := fp.em.CreateRandomnessPairList(
