@@ -101,10 +101,6 @@ func (s *PubRandProofStore) AddPubRandProofList(
 		}
 
 		for i, key := range keys {
-			// skip if already committed
-			if bucket.Get(key) != nil {
-				continue
-			}
 			// set to DB
 			if err := bucket.Put(key, proofBytesList[i]); err != nil {
 				return err
