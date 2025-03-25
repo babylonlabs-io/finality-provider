@@ -49,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#391](https://github.com/babylonlabs-io/finality-provider/pull/391) Improve config and operation doc
 * [#382](https://github.com/babylonlabs-io/finality-provider/pull/382) chore: enforcing keyring-backend test in `fpd start` and `eotsd start`
 * [#397](https://github.com/babylonlabs-io/finality-provider/pull/397) chore: overwrite randomness proof
+* [#399](https://github.com/babylonlabs-io/finality-provider/pull/399) chore: submit immediately
 
 ## v1.0.0-rc.2
 
