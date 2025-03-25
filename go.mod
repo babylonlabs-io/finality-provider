@@ -8,7 +8,7 @@ require (
 	cosmossdk.io/errors v1.0.1
 	cosmossdk.io/math v1.5.0
 	github.com/avast/retry-go/v4 v4.5.1
-	github.com/babylonlabs-io/babylon v1.99.0-snapshot.250211.0.20250225132856-b677bc881224
+	github.com/babylonlabs-io/babylon v1.99.0-snapshot.250319
 	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250206070140-1b5d1ba72584
 	github.com/babylonlabs-io/finality-gadget v0.1.1
 	github.com/btcsuite/btcd v0.24.2
@@ -268,7 +268,7 @@ require (
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/viper v1.19.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/supranational/blst v0.3.11 // indirect
+	github.com/supranational/blst v0.3.14 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tendermint/go-amino v0.16.0 // indirect
 	github.com/tidwall/btree v1.7.0 // indirect
