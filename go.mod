@@ -339,7 +339,7 @@ replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 	// use v0.53 to have the ibctesting pkg
-	github.com/CosmWasm/wasmd => github.com/CosmWasm/wasmd v0.53.0
+	github.com/CosmWasm/wasmd => github.com/CosmWasm/wasmd v0.54.0
 	github.com/ethereum-optimism/optimism => github.com/babylonlabs-io/optimism v1.9.2-0.20241105020448-32f912d130b8
 	github.com/ethereum/go-ethereum => github.com/ethereum-optimism/op-geth v1.101408.0-rc.4.0.20240827042333-110c433a2469
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
