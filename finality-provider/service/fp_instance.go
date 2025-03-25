@@ -194,6 +194,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 			fp.processAndSubmitSignatures()
 		case <-fp.quit:
 			fp.logger.Info("the finality signature submission loop is closing")
+
 			return
 		}
 	}
@@ -241,6 +242,7 @@ func (fp *FinalityProviderInstance) processAndSubmitSignatures() {
 			fp.MustSetStatus(proto.FinalityProviderStatus_JAILED)
 			fp.logger.Debug("the finality-provider has been jailed",
 				zap.String("pk", fp.GetBtcPkHex()))
+
 			return
 		}
 
@@ -355,6 +357,7 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop() {
 			fp.processRandomnessCommitment()
 		case <-fp.quit:
 			fp.logger.Info("the randomness commitment loop is closing")
+
 			return
 		}
 	}
