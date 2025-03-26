@@ -206,9 +206,9 @@ func (s *EOTSStore) Close() error {
 	return s.db.Close()
 }
 
-// DeleteSignRecordsInHeightRange deletes all sign records from the given height and above.
+// DeleteSignRecordsFromHeight deletes all sign records from the given height and above.
 // This is useful when handling chain reorganizations.
-func (s *EOTSStore) DeleteSignRecordsInHeightRange(fromHeight, toHeight uint64) error {
+func (s *EOTSStore) DeleteSignRecordsFromHeight(fromHeight uint64) error {
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		bucket := tx.ReadWriteBucket(signRecordBucketName)
 		if bucket == nil {
@@ -229,10 +229,8 @@ func (s *EOTSStore) DeleteSignRecordsInHeightRange(fromHeight, toHeight uint64) 
 				return err
 			}
 
-			// If toHeight is 0, delete from fromHeight and above
-			// Otherwise, delete records with height in the range [fromHeight, toHeight]
-			if (toHeight == 0 && height >= fromHeight) ||
-				(toHeight > 0 && height >= fromHeight && height <= toHeight) {
+			// If height >= fromHeight, mark for deletion
+			if height >= fromHeight {
 				// Make a copy of the key to avoid potential reference issues
 				keyToDelete := make([]byte, len(k))
 				copy(keyToDelete, k)

@@ -177,8 +177,8 @@ func FuzzListKeysEOTSStore(f *testing.F) {
 	})
 }
 
-// FuzzDeleteSignRecordsInHeightRange tests deleting sign records within a specific height range
-func FuzzDeleteSignRecordsInHeightRange(f *testing.F) {
+// FuzzDeleteSignRecordsFromHeight tests deleting sign records from a specific height
+func FuzzDeleteSignRecordsFromHeight(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
 		t.Parallel()
@@ -202,7 +202,7 @@ func FuzzDeleteSignRecordsInHeightRange(f *testing.F) {
 		chainID := []byte("test-chain")
 
 		// Generate a series of records with different heights
-		numRecords := 20 + r.Intn(30) // Between 20-50 records
+		numRecords := 10 + r.Intn(20) // Between 10-30 records
 		records := make([]struct {
 			height  uint64
 			pk      []byte
@@ -211,9 +211,9 @@ func FuzzDeleteSignRecordsInHeightRange(f *testing.F) {
 		}, numRecords)
 
 		// Create records with ascending heights
-		var baseHeight uint64 = r.Uint64() % 1000 // Start with a random base height
+		baseHeight := r.Uint64() % 1000 // Start with a random base height
 		for i := 0; i < numRecords; i++ {
-			records[i].height = baseHeight + uint64(i*50) // Ensure heights are well-spaced
+			records[i].height = baseHeight + uint64(i*100) // Ensure heights are well-spaced
 			records[i].pk = testutil.GenRandomByteArray(r, 32)
 			records[i].msg = testutil.GenRandomByteArray(r, 32)
 			records[i].eotsSig = testutil.GenRandomByteArray(r, 32)
@@ -238,114 +238,45 @@ func FuzzDeleteSignRecordsInHeightRange(f *testing.F) {
 			require.Equal(t, record.eotsSig, signRecordFromDB.Signature)
 		}
 
-		// Test various range configurations
-		testRanges := []struct {
-			name       string
-			fromHeight uint64
-			toHeight   uint64
-			shouldKeep func(height uint64) bool
-		}{
-			{
-				name:       "Middle range",
-				fromHeight: records[numRecords/4].height,
-				toHeight:   records[numRecords/2].height,
-				shouldKeep: func(height uint64) bool {
-					return height < records[numRecords/4].height || height > records[numRecords/2].height
-				},
-			},
-			{
-				name:       "Delete all above",
-				fromHeight: records[numRecords/2].height,
-				toHeight:   0, // Delete all records from fromHeight and above
-				shouldKeep: func(height uint64) bool {
-					return height < records[numRecords/2].height
-				},
-			},
-			{
-				name:       "Delete below threshold",
-				fromHeight: 0,
-				toHeight:   records[numRecords/3].height,
-				shouldKeep: func(height uint64) bool {
-					return height > records[numRecords/3].height
-				},
-			},
-			{
-				name:       "Empty range (fromHeight > toHeight)",
-				fromHeight: records[numRecords/2].height,
-				toHeight:   records[numRecords/4].height, // This is lower than fromHeight
-				shouldKeep: func(height uint64) bool {
-					// Should keep all records since the range is invalid
-					return true
-				},
-			},
-			{
-				name:       "Exact single record",
-				fromHeight: records[numRecords/2].height,
-				toHeight:   records[numRecords/2].height,
-				shouldKeep: func(height uint64) bool {
-					return height != records[numRecords/2].height
-				},
-			},
-		}
+		// Pick a random cutoff height from the middle of our records
+		cutoffIndex := numRecords / 2
+		cutoffHeight := records[cutoffIndex].height
 
-		// Run tests for each range configuration
-		for _, testRange := range testRanges {
-			t.Run(testRange.name, func(t *testing.T) {
-				// First, ensure all records exist by recreating them if needed
-				for _, record := range records {
-					// Try to get the record first
-					_, found, err := vs.GetSignRecord(record.pk, chainID, record.height)
-					require.NoError(t, err)
-
-					// If it doesn't exist, recreate it
-					if !found {
-						err = vs.SaveSignRecord(
-							record.height,
-							chainID,
-							record.msg,
-							record.pk,
-							record.eotsSig,
-						)
-						require.NoError(t, err)
-					}
-				}
-
-				// Delete records in the specified range
-				err = vs.DeleteSignRecordsInHeightRange(testRange.fromHeight, testRange.toHeight)
-				require.NoError(t, err)
-
-				// Check that records outside the range still exist and those inside are deleted
-				for _, record := range records {
-					signRecordFromDB, found, err := vs.GetSignRecord(record.pk, chainID, record.height)
-					require.NoError(t, err)
-
-					if testRange.shouldKeep(record.height) {
-						require.True(t, found, "Record at height %d should exist for test: %s",
-							record.height, testRange.name)
-						require.Equal(t, record.msg, signRecordFromDB.Msg)
-						require.Equal(t, record.eotsSig, signRecordFromDB.Signature)
-					} else {
-						require.False(t, found, "Record at height %d should be deleted for test: %s",
-							record.height, testRange.name)
-					}
-				}
-			})
-		}
-		
-		// Case 1: Delete non-existent range
-		nonExistentStart := baseHeight + uint64(numRecords*100)
-		err = vs.DeleteSignRecordsInHeightRange(nonExistentStart, nonExistentStart+100)
+		// Delete records from the cutoff height
+		err = vs.DeleteSignRecordsFromHeight(cutoffHeight)
 		require.NoError(t, err)
 
-		// Case 2: Delete all records
-		err = vs.DeleteSignRecordsInHeightRange(0, baseHeight+uint64(numRecords*100))
+		// Verify records before cutoff still exist
+		for i := 0; i < cutoffIndex; i++ {
+			signRecordFromDB, found, err := vs.GetSignRecord(records[i].pk, chainID, records[i].height)
+			require.True(t, found, "Record at height %d should exist", records[i].height)
+			require.NoError(t, err)
+			require.Equal(t, records[i].msg, signRecordFromDB.Msg)
+			require.Equal(t, records[i].eotsSig, signRecordFromDB.Signature)
+		}
+
+		// Verify records at and after cutoff are deleted
+		for i := cutoffIndex; i < numRecords; i++ {
+			_, found, err := vs.GetSignRecord(records[i].pk, chainID, records[i].height)
+			require.False(t, found, "Record at height %d should be deleted", records[i].height)
+			require.NoError(t, err)
+		}
+
+		// Test edge case: delete non-existent records
+		nonExistentHeight := baseHeight + uint64(numRecords*100) + 1000
+		err = vs.DeleteSignRecordsFromHeight(nonExistentHeight)
+		require.NoError(t, err)
+
+		// Test edge case: delete records below the lowest height
+		// This should delete all remaining records
+		err = vs.DeleteSignRecordsFromHeight(0)
 		require.NoError(t, err)
 
 		// Verify all records are now deleted
 		for _, record := range records {
 			_, found, err := vs.GetSignRecord(record.pk, chainID, record.height)
+			require.False(t, found)
 			require.NoError(t, err)
-			require.False(t, found, "Record at height %d should be deleted after deleting all", record.height)
 		}
 	})
 }
