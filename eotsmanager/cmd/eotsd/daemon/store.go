@@ -54,6 +54,10 @@ func rollbackSignStore(cmd *cobra.Command, _ []string) error {
 	if fromHeight == 0 {
 		return fmt.Errorf("rollback-until-height flag is required")
 	}
+	cfg, err := config.LoadConfig(eotsHomePath)
+	if err != nil {
+		return fmt.Errorf("failed to load config at %s: %w", eotsHomePath, err)
+	}
 
 	chainID, err := f.GetString(flagChainID)
 	if err != nil {
@@ -61,11 +65,6 @@ func rollbackSignStore(cmd *cobra.Command, _ []string) error {
 	}
 	if len(chainID) == 0 {
 		return fmt.Errorf("flag %s is required", flagChainID)
-	}
-
-	cfg, err := config.LoadConfig(eotsHomePath)
-	if err != nil {
-		return fmt.Errorf("failed to load config at %s: %w", eotsHomePath, err)
 	}
 
 	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()

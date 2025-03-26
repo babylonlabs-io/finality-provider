@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"log"
 	"math/rand"
 	"os"
@@ -494,16 +493,15 @@ func TestDeleteSignRecords(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	tm := StartManager(t, ctx)
-	r := rand.New(rand.NewSource(time.Now().Unix()))
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer tm.Stop(t)
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+
+	tm.WaitForFpPubRandTimestamped(t, fps[0])
 
 	eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
-	ekey, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
+	_, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
 	require.NoError(t, err)
-	pk, err := schnorr.ParsePubKey(ekey)
-	require.NoError(t, err)
-	eotsPk := bbntypes.NewBIP340PubKeyFromBTCPK(pk).MarshalHex()
 
 	cmd := eotscmd.NewSignStoreRollbackCmd()
 
@@ -514,9 +512,6 @@ func TestDeleteSignRecords(t *testing.T) {
 
 	cmd.SetArgs([]string{
 		"--home=" + tm.EOTSHomeDir,
-		"--eots-pk=" + eotsPk,
-		"--key-name=" + eotsKeyName,
-		"--keyring-backend=" + keyring.BackendTest,
 		"--rollback-until-height=100",
 	})
 
