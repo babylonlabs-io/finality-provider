@@ -5,7 +5,7 @@ on:
     branches:
       - 'main'
       - 'base/consumer-chain-support'
-      - 'lazar/delete-sign-record'
+      - 'rollback-cmd'
     tags:
       - '*'
 
