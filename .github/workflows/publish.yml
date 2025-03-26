@@ -3,9 +3,7 @@ name: docker_publish
 on:
   push:
     branches:
-      - 'main'
-      - 'base/consumer-chain-support'
-      - 'hotfix/remove-interation-in-rand-generation'
+      - '*'
     tags:
       - '*'
 
