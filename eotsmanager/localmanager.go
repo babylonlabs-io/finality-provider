@@ -371,3 +371,8 @@ func (lm *LocalEOTSManager) keyExists(name string) bool {
 func (lm *LocalEOTSManager) ListEOTSKeys() (map[string][]byte, error) {
 	return lm.es.GetAllEOTSKeyNames()
 }
+
+// UnsafeDeleteSignStoreRecords removes all sign store records from the given height
+func (lm *LocalEOTSManager) UnsafeDeleteSignStoreRecords(fromHeight uint64) error {
+	return lm.es.DeleteSignRecordsFromHeight(fromHeight)
+}

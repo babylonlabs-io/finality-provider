@@ -1,6 +1,3 @@
-//go:build e2e
-// +build e2e
-
 package e2etest
 
 import (
@@ -9,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"log"
 	"math/rand"
 	"os"
@@ -490,4 +488,43 @@ func TestRecoverRandProofCmd(t *testing.T) {
 	require.NoError(t, err)
 	_, err = pubRandStore.GetPubRandProof([]byte(testChainID), fpIns.GetBtcPkBIP340().MustMarshal(), finalizedBlock[0].Height)
 	require.NoError(t, err)
+}
+
+func TestDeleteSignRecords(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	tm := StartManager(t, ctx)
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	defer tm.Stop(t)
+
+	eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
+	ekey, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
+	require.NoError(t, err)
+	pk, err := schnorr.ParsePubKey(ekey)
+	require.NoError(t, err)
+	eotsPk := bbntypes.NewBIP340PubKeyFromBTCPK(pk).MarshalHex()
+
+	cmd := eotscmd.NewSignStoreRollbackCmd()
+
+	defaultConfig := eotscfg.DefaultConfigWithHomePath(tm.EOTSHomeDir)
+	fileParser := goflags.NewParser(defaultConfig, goflags.Default)
+	err = goflags.NewIniParser(fileParser).WriteFile(eotscfg.CfgFile(tm.EOTSHomeDir), goflags.IniIncludeDefaults)
+	require.NoError(t, err)
+
+	cmd.SetArgs([]string{
+		"--home=" + tm.EOTSHomeDir,
+		"--eots-pk=" + eotsPk,
+		"--key-name=" + eotsKeyName,
+		"--keyring-backend=" + keyring.BackendTest,
+		"--rollback-until-height=100",
+	})
+
+	var outputBuffer bytes.Buffer
+	cmd.SetOut(&outputBuffer)
+	cmd.SetErr(&outputBuffer)
+
+	err = cmd.Execute()
+	require.NoError(t, err)
+
 }
