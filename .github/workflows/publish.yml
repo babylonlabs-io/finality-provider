@@ -5,7 +5,7 @@ on:
     branches:
       - 'main'
       - 'base/consumer-chain-support'
-      - 'hotfix/remove-interation-in-rand-generation'
+      - 'hotfix/rmv-interation-unsafe'
     tags:
       - '*'
 
