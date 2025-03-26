@@ -510,8 +510,12 @@ func TestDeleteSignRecords(t *testing.T) {
 	err = goflags.NewIniParser(fileParser).WriteFile(eotscfg.CfgFile(tm.EOTSHomeDir), goflags.IniIncludeDefaults)
 	require.NoError(t, err)
 
+	fpIns := fps[0]
+
 	cmd.SetArgs([]string{
 		"--home=" + tm.EOTSHomeDir,
+		"--chain-id" + tm.FpConfig.BabylonConfig.ChainID,
+		"--eots-pk" + fpIns.GetBtcPkHex(),
 		"--rollback-until-height=100",
 	})
 
