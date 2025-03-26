@@ -211,10 +211,12 @@ func FuzzDeleteSignRecordsFromHeight(f *testing.F) {
 		}, numRecords)
 
 		// Create records with ascending heights
+		eotsPk := testutil.GenRandomByteArray(r, 32)
+
 		baseHeight := r.Uint64() % 1000 // Start with a random base height
 		for i := 0; i < numRecords; i++ {
 			records[i].height = baseHeight + uint64(i*100) // Ensure heights are well-spaced
-			records[i].pk = testutil.GenRandomByteArray(r, 32)
+			records[i].pk = eotsPk
 			records[i].msg = testutil.GenRandomByteArray(r, 32)
 			records[i].eotsSig = testutil.GenRandomByteArray(r, 32)
 
@@ -243,7 +245,7 @@ func FuzzDeleteSignRecordsFromHeight(f *testing.F) {
 		cutoffHeight := records[cutoffIndex].height
 
 		// Delete records from the cutoff height
-		err = vs.DeleteSignRecordsFromHeight(cutoffHeight)
+		err = vs.DeleteSignRecordsFromHeight(eotsPk, chainID, cutoffHeight)
 		require.NoError(t, err)
 
 		// Verify records before cutoff still exist
@@ -264,12 +266,12 @@ func FuzzDeleteSignRecordsFromHeight(f *testing.F) {
 
 		// Test edge case: delete non-existent records
 		nonExistentHeight := baseHeight + uint64(numRecords*100) + 1000
-		err = vs.DeleteSignRecordsFromHeight(nonExistentHeight)
+		err = vs.DeleteSignRecordsFromHeight(eotsPk, chainID, nonExistentHeight)
 		require.NoError(t, err)
 
 		// Test edge case: delete records below the lowest height
 		// This should delete all remaining records
-		err = vs.DeleteSignRecordsFromHeight(0)
+		err = vs.DeleteSignRecordsFromHeight(eotsPk, chainID, 0)
 		require.NoError(t, err)
 
 		// Verify all records are now deleted

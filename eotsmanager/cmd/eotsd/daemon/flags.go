@@ -18,4 +18,5 @@ const (
 	flagIndex             = "index"
 	flagRecover           = "recover"
 	flagMnemonicSrc       = "source"
+	flagChainID           = "chain-id"
 )

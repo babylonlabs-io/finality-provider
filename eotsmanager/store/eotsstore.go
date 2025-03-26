@@ -1,10 +1,12 @@
 package store
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"time"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	pm "google.golang.org/protobuf/proto"
 
@@ -208,7 +210,7 @@ func (s *EOTSStore) Close() error {
 
 // DeleteSignRecordsFromHeight deletes all sign records from the given height and above.
 // This is useful when handling chain reorganizations.
-func (s *EOTSStore) DeleteSignRecordsFromHeight(fromHeight uint64) error {
+func (s *EOTSStore) DeleteSignRecordsFromHeight(eotsPk, chainID []byte, fromHeight uint64) error {
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		bucket := tx.ReadWriteBucket(signRecordBucketName)
 		if bucket == nil {
@@ -227,6 +229,12 @@ func (s *EOTSStore) DeleteSignRecordsFromHeight(fromHeight uint64) error {
 			height, err := ExtractHeightFromKey(k)
 			if err != nil {
 				return err
+			}
+
+			reconstructedKey := getSignRecordKey(chainID, eotsPk, height)
+			if !bytes.Equal(k, reconstructedKey) {
+				// check if the keys we are removing are from that same eots and chain ID
+				return nil
 			}
 
 			// If height >= fromHeight, mark for deletion
