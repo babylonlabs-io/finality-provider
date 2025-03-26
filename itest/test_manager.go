@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
+
+	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 
 	"github.com/ory/dockertest/v3"
 
@@ -699,7 +700,7 @@ func (tm *TestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.PublicKe
 	stakerAddr := tm.BBNClient.GetKeyAddress()
 
 	// proof-of-possession
-	pop, err := bstypes.NewPoPBTC(stakerAddr, delBtcPrivKey)
+	pop, err := datagen.NewPoPBTC(stakerAddr, delBtcPrivKey)
 	require.NoError(t, err)
 
 	// create and insert BTC headers which include the staking tx to get staking tx info

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -124,7 +125,7 @@ func (kc *ChainKeyringController) CreateChainKey(passphrase, hdPath, mnemonic st
 // the input is the bytes of BTC public key used to sign
 // this requires both keys created beforehand
 func (kc *ChainKeyringController) CreatePop(fpAddr sdk.AccAddress, btcPrivKey *btcec.PrivateKey) (*bstypes.ProofOfPossessionBTC, error) {
-	return bstypes.NewPoPBTC(fpAddr, btcPrivKey)
+	return datagen.NewPoPBTC(fpAddr, btcPrivKey)
 }
 
 // Address returns the address from the keyring

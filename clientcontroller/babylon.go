@@ -3,9 +3,10 @@ package clientcontroller
 import (
 	"context"
 	"fmt"
-	"github.com/babylonlabs-io/babylon/client/babylonclient"
 	"strings"
 	"time"
+
+	"github.com/babylonlabs-io/babylon/client/babylonclient"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 
@@ -135,10 +136,14 @@ func (bc *BabylonController) RegisterFinalityProvider(
 
 	fpAddr := bc.mustGetTxSigner()
 	msg := &btcstakingtypes.MsgCreateFinalityProvider{
-		Addr:        fpAddr,
-		BtcPk:       bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
-		Pop:         &bbnPop,
-		Commission:  commission,
+		Addr:  fpAddr,
+		BtcPk: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
+		Pop:   &bbnPop,
+		Commission: btcstakingtypes.CommissionRates{
+			Rate:          *commission,
+			MaxRate:       *commission,
+			MaxChangeRate: *commission,
+		},
 		Description: &sdkDescription,
 	}
 
