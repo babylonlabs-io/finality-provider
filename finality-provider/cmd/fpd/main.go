@@ -40,7 +40,7 @@ func main() {
 		daemon.CommandInfoFP(), daemon.CommandAddFinalitySig(), daemon.CommandUnjailFP(),
 		daemon.CommandEditFinalityDescription(), daemon.CommandCommitPubRand(), daemon.CommandRecoverProof(),
 		incentivecli.NewWithdrawRewardCmd(), incentivecli.NewSetWithdrawAddressCmd(),
-		incentivecli.CmdQueryRewardGauges(),
+		incentivecli.CmdQueryRewardGauges(), daemon.CommandDebugRecoverProof(),
 		version.CommandVersion("fpd"), daemon.CommandUnsafePruneMerkleProof(),
 	)
 
