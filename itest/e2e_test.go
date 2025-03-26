@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 	"log"
 	"math/rand"
 	"os"
@@ -491,28 +493,46 @@ func TestRecoverRandProofCmd(t *testing.T) {
 
 func TestDeleteSignRecords(t *testing.T) {
 	t.Parallel()
+	n := 1
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer tm.Stop(t)
-	r := rand.New(rand.NewSource(time.Now().Unix()))
 
 	tm.WaitForFpPubRandTimestamped(t, fps[0])
 
-	eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
-	_, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
-	require.NoError(t, err)
+	// send a BTC delegation
+	for _, fp := range fps {
+		_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fp.GetBtcPk()}, stakingTime, stakingAmount)
+	}
+
+	// check the BTC delegation is pending
+	delsResp := tm.WaitForNPendingDels(t, n)
+	var dels []*bstypes.BTCDelegation
+	for _, delResp := range delsResp {
+		del, err := ParseRespBTCDelToBTCDel(delResp)
+		require.NoError(t, err)
+		dels = append(dels, del)
+		// send covenant sigs
+		tm.InsertCovenantSigForDelegation(t, del)
+	}
+
+	// check the BTC delegation is active
+	_ = tm.WaitForNActiveDels(t, n)
+
+	// check the last voted block is finalized
+	lastVotedHeight := tm.WaitForFpVoteCast(t, fps[0])
+	tm.CheckBlockFinalization(t, lastVotedHeight, 1)
 
 	cmd := eotscmd.NewSignStoreRollbackCmd()
-
-	defaultConfig := eotscfg.DefaultConfigWithHomePath(tm.EOTSHomeDir)
-	fileParser := goflags.NewParser(defaultConfig, goflags.Default)
-	err = goflags.NewIniParser(fileParser).WriteFile(eotscfg.CfgFile(tm.EOTSHomeDir), goflags.IniIncludeDefaults)
+	err := tm.Fps[0].Stop()
+	require.NoError(t, err)
+	err = tm.EOTSServerHandler.eotsManager.Close()
 	require.NoError(t, err)
 
 	cmd.SetArgs([]string{
 		"--home=" + tm.EOTSHomeDir,
-		"--rollback-until-height=100",
+		"--rollback-until-height=1",
 	})
 
 	var outputBuffer bytes.Buffer
@@ -521,5 +541,63 @@ func TestDeleteSignRecords(t *testing.T) {
 
 	err = cmd.Execute()
 	require.NoError(t, err)
+
+}
+
+func TestEotsdRollbackCmd(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	testDir, err := tempDir(t, "fp-e2e-test-*")
+	require.NoError(t, err)
+
+	// 3. prepare EOTS manager
+	eotsHomeDir := filepath.Join(testDir, "eots-home")
+	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
+	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh.Start(ctx)
+
+	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
+	require.NoError(t, err)
+
+	keyname := []byte("eots-key-1")
+
+	key, err := eh.CreateKey(string(keyname))
+
+	require.NoError(t, err)
+
+	err = eotsCli.Ping()
+
+	for i := 0; i < 100; i++ {
+		_, err = eotsCli.SignEOTS(
+			key,
+			[]byte("test"),
+			[]byte("test"),
+			uint64(i),
+		)
+		require.NoError(t, err)
+	}
+
+	cmd := eotscmd.NewSignStoreRollbackCmd()
+	require.NoError(t, err)
+
+	err = eh.Stop()
+	require.NoError(t, err)
+
+	cmd.SetArgs([]string{
+		"--home=" + eotsHomeDir,
+		"--rollback-until-height=10",
+	})
+
+	var outputBuffer bytes.Buffer
+	cmd.SetOut(&outputBuffer)
+	cmd.SetErr(&outputBuffer)
+
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	eh.Start(ctx)
 
 }

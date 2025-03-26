@@ -74,3 +74,7 @@ func (eh *EOTSServerHandler) SetHMACKey(hmacKey string) error {
 	eh.cfg.HMACKey = hmacKey
 	return nil
 }
+
+func (eh *EOTSServerHandler) Stop() error {
+	return eh.eotsManager.Close()
+}
