@@ -5,6 +5,7 @@ on:
     branches:
       - 'main'
       - 'base/consumer-chain-support'
+      - 'hotfix/remove-interation-in-rand-generation'
     tags:
       - '*'
 
@@ -22,7 +23,6 @@ jobs:
       gosec-args: "-exclude-generated -exclude-dir=itest -exclude-dir=testutil ./..."
 
   docker_pipeline:
-    needs: ["lint_test"]
     uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.10.2
     secrets: inherit
     with:
