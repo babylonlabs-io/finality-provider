@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"fmt"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"time"
 
 	pm "google.golang.org/protobuf/proto"
@@ -203,4 +204,67 @@ func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*Signi
 
 func (s *EOTSStore) Close() error {
 	return s.db.Close()
+}
+
+// DeleteSignRecordsFromHeight deletes all sign records from the given height and above.
+// This is useful when handling chain reorganizations.
+func (s *EOTSStore) DeleteSignRecordsFromHeight(fromHeight uint64) error {
+	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+		bucket := tx.ReadWriteBucket(signRecordBucketName)
+		if bucket == nil {
+			return ErrCorruptedEOTSDb
+		}
+
+		// We need to collect keys to delete since we can't delete while iterating
+		var keysToDelete [][]byte
+
+		err := bucket.ForEach(func(k, v []byte) error {
+			if k == nil || v == nil {
+				return fmt.Errorf("encountered invalid key or value in bucket")
+			}
+
+			// Extract height from key
+			height, err := ExtractHeightFromKey(k)
+			if err != nil {
+				return err
+			}
+
+			// If height >= fromHeight, mark for deletion
+			if height >= fromHeight {
+				// Make a copy of the key to avoid potential reference issues
+				keyToDelete := make([]byte, len(k))
+				copy(keyToDelete, k)
+				keysToDelete = append(keysToDelete, keyToDelete)
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return err
+		}
+
+		// Delete all collected keys
+		for _, key := range keysToDelete {
+			if err := bucket.Delete(key); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// ExtractHeightFromKey extracts the height from a sign record key.
+// Assumes the getSignRecordKey function format which encodes height at the end.
+func ExtractHeightFromKey(key []byte) (uint64, error) {
+	if len(key) < 8 {
+		return 0, fmt.Errorf("key too short to contain height")
+	}
+
+	// Extract the last 8 bytes which contain the height
+	heightBytes := key[len(key)-8:]
+
+	// Use sdk.BigEndianToUint64 to convert back to uint64
+	return sdk.BigEndianToUint64(heightBytes), nil
 }
