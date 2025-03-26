@@ -60,6 +60,8 @@ func rollbackSignStore(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	defer es.Close()
+
 	if err = es.DeleteSignRecordsFromHeight(height); err != nil {
 		return fmt.Errorf("failed to delete sign store records: %w", err)
 	}

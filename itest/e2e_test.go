@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -491,65 +492,11 @@ func TestRecoverRandProofCmd(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestDeleteSignRecords(t *testing.T) {
-	t.Parallel()
-	n := 1
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
-
-	tm.WaitForFpPubRandTimestamped(t, fps[0])
-
-	// send a BTC delegation
-	for _, fp := range fps {
-		_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fp.GetBtcPk()}, stakingTime, stakingAmount)
-	}
-
-	// check the BTC delegation is pending
-	delsResp := tm.WaitForNPendingDels(t, n)
-	var dels []*bstypes.BTCDelegation
-	for _, delResp := range delsResp {
-		del, err := ParseRespBTCDelToBTCDel(delResp)
-		require.NoError(t, err)
-		dels = append(dels, del)
-		// send covenant sigs
-		tm.InsertCovenantSigForDelegation(t, del)
-	}
-
-	// check the BTC delegation is active
-	_ = tm.WaitForNActiveDels(t, n)
-
-	// check the last voted block is finalized
-	lastVotedHeight := tm.WaitForFpVoteCast(t, fps[0])
-	tm.CheckBlockFinalization(t, lastVotedHeight, 1)
-
-	cmd := eotscmd.NewSignStoreRollbackCmd()
-	err := tm.Fps[0].Stop()
-	require.NoError(t, err)
-	err = tm.EOTSServerHandler.eotsManager.Close()
-	require.NoError(t, err)
-
-	cmd.SetArgs([]string{
-		"--home=" + tm.EOTSHomeDir,
-		"--rollback-until-height=1",
-	})
-
-	var outputBuffer bytes.Buffer
-	cmd.SetOut(&outputBuffer)
-	cmd.SetErr(&outputBuffer)
-
-	err = cmd.Execute()
-	require.NoError(t, err)
-
-}
-
 func TestEotsdRollbackCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	testDir, err := tempDir(t, "fp-e2e-test-*")
-	require.NoError(t, err)
+	testDir := t.TempDir()
 
 	// 3. prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
@@ -570,7 +517,10 @@ func TestEotsdRollbackCmd(t *testing.T) {
 
 	err = eotsCli.Ping()
 
-	for i := 0; i < 100; i++ {
+	const numRecords = 100
+	const rollbackHeight = 10
+
+	for i := 0; i < numRecords; i++ {
 		_, err = eotsCli.SignEOTS(
 			key,
 			[]byte("test"),
@@ -588,16 +538,20 @@ func TestEotsdRollbackCmd(t *testing.T) {
 
 	cmd.SetArgs([]string{
 		"--home=" + eotsHomeDir,
-		"--rollback-until-height=10",
+		"--rollback-until-height=" + strconv.Itoa(rollbackHeight),
 	})
-
-	var outputBuffer bytes.Buffer
-	cmd.SetOut(&outputBuffer)
-	cmd.SetErr(&outputBuffer)
 
 	err = cmd.Execute()
 	require.NoError(t, err)
 
+	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eh = NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 
+	for i := rollbackHeight; i < numRecords; i++ {
+		exists, err := eh.IsRecordInDb(key, []byte("test"), uint64(i))
+		require.NoError(t, err)
+		require.False(t, exists)
+	}
 }

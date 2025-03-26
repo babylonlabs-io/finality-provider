@@ -78,3 +78,7 @@ func (eh *EOTSServerHandler) SetHMACKey(hmacKey string) error {
 func (eh *EOTSServerHandler) Stop() error {
 	return eh.eotsManager.Close()
 }
+
+func (eh *EOTSServerHandler) IsRecordInDb(eotsPk []byte, chainID []byte, height uint64) (bool, error) {
+	return eh.eotsManager.IsRecordInDb(eotsPk, chainID, height)
+}
