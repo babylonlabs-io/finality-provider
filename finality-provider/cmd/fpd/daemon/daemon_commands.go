@@ -26,7 +26,6 @@ import (
 
 var (
 	defaultFpdDaemonAddress = "127.0.0.1:" + strconv.Itoa(fpcfg.DefaultRPCPort)
-	defaultAppHashStr       = "fd903d9baeb3ab1c734ee003de75f676c5a9a8d0574647e5385834d57d3e79ec"
 )
 
 // CommandGetDaemonInfo returns the get-info command by connecting to the fpd daemon.
@@ -380,7 +379,7 @@ func CommandAddFinalitySig() *cobra.Command {
 		RunE:    runCommandAddFinalitySig,
 	}
 	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
-	cmd.Flags().String(appHashFlag, defaultAppHashStr, "The last commit hash of the chain block")
+	cmd.Flags().String(appHashFlag, "", "The last commit hash of the chain block")
 	cmd.Flags().Bool(checkDoubleSignFlag, true, "If 'true', uses anti-slashing protection when doing EOTS sign")
 
 	return cmd
@@ -405,6 +404,9 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 	appHashHex, err := flags.GetString(appHashFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", appHashFlag, err)
+	}
+	if len(appHashHex) == 0 {
+		return fmt.Errorf("failed to load app hash hex from flag %s: %w", appHashFlag, err)
 	}
 
 	checkDoubleSign, err := flags.GetBool(checkDoubleSignFlag)
@@ -511,7 +513,7 @@ func CommandUnsafePruneMerkleProof() *cobra.Command {
 		Use:     "unsafe-prune-merkle-proof [eots_pk]",
 		Aliases: []string{"rmp"},
 		Short:   "Prunes merkle proofs up to the specified target height",
-		Long: strings.TrimSpace(`This command will prune all merkle proof up to the target height. The 
+		Long: strings.TrimSpace(`This command will prune all merkle proof up to the target height. The
 operator of this command should ensure that finality provider has voted, or doesn't have voting power up to the target height.'
 `),
 		Example: fmt.Sprintf(`fpd unsafe-prune-merkle-proof [eots_pk] --daemon-address %s`, defaultFpdDaemonAddress),
@@ -769,6 +771,6 @@ func getCommissionRates(rateStr, maxRateStr, maxChangeRateStr string) (*proto.Co
 	if err != nil {
 		return nil, fmt.Errorf("invalid commission max change rate: %w", err)
 	}
-	
+
 	return proto.NewCommissionRates(rate, maxRate, maxRateChange), nil
 }
