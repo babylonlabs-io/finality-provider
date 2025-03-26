@@ -80,5 +80,5 @@ func (eh *EOTSServerHandler) Stop() error {
 }
 
 func (eh *EOTSServerHandler) IsRecordInDb(eotsPk []byte, chainID []byte, height uint64) (bool, error) {
-	return eh.eotsManager.IsRecordInDb(eotsPk, chainID, height)
+	return eh.eotsManager.IsRecordInDB(eotsPk, chainID, height)
 }

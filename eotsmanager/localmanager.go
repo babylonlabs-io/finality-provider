@@ -377,7 +377,7 @@ func (lm *LocalEOTSManager) UnsafeDeleteSignStoreRecords(fromHeight uint64) erro
 	return lm.es.DeleteSignRecordsFromHeight(fromHeight)
 }
 
-func (lm *LocalEOTSManager) IsRecordInDb(eotsPk []byte, chainID []byte, height uint64) (bool, error) {
+func (lm *LocalEOTSManager) IsRecordInDB(eotsPk []byte, chainID []byte, height uint64) (bool, error) {
 	_, found, err := lm.es.GetSignRecord(eotsPk, chainID, height)
 	if err != nil {
 		return false, fmt.Errorf("error getting sign record: %w", err)
