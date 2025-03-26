@@ -177,77 +177,92 @@ func (fp *FinalityProviderInstance) IsJailed() bool {
 func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 	defer fp.wg.Done()
 
+	// Process immediately for the first iteration without waiting
+	fp.processAndSubmitSignatures()
+
+	ticker := time.NewTicker(fp.cfg.SignatureSubmissionInterval)
+	defer ticker.Stop()
+
 	for {
 		select {
-		case <-time.After(fp.cfg.SignatureSubmissionInterval):
-			// start submission in the first iteration
-			pollerBlocks := fp.getBatchBlocksFromChan()
-			if len(pollerBlocks) == 0 {
-				continue
-			}
-
-			if fp.IsJailed() {
-				fp.logger.Warn("the finality-provider is jailed",
-					zap.String("pk", fp.GetBtcPkHex()),
-				)
-
-				continue
-			}
-
-			targetHeight := pollerBlocks[len(pollerBlocks)-1].Height
-			fp.logger.Debug("the finality-provider received new block(s), start processing",
-				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint64("start_height", pollerBlocks[0].Height),
-				zap.Uint64("end_height", targetHeight),
-			)
-
-			processedBlocks, err := fp.processBlocksToVote(pollerBlocks)
-			if err != nil {
-				fp.reportCriticalErr(err)
-
-				continue
-			}
-
-			if len(processedBlocks) == 0 {
-				continue
-			}
-
-			res, err := fp.retrySubmitSigsUntilFinalized(processedBlocks)
-			if err != nil {
-				fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
-				if errors.Is(err, ErrFinalityProviderJailed) {
-					fp.MustSetStatus(proto.FinalityProviderStatus_JAILED)
-					fp.logger.Debug("the finality-provider has been jailed",
-						zap.String("pk", fp.GetBtcPkHex()))
-
-					continue
-				}
-				if !errors.Is(err, ErrFinalityProviderShutDown) {
-					fp.reportCriticalErr(err)
-				}
-
-				continue
-			}
-			if res == nil {
-				// this can happen when a finality signature is not needed
-				// either if the block is already submitted or the signature
-				// is already submitted
-				continue
-			}
-			fp.logger.Info(
-				"successfully submitted the finality signature to the consumer chain",
-				zap.String("consumer_id", string(fp.GetChainID())),
-				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint64("start_height", pollerBlocks[0].Height),
-				zap.Uint64("end_height", targetHeight),
-				zap.String("tx_hash", res.TxHash),
-			)
+		case <-ticker.C:
+			fp.processAndSubmitSignatures()
 		case <-fp.quit:
 			fp.logger.Info("the finality signature submission loop is closing")
 
 			return
 		}
 	}
+}
+
+// processAndSubmitSignatures handles the logic of fetching blocks, checking jail status,
+// processing them, and submitting signatures
+func (fp *FinalityProviderInstance) processAndSubmitSignatures() {
+	pollerBlocks := fp.getBatchBlocksFromChan()
+	if len(pollerBlocks) == 0 {
+		return
+	}
+
+	if fp.IsJailed() {
+		fp.logger.Warn("the finality-provider is jailed",
+			zap.String("pk", fp.GetBtcPkHex()),
+		)
+
+		return
+	}
+
+	targetHeight := pollerBlocks[len(pollerBlocks)-1].Height
+	fp.logger.Debug("the finality-provider received new block(s), start processing",
+		zap.String("pk", fp.GetBtcPkHex()),
+		zap.Uint64("start_height", pollerBlocks[0].Height),
+		zap.Uint64("end_height", targetHeight),
+	)
+
+	processedBlocks, err := fp.processBlocksToVote(pollerBlocks)
+	if err != nil {
+		fp.reportCriticalErr(err)
+
+		return
+	}
+
+	if len(processedBlocks) == 0 {
+		return
+	}
+
+	res, err := fp.retrySubmitSigsUntilFinalized(processedBlocks)
+	if err != nil {
+		fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
+
+		if errors.Is(err, ErrFinalityProviderJailed) {
+			fp.MustSetStatus(proto.FinalityProviderStatus_JAILED)
+			fp.logger.Debug("the finality-provider has been jailed",
+				zap.String("pk", fp.GetBtcPkHex()))
+
+			return
+		}
+
+		if !errors.Is(err, ErrFinalityProviderShutDown) {
+			fp.reportCriticalErr(err)
+		}
+
+		return
+	}
+
+	if res == nil {
+		// this can happen when a finality signature is not needed
+		// either if the block is already submitted or the signature
+		// is already submitted
+		return
+	}
+
+	fp.logger.Info(
+		"successfully submitted the finality signature to the consumer chain",
+		zap.String("consumer_id", string(fp.GetChainID())),
+		zap.String("pk", fp.GetBtcPkHex()),
+		zap.Uint64("start_height", pollerBlocks[0].Height),
+		zap.Uint64("end_height", targetHeight),
+		zap.String("tx_hash", res.TxHash),
+	)
 }
 
 // processBlocksToVote processes a batch a blocks and picks ones that need to vote
@@ -326,40 +341,53 @@ func (fp *FinalityProviderInstance) getBatchBlocksFromChan() []*types.BlockInfo 
 func (fp *FinalityProviderInstance) randomnessCommitmentLoop() {
 	defer fp.wg.Done()
 
+	fp.processRandomnessCommitment()
+
+	ticker := time.NewTicker(fp.cfg.RandomnessCommitInterval)
+	defer ticker.Stop()
+
 	for {
 		select {
-		case <-time.After(fp.cfg.RandomnessCommitInterval):
-			// start randomness commit in the first iteration
-			should, startHeight, err := fp.ShouldCommitRandomness()
-			if err != nil {
-				fp.reportCriticalErr(err)
-
-				continue
-			}
-			if !should {
-				continue
-			}
-
-			txRes, err := fp.CommitPubRand(startHeight)
-			if err != nil {
-				fp.metrics.IncrementFpTotalFailedRandomness(fp.GetBtcPkHex())
-				fp.reportCriticalErr(err)
-
-				continue
-			}
-			// txRes could be nil if no need to commit more randomness
-			if txRes != nil {
-				fp.logger.Info(
-					"successfully committed public randomness to the consumer chain",
-					zap.String("pk", fp.GetBtcPkHex()),
-					zap.String("tx_hash", txRes.TxHash),
-				)
-			}
+		case <-ticker.C:
+			fp.processRandomnessCommitment()
 		case <-fp.quit:
 			fp.logger.Info("the randomness commitment loop is closing")
 
 			return
 		}
+	}
+}
+
+// processRandomnessCommitment handles the logic of checking if randomness should be committed
+// and submitting the commitment if needed
+func (fp *FinalityProviderInstance) processRandomnessCommitment() {
+	should, startHeight, err := fp.ShouldCommitRandomness()
+	if err != nil {
+		fp.reportCriticalErr(err)
+
+		return
+	}
+
+	if !should {
+		return
+	}
+
+	txRes, err := fp.CommitPubRand(startHeight)
+	if err != nil {
+		fp.metrics.IncrementFpTotalFailedRandomness(fp.GetBtcPkHex())
+		fp.reportCriticalErr(err)
+
+		return
+	}
+
+	// txRes could be nil if no need to commit more randomness
+	if txRes != nil {
+		fp.logger.Info(
+			"successfully committed public randomness to the consumer chain",
+			zap.String("consumer_id", string(fp.GetChainID())),
+			zap.String("pk", fp.GetBtcPkHex()),
+			zap.String("tx_hash", txRes.TxHash),
+		)
 	}
 }
 
