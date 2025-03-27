@@ -1,7 +1,7 @@
-//go:build e2e_babylon
-// +build e2e_babylon
+//go:build e2e
+// +build e2e
 
-package e2etest_babylon
+package e2etest
 
 import (
 	"context"
@@ -31,7 +31,7 @@ func TestHMACMismatch(t *testing.T) {
 	eotsHmacKey := "server-hmac-key-for-testing"
 	fpHmacKey := "client-hmac-key-for-testing-different"
 
-	tm := StartManager(t, ctx, eotsHmacKey, fpHmacKey)
+	tm := StartManager(t, ctx)
 	defer tm.Stop(t)
 
 	require.Equal(t, eotsHmacKey, tm.EOTSServerHandler.Config().HMACKey, "HMAC key should be set in the server config")
