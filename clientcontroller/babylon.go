@@ -2,6 +2,7 @@ package clientcontroller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -226,6 +227,13 @@ func (bc *BabylonController) SubmitBatchFinalitySigs(
 			BlockAppHash: b.Hash,
 			FinalitySig:  bbntypes.NewSchnorrEOTSSigFromModNScalar(sigs[i]),
 		}
+
+		msgJson, err := json.Marshal(msg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal msg: %w", err)
+		}
+		bc.logger.Info("submitting finality sig", zap.String("msg", string(msgJson)))
+
 		msgs = append(msgs, msg)
 	}
 
