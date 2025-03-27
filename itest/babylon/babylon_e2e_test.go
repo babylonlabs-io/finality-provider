@@ -1,6 +1,3 @@
-//go:build e2e_babylon
-// +build e2e_babylon
-
 package e2etest_babylon
 
 import (
@@ -9,10 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -508,4 +509,68 @@ func TestSigHeightOutdated(t *testing.T) {
 	require.Empty(t, res)
 
 	t.Logf("Finality signature for already finalized block at height %d was properly handled", finalizedBlock.Height)
+}
+
+func TestEotsdRollbackCmd(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	testDir := t.TempDir()
+
+	// 3. prepare EOTS manager
+	eotsHomeDir := filepath.Join(testDir, "eots-home")
+	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
+	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh.Start(ctx)
+
+	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
+	require.NoError(t, err)
+
+	keyname := []byte("eots-key-1")
+
+	key, err := eh.CreateKey(string(keyname))
+
+	require.NoError(t, err)
+
+	err = eotsCli.Ping()
+
+	const numRecords = 100
+	const rollbackHeight = 10
+
+	for i := 0; i < numRecords; i++ {
+		_, err = eotsCli.SignEOTS(
+			key,
+			[]byte("test"),
+			[]byte("test"),
+			uint64(i),
+		)
+		require.NoError(t, err)
+	}
+
+	cmd := eotscmd.NewSignStoreRollbackCmd()
+	require.NoError(t, err)
+
+	err = eh.Stop()
+	require.NoError(t, err)
+
+	cmd.SetArgs([]string{
+		"--home=" + eotsHomeDir,
+		"--rollback-until-height=" + strconv.Itoa(rollbackHeight),
+	})
+
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eh = e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh.Start(ctx)
+
+	for i := rollbackHeight; i < numRecords; i++ {
+		exists, err := eh.IsRecordInDb(key, []byte("test"), uint64(i))
+		require.NoError(t, err)
+		require.False(t, exists)
+	}
 }
