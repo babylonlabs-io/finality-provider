@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -206,9 +207,14 @@ func (s *EOTSStore) Close() error {
 	return s.db.Close()
 }
 
-// DeleteSignRecordsFromHeight deletes all sign records from the given height and above.
-// This is useful when handling chain reorganizations.
-func (s *EOTSStore) DeleteSignRecordsFromHeight(fromHeight uint64) error {
+// DeleteSignRecordsFromHeight deletes all sign records with the specified eotsPk and chainID
+// from the given height and above. This is useful when handling chain reorganizations.
+// All arguments are mandatory.
+func (s *EOTSStore) DeleteSignRecordsFromHeight(eotsPk, chainID []byte, fromHeight uint64) error {
+	if eotsPk == nil || chainID == nil {
+		return fmt.Errorf("eotsPk and chainID must not be nil")
+	}
+
 	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		bucket := tx.ReadWriteBucket(signRecordBucketName)
 		if bucket == nil {
@@ -217,10 +223,14 @@ func (s *EOTSStore) DeleteSignRecordsFromHeight(fromHeight uint64) error {
 
 		// We need to collect keys to delete since we can't delete while iterating
 		var keysToDelete [][]byte
-
 		err := bucket.ForEach(func(k, v []byte) error {
 			if k == nil || v == nil {
 				return fmt.Errorf("encountered invalid key or value in bucket")
+			}
+
+			// Check if key matches our eotsPk and chainID prefix
+			if !hasKeyPrefix(k, chainID, eotsPk) {
+				return nil // Skip keys that don't match our prefix
 			}
 
 			// Extract height from key
@@ -229,7 +239,6 @@ func (s *EOTSStore) DeleteSignRecordsFromHeight(fromHeight uint64) error {
 				return err
 			}
 
-			// If height >= fromHeight, mark for deletion
 			if height >= fromHeight {
 				// Make a copy of the key to avoid potential reference issues
 				keyToDelete := make([]byte, len(k))
@@ -244,7 +253,6 @@ func (s *EOTSStore) DeleteSignRecordsFromHeight(fromHeight uint64) error {
 			return err
 		}
 
-		// Delete all collected keys
 		for _, key := range keysToDelete {
 			if err := bucket.Delete(key); err != nil {
 				return err
@@ -253,6 +261,22 @@ func (s *EOTSStore) DeleteSignRecordsFromHeight(fromHeight uint64) error {
 
 		return nil
 	})
+}
+
+// hasKeyPrefix checks if a key starts with the given chainID and eotsPk prefix.
+// This is a helper function for DeleteSignRecordsFromHeight.
+func hasKeyPrefix(key, chainID, eotsPk []byte) bool {
+	if len(key) < len(chainID)+len(eotsPk) {
+		return false
+	}
+
+	// Check chainID prefix
+	if !bytes.Equal(key[:len(chainID)], chainID) {
+		return false
+	}
+
+	// Check eotsPk part (after chainID)
+	return bytes.Equal(key[len(chainID):len(chainID)+len(eotsPk)], eotsPk)
 }
 
 // ExtractHeightFromKey extracts the height from a sign record key.

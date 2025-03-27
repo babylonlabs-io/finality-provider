@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"fmt"
+	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
@@ -10,6 +11,7 @@ import (
 
 const (
 	flagFromHeight = "rollback-until-height"
+	flagChainID    = "chain-id"
 )
 
 func NewSignStoreRollbackCmd() *cobra.Command {
@@ -24,6 +26,9 @@ func NewSignStoreRollbackCmd() *cobra.Command {
 	f := cmd.Flags()
 
 	f.String(sdkflags.FlagHome, config.DefaultEOTSDir, "EOTS home directory")
+	f.String(eotsPkFlag, "", "EOTS public key of the finality-provider")
+	f.String(flagChainID, "", "The identifier of the consumer chain")
+
 	f.Uint64(flagFromHeight, 0, "height until which to rollback the sign store")
 
 	return cmd
@@ -39,11 +44,24 @@ func rollbackSignStore(cmd *cobra.Command, _ []string) error {
 
 	height, err := f.GetUint64(flagFromHeight)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get rollback-until-height flag: %w", err)
 	}
 
 	if height == 0 {
 		return fmt.Errorf("rollback-until-height flag is required")
+	}
+
+	eotsFpPubKeyStr, err := f.GetString(eotsPkFlag)
+	if err != nil {
+		return fmt.Errorf("failed to get eots pk flag: %w", err)
+	}
+
+	chainID, err := f.GetString(flagChainID)
+	if err != nil {
+		return fmt.Errorf("failed to get chain-id flag: %w", err)
+	}
+	if len(chainID) == 0 {
+		return fmt.Errorf("flag %s is required", flagChainID)
 	}
 
 	cfg, err := config.LoadConfig(eotsHomePath)
@@ -58,12 +76,17 @@ func rollbackSignStore(cmd *cobra.Command, _ []string) error {
 
 	es, err := store.NewEOTSStore(dbBackend)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create eots store: %w", err)
 	}
 
 	defer es.Close()
 
-	if err = es.DeleteSignRecordsFromHeight(height); err != nil {
+	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(eotsFpPubKeyStr)
+	if err != nil {
+		return fmt.Errorf("invalid finality-provider public key %s: %w", eotsFpPubKeyStr, err)
+	}
+
+	if err = es.DeleteSignRecordsFromHeight(fpPk.MustMarshal(), []byte(chainID), height); err != nil {
 		return fmt.Errorf("failed to delete sign store records: %w", err)
 	}
 

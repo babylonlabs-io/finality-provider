@@ -517,24 +517,22 @@ func TestEotsdRollbackCmd(t *testing.T) {
 	defer cancel()
 	testDir := t.TempDir()
 
-	// 3. prepare EOTS manager
 	eotsHomeDir := filepath.Join(testDir, "eots-home")
 	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
 	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 
 	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
 	require.NoError(t, err)
 
-	keyname := []byte("eots-key-1")
-
-	key, err := eh.CreateKey(string(keyname))
-
+	key, err := eh.CreateKey("eots-key-1")
 	require.NoError(t, err)
 
 	err = eotsCli.Ping()
+	require.NoError(t, err)
 
 	const numRecords = 100
 	const rollbackHeight = 10
@@ -542,7 +540,7 @@ func TestEotsdRollbackCmd(t *testing.T) {
 	for i := 0; i < numRecords; i++ {
 		_, err = eotsCli.SignEOTS(
 			key,
-			[]byte("test"),
+			[]byte(testChainID),
 			[]byte("test"),
 			uint64(i),
 		)
@@ -555,9 +553,14 @@ func TestEotsdRollbackCmd(t *testing.T) {
 	err = eh.Stop()
 	require.NoError(t, err)
 
+	eotsPK, err := bbntypes.NewBIP340PubKey(key)
+	require.NoError(t, err)
+
 	cmd.SetArgs([]string{
 		"--home=" + eotsHomeDir,
 		"--rollback-until-height=" + strconv.Itoa(rollbackHeight),
+		"--chain-id=" + testChainID,
+		"--eots-pk=" + eotsPK.MarshalHex(),
 	})
 
 	err = cmd.Execute()
@@ -569,7 +572,7 @@ func TestEotsdRollbackCmd(t *testing.T) {
 	eh.Start(ctx)
 
 	for i := rollbackHeight; i < numRecords; i++ {
-		exists, err := eh.IsRecordInDb(key, []byte("test"), uint64(i))
+		exists, err := eh.IsRecordInDb(key, []byte(testChainID), uint64(i))
 		require.NoError(t, err)
 		require.False(t, exists)
 	}
