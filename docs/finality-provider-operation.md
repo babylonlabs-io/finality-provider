@@ -911,13 +911,14 @@ Parameters:
 To recover the local status of a finality provider, use the following command:
 
 ```shell
-fpd set-withdraw-addr <new-address> --from <registered-bbn-address>
+fpd set-withdraw-addr <operational-address> --from <registered-bbn-address>
 --keyring-backend test --home <home-dir> --fees <fees>
 ```
 
 Parameters:
 
-* `<new-address>`: The new address to withdraw rewards to.
+* `<operational-address>`: Corresponds to the operational key and is where
+  withdraw rewards are sent to
 * `--from`: The finality provider's registered Babylon address.
 * `--keyring-backend`: The keyring backend to use.
 * `--home`: The home directory for the finality provider.
@@ -928,11 +929,17 @@ This command should ask to
 `confirm transaction before signing and broadcasting [y/N]:` and output the
 transaction hash.
 
-Once the address is set, rewards can be withdrawn by running the
-following command:
+Once the address is set, be sure to set the operational key name in the
+keyring home directory in the `[babylon]` config in `fpd.conf`.
+
+> Important: The `fpd` must be stopped before performing this function.
+
+Once the `fpd` is stopped, run the following to withdraw rewards.
+The finality provider must first be active and have voting power to proceed and
+recieve rewards.
 
 ```shell
-fpd withdraw-reward <type> --from <registered-bbn-address>
+fpd withdraw-reward <type> --from <operational-address>
 --keyring-backend test --home <home-dir> --fees <fees>
 ```
 
@@ -941,6 +948,8 @@ Parameters:
 * `<type>`: The type of reward to withdraw (one of `finality_provider`,
   `btc_delegation`)
 * `--from`: The finality provider's registered Babylon address.
+* `<operational-address>`: Corresponds to the operational key and is where
+  withdraw rewards are sent to
 * `--keyring-backend`: The keyring backend to use.
 * `--home`: The home directory for the finality provider.
 * `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
