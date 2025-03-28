@@ -3,6 +3,8 @@ package eotsmanager
 import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
+
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/types"
 )
 
 type EOTSManager interface {
@@ -30,6 +32,16 @@ type EOTSManager interface {
 	// It fails if the finality provider does not exist or the message size is not 32 bytes
 	// or passPhrase is incorrect
 	SignSchnorrSig(uid []byte, msg []byte) (*schnorr.Signature, error)
+
+	// SignEOTSBoth signs an EOTS using the private key of the finality provider and the corresponding
+	// secret randomness of the given chain at the given height
+	// It fails if the finality provider does not exist or there's no randomness committed to the given height
+	// or passPhrase is incorrect. Has built-in anti-slashing mechanism to ensure signature
+	// for the same height will not be signed twice.
+	// NOTE: it will return both EOTS signature and the corresponding public rand
+	// by using a safe rand generator and an unsafe one, respectively
+	// this is for backward compatibility, will be deprecated soon
+	SignEOTSBoth(uid []byte, chainID []byte, msg []byte, height uint64) (*types.EOTSRecord, *types.EOTSRecord, error)
 
 	Close() error
 }

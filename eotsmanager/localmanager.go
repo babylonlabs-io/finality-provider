@@ -247,6 +247,73 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 	return signedBytes, nil
 }
 
+func (lm *LocalEOTSManager) SignEOTSBoth(eotsPk []byte, chainID []byte, msg []byte, height uint64) (*eotstypes.EOTSRecord, *eotstypes.EOTSRecord, error) {
+	record, found, err := lm.es.GetSignRecord(eotsPk, chainID, height)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error getting sign record: %w", err)
+	}
+
+	if found && !bytes.Equal(msg, record.Msg) {
+		lm.logger.Error(
+			"double sign requested",
+			zap.String("eots_pk", hex.EncodeToString(eotsPk)),
+			zap.String("hash", hex.EncodeToString(msg)),
+			zap.Uint64("height", height),
+			zap.String("chainID", string(chainID)),
+		)
+
+		return nil, nil, eotstypes.ErrDoubleSign
+	}
+
+	keyRecord, err := lm.KeyRecord(eotsPk)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	privKey, err := lm.getEOTSPrivKey(eotsPk)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get EOTS private key: %w", err)
+	}
+
+	// 1. generate rand pair and sign using safe rand generator
+	privRand, pubRand, err := lm.getRandomnessPair(eotsPk, chainID, height)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get private randomness: %w", err)
+	}
+
+	sig, err := eots.Sign(privKey, privRand, msg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to sign eots")
+	}
+
+	eotsRecord := &eotstypes.EOTSRecord{
+		Sig:     sig,
+		PubRand: pubRand,
+	}
+
+	// 2. generate rand pair and sign using unsafe rand generator
+	privRandUnsafe, pubRandUnsafe := randgenerator.GenerateRandomnessUnsafe(keyRecord.PrivKey.Serialize(), chainID, height)
+
+	sigUnsafe, err := eots.Sign(privKey, privRandUnsafe, msg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to sign eots unsafe")
+	}
+
+	eotsRecordUnsafe := &eotstypes.EOTSRecord{
+		Sig:     sigUnsafe,
+		PubRand: pubRandUnsafe,
+	}
+
+	// save the sign record as the placeholder
+	// note that only `msg` matters
+	s := sig.Bytes()
+	if err := lm.es.SaveSignRecord(height, chainID, msg, eotsPk, s[:]); err != nil {
+		return nil, nil, fmt.Errorf("failed to save signing record: %w", err)
+	}
+
+	return eotsRecord, eotsRecordUnsafe, nil
+}
+
 // UnsafeSignEOTS should only be used in e2e test to demonstrate double sign
 func (lm *LocalEOTSManager) UnsafeSignEOTS(fpPk []byte, chainID []byte, msg []byte, height uint64) (*btcec.ModNScalar, error) {
 	privRand, _, err := lm.getRandomnessPair(fpPk, chainID, height)

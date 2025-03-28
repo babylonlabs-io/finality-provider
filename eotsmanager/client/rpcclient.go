@@ -11,6 +11,7 @@ import (
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/proto"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/types"
 )
 
 var _ eotsmanager.EOTSManager = &EOTSManagerGRpcClient{}
@@ -116,6 +117,43 @@ func (c *EOTSManagerGRpcClient) SignEOTS(uid, chaiID, msg []byte, height uint64)
 	s.SetByteSlice(res.Sig)
 
 	return &s, nil
+}
+
+func (c *EOTSManagerGRpcClient) SignEOTSBoth(uid, chaiID, msg []byte, height uint64) (*types.EOTSRecord, *types.EOTSRecord, error) {
+	req := &proto.SignEOTSBothRequest{
+		Uid:     uid,
+		ChainId: chaiID,
+		Msg:     msg,
+		Height:  height,
+	}
+	res, err := c.client.SignEOTSBoth(context.Background(), req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var s btcec.ModNScalar
+	s.SetByteSlice(res.Sig)
+
+	var pubrand btcec.FieldVal
+	pubrand.SetByteSlice(res.PubRand)
+
+	eotsRecord := &types.EOTSRecord{
+		Sig:     &s,
+		PubRand: &pubrand,
+	}
+
+	var sUnsafe btcec.ModNScalar
+	sUnsafe.SetByteSlice(res.SigUnsafe)
+
+	var pubrandUnsafe btcec.FieldVal
+	pubrandUnsafe.SetByteSlice(res.PubRandUnsafe)
+
+	eotsRecordUnsafe := &types.EOTSRecord{
+		Sig:     &sUnsafe,
+		PubRand: &pubrandUnsafe,
+	}
+
+	return eotsRecord, eotsRecordUnsafe, nil
 }
 
 func (c *EOTSManagerGRpcClient) UnsafeSignEOTS(uid, chaiID, msg []byte, height uint64) (*btcec.ModNScalar, error) {

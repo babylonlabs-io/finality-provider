@@ -15,6 +15,11 @@ service EOTSManager {
   rpc SignEOTS (SignEOTSRequest)
       returns (SignEOTSResponse);
 
+  // SignEOTSBoth signs an EOTS with the EOTS private key and the relevant randomness
+	// this is for backward compatibility, will be deprecated soon
+  rpc SignEOTSBoth (SignEOTSBothRequest)
+      returns (SignEOTSBothResponse);
+
   // UnsafeSignEOTS used only for testing purpose. Use SignEOTS for real operations
   rpc UnsafeSignEOTS (SignEOTSRequest)
       returns (SignEOTSResponse);
@@ -74,6 +79,29 @@ message SignEOTSRequest {
 message SignEOTSResponse {
   // sig is the EOTS signature
   bytes sig = 1;
+}
+
+message SignEOTSBothRequest {
+  // uid is the identifier of an EOTS key, i.e., public key following BIP-340 spec
+  bytes uid = 1;
+  // chain_id is the identifier of the consumer chain that the randomness is committed to
+  bytes chain_id = 2;
+  // the message which the EOTS signs
+  bytes msg = 3;
+  // the block height which the EOTS signs
+  uint64 height = 4;
+}
+
+message SignEOTSBothResponse {
+  // sig is the EOTS signature
+  bytes sig = 1;
+  // pub_rand is the EOTS public randomness
+  bytes pub_rand = 2;
+  // sig_unsafe is the EOTS signature signed using pub_rand_unsafe
+  bytes sig_unsafe = 3;
+  // pub_rand_unsafe is the EOTS public randomness generated
+  // by unsafe rand generator
+  bytes pub_rand_unsafe = 4;
 }
 
 message SignSchnorrSigRequest {

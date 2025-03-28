@@ -72,6 +72,28 @@ func (r *rpcServer) SignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 	return &proto.SignEOTSResponse{Sig: sigBytes[:]}, nil
 }
 
+// SignEOTSBoth signs an EOTS with the EOTS private key and the relevant randomness
+func (r *rpcServer) SignEOTSBoth(_ context.Context, req *proto.SignEOTSBothRequest) (
+	*proto.SignEOTSBothResponse, error) {
+	eotsRecord, eotsRecordUnsafe, err := r.em.SignEOTSBoth(req.Uid, req.ChainId, req.Msg, req.Height)
+	if err != nil {
+		return nil, err
+	}
+
+	sigBytes := eotsRecord.Sig.Bytes()
+	pubRandBytes := eotsRecord.PubRand.Bytes()
+
+	sigBytesUnsafe := eotsRecordUnsafe.Sig.Bytes()
+	pubRandBytesUnsafe := eotsRecordUnsafe.PubRand.Bytes()
+
+	return &proto.SignEOTSBothResponse{
+		Sig:           sigBytes[:],
+		PubRand:       pubRandBytes[:],
+		SigUnsafe:     sigBytesUnsafe[:],
+		PubRandUnsafe: pubRandBytesUnsafe[:],
+	}, nil
+}
+
 // UnsafeSignEOTS only used for testing purposes. Doesn't offer slashing protection!
 func (r *rpcServer) UnsafeSignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 	*proto.SignEOTSResponse, error) {
