@@ -1,8 +1,10 @@
 package store
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"time"
 
 	pm "google.golang.org/protobuf/proto"
@@ -203,4 +205,90 @@ func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*Signi
 
 func (s *EOTSStore) Close() error {
 	return s.db.Close()
+}
+
+// DeleteSignRecordsFromHeight deletes all sign records with the specified eotsPk and chainID
+// from the given height and above. This is useful when handling chain reorganizations.
+// All arguments are mandatory.
+func (s *EOTSStore) DeleteSignRecordsFromHeight(eotsPk, chainID []byte, fromHeight uint64) error {
+	if eotsPk == nil || chainID == nil {
+		return fmt.Errorf("eotsPk and chainID must not be nil")
+	}
+
+	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+		bucket := tx.ReadWriteBucket(signRecordBucketName)
+		if bucket == nil {
+			return ErrCorruptedEOTSDb
+		}
+
+		// We need to collect keys to delete since we can't delete while iterating
+		var keysToDelete [][]byte
+		err := bucket.ForEach(func(k, v []byte) error {
+			if k == nil || v == nil {
+				return fmt.Errorf("encountered invalid key or value in bucket")
+			}
+
+			// Check if key matches our eotsPk and chainID prefix
+			if !hasKeyPrefix(k, chainID, eotsPk) {
+				return nil // Skip keys that don't match our prefix
+			}
+
+			// Extract height from key
+			height, err := ExtractHeightFromKey(k)
+			if err != nil {
+				return err
+			}
+
+			if height >= fromHeight {
+				// Make a copy of the key to avoid potential reference issues
+				keyToDelete := make([]byte, len(k))
+				copy(keyToDelete, k)
+				keysToDelete = append(keysToDelete, keyToDelete)
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return err
+		}
+
+		for _, key := range keysToDelete {
+			if err := bucket.Delete(key); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// hasKeyPrefix checks if a key starts with the given chainID and eotsPk prefix.
+// This is a helper function for DeleteSignRecordsFromHeight.
+func hasKeyPrefix(key, chainID, eotsPk []byte) bool {
+	if len(key) < len(chainID)+len(eotsPk) {
+		return false
+	}
+
+	// Check chainID prefix
+	if !bytes.Equal(key[:len(chainID)], chainID) {
+		return false
+	}
+
+	// Check eotsPk part (after chainID)
+	return bytes.Equal(key[len(chainID):len(chainID)+len(eotsPk)], eotsPk)
+}
+
+// ExtractHeightFromKey extracts the height from a sign record key.
+// Assumes the getSignRecordKey function format which encodes height at the end.
+func ExtractHeightFromKey(key []byte) (uint64, error) {
+	if len(key) < 8 {
+		return 0, fmt.Errorf("key too short to contain height")
+	}
+
+	// Extract the last 8 bytes which contain the height
+	heightBytes := key[len(key)-8:]
+
+	// Use sdk.BigEndianToUint64 to convert back to uint64
+	return sdk.BigEndianToUint64(heightBytes), nil
 }
