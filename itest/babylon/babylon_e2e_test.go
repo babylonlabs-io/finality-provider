@@ -574,9 +574,15 @@ func TestEotsdRollbackCmd(t *testing.T) {
 	eh = e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 
-	for i := rollbackHeight; i < numRecords; i++ {
+	for i := rollbackHeight; i <= numRecords; i++ {
 		exists, err := eh.IsRecordInDb(key, []byte(testChainID), uint64(i))
 		require.NoError(t, err)
 		require.False(t, exists)
+	}
+
+	for i := 0; i < rollbackHeight; i++ {
+		exists, err := eh.IsRecordInDb(key, []byte(testChainID), uint64(i))
+		require.NoError(t, err)
+		require.True(t, exists)
 	}
 }

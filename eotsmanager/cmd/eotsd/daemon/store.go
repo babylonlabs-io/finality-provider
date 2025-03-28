@@ -28,8 +28,20 @@ func NewSignStoreRollbackCmd() *cobra.Command {
 	f.String(sdkflags.FlagHome, config.DefaultEOTSDir, "EOTS home directory")
 	f.String(eotsPkFlag, "", "EOTS public key of the finality-provider")
 	f.String(flagChainID, "", "The identifier of the consumer chain")
-
 	f.Uint64(flagFromHeight, 0, "height until which to rollback the sign store")
+
+	if err := cmd.MarkFlagRequired(sdkflags.FlagHome); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired(eotsPkFlag); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired(flagChainID); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired(flagFromHeight); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -90,7 +102,7 @@ func rollbackSignStore(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to delete sign store records: %w", err)
 	}
 
-	cmd.Printf("Successfully deleted sign store records until height %d\n", height)
+	cmd.Printf("Successfully deleted sign store records from height %d\n", height)
 
 	return nil
 }
