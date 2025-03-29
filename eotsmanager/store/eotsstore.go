@@ -3,8 +3,9 @@ package store
 import (
 	"errors"
 	"fmt"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"time"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	pm "google.golang.org/protobuf/proto"
 
@@ -149,10 +150,6 @@ func (s *EOTSStore) SaveSignRecord(
 		bucket := tx.ReadWriteBucket(signRecordBucketName)
 		if bucket == nil {
 			return ErrCorruptedEOTSDb
-		}
-
-		if bucket.Get(key) != nil {
-			return ErrDuplicateSignRecord
 		}
 
 		signRecord := &proto.SigningRecord{

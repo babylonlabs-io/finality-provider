@@ -111,7 +111,7 @@ func FuzzSignStore(f *testing.F) {
 			pk,
 			eotsSig,
 		)
-		require.ErrorIs(t, err, store.ErrDuplicateSignRecord)
+		require.NoError(t, err)
 
 		signRecordFromDB, found, err := vs.GetSignRecord(pk, chainID, expectedHeight)
 		require.True(t, found)

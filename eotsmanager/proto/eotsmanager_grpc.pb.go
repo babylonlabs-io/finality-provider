@@ -22,6 +22,7 @@ const (
 	EOTSManager_Ping_FullMethodName                     = "/proto.EOTSManager/Ping"
 	EOTSManager_CreateRandomnessPairList_FullMethodName = "/proto.EOTSManager/CreateRandomnessPairList"
 	EOTSManager_SignEOTS_FullMethodName                 = "/proto.EOTSManager/SignEOTS"
+	EOTSManager_SignEOTSBoth_FullMethodName             = "/proto.EOTSManager/SignEOTSBoth"
 	EOTSManager_UnsafeSignEOTS_FullMethodName           = "/proto.EOTSManager/UnsafeSignEOTS"
 	EOTSManager_SignSchnorrSig_FullMethodName           = "/proto.EOTSManager/SignSchnorrSig"
 	EOTSManager_SaveEOTSKeyName_FullMethodName          = "/proto.EOTSManager/SaveEOTSKeyName"
@@ -36,6 +37,9 @@ type EOTSManagerClient interface {
 	CreateRandomnessPairList(ctx context.Context, in *CreateRandomnessPairListRequest, opts ...grpc.CallOption) (*CreateRandomnessPairListResponse, error)
 	// SignEOTS signs an EOTS with the EOTS private key and the relevant randomness
 	SignEOTS(ctx context.Context, in *SignEOTSRequest, opts ...grpc.CallOption) (*SignEOTSResponse, error)
+	// SignEOTSBoth signs an EOTS with the EOTS private key and the relevant randomness
+	// this is for backward compatibility, will be deprecated soon
+	SignEOTSBoth(ctx context.Context, in *SignEOTSBothRequest, opts ...grpc.CallOption) (*SignEOTSBothResponse, error)
 	// UnsafeSignEOTS used only for testing purpose. Use SignEOTS for real operations
 	UnsafeSignEOTS(ctx context.Context, in *SignEOTSRequest, opts ...grpc.CallOption) (*SignEOTSResponse, error)
 	// SignSchnorrSig signs a Schnorr sig with the EOTS private key
@@ -82,6 +86,16 @@ func (c *eOTSManagerClient) SignEOTS(ctx context.Context, in *SignEOTSRequest, o
 	return out, nil
 }
 
+func (c *eOTSManagerClient) SignEOTSBoth(ctx context.Context, in *SignEOTSBothRequest, opts ...grpc.CallOption) (*SignEOTSBothResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SignEOTSBothResponse)
+	err := c.cc.Invoke(ctx, EOTSManager_SignEOTSBoth_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eOTSManagerClient) UnsafeSignEOTS(ctx context.Context, in *SignEOTSRequest, opts ...grpc.CallOption) (*SignEOTSResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SignEOTSResponse)
@@ -121,6 +135,9 @@ type EOTSManagerServer interface {
 	CreateRandomnessPairList(context.Context, *CreateRandomnessPairListRequest) (*CreateRandomnessPairListResponse, error)
 	// SignEOTS signs an EOTS with the EOTS private key and the relevant randomness
 	SignEOTS(context.Context, *SignEOTSRequest) (*SignEOTSResponse, error)
+	// SignEOTSBoth signs an EOTS with the EOTS private key and the relevant randomness
+	// this is for backward compatibility, will be deprecated soon
+	SignEOTSBoth(context.Context, *SignEOTSBothRequest) (*SignEOTSBothResponse, error)
 	// UnsafeSignEOTS used only for testing purpose. Use SignEOTS for real operations
 	UnsafeSignEOTS(context.Context, *SignEOTSRequest) (*SignEOTSResponse, error)
 	// SignSchnorrSig signs a Schnorr sig with the EOTS private key
@@ -145,6 +162,9 @@ func (UnimplementedEOTSManagerServer) CreateRandomnessPairList(context.Context, 
 }
 func (UnimplementedEOTSManagerServer) SignEOTS(context.Context, *SignEOTSRequest) (*SignEOTSResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SignEOTS not implemented")
+}
+func (UnimplementedEOTSManagerServer) SignEOTSBoth(context.Context, *SignEOTSBothRequest) (*SignEOTSBothResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SignEOTSBoth not implemented")
 }
 func (UnimplementedEOTSManagerServer) UnsafeSignEOTS(context.Context, *SignEOTSRequest) (*SignEOTSResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnsafeSignEOTS not implemented")
@@ -230,6 +250,24 @@ func _EOTSManager_SignEOTS_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EOTSManager_SignEOTSBoth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignEOTSBothRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EOTSManagerServer).SignEOTSBoth(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EOTSManager_SignEOTSBoth_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EOTSManagerServer).SignEOTSBoth(ctx, req.(*SignEOTSBothRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EOTSManager_UnsafeSignEOTS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SignEOTSRequest)
 	if err := dec(in); err != nil {
@@ -302,6 +340,10 @@ var EOTSManager_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SignEOTS",
 			Handler:    _EOTSManager_SignEOTS_Handler,
+		},
+		{
+			MethodName: "SignEOTSBoth",
+			Handler:    _EOTSManager_SignEOTSBoth_Handler,
 		},
 		{
 			MethodName: "UnsafeSignEOTS",

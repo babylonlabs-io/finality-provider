@@ -9,8 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
-	"github.com/babylonlabs-io/finality-provider/testutil"
 	"log"
 	"math/rand"
 	"os"
@@ -18,6 +16,9 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
