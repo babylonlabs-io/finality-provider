@@ -747,59 +747,13 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignaturesBoth(blocks []*
 	// we cannot send blocks in a batch in case one failure will cause the whole batch fail
 	var res *types.TxResponse
 	for _, b := range blocks {
-		msgToSign := getMsgToSignForVote(b.Height, b.Hash)
-		sigRecord, sigRecordUnsafe, err := fp.em.SignEOTSBoth(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign EOTS: %w", err)
-		}
-
-		// try to send finality signature unsafe version first
-		res, err = fp.trySendFinalitySig(b, sigRecordUnsafe.PubRand, proofBytes, sigRecordUnsafe.Sig)
-		if err != nil {
-			pubRandUnsafeBytes := sigRecordUnsafe.PubRand.Bytes()
-			sigUnsafeBytes := sigRecordUnsafe.Sig.Bytes()
-			fp.logger.Info(
-				"failed sending the unsafe version of finality signature, trying with the safe version",
-				zap.String("pub_rand", hex.EncodeToString(pubRandUnsafeBytes[:])),
-				zap.String("proof", hex.EncodeToString(proofBytes[:])),
-				zap.String("sig", hex.EncodeToString(sigUnsafeBytes[:])),
-			)
-			// if failed, try to send finality signature safe version
-			res, err = fp.trySendFinalitySig(b, sigRecord.PubRand, proofBytes, sigRecord.Sig)
-			if err != nil {
-				pubRandBytes := sigRecord.PubRand.Bytes()
-				sigBytes := sigRecord.Sig.Bytes()
-				fp.logger.Error(
-					"failed sending the safe version of finality signature",
-					zap.String("pub_rand", hex.EncodeToString(pubRandBytes[:])),
-					zap.String("proof", hex.EncodeToString(proofBytes[:])),
-					zap.String("sig", hex.EncodeToString(sigBytes[:])),
-				)
-				return nil, err
-			}
-			if res != nil {
-				fp.logger.Info(
-					"successfully sent the safe version of finality signature",
-					zap.String("tx_id", res.TxHash),
-				)
-			}
-
-		} else {
-			if res != nil {
-				fp.logger.Info(
-					"successfully sent the unsafe version of finality signature",
-					zap.String("tx_id", res.TxHash),
-				)
-			}
-		}
-
+		res, err = fp.trySendTwoVersionFinalitySigs(b, proofBytes)
 		if err != nil {
 			return nil, err
 		}
 
 		// update DB
 		fp.MustUpdateStateAfterFinalitySigSubmission(b.Height)
-
 	}
 
 	return res, nil
@@ -816,6 +770,54 @@ func (fp *FinalityProviderInstance) trySendFinalitySig(block *types.BlockInfo, p
 		}
 
 		return nil, err
+	}
+
+	return res, nil
+}
+
+func (fp *FinalityProviderInstance) trySendTwoVersionFinalitySigs(block *types.BlockInfo, proof []byte) (*types.TxResponse, error) {
+	msgToSign := getMsgToSignForVote(block.Height, block.Hash)
+	sigRecord, sigRecordUnsafe, err := fp.em.SignEOTSBoth(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, block.Height)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign EOTS: %w", err)
+	}
+
+	// try to send finality signature unsafe version first
+	res, err := fp.trySendFinalitySig(block, sigRecordUnsafe.PubRand, proof, sigRecordUnsafe.Sig)
+	if err != nil {
+		pubRandUnsafeBytes := sigRecordUnsafe.PubRand.Bytes()
+		sigUnsafeBytes := sigRecordUnsafe.Sig.Bytes()
+		fp.logger.Info(
+			"failed sending the unsafe version of finality signature, trying with the safe version",
+			zap.String("pub_rand", hex.EncodeToString(pubRandUnsafeBytes[:])),
+			zap.String("proof", hex.EncodeToString(proof)),
+			zap.String("sig", hex.EncodeToString(sigUnsafeBytes[:])),
+		)
+		// if failed, try to send finality signature safe version
+		res, err = fp.trySendFinalitySig(block, sigRecord.PubRand, proof, sigRecord.Sig)
+		if err != nil {
+			pubRandBytes := sigRecord.PubRand.Bytes()
+			sigBytes := sigRecord.Sig.Bytes()
+			fp.logger.Error(
+				"failed sending the safe version of finality signature",
+				zap.String("pub_rand", hex.EncodeToString(pubRandBytes[:])),
+				zap.String("proof", hex.EncodeToString(proof)),
+				zap.String("sig", hex.EncodeToString(sigBytes[:])),
+			)
+
+			return nil, err
+		}
+		if res != nil {
+			fp.logger.Info(
+				"successfully sent the safe version of finality signature",
+				zap.String("tx_id", res.TxHash),
+			)
+		}
+	} else if res != nil {
+		fp.logger.Info(
+			"successfully sent the unsafe version of finality signature",
+			zap.String("tx_id", res.TxHash),
+		)
 	}
 
 	return res, nil

@@ -37,6 +37,7 @@ func GenerateRandomness(key []byte, chainID []byte, height uint64) (*eots.Privat
 	privRand := secp256k1.NewPrivateKey(&randScalar)
 	var j secp256k1.JacobianPoint
 	privRand.PubKey().AsJacobian(&j)
+
 	return &privRand.Key, &j.X
 }
 
