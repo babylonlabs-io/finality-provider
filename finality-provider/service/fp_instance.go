@@ -719,7 +719,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 
 // SubmitBatchFinalitySignaturesBoth builds and sends a finality signature over the given block to the consumer chain
 // NOTE: the input blocks should be in the ascending order of height
-// NOTE: it will try EOTS signing generated through safe and unsafe versions of rand generator (if either one succeeds)
+// NOTE: it will try EOTS signing generated through current and legacy versions of rand generator (if either one succeeds)
 // this is for backward compatibility, will be deprecated soon
 func (fp *FinalityProviderInstance) SubmitBatchFinalitySignaturesBoth(blocks []*types.BlockInfo) (*types.TxResponse, error) {
 	if len(blocks) == 0 {
@@ -740,6 +740,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignaturesBoth(blocks []*
 		uint64(numPubRand),
 	)
 	if err != nil {
+
 		return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w\nplease recover the randomness proof from db", err)
 	}
 
@@ -747,6 +748,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignaturesBoth(blocks []*
 	// we cannot send blocks in a batch in case one failure will cause the whole batch fail
 	res, err := fp.trySendTwoVersionFinalitySigs(blocks, proofBytesList)
 	if err != nil {
+
 		return nil, err
 	}
 
@@ -757,42 +759,42 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignaturesBoth(blocks []*
 	return res, nil
 }
 
-// trySendTwoVersionFinalitySigs attempts to send finality signatures using both unsafe and safe versions
+// trySendTwoVersionFinalitySigs attempts to send finality signatures using both current and legacy versions
 // Returns the transaction response and any error encountered
 func (fp *FinalityProviderInstance) trySendTwoVersionFinalitySigs(blocks []*types.BlockInfo, proofList [][]byte) (*types.TxResponse, error) {
 	sigList := make([]*btcec.ModNScalar, 0, len(blocks))
 	prList := make([]*btcec.FieldVal, 0, len(blocks))
-	sigListUnsafe := make([]*btcec.ModNScalar, 0, len(blocks))
-	prListUnsafe := make([]*btcec.FieldVal, 0, len(blocks))
+	sigListLegacy := make([]*btcec.ModNScalar, 0, len(blocks))
+	prListLegacy := make([]*btcec.FieldVal, 0, len(blocks))
 	for _, b := range blocks {
 		// Get message to sign
 		msgToSign := getMsgToSignForVote(b.Height, b.Hash)
-		sigRecord, sigRecordUnsafe, err := fp.em.SignEOTSBoth(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
+		sigRecord, sigRecordLegacy, err := fp.em.SignEOTSBoth(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate EOTS signatures: %w", err)
 		}
 		sigList = append(sigList, sigRecord.Sig)
 		prList = append(prList, sigRecord.PubRand)
-		sigListUnsafe = append(sigListUnsafe, sigRecordUnsafe.Sig)
-		prListUnsafe = append(prListUnsafe, sigRecordUnsafe.PubRand)
+		sigListLegacy = append(sigListLegacy, sigRecordLegacy.Sig)
+		prListLegacy = append(prListLegacy, sigRecordLegacy.PubRand)
 	}
 
-	// Try unsafe version first
-	res, err := fp.sendFinalitySigs(blocks, prListUnsafe, proofList, sigListUnsafe)
+	// Try legacy version first
+	res, err := fp.sendFinalitySigs(blocks, prListLegacy, proofList, sigListLegacy)
 	if err == nil {
-		fp.logger.Info("success in sending unsafe version of EOTS sigs")
+		fp.logger.Info("success in sending legacy version of EOTS sigs")
 		return res, nil
 	}
 
-	fp.logger.Info("failed in sending unsafe version of EOTS sigs, trying the safe version")
+	fp.logger.Info("failed in sending legacy version of EOTS sigs, trying the current version")
 
 	res, err = fp.sendFinalitySigs(blocks, prList, proofList, sigList)
 	if err != nil {
-		fp.logger.Info("failed in sending safe version of EOTS sigs, both signature versions failed")
+		fp.logger.Info("failed in sending the current version of EOTS sigs, both signature versions failed")
 		return nil, err
 	}
 
-	fp.logger.Info("success in sending safe version of EOTS sigs")
+	fp.logger.Info("success in sending the current version of EOTS sigs")
 
 	return res, nil
 }

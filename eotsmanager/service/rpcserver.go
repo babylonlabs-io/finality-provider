@@ -75,7 +75,7 @@ func (r *rpcServer) SignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 // SignEOTSBoth signs an EOTS with the EOTS private key and the relevant randomness
 func (r *rpcServer) SignEOTSBoth(_ context.Context, req *proto.SignEOTSBothRequest) (
 	*proto.SignEOTSBothResponse, error) {
-	eotsRecord, eotsRecordUnsafe, err := r.em.SignEOTSBoth(req.Uid, req.ChainId, req.Msg, req.Height)
+	eotsRecord, eotsRecordLegacy, err := r.em.SignEOTSBoth(req.Uid, req.ChainId, req.Msg, req.Height)
 	if err != nil {
 		return nil, err
 	}
@@ -83,14 +83,14 @@ func (r *rpcServer) SignEOTSBoth(_ context.Context, req *proto.SignEOTSBothReque
 	sigBytes := eotsRecord.Sig.Bytes()
 	pubRandBytes := eotsRecord.PubRand.Bytes()
 
-	sigBytesUnsafe := eotsRecordUnsafe.Sig.Bytes()
-	pubRandBytesUnsafe := eotsRecordUnsafe.PubRand.Bytes()
+	sigBytesLegacy := eotsRecordLegacy.Sig.Bytes()
+	pubRandBytesLegacy := eotsRecordLegacy.PubRand.Bytes()
 
 	return &proto.SignEOTSBothResponse{
 		Sig:           sigBytes[:],
 		PubRand:       pubRandBytes[:],
-		SigUnsafe:     sigBytesUnsafe[:],
-		PubRandUnsafe: pubRandBytesUnsafe[:],
+		SigLegacy:     sigBytesLegacy[:],
+		PubRandLegacy: pubRandBytesLegacy[:],
 	}, nil
 }
 

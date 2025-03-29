@@ -291,17 +291,17 @@ func (lm *LocalEOTSManager) SignEOTSBoth(eotsPk []byte, chainID []byte, msg []by
 		PubRand: pubRand,
 	}
 
-	// 2. generate rand pair and sign using unsafe rand generator
-	privRandUnsafe, pubRandUnsafe := randgenerator.GenerateRandomnessUnsafe(keyRecord.PrivKey.Serialize(), chainID, height)
+	// 2. generate rand pair and sign using legacy rand generator
+	privRandLegacy, pubRandLegacy := randgenerator.GenerateRandomnessLegacy(keyRecord.PrivKey.Serialize(), chainID, height)
 
-	sigUnsafe, err := eots.Sign(privKey, privRandUnsafe, msg)
+	sigLegacy, err := eots.Sign(privKey, privRandLegacy, msg)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to sign eots unsafe")
+		return nil, nil, fmt.Errorf("failed to sign eots legacy")
 	}
 
-	eotsRecordUnsafe := &eotstypes.EOTSRecord{
-		Sig:     sigUnsafe,
-		PubRand: pubRandUnsafe,
+	eotsRecordLegacy := &eotstypes.EOTSRecord{
+		Sig:     sigLegacy,
+		PubRand: pubRandLegacy,
 	}
 
 	// save the sign record as the placeholder
@@ -311,7 +311,7 @@ func (lm *LocalEOTSManager) SignEOTSBoth(eotsPk []byte, chainID []byte, msg []by
 		return nil, nil, fmt.Errorf("failed to save signing record: %w", err)
 	}
 
-	return eotsRecord, eotsRecordUnsafe, nil
+	return eotsRecord, eotsRecordLegacy, nil
 }
 
 // UnsafeSignEOTS should only be used in e2e test to demonstrate double sign

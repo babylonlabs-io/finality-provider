@@ -39,7 +39,7 @@ type EOTSManager interface {
 	// or passPhrase is incorrect. Has built-in anti-slashing mechanism to ensure signature
 	// for the same height will not be signed twice.
 	// NOTE: it will return both EOTS signature and the corresponding public rand
-	// by using a safe rand generator and an unsafe one, respectively
+	// by using a rand generator and a legacy one, respectively
 	// this is for backward compatibility, will be deprecated soon
 	SignEOTSBoth(uid []byte, chainID []byte, msg []byte, height uint64) (*types.EOTSRecord, *types.EOTSRecord, error)
 

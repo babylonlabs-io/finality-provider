@@ -97,11 +97,11 @@ message SignEOTSBothResponse {
   bytes sig = 1;
   // pub_rand is the EOTS public randomness
   bytes pub_rand = 2;
-  // sig_unsafe is the EOTS signature signed using pub_rand_unsafe
-  bytes sig_unsafe = 3;
-  // pub_rand_unsafe is the EOTS public randomness generated
-  // by unsafe rand generator
-  bytes pub_rand_unsafe = 4;
+  // sig_legacy is the EOTS signature signed using pub_rand_legacy
+  bytes sig_legacy = 3;
+  // pub_rand_legacy is the EOTS public randomness generated
+  // by legacy rand generator
+  bytes pub_rand_legacy = 4;
 }
 
 message SignSchnorrSigRequest {

@@ -142,18 +142,18 @@ func (c *EOTSManagerGRpcClient) SignEOTSBoth(uid, chaiID, msg []byte, height uin
 		PubRand: &pubrand,
 	}
 
-	var sUnsafe btcec.ModNScalar
-	sUnsafe.SetByteSlice(res.SigUnsafe)
+	var sLegacy btcec.ModNScalar
+	sLegacy.SetByteSlice(res.SigLegacy)
 
-	var pubrandUnsafe btcec.FieldVal
-	pubrandUnsafe.SetByteSlice(res.PubRandUnsafe)
+	var pubrandLegacy btcec.FieldVal
+	pubrandLegacy.SetByteSlice(res.PubRandLegacy)
 
-	eotsRecordUnsafe := &types.EOTSRecord{
-		Sig:     &sUnsafe,
-		PubRand: &pubrandUnsafe,
+	eotsRecordLegacy := &types.EOTSRecord{
+		Sig:     &sLegacy,
+		PubRand: &pubrandLegacy,
 	}
 
-	return eotsRecord, eotsRecordUnsafe, nil
+	return eotsRecord, eotsRecordLegacy, nil
 }
 
 func (c *EOTSManagerGRpcClient) UnsafeSignEOTS(uid, chaiID, msg []byte, height uint64) (*btcec.ModNScalar, error) {

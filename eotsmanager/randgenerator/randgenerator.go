@@ -41,12 +41,12 @@ func GenerateRandomness(key []byte, chainID []byte, height uint64) (*eots.Privat
 	return &privRand.Key, &j.X
 }
 
-// GenerateRandomnessUnsafe generates a random scalar with the given key and src
+// GenerateRandomnessLegacy generates a random scalar with the given key and src
 // the result is deterministic with each given input
 // NOTE: keeping it is for backward compatibility
 //
 //	this will be deprecated soon
-func GenerateRandomnessUnsafe(key []byte, chainID []byte, height uint64) (*eots.PrivateRand, *eots.PublicRand) {
+func GenerateRandomnessLegacy(key []byte, chainID []byte, height uint64) (*eots.PrivateRand, *eots.PublicRand) {
 	// calculate the random hash of the key concatenated with chainID and height
 	digest := hmac.New(sha256.New, key)
 	digest.Write(append(sdk.Uint64ToBigEndian(height), chainID...))
