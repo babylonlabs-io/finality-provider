@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/cometbft/cometbft/crypto/tmhash"
 	"os"
 	"strconv"
 	"strings"
@@ -382,6 +383,14 @@ func CommandAddFinalitySig() *cobra.Command {
 	cmd.Flags().String(appHashFlag, "", "The last commit hash of the chain block")
 	cmd.Flags().Bool(checkDoubleSignFlag, true, "If 'true', uses anti-slashing protection when doing EOTS sign")
 
+	if err := cmd.MarkFlagRequired(fpdDaemonAddressFlag); err != nil {
+		panic(err)
+	}
+
+	if err := cmd.MarkFlagRequired(appHashFlag); err != nil {
+		panic(err)
+	}
+
 	return cmd
 }
 
@@ -410,6 +419,15 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("app hash is required")
 	}
 
+	appHash, err := hex.DecodeString(appHashHex)
+	if err != nil {
+		return fmt.Errorf("failed to decode app hash: %w", err)
+	}
+
+	if len(appHash) != tmhash.Size {
+		return fmt.Errorf("invalid app hash length: got %d bytes, expected 32 bytes", len(appHash))
+	}
+
 	checkDoubleSign, err := flags.GetBool(checkDoubleSignFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", checkDoubleSignFlag, err)
@@ -424,11 +442,6 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 			fmt.Printf("Failed to clean up grpc client: %v\n", err)
 		}
 	}()
-
-	appHash, err := hex.DecodeString(appHashHex)
-	if err != nil {
-		return fmt.Errorf("failed to decode app hash: %w", err)
-	}
 
 	res, err := client.AddFinalitySignature(cmd.Context(), fpPk.MarshalHex(), blkHeight, appHash, checkDoubleSign)
 	if err != nil {
