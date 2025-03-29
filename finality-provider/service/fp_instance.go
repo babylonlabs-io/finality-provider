@@ -1,6 +1,8 @@
 package service
 
 import (
+	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
@@ -12,6 +14,9 @@ import (
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/cometbft/cometbft/crypto/merkle"
+	"github.com/cometbft/cometbft/crypto/tmhash"
+	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 	"github.com/gogo/protobuf/jsonpb"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -740,7 +745,6 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignaturesBoth(blocks []*
 		uint64(numPubRand),
 	)
 	if err != nil {
-
 		return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w\nplease recover the randomness proof from db", err)
 	}
 
@@ -748,7 +752,6 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignaturesBoth(blocks []*
 	// we cannot send blocks in a batch in case one failure will cause the whole batch fail
 	res, err := fp.trySendTwoVersionFinalitySigs(blocks, proofBytesList)
 	if err != nil {
-
 		return nil, err
 	}
 
@@ -759,42 +762,57 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignaturesBoth(blocks []*
 	return res, nil
 }
 
-// trySendTwoVersionFinalitySigs attempts to send finality signatures using both current and legacy versions
-// Returns the transaction response and any error encountered
 func (fp *FinalityProviderInstance) trySendTwoVersionFinalitySigs(blocks []*types.BlockInfo, proofList [][]byte) (*types.TxResponse, error) {
 	sigList := make([]*btcec.ModNScalar, 0, len(blocks))
 	prList := make([]*btcec.FieldVal, 0, len(blocks))
-	sigListLegacy := make([]*btcec.ModNScalar, 0, len(blocks))
-	prListLegacy := make([]*btcec.FieldVal, 0, len(blocks))
-	for _, b := range blocks {
+	for i, b := range blocks {
 		// Get message to sign
 		msgToSign := getMsgToSignForVote(b.Height, b.Hash)
 		sigRecord, sigRecordLegacy, err := fp.em.SignEOTSBoth(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate EOTS signatures: %w", err)
 		}
-		sigList = append(sigList, sigRecord.Sig)
-		prList = append(prList, sigRecord.PubRand)
-		sigListLegacy = append(sigListLegacy, sigRecordLegacy.Sig)
-		prListLegacy = append(prListLegacy, sigRecordLegacy.PubRand)
+
+		// recover the proof to verify which version of pub rand is used
+		cmtProof := cmtcrypto.Proof{}
+		if err := cmtProof.Unmarshal(proofList[i]); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal proof: %w", err)
+		}
+		unwrappedProof, err := merkle.ProofFromProto(&cmtProof)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unwrap proof")
+		}
+
+		// try the current version first
+		prBytes := sigRecord.PubRand.Bytes()
+		leafHash := tmhash.Sum(append([]byte{0}, prBytes[:]...))
+		prBytesLegacy := sigRecordLegacy.PubRand.Bytes()
+		leafHashLegacy := tmhash.Sum(append([]byte{0}, prBytesLegacy[:]...))
+
+		switch {
+		case bytes.Equal(unwrappedProof.LeafHash, leafHash):
+			sigList = append(sigList, sigRecord.Sig)
+			prList = append(prList, sigRecord.PubRand)
+			fp.logger.Info("using the current version of randomness",
+				zap.String("pub_rand", hex.EncodeToString(prBytes[:])))
+
+		case bytes.Equal(unwrappedProof.LeafHash, leafHashLegacy):
+			sigList = append(sigList, sigRecordLegacy.Sig)
+			prList = append(prList, sigRecordLegacy.PubRand)
+			fp.logger.Info("current version failed, using the legacy version",
+				zap.String("pub_rand", hex.EncodeToString(prBytesLegacy[:])))
+
+		default:
+			return nil, fmt.Errorf(
+				"the proof does not match with neither versions, current version: %x, legacy version: %x, leaf hash: %x, height: %d",
+				prBytes, prBytesLegacy, unwrappedProof.LeafHash, b.Height)
+		}
 	}
 
-	// Try legacy version first
-	res, err := fp.sendFinalitySigs(blocks, prListLegacy, proofList, sigListLegacy)
-	if err == nil {
-		fp.logger.Info("success in sending legacy version of EOTS sigs")
-		return res, nil
-	}
-
-	fp.logger.Info("failed in sending legacy version of EOTS sigs, trying the current version")
-
-	res, err = fp.sendFinalitySigs(blocks, prList, proofList, sigList)
+	res, err := fp.sendFinalitySigs(blocks, prList, proofList, sigList)
 	if err != nil {
-		fp.logger.Info("failed in sending the current version of EOTS sigs, both signature versions failed")
-		return nil, err
+		return nil, fmt.Errorf("failed to send finality signatures: %w", err)
 	}
-
-	fp.logger.Info("success in sending the current version of EOTS sigs")
 
 	return res, nil
 }
