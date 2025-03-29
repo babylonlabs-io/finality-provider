@@ -731,22 +731,19 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignaturesBoth(blocks []*
 		return nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
 	}
 
-	// #nosec G115 -- performed the conversion check above
-	// get proof list
-	// TODO: how to recover upon having an error in getPubRandProofList?
-	proofBytes, err := fp.pubRandState.getPubRandProof(
-		fp.btcPk.MustMarshal(),
-		fp.GetChainID(),
-		blocks[0].Height,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w\nplease recover the randomness proof from db", err)
-	}
-
 	// sign block and send one-by-one
 	// we cannot send blocks in a batch in case one failure will cause the whole batch fail
 	var res *types.TxResponse
 	for _, b := range blocks {
+		proofBytes, err := fp.pubRandState.getPubRandProof(
+			fp.btcPk.MustMarshal(),
+			fp.GetChainID(),
+			b.Height,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w\nplease recover the randomness proof from db", err)
+		}
+
 		res, err = fp.trySendTwoVersionFinalitySigs(b, proofBytes)
 		if err != nil {
 			return nil, err
@@ -759,7 +756,73 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignaturesBoth(blocks []*
 	return res, nil
 }
 
-func (fp *FinalityProviderInstance) trySendFinalitySig(block *types.BlockInfo, pubRand *btcec.FieldVal, proof []byte, sig *btcec.ModNScalar) (*types.TxResponse, error) {
+// trySendTwoVersionFinalitySigs attempts to send finality signatures using both unsafe and safe versions
+// Returns the transaction response and any error encountered
+func (fp *FinalityProviderInstance) trySendTwoVersionFinalitySigs(block *types.BlockInfo, proof []byte) (*types.TxResponse, error) {
+	// Get message to sign
+	msgToSign := getMsgToSignForVote(block.Height, block.Hash)
+
+	// Generate both signature versions
+	sigRecord, sigRecordUnsafe, err := fp.em.SignEOTSBoth(
+		fp.btcPk.MustMarshal(),
+		fp.GetChainID(),
+		msgToSign,
+		block.Height,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate EOTS signatures: %w", err)
+	}
+
+	// Try unsafe version first
+	res, err := fp.trySignatureVersion(block, sigRecordUnsafe.PubRand, proof, sigRecordUnsafe.Sig, "unsafe")
+	if err == nil {
+		return res, nil
+	}
+
+	res, err = fp.trySignatureVersion(block, sigRecord.PubRand, proof, sigRecord.Sig, "safe")
+	if err != nil {
+		return nil, fmt.Errorf("both signature versions failed: %w", err)
+	}
+
+	return res, nil
+}
+
+// trySignatureVersion attempts to send a single version of the finality signature
+func (fp *FinalityProviderInstance) trySignatureVersion(
+	block *types.BlockInfo,
+	pubRand *btcec.FieldVal,
+	proof []byte,
+	sig *btcec.ModNScalar,
+	version string,
+) (*types.TxResponse, error) {
+	res, err := fp.sendFinalitySig(block, pubRand, proof, sig)
+	if err != nil {
+		pubRandBytes := pubRand.Bytes()
+		sigBytes := sig.Bytes()
+		fp.logger.Error(fmt.Sprintf("failed sending %s version of finality signature", version),
+			zap.String("pk", fp.GetBtcPkHex()),
+			zap.Uint64("height", block.Height),
+			zap.String("pub_rand", hex.EncodeToString(pubRandBytes[:])),
+			zap.String("proof", hex.EncodeToString(proof)),
+			zap.String("sig", hex.EncodeToString(sigBytes[:])),
+			zap.Error(err),
+		)
+
+		return nil, err
+	}
+
+	if res != nil {
+		fp.logger.Info(fmt.Sprintf("successfully sent %s version of finality signature", version),
+			zap.String("pk", fp.GetBtcPkHex()),
+			zap.Uint64("height", block.Height),
+			zap.String("tx_id", res.TxHash),
+		)
+	}
+
+	return res, nil
+}
+
+func (fp *FinalityProviderInstance) sendFinalitySig(block *types.BlockInfo, pubRand *btcec.FieldVal, proof []byte, sig *btcec.ModNScalar) (*types.TxResponse, error) {
 	res, err := fp.cc.SubmitFinalitySig(fp.GetBtcPk(), block, pubRand, proof, sig)
 	if err != nil {
 		if strings.Contains(err.Error(), "jailed") {
@@ -770,54 +833,6 @@ func (fp *FinalityProviderInstance) trySendFinalitySig(block *types.BlockInfo, p
 		}
 
 		return nil, err
-	}
-
-	return res, nil
-}
-
-func (fp *FinalityProviderInstance) trySendTwoVersionFinalitySigs(block *types.BlockInfo, proof []byte) (*types.TxResponse, error) {
-	msgToSign := getMsgToSignForVote(block.Height, block.Hash)
-	sigRecord, sigRecordUnsafe, err := fp.em.SignEOTSBoth(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, block.Height)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sign EOTS: %w", err)
-	}
-
-	// try to send finality signature unsafe version first
-	res, err := fp.trySendFinalitySig(block, sigRecordUnsafe.PubRand, proof, sigRecordUnsafe.Sig)
-	if err != nil {
-		pubRandUnsafeBytes := sigRecordUnsafe.PubRand.Bytes()
-		sigUnsafeBytes := sigRecordUnsafe.Sig.Bytes()
-		fp.logger.Info(
-			"failed sending the unsafe version of finality signature, trying with the safe version",
-			zap.String("pub_rand", hex.EncodeToString(pubRandUnsafeBytes[:])),
-			zap.String("proof", hex.EncodeToString(proof)),
-			zap.String("sig", hex.EncodeToString(sigUnsafeBytes[:])),
-		)
-		// if failed, try to send finality signature safe version
-		res, err = fp.trySendFinalitySig(block, sigRecord.PubRand, proof, sigRecord.Sig)
-		if err != nil {
-			pubRandBytes := sigRecord.PubRand.Bytes()
-			sigBytes := sigRecord.Sig.Bytes()
-			fp.logger.Error(
-				"failed sending the safe version of finality signature",
-				zap.String("pub_rand", hex.EncodeToString(pubRandBytes[:])),
-				zap.String("proof", hex.EncodeToString(proof)),
-				zap.String("sig", hex.EncodeToString(sigBytes[:])),
-			)
-
-			return nil, err
-		}
-		if res != nil {
-			fp.logger.Info(
-				"successfully sent the safe version of finality signature",
-				zap.String("tx_id", res.TxHash),
-			)
-		}
-	} else if res != nil {
-		fp.logger.Info(
-			"successfully sent the unsafe version of finality signature",
-			zap.String("tx_id", res.TxHash),
-		)
 	}
 
 	return res, nil
