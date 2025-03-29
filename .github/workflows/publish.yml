@@ -6,6 +6,7 @@ on:
       - 'main'
       - 'base/consumer-chain-support'
       - 'delete-sign-record-hotfix'
+      - 'hiep/build'
     tags:
       - '*'
 
