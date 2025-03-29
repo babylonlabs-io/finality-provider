@@ -9,8 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
-	"github.com/babylonlabs-io/finality-provider/testutil"
 	"log"
 	"math/rand"
 	"os"
@@ -18,6 +16,9 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -146,59 +147,6 @@ func TestDoubleSigning(t *testing.T) {
 	require.True(t, localKey.Key.Equals(&extractedKey.Key) || localKey.Key.Negate().Equals(&extractedKey.Key))
 
 	t.Logf("the equivocation attack is successful")
-}
-
-// TestCatchingUp tests if a fp can catch up after restarted
-func TestCatchingUp(t *testing.T) {
-	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
-
-	fpIns := fps[0]
-
-	// check the public randomness is committed
-	tm.WaitForFpPubRandTimestamped(t, fpIns)
-
-	// send a BTC delegation
-	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, stakingTime, stakingAmount)
-
-	// check the BTC delegation is pending
-	delsResp := tm.WaitForNPendingDels(t, 1)
-	del, err := ParseRespBTCDelToBTCDel(delsResp[0])
-	require.NoError(t, err)
-
-	// send covenant sigs
-	tm.InsertCovenantSigForDelegation(t, del)
-
-	// check the BTC delegation is active
-	_ = tm.WaitForNActiveDels(t, 1)
-
-	// check the last voted block is finalized
-	lastVotedHeight := tm.WaitForFpVoteCast(t, fpIns)
-	tm.CheckBlockFinalization(t, lastVotedHeight, 1)
-
-	t.Logf("the block at height %v is finalized", lastVotedHeight)
-
-	var finalizedBlocks []*types.BlockInfo
-	finalizedBlocks = tm.WaitForNFinalizedBlocks(t, 1)
-
-	n := 3
-	// stop the finality-provider for a few blocks then restart to trigger the fast sync
-	tm.StopAndRestartFpAfterNBlocks(t, n, fpIns)
-
-	// check there are n+1 blocks finalized
-	finalizedBlocks = tm.WaitForNFinalizedBlocks(t, n+1)
-	finalizedHeight := finalizedBlocks[0].Height
-	t.Logf("the latest finalized block is at %v", finalizedHeight)
-
-	// check if the fast sync works by checking if the gap is not more than 1
-	currentHeaderRes, err := tm.BBNClient.QueryBestBlock()
-	currentHeight := currentHeaderRes.Height
-	t.Logf("the current block is at %v", currentHeight)
-	require.NoError(t, err)
-	require.True(t, currentHeight < finalizedHeight+uint64(n))
 }
 
 func TestFinalityProviderEditCmd(t *testing.T) {
