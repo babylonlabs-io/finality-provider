@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/cometbft/cometbft/crypto/tmhash"
 	"os"
 	"strconv"
 	"strings"
@@ -26,7 +27,6 @@ import (
 
 var (
 	defaultFpdDaemonAddress = "127.0.0.1:" + strconv.Itoa(fpcfg.DefaultRPCPort)
-	defaultAppHashStr       = "fd903d9baeb3ab1c734ee003de75f676c5a9a8d0574647e5385834d57d3e79ec"
 )
 
 // CommandGetDaemonInfo returns the get-info command by connecting to the fpd daemon.
@@ -380,8 +380,16 @@ func CommandAddFinalitySig() *cobra.Command {
 		RunE:    runCommandAddFinalitySig,
 	}
 	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
-	cmd.Flags().String(appHashFlag, defaultAppHashStr, "The last commit hash of the chain block")
+	cmd.Flags().String(appHashFlag, "", "The last commit hash of the chain block")
 	cmd.Flags().Bool(checkDoubleSignFlag, true, "If 'true', uses anti-slashing protection when doing EOTS sign")
+
+	if err := cmd.MarkFlagRequired(fpdDaemonAddressFlag); err != nil {
+		panic(err)
+	}
+
+	if err := cmd.MarkFlagRequired(appHashFlag); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -407,6 +415,19 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", appHashFlag, err)
 	}
 
+	if len(appHashHex) == 0 {
+		return fmt.Errorf("app hash is required")
+	}
+
+	appHash, err := hex.DecodeString(appHashHex)
+	if err != nil {
+		return fmt.Errorf("failed to decode app hash: %w", err)
+	}
+
+	if len(appHash) != tmhash.Size {
+		return fmt.Errorf("invalid app hash length: got %d bytes, expected 32 bytes", len(appHash))
+	}
+
 	checkDoubleSign, err := flags.GetBool(checkDoubleSignFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", checkDoubleSignFlag, err)
@@ -414,7 +435,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create grpc client: %w", err)
 	}
 	defer func() {
 		if err := cleanUp(); err != nil {
@@ -422,12 +443,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	appHash, err := hex.DecodeString(appHashHex)
-	if err != nil {
-		return err
-	}
-
-	res, err := client.AddFinalitySignature(context.Background(), fpPk.MarshalHex(), blkHeight, appHash, checkDoubleSign)
+	res, err := client.AddFinalitySignature(cmd.Context(), fpPk.MarshalHex(), blkHeight, appHash, checkDoubleSign)
 	if err != nil {
 		return err
 	}
@@ -769,6 +785,6 @@ func getCommissionRates(rateStr, maxRateStr, maxChangeRateStr string) (*proto.Co
 	if err != nil {
 		return nil, fmt.Errorf("invalid commission max change rate: %w", err)
 	}
-	
+
 	return proto.NewCommissionRates(rate, maxRate, maxRateChange), nil
 }
