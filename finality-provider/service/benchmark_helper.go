@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
@@ -28,7 +29,7 @@ func (fp *FinalityProviderInstance) HelperCommitPubRand(tipHeight uint64) (*type
 	case lastCommittedHeight == uint64(0):
 		// the finality-provider has never submitted public rand before
 		startHeight = tipHeight + 1
-	case lastCommittedHeight < uint64(fp.cfg.TimestampingDelayBlocks)+tipHeight:
+	case lastCommittedHeight < uint64(config.TimestampingDelayBlocks)+tipHeight:
 		// (should not use subtraction because they are in the type of uint64)
 		// we are running out of the randomness
 		startHeight = lastCommittedHeight + 1

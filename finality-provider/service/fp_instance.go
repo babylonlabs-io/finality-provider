@@ -348,7 +348,7 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop() {
 
 	fp.processRandomnessCommitment()
 
-	ticker := time.NewTicker(fp.cfg.RandomnessCommitInterval)
+	ticker := time.NewTicker(fpcfg.RandCommitInterval)
 	defer ticker.Stop()
 
 	for {
@@ -412,7 +412,7 @@ func (fp *FinalityProviderInstance) ShouldCommitRandomness() (bool, uint64, erro
 		return false, 0, fmt.Errorf("failed to get the last block: %w", err)
 	}
 
-	tipHeightWithDelay := tipHeight + uint64(fp.cfg.TimestampingDelayBlocks)
+	tipHeightWithDelay := tipHeight + uint64(fpcfg.TimestampingDelayBlocks)
 
 	var startHeight uint64
 	switch {

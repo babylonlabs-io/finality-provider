@@ -104,9 +104,6 @@ func DefaultFpConfig(keyringDir, homeDir string) *config.Config {
 	cfg := config.DefaultConfigWithHome(homeDir)
 
 	cfg.NumPubRand = 1000
-	cfg.NumPubRandMax = 1000
-	cfg.TimestampingDelayBlocks = 0
-
 	cfg.BitcoinNetwork = "simnet"
 	cfg.BTCNetParams = chaincfg.SimNetParams
 

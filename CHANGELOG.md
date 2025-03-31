@@ -52,6 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#399](https://github.com/babylonlabs-io/finality-provider/pull/399) chore: submit immediately
 * [#410](https://github.com/babylonlabs-io/finality-provider/pull/410) chore: rollback sign records from eots store
 * [#413](https://github.com/babylonlabs-io/finality-provider/pull/413) chore: rm default value for app hash flag
+* [#417](https://github.com/babylonlabs-io/finality-provider/pull/417) chore: Modify default config and add validation
 
 ## v1.0.0-rc.2
 
