@@ -73,8 +73,8 @@ Recommended specifications for running a Babylon Finality Provider:
 * Storage: 50GB SSD/NVMe
 * Network: Stable internet connection
 * Security:
-    * Encrypted storage for keys and sensitive data
-    * Regular system backups
+  * Encrypted storage for keys and sensitive data
+  * Regular system backups
 
 These are the minimum specifications for running a finality provider.
 Requirements may vary based on network activity and your operational needs.
@@ -525,18 +525,19 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > The finality provider can only vote for blocks for which it has submitted
 > public randomness for. Further, for the randomness to be available for use,
 > it should have been committed in a Babylon Genesis block that has been
-> timestamped sufficiently enough in the Bitcoin network.
+> confirmed with sufficient depth on the Bitcoin network.
 >
 > The configuration enables operators to choose how much randomness they commit
 > each time and what estimations they should perform to target their
 > randomness activating at a desired height.
+>
 > * `NumPubRand` determines the number of public randomness entries
 >   generated and committed per batch. The default value is set to `50,000`, which is
 >   approx. 5 days of operation with 10 second intervals (the current target
 >   block time for the testnet and mainnet).
->    * The codebase enforces a minimum of 1800 of `NumPubRand` and a maximum of
+>   * The codebase enforces a minimum of 1800 of `NumPubRand` and a maximum of
 >      `500000`.
->    * An increased value leads to less frequent commits and less gas usage,
+>   * An increased value leads to less frequent commits and less gas usage,
 >      but it leads to longer computation times whenever a commit should be
 >      created.
 > * `TimestampingDelayBlocks` defines an estimation
@@ -546,7 +547,7 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 >   which corresponds to 300 Bitcoin blocks being generated (the finalization
 >   target for mainnet) and Babylon Genesis having a 10s block time (the target
 >   block time for testnet and mainnet).
->    * *Note: This value should be selected according to the network you
+>   * *Note: This value should be selected according to the network you
 >      connect to and its parameters. For example, for testnet, with the
 >      finalization target being set to 100 Bitcoin blocks, a value of 6,000 is
 >      more appropriate*
@@ -1081,6 +1082,7 @@ randomness used in the signature is already committed on Babylon. Loss of
 public randomness proof leads to direct failure of the vote submission.
 
 To recover the public randomness proof, the following steps should be followed:
+
 1. Ensure the `fpd` is stopped.
 2. Unjail your finality provider if needed.
 3. Run the recovery command
