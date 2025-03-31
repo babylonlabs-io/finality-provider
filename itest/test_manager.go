@@ -812,7 +812,7 @@ func defaultFpConfig(keyringDir, homeDir string) *fpcfg.Config {
 
 	cfg.NumPubRand = fpcfg.MinPubRand
 	// to have faster finality activation
-	cfg.TimestampingDelayBlocks = 0
+	cfg.TimestampingDelayBlocks = 1
 
 	cfg.BitcoinNetwork = "simnet"
 	cfg.BTCNetParams = chaincfg.SimNetParams

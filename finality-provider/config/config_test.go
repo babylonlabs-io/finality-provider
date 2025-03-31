@@ -107,6 +107,7 @@ func TestConfig_Validate(t *testing.T) {
 			cfg: &config.Config{
 				SignatureSubmissionInterval: time.Second,
 				SubmissionRetryInterval:     time.Second,
+				TimestampingDelayBlocks:     1,
 				BatchSubmissionSize:         100,
 				MaxSubmissionRetries:        50,
 				NumPubRand:                  config.MinPubRand,

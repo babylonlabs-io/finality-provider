@@ -32,6 +32,12 @@ const (
 	defaultMaxSubmissionRetries        = 20
 	defaultBitcoinNetwork              = "signet"
 	defaultDataDirname                 = "data"
+	// TimestampingDelayBlocks is the delay for a commit to become available due to BTC timestamping protocol
+	// it is calculated by converting BTC block time (parameter w=300) to Babylon Genesis block time
+	// 300 BTC blocks * 600s / 10s where 300 BTC blocks is the system parameter of BTC block time required
+	// by the btc timestamping protocol.
+	// for testnet with w=100, the recommended default value is 6000
+	defaultTimestampingDelayBlocks = 18000
 )
 
 // Constants for system parameters validation limits
@@ -46,12 +52,6 @@ const (
 	// MinPubRand is the minimum allowed number of public randomness in each commit
 	// a commit with less than this value will be rejected by Babylon Genesis
 	MinPubRand = 8192
-	// TimestampingDelayBlocks is the delay for a commit to become available due to BTC timestamping protocol
-	// it is calculated by converting BTC block time (parameter w=300) to Babylon Genesis block time
-	// 300 BTC blocks * 600s / 10s where 300 BTC blocks is the system parameter of BTC block time required
-	// by the btc timestamping protocol. Adding 12,000 as a buffer in case 300 BTC blocks come with more than
-	// 10min of average time
-	TimestampingDelayBlocks = 18000 + 12000
 	// RandCommitInterval is the interval between each check of whether a new commit needs to be made,
 	// technically this could be a large value depending on NumPubRand, but hardcode a small value for safety
 	RandCommitInterval = 30 * time.Second // Interval between check of randomness commit
@@ -75,15 +75,13 @@ type Config struct {
 	// ChainType and ChainID (if any) of the chain config identify a consumer chain
 	ChainType                   string        `long:"chaintype" description:"the type of the consumer chain" choice:"babylon"`
 	NumPubRand                  uint32        `long:"numPubRand" description:"The number of Schnorr public randomness for each commitment"`
+	TimestampingDelayBlocks     uint32        `long:"timestampingdelayblocks" description:"The delay, measured in blocks, between a randomness commit submission and the randomness is BTC-timestamped"`
 	MaxSubmissionRetries        uint32        `long:"maxsubmissionretries" description:"The maximum number of retries to submit finality signature or public randomness"`
 	EOTSManagerAddress          string        `long:"eotsmanageraddress" description:"The address of the remote EOTS manager; Empty if the EOTS manager is running locally"`
 	HMACKey                     string        `long:"hmackey" description:"The HMAC key for authentication with EOTSD. If not provided, will use HMAC_KEY environment variable."`
 	BatchSubmissionSize         uint32        `long:"batchsubmissionsize" description:"The size of a batch in one submission"`
 	SubmissionRetryInterval     time.Duration `long:"submissionretryinterval" description:"The interval between each attempt to submit finality signature or public randomness after a failure"`
 	SignatureSubmissionInterval time.Duration `long:"signaturesubmissioninterval" description:"The interval between each finality signature(s) submission"`
-
-	// not configurable in config file but still keep it here to allow inserting value for e2e tests
-	TimestampingDelayBlocks uint32
 
 	BitcoinNetwork string `long:"bitcoinnetwork" description:"Bitcoin network to run on" choice:"mainnet" choice:"regtest" choice:"testnet" choice:"simnet" choice:"signet"`
 
@@ -111,7 +109,7 @@ func DefaultConfigWithHome(homePath string) Config {
 		DatabaseConfig:              DefaultDBConfigWithHomePath(homePath),
 		BabylonConfig:               &bbnCfg,
 		PollerConfig:                &pollerCfg,
-		TimestampingDelayBlocks:     TimestampingDelayBlocks,
+		TimestampingDelayBlocks:     defaultTimestampingDelayBlocks,
 		NumPubRand:                  defaultNumPubRand,
 		BatchSubmissionSize:         defaultBatchSubmissionSize,
 		SubmissionRetryInterval:     defaultSubmitRetryInterval,
@@ -175,8 +173,6 @@ func LoadConfig(homePath string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	cfg.TimestampingDelayBlocks = TimestampingDelayBlocks
 
 	// Make sure everything we just loaded makes sense.
 	if err := cfg.Validate(); err != nil {
@@ -265,6 +261,9 @@ func (cfg *Config) validateBatchAndRetryConfigs() error {
 	}
 	if cfg.NumPubRand > MaxPubRand {
 		return fmt.Errorf("number of public randomness must not exceed %d, got %d", MaxPubRand, cfg.NumPubRand)
+	}
+	if cfg.TimestampingDelayBlocks <= 0 {
+		return fmt.Errorf("timestamping delay blocks should be positive")
 	}
 
 	return nil
