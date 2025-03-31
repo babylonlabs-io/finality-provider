@@ -494,11 +494,11 @@ The output should look similar to the one below:
 
 ### 5.3. Configure Your Finality Provider
 
-Once you've initialised the finality provider and added your Babylon key,
-you must configure your finality provider by editing the `fpd.conf` file in
-your daemon's home directory.
+Once the finality provider initialised and keys are added/created,
+the  `fpd.conf` file located in the daemon's home directory must be configured
+with the below minimal parameters.
 
-This configuration controls how your finality provider communicates with the
+The configuration controls how the finality provider communicates with the
 EOTS manager, the Babylon chain, and manages the keyring and RPC interfaces.
 
 #### 5.3.1 Minimal Configuration Example
