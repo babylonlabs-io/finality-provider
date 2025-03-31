@@ -501,8 +501,6 @@ with the below minimal parameters.
 The configuration controls how the finality provider communicates with the
 EOTS manager, the Babylon chain, and manages the keyring and RPC interfaces.
 
-#### 5.3.1 Minimal Configuration Example
-
 The following is an example of the `fpd.conf` file:
 
 ```shell
