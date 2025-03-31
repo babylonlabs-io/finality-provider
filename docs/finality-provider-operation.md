@@ -580,10 +580,6 @@ Please verify the `chain-id` and other network parameters from the official
 [Babylon Networks
 repository](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/).
 
-`RandCommitInterval = 30s` is the polling interval for the finality provider to
-whether a new public randomness should be committed. It is intentially kept
-small to ensure timely commit checks.
-
 ### 5.4. Starting the Finality Provider Daemon
 
 The finality provider daemon (FPD) needs to be running before proceeding with
