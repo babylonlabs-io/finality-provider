@@ -73,8 +73,8 @@ Recommended specifications for running a Babylon Finality Provider:
 * Storage: 50GB SSD/NVMe
 * Network: Stable internet connection
 * Security:
-    * Encrypted storage for keys and sensitive data
-    * Regular system backups
+  * Encrypted storage for keys and sensitive data
+  * Regular system backups
 
 These are the minimum specifications for running a finality provider.
 Requirements may vary based on network activity and your operational needs.
@@ -494,13 +494,25 @@ The output should look similar to the one below:
 
 ### 5.3. Configure Your Finality Provider
 
-Edit the `fpd.conf` file in your finality provider home directory with the
-following parameters:
+Once the finality provider is initialised and its keys are added/created,
+the `fpd.conf` file located in the daemon's home directory must be configured
+with the below minimal parameters.
+
+The configuration controls how the finality provider communicates with the
+EOTS manager, the Babylon Genesis chain, and manages the keyring and RPC interfaces.
+
+The following is an example of the `fpd.conf` file:
 
 ```shell
 [Application Options]
 EOTSManagerAddress = 127.0.0.1:12582
 RPCListener = 127.0.0.1:12581
+
+; The number of Schnorr public randomness for each commitment
+NumPubRand              = 50000     # the number of randomness entries generated and committed per batch (~5 days)
+
+; The delay, measured in blocks, between a randomness commit submission and the randomness is BTC-timestamped
+TimestampingDelayBlocks = 18000     # delay before timestamping (300 BTC blocks = 18000 Babylon blocks)
 
 [babylon]
 Key = <finality-provider-key-name-signer> # the key you used above
@@ -508,6 +520,40 @@ ChainID = bbn-test-5 # chain ID of the Babylon chain
 RPCAddr = http://127.0.0.1:26657 # Your Babylon node's RPC endpoint
 KeyDirectory = <path> # The `--home` path to the directory where the keyring is stored
 ```
+
+> ⚠️ **Critical Public Randomness Configuration**:
+> The finality provider can only vote for blocks for which it has submitted
+> public randomness for. Further, for the randomness to be available for use,
+> it should have been committed in a Babylon Genesis block that has been
+> confirmed with sufficient depth on the Bitcoin network.
+>
+> The configuration enables operators to choose how much randomness they commit
+> each time and what estimations they should perform to target their
+> randomness activating at a desired height.
+>
+> * `NumPubRand` determines the number of public randomness entries
+>   generated and committed per batch. The default value is set to `50,000`, which is
+>   approx. 5 days of operation with 10 second intervals (the current target
+>   block time for the testnet and mainnet).
+>   * The codebase enforces a minimum of 1800 of `NumPubRand` and a maximum of
+>      `500000`.
+>   * An increased value leads to less frequent commits and less gas usage,
+>      but it leads to longer computation times whenever a commit should be
+>      created.
+> * `TimestampingDelayBlocks` defines an estimation
+>   of the number of Babylon Genesis blocks that will be generated
+>   until a public randomness commit is Bitcoin timestamped.
+>   The default value is set to `18,000` Babylon Genesis blocks,
+>   which corresponds to 300 Bitcoin blocks being generated (the finalization
+>   target for mainnet) and Babylon Genesis having a 10s block time (the target
+>   block time for testnet and mainnet).
+>   * *Note: This value should be selected according to the network you
+>      connect to and its parameters. For example, for testnet, with the
+>      finalization target being set to 100 Bitcoin blocks, a value of 6,000 is
+>      more appropriate*
+>
+> For further explanation of how public randomness works and how it is
+> committed, refer to the [Public Randomness Commit Specification](commit-pub-rand.md).
 
 > ⚠️ **Important**: Operating a finality provider requires a connection to a
 > Babylon blockchain node. It is **highly recommended** to operate your own
@@ -530,17 +576,10 @@ Configuration parameters explained:
 * `RPCAddr`: Your Babylon node's RPC endpoint
 * `KeyDirectory`: Path to your keyring directory (same as `--home` path)
 
+
 Please verify the `chain-id` and other network parameters from the official
 [Babylon Networks
 repository](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/).
-
-Another notable configurable parameter is `NumPubRand`, which is the number of
-public randomness that will be generated and submitted in one commit to Babylon
-Genesis. This value is set to `50,000` by default, which is sufficient for
-roughly 5 days of usage with block production time at `10s`.
-Larger values can be set to tolerate longer down times with larger size of
-merkle proofs for each randomness, resulting in higher gas fees when submitting
-future finality signatures and larger storage requirements.
 
 ### 5.4. Starting the Finality Provider Daemon
 
@@ -564,7 +603,7 @@ The command flags:
 
 It will start the finality provider daemon listening for registration and other
 operations. If there is already a finality provider created (described in a
-later [section](#51-create-finality-provider)), `fpd start` will also start
+later [section](#51-initialize-the-finality-provider-daemon), `fpd start` will also start
 the finality provider. If there are multiple finality providers created,
 `--eots-pk` is required.
 
@@ -1043,6 +1082,7 @@ randomness used in the signature is already committed on Babylon. Loss of
 public randomness proof leads to direct failure of the vote submission.
 
 To recover the public randomness proof, the following steps should be followed:
+
 1. Ensure the `fpd` is stopped.
 2. Unjail your finality provider if needed.
 3. Run the recovery command
