@@ -494,8 +494,16 @@ The output should look similar to the one below:
 
 ### 5.3. Configure Your Finality Provider
 
-Edit the `fpd.conf` file in your finality provider home directory with the
-following parameters:
+Once you've initialised the finality provider and added your Babylon key,
+you must configure your finality provider by editing the `fpd.conf` file in
+your daemon's home directory.
+
+This configuration controls how your finality provider communicates with the
+EOTS manager, the Babylon chain, and manages the keyring and RPC interfaces.
+
+#### 5.3.1 Minimal Configuration Example
+
+The following is an example of the `fpd.conf` file:
 
 ```shell
 [Application Options]
@@ -530,17 +538,72 @@ Configuration parameters explained:
 * `RPCAddr`: Your Babylon node's RPC endpoint
 * `KeyDirectory`: Path to your keyring directory (same as `--home` path)
 
+The finality provider enforces the following parameters, which are not
+configurable via the `fpd.conf` file. These values are necessary to ensure
+anti-slashing guarentees and govern how finality signatures and randomness
+committed so that all participants remain in sync. This is also preventative
+of double-signing, meaning slashing.
+
+```shell
+
+NumPubRand              = 50000     # the number of randomness entries generated and committed per batch (~5 days)
+MinPubRand              = 8192      # the minimum randomness entries required for a valid batch commit
+MaxPubRand              = 500000    # the maximum allowed randomness batch size
+TimestampingDelayBlocks = 18000     # delay before timestamping (300 BTC blocks = 18000 Babylon blocks)
+RandCommitInterval      = 30s       # interval at which randomness commit checks are performed
+```
+
+> **⚠️ Important:** These values must not be modified.
+
+**Why are these values hardcoded?**
+
+`TimestampingDelayBlocks = 18000` ensures that public randomness is only used
+after a delay equivalent to 300 Bitcoin blocks (approx 50 hours). This delay
+guarantees that the randomness has been included in a Bitcoin finalised
+checkpoint before being used for finality votes. It provides slashing protection
+by preventing premature votes, ensures safety for light clients across IBC chains
+preventing premature votes, light client safety for IBC chains
+(by staying within Babylon’s trusting period) and allows up to 32 hours of Babylon
+downtime without freezing counterparty light clients.
+
+The value 18000 corresponds to a delay of 300 Bitcoin blocks, calculated as:
+
+`300 BTC blocks × 600s ÷ 10s = 18000 Babylon blocks ≈ 50 hours`
+
+This ensures all finality providers wait long enough for public randomness to
+safely finalised by Bitcoin before it is used.
+
+`NumPubRand = 50000` determines the number of public randomness entries
+generated and committed per batch. This value is set to `50,000`, which is
+approx. 5 days of operation with 10 second intervals, is hardcoded to ensure
+ensure configuration is consistent across all finality providers and
+sets out to guarentee commits are large enough to remain gas efficient.
+
+`MinPubRand = 8192 and MaxPubRand = 500000` define the lower and upper bounds
+for the number of randomness entries in a commit. If the `MinPubRand` is too
+low, the finality provider may submit smaller commits, leading to higher usage
+of gas fees. When the `MaxPubRand` is too high, this can increase memory and
+storage requirements potentially overloading the finality provider. If
+randomness isn’t committed properly and timely due to large batch size,
+finality votes may reference randomness not yet finalised, which leads to
+slashing vulnerability.
+
+`RandCommitInterval = 30s` defines how frequently the finality provider checks
+whether a new randomness commit is needed. This interval is kept small to
+ensure prompt detection of the need for new randomness commits, offering a
+buffer ensuring that randomness is always available before it is needed for
+voting.
+
+For further explanation of how public randomness works and how it is
+committed, refer to the [Public Randomness Commit Specification](commit-pub-rand.md).
+
 Please verify the `chain-id` and other network parameters from the official
 [Babylon Networks
 repository](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/).
 
-Another notable configurable parameter is `NumPubRand`, which is the number of
-public randomness that will be generated and submitted in one commit to Babylon
-Genesis. This value is set to `50,000` by default, which is sufficient for
-roughly 5 days of usage with block production time at `10s`.
-Larger values can be set to tolerate longer down times with larger size of
-merkle proofs for each randomness, resulting in higher gas fees when submitting
-future finality signatures and larger storage requirements.
+`RandCommitInterval = 30s` is the polling interval for the finality provider to
+whether a new public randomness should be committed. It is intentially kept
+small to ensure timely commit checks.
 
 ### 5.4. Starting the Finality Provider Daemon
 
@@ -564,7 +627,7 @@ The command flags:
 
 It will start the finality provider daemon listening for registration and other
 operations. If there is already a finality provider created (described in a
-later [section](#51-create-finality-provider)), `fpd start` will also start
+later [section](#51-initialize-the-finality-provider-daemon), `fpd start` will also start
 the finality provider. If there are multiple finality providers created,
 `--eots-pk` is required.
 
