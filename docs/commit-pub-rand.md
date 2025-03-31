@@ -4,16 +4,16 @@
 
 The finality provider periodically commits public randomness to the consumer
 chain to be used for future block finalization. This document specifies the
-process of committing public randomness.
+process for committing public randomness.
 
 ## Commit Process
 
 ### Generating a Commit
 
 A randomness pair is essentially a pair of `32-byte` points over `secp256k1`.
-A public randomness commit is a list of public
-randomness, each committed to a specific height. In particular, a commit
-consists of:
+A public randomness commit is a commitment to an association
+between public randomnesses and heights for them to be used.
+In particular, a commit consists of:
 
 - a merkle root containing a list of public randomness values,
 - a start height, indicating from which height the randomness starts, and
@@ -22,38 +22,51 @@ consists of:
 To generate a new commit, following steps are needed:
 
 1. Generate a list of randomness. This requires an RPC call to the EOTS manager
-  (eotsd) to generate a list of public randomness, each corresponding to a
-  specific height according to the start height and the number of randomness in
-  the request. Randomness generation is required to be deterministic.
-2. Construct the merkle tree based on the list of randomness using the CometBFT's [merkle](https://github.com/cometbft/cometbft/tree/main/crypto/merkle)
-  library. The merkle root will be used in the commit, while each randomness
-  number and their merkle proofs will be used for finality vote submission
-  in the future.
-3. Send a [Schnorr](https://github.com/btcsuite/btcd/blob/684d64ad74fed203fb846c032f2b55b3e3c36734/btcec/schnorr/signature.go#L391)
-  signature request to the EOTS manager over the hash of the commit
-  (concatenated by the start height, number of randomness, and the merkle root).
-4. Build the commit message ([MsgCommitPubRandList](https://github.com/babylonlabs-io/babylon/blob/aa99e2eb093e06cb9a28a58f373e8fa5f2494383/proto/babylon/finality/v1/tx.proto#L29))
-  and send a transaction to Babylon.
+   daemon (`eotsd`) to generate a list of public randomness,
+   each corresponding to a specific height according to the start height and
+   the number of randomness in the request.
+   Randomness generation is required to be deterministic.
+2. Construct the merkle tree based on the list of randomness using the CometBFT's
+   [merkle](https://github.com/cometbft/cometbft/tree/main/crypto/merkle)
+   library. The merkle root will be used in the commit, while each randomness
+   number and their merkle proofs will be used for finality vote submission
+   in the future.
+3. Send a
+   [Schnorr](https://github.com/btcsuite/btcd/blob/684d64ad74fed203fb846c032f2b55b3e3c36734/btcec/schnorr/signature.go#L391)
+   signature request to the EOTS manager over the hash of the commit
+   (concatenated by the start height, number of randomness, and the merkle root).
+4. Build the commit message
+   ([MsgCommitPubRandList](https://github.com/babylonlabs-io/babylon/blob/aa99e2eb093e06cb9a28a58f373e8fa5f2494383/proto/babylon/finality/v1/tx.proto#L29))
+   and send a transaction to Babylon.
 
 ### Timing to Commit
 
-Public randomness is an essential component of finality. It should be
-committed before finality votes can be sent. Otherwise, the finality provider
-looses voting power for this height.
+Public randomness is an essential component of finality voting. It should be
+committed before finality votes can be sent.
+If the finality provider does not have public randomness committed for a
+specific height, they can't vote for it and therefore lose the voting power
+they would have otherwise had for it.
 
 To this end, when a finality provider is started, it runs a loop to periodically
-check whether it needs to make a new commit and calculate the start height of
-the next commit. In particular:
+check whether it needs to make a new commit and calculate the height
+its next public randomness commit should start with. In particular:
 
 ```go
+    // Estimate the consumer chain block height
+    // a new commitment of public randomness would be Bitcoin timestamped
+    // and ready for use, if the commitment was made in the current
+    // consumer chain block.
 	tipHeightWithDelay := tipHeight + uint64(fp.cfg.TimestampingDelayBlocks)
 	var startHeight uint64
 	switch {
 	case lastCommittedHeight < tipHeightWithDelay:
-		// the start height should consider the timestamping delay
-		// as it is only available to use after tip height + estimated timestamping delay
+        // If the last height the finality provider has committed
+        // randomness, is less than the estimation, then
+        // the finality provider should commit randomness from that height.
 		startHeight = tipHeightWithDelay
 	case lastCommittedHeight < tipHeightWithDelay+uint64(fp.cfg.NumPubRand):
+        // otherwise, the finality provider should commit randomness
+        // from the last height it has committed to
 		startHeight = lastCommittedHeight + 1
 	default:
         // randomness is sufficient, do not need to make a commit
@@ -62,18 +75,19 @@ the next commit. In particular:
 where:
 
 - `lastCommittedHeight` is the end height (`startHeight + numRand - 1`)
-  from the latest public randomness commit recorded on the consumer chain
+  of the latest public randomness commit recorded on the consumer chain
 - `tipHeight` is the current height of the consumer chain
-- `TimestampingDelayBlocks` is a hardcoded value, which measures when to make a
+- `TimestampingDelayBlocks` is a configuration value, which measures when to make a
   new commit
 - `NumPubRand` is the number of randomness in a commit defined in the config.
 
-### Determining TimestampingDelayBlocks
+### Determining `TimestampingDelayBlocks`
 
-The value of `TimestampingDelayBlocks` must account for BTC-timestamping
-delays, which is needed to activate the randomness for a specific height
-after the committed epoch is BTC-timestamped. Here's an example:
+The configuration value `TimestampingDelayBlocks` defines an estimation 
+estimation of the number of consumer chain blocks that will be generated
+until a public randomness commit is Bitcoin timestamped.
 
+Here's an example:
 - The consumer chain receives a commit with:
   - Start height: 100
   - Number of randomness values: 1000
@@ -83,67 +97,60 @@ after the committed epoch is BTC-timestamped. Here's an example:
 
 The BTC-timestamping protocol requires:
 
-- `w` = 100 BTC blocks for epoch finalization (in current testnets)
-- ≈ 1000 minutes (17 hours) at 10-minute average block time
-- With consumer chain blocks every 10 seconds, this equals approximately 6,000
+- 300 BTC blocks for epoch finalization
+- ≈ 3000 minutes (50 hours) at 10-minute average block time
+- With consumer chain blocks every 10 seconds, this equals approximately 18,000
   blocks
 
-Therefore:
+Therefore,
 
-- `TimestampingDelayBlocks` should be at least 6,000
-- This value is systematically set to 18,000 to provide additional safety margin.
+- `TimestampingDelayBlocks` should be around 18,000
+- Recommended production value: > 20,000 to provide additional safety margin
 
-Since `TimestampingDelayBlocks` is set to 18,000, this aligns with `w` = 300
-Bitcoin blocks (≈50 hours). This ensures that committed randomness is only used
-after the corresponding checkpoint is finalized on Bitcoin. It prevents
-premature voting, protects against slashing, and maintains light client
-safety across IBC-connected chains.
+### Determining the Start Height for a Commit
 
-Note: In future upgrades, the finality provider will automatically
-retrieve the `w` parameter from Babylon and calculate `TimestampingDelayBlocks`
-based on the current `w` and Babylon’s block time.
+To determine the start height for a commit:
 
-### Determining Start Height
-
-To determine the start height of a commit:
-
-1. For first-time commit:
-   - `startHeight = baseHeight + 1`,
-   - where `baseHeight` is a future height, which is estimated based on the
-     BTC-timestamping delays.
-2. For subsequent commit:
+1. If this is a first time commit or the finality provider has not committed
+   for a long time:
+   - `startHeight = currentConsumerChainHeight + TimestampingDelayBlocks + 1`
+2. For subsequent commits:
    - `startHeight = lastCommittedHeight + 1`,
    - where `lastCommittedHeight` is obtained from the consumer chain.
 
 The `baseHeight` can be specified via configuration or CLI options.
 
-**Important Notes:**
-
-- After long downtime, treat as first-time commit by specifying `baseHeight`.
-- Consecutiveness across commits is not enforced by the system but
-  different commits must not overlap.
-- `startHeight` should not be higher than `finalityActivationHeight`,
-a parameter defined in Babylon. Therefore,
-`startHeight = max(startHeight, finalityActivationHeight)`.
+> **Important Notes:**
+> - Consecutiveness across commits is not enforced by the system but
+>   different commits must not overlap.
+> - `startHeight` should not be higher than `finalityActivationHeight`,
+>    a parameter defined in Babylon Genesis specifying when the finality
+>    protocol is activated.
+>    Therefore, `startHeight = max(startHeight, finalityActivationHeight)`.
 
 ### Determining the Number of Randomness
 
-The number of randomness contained in a commit is specified in the config
-`NumPubRand`. A general strategy is that the value should be as large
-as possible. This is because each commit to the consumer chain costs gas.
-
+The number of randomness contained in a commit is specified in the `NumPubRand`
+configuration. A general strategy is that the value should be as large
+as possible. This is because each commit of the consumer chain costs gas.
+  
 However, in real life, this stategy might not always gain due to the following
 reasons:
-
 - A finality provider might not have voting power for every block. Randomness
   for those heights is a waste.
 - Generating more randomness leads to a larger merkle proof size which will be
   used for sending finality votes.
 - Generating randomness and saving the merkle proofs require time.
 
-Additionally, given that the end height of a commit equals to
+Additionally, given that the the end height of a commit equals to
 `startHeight + NumPubRand - 1`, we should ensure that the condition
 `lastCommittedHeight > tipHeight + uint64(TimestampingDelayBlocks)` can hold for
 a long period of time to avoid frequent commit of randomness.
-In real life, the value of `NumPubRand` should be much larger than
-`TimestampingDelayBlocks`, e.g., `NumPubRand = 2 * TimestampingDelayBlocks`.
+
+> **Important Note**:
+> In real life, the value of `NumPubRand` should be much larger than
+> `TimestampingDelayBlocks`, e.g., `NumPubRand = 2 * TimestampingDelayBlocks`.
+
+> **Important Note**:
+> The finality provider daemon enforces a minimum
+> of `16384` of `NumPubRand` and a maximum of `50000`.
