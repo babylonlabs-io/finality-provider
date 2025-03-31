@@ -343,7 +343,7 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop() {
 
 	fp.processRandomnessCommitment()
 
-	ticker := time.NewTicker(fp.cfg.RandomnessCommitInterval)
+	ticker := time.NewTicker(fpcfg.RandCommitInterval)
 	defer ticker.Stop()
 
 	for {

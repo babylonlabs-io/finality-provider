@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"net"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/util"
 )
 
+// Constants for config default values
 const (
 	defaultChainType                   = "babylon"
 	defaultLogLevel                    = zapcore.DebugLevel
@@ -26,15 +26,21 @@ const (
 	DefaultRPCPort                     = 12581
 	defaultConfigFileName              = "fpd.conf"
 	defaultNumPubRand                  = 50000 // support running of roughly 5 days with block production time as 10s
-	defaultNumPubRandMax               = 500000
-	defaultTimestampingDelayBlocks     = 6000 // 100 BTC blocks * 600s / 10s
-	defaultBatchSubmissionSize         = 1000
-	defaultRandomInterval              = 30 * time.Second
+	defaultBatchSubmissionSize         = 100
 	defaultSubmitRetryInterval         = 1 * time.Second
 	defaultSignatureSubmissionInterval = 1 * time.Second
 	defaultMaxSubmissionRetries        = 20
 	defaultBitcoinNetwork              = "signet"
 	defaultDataDirname                 = "data"
+)
+
+// Constants for system parameters validation limits
+const (
+	MaxBatchSize            = 100              // Maximum allowed batch submission size
+	MaxPubRand              = 500000           // Maximum allowed public randomness number
+	MinPubRand              = 8192             // Minimum allowed public randomness number
+	TimestampingDelayBlocks = 18000            // 300 BTC blocks * 600s / 10s where 300 BTC blocks is the system parameter of BTC block time required by the btc timestamping protocol
+	RandCommitInterval      = 30 * time.Second // Interval between check of randomness commit
 )
 
 var (
@@ -55,15 +61,15 @@ type Config struct {
 	// ChainType and ChainID (if any) of the chain config identify a consumer chain
 	ChainType                   string        `long:"chaintype" description:"the type of the consumer chain" choice:"babylon"`
 	NumPubRand                  uint32        `long:"numPubRand" description:"The number of Schnorr public randomness for each commitment"`
-	NumPubRandMax               uint32        `long:"numpubrandmax" description:"The upper bound of the number of Schnorr public randomness for each commitment"`
-	TimestampingDelayBlocks     uint32        `long:"timestampingdelayblocks" description:"The delay, measured in blocks, between a randomness commit submission and the randomness is BTC-timestamped"`
 	MaxSubmissionRetries        uint32        `long:"maxsubmissionretries" description:"The maximum number of retries to submit finality signature or public randomness"`
 	EOTSManagerAddress          string        `long:"eotsmanageraddress" description:"The address of the remote EOTS manager; Empty if the EOTS manager is running locally"`
 	HMACKey                     string        `long:"hmackey" description:"The HMAC key for authentication with EOTSD. If not provided, will use HMAC_KEY environment variable."`
 	BatchSubmissionSize         uint32        `long:"batchsubmissionsize" description:"The size of a batch in one submission"`
-	RandomnessCommitInterval    time.Duration `long:"randomnesscommitinterval" description:"The interval between each attempt to commit public randomness"`
 	SubmissionRetryInterval     time.Duration `long:"submissionretryinterval" description:"The interval between each attempt to submit finality signature or public randomness after a failure"`
 	SignatureSubmissionInterval time.Duration `long:"signaturesubmissioninterval" description:"The interval between each finality signature(s) submission"`
+
+	// not configurable in config file
+	TimestampingDelayBlocks uint32
 
 	BitcoinNetwork string `long:"bitcoinnetwork" description:"Bitcoin network to run on" choice:"mainnet" choice:"regtest" choice:"testnet" choice:"simnet" choice:"signet"`
 
@@ -91,11 +97,9 @@ func DefaultConfigWithHome(homePath string) Config {
 		DatabaseConfig:              DefaultDBConfigWithHomePath(homePath),
 		BabylonConfig:               &bbnCfg,
 		PollerConfig:                &pollerCfg,
+		TimestampingDelayBlocks:     TimestampingDelayBlocks,
 		NumPubRand:                  defaultNumPubRand,
-		NumPubRandMax:               defaultNumPubRandMax,
-		TimestampingDelayBlocks:     defaultTimestampingDelayBlocks,
 		BatchSubmissionSize:         defaultBatchSubmissionSize,
-		RandomnessCommitInterval:    defaultRandomInterval,
 		SubmissionRetryInterval:     defaultSubmitRetryInterval,
 		SignatureSubmissionInterval: defaultSignatureSubmissionInterval,
 		MaxSubmissionRetries:        defaultMaxSubmissionRetries,
@@ -158,6 +162,8 @@ func LoadConfig(homePath string) (*Config, error) {
 		return nil, err
 	}
 
+	cfg.TimestampingDelayBlocks = TimestampingDelayBlocks
+
 	// Make sure everything we just loaded makes sense.
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -170,36 +176,83 @@ func LoadConfig(homePath string) (*Config, error) {
 // illegal values or a combination of values are set. All file system paths are
 // normalized. The cleaned up config is returned on success.
 func (cfg *Config) Validate() error {
-	if cfg.EOTSManagerAddress == "" {
-		return fmt.Errorf("EOTS manager address not specified")
-	}
-	// Multiple networks can't be selected simultaneously.  Count number of
-	// network flags passed; assign active network params
-	// while we're at it.
-	btcNetConfig, err := NetParamsBTC(cfg.BitcoinNetwork)
-	if err != nil {
-		return err
-	}
-	cfg.BTCNetParams = btcNetConfig
-
-	_, err = net.ResolveTCPAddr("tcp", cfg.RPCListener)
-	if err != nil {
-		return fmt.Errorf("invalid RPC listener address %s, %w", cfg.RPCListener, err)
+	if cfg == nil {
+		return fmt.Errorf("config cannot be nil")
 	}
 
-	if cfg.Metrics == nil {
-		return fmt.Errorf("empty metrics config")
+	// Validate timing configurations
+	if err := cfg.validateTimingConfigs(); err != nil {
+		return fmt.Errorf("timing configuration validation failed: %w", err)
 	}
 
-	if err := cfg.Metrics.Validate(); err != nil {
-		return fmt.Errorf("invalid metrics config: %w", err)
+	// Validate batch and retry configurations
+	if err := cfg.validateBatchAndRetryConfigs(); err != nil {
+		return fmt.Errorf("batch and retry configuration validation failed: %w", err)
+	}
+
+	// Validate poller configuration
+	if cfg.PollerConfig == nil {
+		return fmt.Errorf("poller config cannot be empty")
 	}
 
 	if err := cfg.PollerConfig.Validate(); err != nil {
-		return fmt.Errorf("invalid poller config: %w", err)
+		return fmt.Errorf("poller configuration validation failed: %w", err)
 	}
 
-	// All good, return the sanitized result.
+	// Validate metrics configuration
+	if cfg.Metrics == nil {
+		return fmt.Errorf("metrics configuration cannot be empty")
+	}
+	if err := cfg.Metrics.Validate(); err != nil {
+		return fmt.Errorf("metrics configuration validation failed: %w", err)
+	}
+
+	btcNetParams, err := NetParamsBTC(cfg.BitcoinNetwork)
+	if err != nil {
+		return fmt.Errorf("invalid BTC network: %w", err)
+	}
+
+	cfg.BTCNetParams = btcNetParams
+
+	return nil
+}
+
+func (cfg *Config) validateTimingConfigs() error {
+	// Validate SignatureSubmissionInterval
+	if cfg.SignatureSubmissionInterval <= 0 {
+		return fmt.Errorf("signature submission interval must be positive, got %v", cfg.SignatureSubmissionInterval)
+	}
+
+	// Validate SubmissionRetryInterval
+	if cfg.SubmissionRetryInterval <= 0 {
+		return fmt.Errorf("submission retry interval must be positive, got %v", cfg.SubmissionRetryInterval)
+	}
+
+	return nil
+}
+
+func (cfg *Config) validateBatchAndRetryConfigs() error {
+	// Validate BatchSubmissionSize
+	if cfg.BatchSubmissionSize <= 0 {
+		return fmt.Errorf("batch submission size must be positive, got %d", cfg.BatchSubmissionSize)
+	}
+	if cfg.BatchSubmissionSize > MaxBatchSize {
+		return fmt.Errorf("batch submission size must not exceed %d, got %d", MaxBatchSize, cfg.BatchSubmissionSize)
+	}
+
+	// Validate MaxSubmissionRetries
+	if cfg.MaxSubmissionRetries <= 0 {
+		return fmt.Errorf("max submission retries must be positive, got %d", cfg.MaxSubmissionRetries)
+	}
+
+	// Validate NumPubRand
+	if cfg.NumPubRand < MinPubRand {
+		return fmt.Errorf("number of public randomness must not be less than %d, got %d", MinPubRand, cfg.NumPubRand)
+	}
+	if cfg.NumPubRand > MaxPubRand {
+		return fmt.Errorf("number of public randomness must not exceed %d, got %d", MaxPubRand, cfg.NumPubRand)
+	}
+
 	return nil
 }
 
