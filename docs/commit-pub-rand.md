@@ -83,7 +83,7 @@ where:
 
 ### Determining `TimestampingDelayBlocks`
 
-The configuration value `TimestampingDelayBlocks` defines an estimation 
+The configuration value `TimestampingDelayBlocks` defines an estimation
 estimation of the number of consumer chain blocks that will be generated
 until a public randomness commit is Bitcoin timestamped.
 
@@ -133,16 +133,17 @@ The `baseHeight` can be specified via configuration or CLI options.
 The number of randomness contained in a commit is specified in the `NumPubRand`
 configuration. A general strategy is that the value should be as large
 as possible. This is because each commit of the consumer chain costs gas.
-  
+
 However, in real life, this stategy might not always gain due to the following
 reasons:
+
 - A finality provider might not have voting power for every block. Randomness
   for those heights is a waste.
 - Generating more randomness leads to a larger merkle proof size which will be
   used for sending finality votes.
 - Generating randomness and saving the merkle proofs require time.
 
-Additionally, given that the the end height of a commit equals to
+Additionally, given that the end height of a commit equals to
 `startHeight + NumPubRand - 1`, we should ensure that the condition
 `lastCommittedHeight > tipHeight + uint64(TimestampingDelayBlocks)` can hold for
 a long period of time to avoid frequent commit of randomness.
