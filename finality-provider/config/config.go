@@ -36,11 +36,25 @@ const (
 
 // Constants for system parameters validation limits
 const (
-	MaxBatchSize            = 100              // Maximum allowed batch submission size
-	MaxPubRand              = 500000           // Maximum allowed public randomness number
-	MinPubRand              = 8192             // Minimum allowed public randomness number
-	TimestampingDelayBlocks = 18000            // 300 BTC blocks * 600s / 10s where 300 BTC blocks is the system parameter of BTC block time required by the btc timestamping protocol
-	RandCommitInterval      = 30 * time.Second // Interval between check of randomness commit
+	// MaxBatchSize is the maximum allowed batch submission size,
+	// this limits BatchSubmissionSize as larger values could cause error due to insufficient fees
+	MaxBatchSize = 100
+	// MaxPubRand is the maximum allowed number of public randomness in each commit,
+	// this limits NumPubRand as larger values could take more than 10min to generate/store
+	// rand proofs
+	MaxPubRand = 500000 //
+	// MinPubRand is the minimum allowed number of public randomness in each commit
+	// a commit with less than this value will be rejected by Babylon Genesis
+	MinPubRand = 8192
+	// TimestampingDelayBlocks is the delay for a commit to become available due to BTC timestamping protocol
+	// it is calculated by converting BTC block time (parameter w=300) to Babylon Genesis block time
+	// 300 BTC blocks * 600s / 10s where 300 BTC blocks is the system parameter of BTC block time required
+	// by the btc timestamping protocol. Adding 12,000 as a buffer in case 300 BTC blocks come with more than
+	// 10min of average time
+	TimestampingDelayBlocks = 18000 + 12000
+	// RandCommitInterval is the interval between each check of whether a new commit needs to be made,
+	// technically this could be a large value depending on NumPubRand, but hardcode a small value for safety
+	RandCommitInterval = 30 * time.Second // Interval between check of randomness commit
 )
 
 var (
@@ -68,7 +82,7 @@ type Config struct {
 	SubmissionRetryInterval     time.Duration `long:"submissionretryinterval" description:"The interval between each attempt to submit finality signature or public randomness after a failure"`
 	SignatureSubmissionInterval time.Duration `long:"signaturesubmissioninterval" description:"The interval between each finality signature(s) submission"`
 
-	// not configurable in config file
+	// not configurable in config file but still keep it here to allow inserting value for e2e tests
 	TimestampingDelayBlocks uint32
 
 	BitcoinNetwork string `long:"bitcoinnetwork" description:"Bitcoin network to run on" choice:"mainnet" choice:"regtest" choice:"testnet" choice:"simnet" choice:"signet"`
