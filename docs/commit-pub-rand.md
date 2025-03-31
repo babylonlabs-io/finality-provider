@@ -62,9 +62,9 @@ the next commit. In particular:
 where:
 
 - `lastCommittedHeight` is the end height (`startHeight + numRand - 1`)
-from the latest public randomness commit recorded on the consumer chain
+  from the latest public randomness commit recorded on the consumer chain
 - `tipHeight` is the current height of the consumer chain
-- `TimestampingDelayBlocks` is a configuration value, which measures when to make a
+- `TimestampingDelayBlocks` is a hardcoded value, which measures when to make a
   new commit
 - `NumPubRand` is the number of randomness in a commit defined in the config.
 
@@ -83,15 +83,25 @@ after the committed epoch is BTC-timestamped. Here's an example:
 
 The BTC-timestamping protocol requires:
 
-- 100 BTC blocks for epoch finalization
+- `w` = 100 BTC blocks for epoch finalization (in current testnets)
 - ≈ 1000 minutes (17 hours) at 10-minute average block time
 - With consumer chain blocks every 10 seconds, this equals approximately 6,000
   blocks
 
-Therefore,
+Therefore:
 
-- `TimestampingDelayBlocks` should be around 6,000
-- Recommended production value: > 10,000 to provide additional safety margin
+- `TimestampingDelayBlocks` should be at least 6,000
+- This value is systematically set to 18,000 to provide additional safety margin.
+
+Since `TimestampingDelayBlocks` is set to 18,000, this aligns with `w` = 300
+Bitcoin blocks (≈50 hours). This ensures that committed randomness is only used
+after the corresponding checkpoint is finalized on Bitcoin. It prevents
+premature voting, protects against slashing, and maintains light client
+safety across IBC-connected chains.
+
+Note: In future upgrades, the finality provider will automatically
+retrieve the `w` parameter from Babylon and calculate `TimestampingDelayBlocks`
+based on the current `w` and Babylon’s block time.
 
 ### Determining Start Height
 
@@ -99,7 +109,7 @@ To determine the start height of a commit:
 
 1. For first-time commit:
    - `startHeight = baseHeight + 1`,
-   - where `baseHeight` is a future height which is estimated based on the
+   - where `baseHeight` is a future height, which is estimated based on the
      BTC-timestamping delays.
 2. For subsequent commit:
    - `startHeight = lastCommittedHeight + 1`,
@@ -121,7 +131,7 @@ a parameter defined in Babylon. Therefore,
 The number of randomness contained in a commit is specified in the config
 `NumPubRand`. A general strategy is that the value should be as large
 as possible. This is because each commit to the consumer chain costs gas.
-  
+
 However, in real life, this stategy might not always gain due to the following
 reasons:
 
