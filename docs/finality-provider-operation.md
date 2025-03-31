@@ -559,10 +559,9 @@ RandCommitInterval      = 30s       # interval at which randomness commit checks
 after a delay equivalent to 300 Bitcoin blocks (approx 50 hours). This delay
 guarantees that the randomness has been included in a Bitcoin finalised
 checkpoint before being used for finality votes. It provides slashing protection
-by preventing premature votes, ensures safety for light clients across IBC chains
-preventing premature votes, light client safety for IBC chains
-(by staying within Babylon’s trusting period) and allows up to 32 hours of Babylon
-downtime without freezing counterparty light clients.
+by preventing premature votes, ensures light client safety across IBC chains
+(by staying within Babylon’s trusting period), and allows up to 32 hours of
+Babylon downtime without freezing counterparty light clients.
 
 The value 18000 corresponds to a delay of 300 Bitcoin blocks, calculated as:
 
