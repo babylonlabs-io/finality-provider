@@ -810,9 +810,9 @@ func (tm *TestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.PublicKe
 func defaultFpConfig(keyringDir, homeDir string) *fpcfg.Config {
 	cfg := fpcfg.DefaultConfigWithHome(homeDir)
 
-	cfg.NumPubRand = 1000
-	cfg.NumPubRandMax = 1000
-	cfg.TimestampingDelayBlocks = 0
+	cfg.NumPubRand = fpcfg.MinPubRand
+	// to have faster finality activation
+	cfg.TimestampingDelayBlocks = 1
 
 	cfg.BitcoinNetwork = "simnet"
 	cfg.BTCNetParams = chaincfg.SimNetParams
