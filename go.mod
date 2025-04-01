@@ -8,7 +8,7 @@ require (
 	cosmossdk.io/errors v1.0.1
 	cosmossdk.io/math v1.5.0
 	github.com/avast/retry-go/v4 v4.5.1
-	github.com/babylonlabs-io/babylon v1.0.0-rc.8
+	github.com/babylonlabs-io/babylon v1.0.0-rc.7
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
 	github.com/btcsuite/btcd/btcutil v1.1.6
