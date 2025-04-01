@@ -45,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#364](https://github.com/babylonlabs-io/finality-provider/pull/364) HMAC authentication service between fpd and eotsd.
 * [#372](https://github.com/babylonlabs-io/finality-provider/pull/372) Add expected errors to finality vote sending.
 * [#413](https://github.com/babylonlabs-io/finality-provider/pull/413) chore: rm default value for app hash flag
+* [#417](https://github.com/babylonlabs-io/finality-provider/pull/417) chore: Modify default config and add validation
 * [#422](https://github.com/babylonlabs-io/finality-provider/pull/422) chore: bump bbn to rc.9
 
 ## v1.0.0-rc.4
@@ -68,7 +69,6 @@ changes in messages and state
 * [#397](https://github.com/babylonlabs-io/finality-provider/pull/397) chore: overwrite randomness proof
 * [#399](https://github.com/babylonlabs-io/finality-provider/pull/399) chore: submit immediately
 * [#410](https://github.com/babylonlabs-io/finality-provider/pull/410) chore: rollback sign records from eots store
-* [#417](https://github.com/babylonlabs-io/finality-provider/pull/417) chore: Modify default config and add validation
 
 ## v1.0.0-rc.2
 
