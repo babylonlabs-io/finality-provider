@@ -32,29 +32,36 @@ const (
 	defaultMaxSubmissionRetries        = 20
 	defaultBitcoinNetwork              = "signet"
 	defaultDataDirname                 = "data"
-	// TimestampingDelayBlocks is the delay for a commit to become available due to BTC timestamping protocol
-	// it is calculated by converting BTC block time (parameter w=300) to Babylon Genesis block time
-	// 300 BTC blocks * 600s / 10s where 300 BTC blocks is the system parameter of BTC block time required
-	// by the btc timestamping protocol.
-	// for testnet with w=100, the recommended default value is 6000
+	// TimestampingDelayBlocks is an estimation on the delay
+	// for a commit to become available due to BTC timestamping protocol,
+	// counted as the number of Babylon Genesis' blocks.
+	// It is calculated by converting the time it takes for the public randomness
+	// to be BTC timestamped counted as Bitcoin blocks to Babylon Genesis blocks.
+	// As this is an estimation, we make the following assumptions:
+	//    - Babylon Genesis' block time: 10s
+	//    - Bitcoin's block time: 10m => 60 Babylon Genesis blocks per Bitcoin block.
+	//    - Babylon Genesis' finalization delta: 300 blocks
+	// The above leads to a recommended default value of 300 * 60 = 18000 Babylon blocks.
+	// You should set this parameter depending on the network you connect to.
 	defaultTimestampingDelayBlocks = 18000
 )
 
 // Constants for system parameters validation limits
 const (
-	// MaxBatchSize is the maximum allowed batch submission size,
-	// this limits BatchSubmissionSize as larger values could cause error due to insufficient fees
+	// MaxBatchSize is the maximum allowed batch submission size
+	// This constant limits BatchSubmissionSize as larger values could cause an error due to insufficient fees.
 	MaxBatchSize = 100
-	// MaxPubRand is the maximum allowed number of public randomness in each commit,
-	// this limits NumPubRand as larger values could take more than 10min to generate/store
-	// rand proofs
+	// MaxPubRand is the maximum allowed number of public randomness in each public randomness commit.
+	// This constant limits NumPubRand as larger values could take more than 10min to generate/store
+	// the randomness proofs.
 	MaxPubRand = 500000 //
-	// MinPubRand is the minimum allowed number of public randomness in each commit
-	// a commit with less than this value will be rejected by Babylon Genesis
-	MinPubRand = 8192
+	// MinPubRand is the minimum allowed number of public randomness in each public randomness commit.
+	// This constant limits NumPubRand to be generally large to cover inaccurate estimation of BTC block time.
+	// For example, Bitcoin is running slow and by the time when the commit is timestamped, the randomness is run out.
+	MinPubRand = 18000
 	// RandCommitInterval is the interval between each check of whether a new commit needs to be made,
 	// technically this could be a large value depending on NumPubRand, but hardcode a small value for safety
-	RandCommitInterval = 30 * time.Second // Interval between check of randomness commit
+	RandCommitInterval = 30 * time.Second
 )
 
 var (
