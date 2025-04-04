@@ -270,6 +270,9 @@ func (s *FinalityProviderStore) SetFpDescription(btcPk *btcec.PublicKey, desc *s
 		fp.Description = descBytes
 		if rate != nil {
 			fp.Commission = rate.String()
+			if fp.CommissionInfo == nil {
+				fp.CommissionInfo = &proto.CommissionInfo{}
+			}
 			fp.CommissionInfo.UpdateTime = timestamppb.New(time.Now().UTC())
 		}
 
