@@ -914,14 +914,15 @@ Parameters:
 To set the withdraw address to the beneficiary key, use the following command:
 
 ```shell
-fpd set-withdraw-addr <operational-address> --from <registered-bbn-address>
+fpd set-withdraw-addr <beneficiary-address> --from <registered-bbn-address>
 --keyring-backend test --home <home-dir> --fees <fees>
 ```
 
 Parameters:
 
-* `<operational-address>`: Is the beneficiary key address.
-* `<registered-bbn-address>`: Is the finality provider's registered Babylon address.
+* `<beneficiary-address>`: Corresponds to the beneficiary key and is where
+  withdraw rewards are sent to.
+* `<registered-bbn-address>`: The finality provider's registered Babylon address.
 * `--from`: The finality provider's registered Babylon address.
 * `--keyring-backend`: The keyring backend to use.
 * `--home`: The home directory for the finality provider.
@@ -934,14 +935,15 @@ transaction hash.
 
 #### 6.7.3 Withdraw Rewards
 
-Once the address is set, be sure to set the operational key name in the
-keyring home directory in the `[babylon]` config in `fpd.conf`.
-
-> ⚠️ **Important**: The `fpd` must be stopped before performing this function.
+This command will withdraw all accumulated rewards. The `fpd` must be **stopped**
+before performing this action as it uses the registered key as the operational
+key. If the operator follows the steps in
+[6.8 Refunding finality provider](#68-refunding-finality-provider)
+this will not cause any issues.
 
 Once the `fpd` is stopped, run the following to withdraw rewards.
-The finality provider must first be active and have voting power to proceed and
-recieve rewards.
+The finality provider must first be active and have sent finality votes to be
+eligible to receive rewards.
 
 ```shell
 fpd withdraw-reward <type> --from <registered-bbn-address>
@@ -999,14 +1001,9 @@ operational key used by the finality provider.
   Lastly, set the operational key name in the keyring home directory in the
   `[babylon]` config in `fpd.conf`.
 
-> ⚠️ **Important**: The `fpd` must be stopped before performing this function.
-
-Once the `fpd` is stopped, run the following to withdraw rewards.
-The finality provider must first be active and have voting power to proceed and
-recieve rewards.
-
-Add a cron job to transfer funds from the beneficiary key to the operational
-key as needed.
+4. Add a cron job:
+  Add a cron job to transfer funds from the beneficiary key to the operational
+  key as needed.
 
 Only maintain the minimum balance required for finality provider operations in
 the operational key. Excess funds should be kept in more secure storage.
@@ -1075,13 +1072,13 @@ The local status of a finality provider is defined as follows:
 
 ```go
 type StoredFinalityProvider struct {
- FPAddr          string
- BtcPk           *btcec.PublicKey
- Description     *stakingtypes.Description
- Commission      *sdkmath.LegacyDec
- ChainID         string
- LastVotedHeight uint64
- Status          proto.FinalityProviderStatus
+FPAddr          string
+BtcPk           *btcec.PublicKey
+Description     *stakingtypes.Description
+Commission      *sdkmath.LegacyDec
+ChainID         string
+LastVotedHeight uint64
+Status          proto.FinalityProviderStatus
 }
 ```
 
