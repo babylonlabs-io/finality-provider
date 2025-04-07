@@ -10,10 +10,16 @@ import (
 	"time"
 
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
+
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/ory/dockertest/v3"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
@@ -25,10 +31,6 @@ import (
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/ory/dockertest/v3"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 const (
@@ -106,7 +108,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 			time.Sleep(100 * time.Millisecond)
 			return false
 		}
-		bc, err = bbncc.NewBabylonController(bbnCl, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		bc, err = bbncc.NewBabylonController(bbnCl, cfg.BabylonConfig, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon controller: %v", err)
 			time.Sleep(100 * time.Millisecond)
@@ -119,7 +121,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 			time.Sleep(200 * time.Millisecond)
 			return false
 		}
-		bcc, err = bbncc.NewBabylonConsumerController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		bcc, err = bbncc.NewBabylonConsumerController(cfg.BabylonConfig, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon consumer controller: %v", err)
 			time.Sleep(100 * time.Millisecond)
@@ -213,7 +215,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	require.NoError(t, err)
 	err = bc.Start()
 	require.NoError(t, err)
-	bcc, err := bbncc.NewBabylonConsumerController(cfg.BabylonConfig, &cfg.BTCNetParams, tm.logger)
+	bcc, err := bbncc.NewBabylonConsumerController(cfg.BabylonConfig, tm.logger)
 	require.NoError(t, err)
 
 	// Create and start finality provider app
