@@ -110,12 +110,12 @@ go version
 
 Subsequently, clone the finality provider
 [repository](https://github.com/babylonlabs-io/finality-provider) and checkout
-to `v0.14.4`.
+to the version you want to install.
 
 ```shell
 git clone https://github.com/babylonlabs-io/finality-provider.git
 cd finality-provider
-git checkout v0.14.4
+git checkout <version>
 ```
 
 ### 3.2. Install Finality Provider Toolset Binaries
@@ -141,9 +141,9 @@ Run the following command to verify the installation:
 
 ```shell
 fpd version
-Version:       0.14.4
-Git Commit:    c8c41f0
-Git Timestamp: 2025-01-27T14:17:02Z
+Version:       <version>
+Git Commit:    <commit>
+Git Timestamp: <timestamp>
 ```
 
 If your shell cannot find the installed binaries, make sure `$GOPATH/bin` is in
@@ -210,10 +210,8 @@ Parameters:
 
 * **keyring-directory***:
   * EOTS private keys are securely stored using Cosmos SDK's keyring system
-  * Test backend is used for daemon access (required for automated signing)
+  * Test backend is mandatory for daemon access (required for automated signing)
   * Keys are used for EOTS signatures
-  * Other keyring backends (file/os) are supported but not recommended
-    for daemon use
 
 * **eotsd.log**:
   * Key creation and import events
