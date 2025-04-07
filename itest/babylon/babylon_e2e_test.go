@@ -9,9 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
-	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
-	"github.com/babylonlabs-io/finality-provider/testutil"
 	"log"
 	"math/rand"
 	"os"
@@ -19,6 +16,10 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -74,6 +75,51 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 
 	tm.CheckBlockFinalization(t, lastVotedHeight, 1)
 	t.Logf("the block at height %v is finalized", lastVotedHeight)
+}
+
+// TestDoubleSigning tests the attack scenario where the finality-provider
+// sends a finality vote over a conflicting block
+// in this case, the BTC private key should be extracted by Babylon
+func TestSkippingDoubleSignError(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
+	defer tm.Stop(t)
+
+	fpIns := fps[0]
+
+	// check the public randomness is committed
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
+
+	// send a BTC delegation
+	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, e2eutils.StakingTime, e2eutils.StakingAmount)
+
+	// check the BTC delegation is pending
+	delsResp := tm.WaitForNPendingDels(t, 1)
+	del, err := e2eutils.ParseRespBTCDelToBTCDel(delsResp[0])
+	require.NoError(t, err)
+
+	// send covenant sigs
+	tm.InsertCovenantSigForDelegation(t, del)
+
+	// check the BTC delegation is active
+	_ = tm.WaitForNActiveDels(t, 1)
+
+	// check the last voted block is finalized
+	lastVotedHeight := tm.WaitForFpVoteCast(t, fpIns)
+	// manually submit a finality vote over a conflicting block
+	// to trigger the extraction of finality-provider's private key
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	manualVotedHeight := lastVotedHeight + 2 // manually vote for a future height
+	b := &types.BlockInfo{
+		Height: manualVotedHeight,
+		Hash:   datagen.GenRandomByteArray(r, 32),
+	}
+	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b, true)
+	require.NoError(t, err)
+
+	// assert that the fp voting continues
+	tm.WaitForFpVoteCastAtHeight(t, fpIns, manualVotedHeight+1)
 }
 
 // TestDoubleSigning tests the attack scenario where the finality-provider

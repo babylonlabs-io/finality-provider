@@ -10,10 +10,16 @@ import (
 	"time"
 
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
+
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/ory/dockertest/v3"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
@@ -25,10 +31,6 @@ import (
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/ory/dockertest/v3"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 const (
@@ -353,6 +355,20 @@ func (tm *TestManager) WaitForFpVoteCast(t *testing.T, fpIns *service.FinalityPr
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	return lastVotedHeight
+}
+
+func (tm *TestManager) WaitForFpVoteCastAtHeight(t *testing.T, fpIns *service.FinalityProviderInstance, height uint64) {
+	var lastVotedHeight uint64
+	require.Eventually(t, func() bool {
+		votedHeight := fpIns.GetLastVotedHeight()
+		if votedHeight >= height {
+			lastVotedHeight = votedHeight
+			return true
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	t.Logf("the fp voted at height %d", lastVotedHeight)
 }
 
 func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
