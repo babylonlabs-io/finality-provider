@@ -934,7 +934,7 @@ transaction hash.
 Once the address is set, be sure to set the operational key name in the
 keyring home directory in the `[babylon]` config in `fpd.conf`.
 
-> Important: The `fpd` must be stopped before performing this function.
+> ⚠️ **Important**: The `fpd` must be stopped before performing this function.
 
 Once the `fpd` is stopped, run the following to withdraw rewards.
 The finality provider must first be active and have voting power to proceed and
@@ -978,10 +978,9 @@ operational key used by the finality provider.
    * Beneficiary Key: Receives staking rewards.
    * Operational Key: Used by the finality provider daemon to submit transactions.
 
-If this step hasnt been completed, follow the steps in
-[5.2 Add key for the Babylon account](#52-add-key-for-the-babylon-account) and
-create 2 additional keys. If you have a Babylon node running, you can also
-directly create the keys there.
+  If this step hasnt been completed, follow the steps in
+  [5.2 Add key for the Babylon account](#52-add-key-for-the-babylon-account) and
+  create 2 additional keys.
 
 2. Configure Withdrawals:
   To set the withdraw address to the beneficiary key, use the following command:
@@ -998,7 +997,7 @@ directly create the keys there.
   Lastly, set the operational key name in the keyring home directory in the
   `[babylon]` config in `fpd.conf`.
 
-> Important: The `fpd` must be stopped before performing this function.
+> ⚠️ **Important**: The `fpd` must be stopped before performing this function.
 
 Once the `fpd` is stopped, run the following to withdraw rewards.
 The finality provider must first be active and have voting power to proceed and
