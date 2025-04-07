@@ -711,6 +711,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 			fp.logger.Warn("encountered double sign error, skipping block",
 				zap.Uint64("height", b.Height),
 				zap.String("hash", hex.EncodeToString(b.Hash)))
+
 			continue
 		}
 		// If signature is valid, append all corresponding items
@@ -723,6 +724,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 	// If all blocks were skipped, return early
 	if len(validBlocks) == 0 {
 		fp.logger.Info("all blocks were skipped due to double sign errors")
+
 		return nil, nil
 	}
 
@@ -735,6 +737,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 		if strings.Contains(err.Error(), "slashed") {
 			return nil, ErrFinalityProviderSlashed
 		}
+
 		return nil, err
 	}
 
