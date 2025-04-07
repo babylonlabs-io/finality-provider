@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
@@ -19,6 +20,7 @@ import (
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	eotstypes "github.com/babylonlabs-io/finality-provider/eotsmanager/types"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
@@ -692,18 +694,40 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 		return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w\nplease recover the randomness proof from db", err)
 	}
 
-	// sign blocks
-	sigList := make([]*btcec.ModNScalar, 0, len(blocks))
-	for _, b := range blocks {
+	// Create slices to store only the valid items
+	validBlocks := make([]*types.BlockInfo, 0, len(blocks))
+	validPrList := make([]*btcec.FieldVal, 0, len(blocks))
+	validProofList := make([][]byte, 0, len(blocks))
+	validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
+
+	// Process each block and collect only valid items
+	for i, b := range blocks {
 		eotsSig, err := fp.SignFinalitySig(b)
 		if err != nil {
-			return nil, err
+			if !errors.Is(err, eotstypes.ErrDoubleSign) {
+				return nil, err
+			}
+			// Skip this block and its corresponding items if we encounter ErrDoubleSign
+			fp.logger.Warn("encountered double sign error, skipping block",
+				zap.Uint64("height", b.Height),
+				zap.String("hash", hex.EncodeToString(b.Hash)))
+			continue
 		}
-		sigList = append(sigList, eotsSig.ToModNScalar())
+		// If signature is valid, append all corresponding items
+		validBlocks = append(validBlocks, b)
+		validPrList = append(validPrList, prList[i])
+		validProofList = append(validProofList, proofBytesList[i])
+		validSigList = append(validSigList, eotsSig.ToModNScalar())
 	}
 
-	// send finality signature to the consumer chain
-	res, err := fp.consumerCon.SubmitBatchFinalitySigs(fp.GetBtcPk(), blocks, prList, proofBytesList, sigList)
+	// If all blocks were skipped, return early
+	if len(validBlocks) == 0 {
+		fp.logger.Info("all blocks were skipped due to double sign errors")
+		return nil, nil
+	}
+
+	// send finality signature to the consumer chain with only valid items
+	res, err := fp.consumerCon.SubmitBatchFinalitySigs(fp.GetBtcPk(), validBlocks, validPrList, validProofList, validSigList)
 	if err != nil {
 		if strings.Contains(err.Error(), "jailed") {
 			return nil, ErrFinalityProviderJailed
@@ -711,11 +735,11 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 		if strings.Contains(err.Error(), "slashed") {
 			return nil, ErrFinalityProviderSlashed
 		}
-
 		return nil, err
 	}
 
-	// update DB
+	// update state with the highest height of this batch even though
+	// some of the votes are skipped due to double sign error
 	highBlock := blocks[len(blocks)-1]
 	fp.MustUpdateStateAfterFinalitySigSubmission(highBlock.Height)
 
