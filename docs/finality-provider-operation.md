@@ -40,8 +40,8 @@ gain an overall understanding of the finality provider.
    6. [Prometheus Metrics](#66-prometheus-metrics)
    7. [Rewards](#67-rewards)
       1. [Querying Rewards](#671-querying-rewards)
-      2. [Set Withdraw Address](#672-set-withdraw-address)
-      3. [Withdraw Rewards](#673-withdraw-rewards)
+      2. [Withdraw Rewards](#672-withdraw-rewards)
+      3. [Set Withdraw Address](#673-set-withdraw-address)
    8. [Refunding finality provider](#68-refunding-finality-provider)
 7. [Recovery and backup](#7-recovery-and-backup)
    1. [Critical assets](#71-critical-assets)
@@ -909,31 +909,7 @@ Parameters:
 
 * `<address>`: The Babylon address of the stakeholder in bech32 string.
 
-#### 6.7.2 Set Withdraw Address
-
-To set the withdraw address to the beneficiary key, use the following command:
-
-```shell
-fpd set-withdraw-addr <beneficiary-address> --from <registered-bbn-address>
---keyring-backend test --home <home-dir> --fees <fees>
-```
-
-Parameters:
-
-* `<beneficiary-address>`: Corresponds to the beneficiary key and is where
-  withdraw rewards are sent to.
-* `<registered-bbn-address>`: The finality provider's registered Babylon address.
-* `--from`: The finality provider's registered Babylon address.
-* `--keyring-backend`: The keyring backend to use.
-* `--home`: The home directory for the finality provider.
-* `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
-  These fees are paid from the account specified in `--from`.
-
-This command should ask to
-`confirm transaction before signing and broadcasting [y/N]:` and output the
-transaction hash.
-
-#### 6.7.3 Withdraw Rewards
+#### 6.7.2 Withdraw Rewards
 
 This command will withdraw all accumulated rewards. The `fpd` must be **stopped**
 before performing this action as it uses the registered key as the operational
@@ -968,6 +944,30 @@ transaction hash.
 This will withdraw **ALL** accumulated rewards to the address you set in the
 `set-withdraw-addr` command if you set one. If no withdrawal address was set,
 the rewards will be withdrawn to your finality provider address.
+
+#### 6.7.3 Set Withdraw Address
+
+To set the withdraw address to the beneficiary key, use the following command:
+
+```shell
+fpd set-withdraw-addr <beneficiary-address> --from <registered-bbn-address>
+--keyring-backend test --home <home-dir> --fees <fees>
+```
+
+Parameters:
+
+* `<beneficiary-address>`: Corresponds to the beneficiary key and is where
+  withdraw rewards are sent to.
+* `<registered-bbn-address>`: The finality provider's registered Babylon address.
+* `--from`: The finality provider's registered Babylon address.
+* `--keyring-backend`: The keyring backend to use.
+* `--home`: The home directory for the finality provider.
+* `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
+  These fees are paid from the account specified in `--from`.
+
+This command should ask to
+`confirm transaction before signing and broadcasting [y/N]:` and output the
+transaction hash.
 
 ### 6.8 Refunding finality provider
 
