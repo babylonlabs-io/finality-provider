@@ -392,6 +392,28 @@ func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *
 	require.NoError(t, err)
 }
 
+func (tm *TestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
+	beforeHeight, err := tm.BBNConsumerClient.QueryLatestBlockHeight()
+	require.NoError(t, err)
+
+	var afterHeight uint64
+	require.Eventually(t, func() bool {
+		height, err := tm.BBNConsumerClient.QueryLatestBlockHeight()
+		if err != nil {
+			return false
+		}
+
+		if height >= uint64(n)+beforeHeight {
+			afterHeight = height
+			return true
+		}
+
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	return afterHeight
+}
+
 func (tm *TestManager) WaitForNFinalizedBlocks(t *testing.T, n uint) *types.BlockInfo {
 	var (
 		firstFinalizedBlock *types.BlockInfo

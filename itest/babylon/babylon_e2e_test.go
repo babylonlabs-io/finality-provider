@@ -77,9 +77,9 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 	t.Logf("the block at height %v is finalized", lastVotedHeight)
 }
 
-// TestDoubleSigning tests the attack scenario where the finality-provider
-// sends a finality vote over a conflicting block
-// in this case, the BTC private key should be extracted by Babylon
+// TestSkippingDoubleSignError tests the scenario where the finality-provider
+// should skip the block when encountering a double sign request from the
+// eots manager
 func TestSkippingDoubleSignError(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -105,21 +105,27 @@ func TestSkippingDoubleSignError(t *testing.T) {
 	// check the BTC delegation is active
 	_ = tm.WaitForNActiveDels(t, 1)
 
-	// check the last voted block is finalized
-	lastVotedHeight := tm.WaitForFpVoteCast(t, fpIns)
-	// manually submit a finality vote over a conflicting block
-	// to trigger the extraction of finality-provider's private key
+	_ = tm.WaitForFpVoteCast(t, fpIns)
+
+	// stop the fp and manually submits a finality sig for a future height
+	err = fpIns.Stop()
+	require.NoError(t, err)
+	currentHeight := tm.WaitForNBlocks(t, 1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	manualVotedHeight := lastVotedHeight + 2 // manually vote for a future height
 	b := &types.BlockInfo{
-		Height: manualVotedHeight,
+		Height: currentHeight,
 		Hash:   datagen.GenRandomByteArray(r, 32),
 	}
+	t.Logf("manually sending a vote for height %d", currentHeight)
 	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b, true)
 	require.NoError(t, err)
 
+	// restart the fp to see if it will skip sending the height
+	err = fpIns.Start()
+	require.NoError(t, err)
+
 	// assert that the fp voting continues
-	tm.WaitForFpVoteCastAtHeight(t, fpIns, manualVotedHeight+1)
+	tm.WaitForFpVoteCastAtHeight(t, fpIns, currentHeight+1)
 }
 
 // TestDoubleSigning tests the attack scenario where the finality-provider

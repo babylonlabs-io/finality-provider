@@ -701,6 +701,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 	validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
 
 	// Process each block and collect only valid items
+	// (skip ones encountering double sign error)
 	for i, b := range blocks {
 		eotsSig, err := fp.SignFinalitySig(b)
 		if err != nil {
