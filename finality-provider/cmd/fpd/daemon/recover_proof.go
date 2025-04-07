@@ -95,7 +95,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}
 
-	bcc, err := babylon.NewBabylonConsumerController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+	bcc, err := babylon.NewBabylonConsumerController(cfg.BabylonConfig, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create Babylon rpc client: %w", err)
 	}

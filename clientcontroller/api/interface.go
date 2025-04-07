@@ -3,9 +3,10 @@ package api
 import (
 	"cosmossdk.io/math"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
+
+	"github.com/babylonlabs-io/finality-provider/types"
 )
 
 //nolint:revive,unused

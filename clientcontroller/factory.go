@@ -4,13 +4,14 @@ import (
 	"fmt"
 
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
+	"go.uber.org/zap"
+
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/cosmwasm"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/opstackl2"
 	cosmwasmcfg "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	"go.uber.org/zap"
 )
 
 const (
@@ -28,7 +29,7 @@ func NewBabylonController(config *fpcfg.Config, logger *zap.Logger) (api.ClientC
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
 	}
-	cc, err := babylon.NewBabylonController(bbnClient, config.BabylonConfig, &config.BTCNetParams, logger)
+	cc, err := babylon.NewBabylonController(bbnClient, config.BabylonConfig, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
 	}
@@ -44,7 +45,7 @@ func NewConsumerController(config *fpcfg.Config, logger *zap.Logger) (api.Consum
 
 	switch config.ChainType {
 	case BabylonConsumerChainType:
-		ccc, err = babylon.NewBabylonConsumerController(config.BabylonConfig, &config.BTCNetParams, logger)
+		ccc, err = babylon.NewBabylonConsumerController(config.BabylonConfig, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
 		}

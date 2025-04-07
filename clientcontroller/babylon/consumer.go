@@ -13,7 +13,6 @@ import (
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-	"github.com/btcsuite/btcd/chaincfg"
 	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
@@ -30,13 +29,11 @@ var _ api.ConsumerController = &BabylonConsumerController{}
 type BabylonConsumerController struct {
 	bbnClient *bbnclient.Client
 	cfg       *fpcfg.BBNConfig
-	btcParams *chaincfg.Params
 	logger    *zap.Logger
 }
 
 func NewBabylonConsumerController(
 	cfg *fpcfg.BBNConfig,
-	btcParams *chaincfg.Params,
 	logger *zap.Logger,
 ) (*BabylonConsumerController, error) {
 	bbnConfig := fpcfg.BBNConfigToBabylonConfig(cfg)
@@ -56,7 +53,6 @@ func NewBabylonConsumerController(
 	return &BabylonConsumerController{
 		bc,
 		cfg,
-		btcParams,
 		logger,
 	}, nil
 }
