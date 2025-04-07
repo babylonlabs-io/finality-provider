@@ -920,8 +920,8 @@ fpd set-withdraw-addr <operational-address> --from <registered-bbn-address>
 
 Parameters:
 
-* `<operational-address>`: Corresponds to the operational key and is where
-  withdraw rewards are sent to
+* `<operational-address>`: Is the beneficiary key address.
+* `<registered-bbn-address>`: Is the finality provider's registered Babylon address.
 * `--from`: The finality provider's registered Babylon address.
 * `--keyring-backend`: The keyring backend to use.
 * `--home`: The home directory for the finality provider.
