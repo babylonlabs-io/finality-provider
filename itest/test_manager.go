@@ -126,7 +126,7 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 
 	var bc *fpcc.BabylonController
 	require.Eventually(t, func() bool {
-		bc = fpcc.NewBabylonController(bbnCl, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		bc = fpcc.NewBabylonController(bbnCl, cfg.BabylonConfig, logger)
 		err = bc.Start()
 		if err != nil {
 			t.Log(err)
@@ -190,7 +190,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context) *s
 	// create and start finality provider app
 	eotsCli, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.cfg.RPCListener, "")
 	require.NoError(t, err)
-	cc, err := fpcc.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, tm.logger)
+	cc, err := fpcc.NewClientController(cfg.ChainType, cfg.BabylonConfig, tm.logger)
 	require.NoError(t, err)
 	err = cc.Start()
 	require.NoError(t, err)
@@ -813,10 +813,6 @@ func defaultFpConfig(keyringDir, homeDir string) *fpcfg.Config {
 	cfg.NumPubRand = fpcfg.MinPubRand
 	// to have faster finality activation
 	cfg.TimestampingDelayBlocks = 1
-
-	cfg.BitcoinNetwork = "simnet"
-	cfg.BTCNetParams = chaincfg.SimNetParams
-
 	cfg.PollerConfig.PollInterval = 1 * time.Millisecond
 	// babylon configs for sending transactions
 	cfg.BabylonConfig.KeyDirectory = keyringDir

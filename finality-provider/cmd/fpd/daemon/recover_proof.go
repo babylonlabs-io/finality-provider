@@ -104,7 +104,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	if err != nil {
 		return fmt.Errorf("failed to create Babylon rpc client: %w", err)
 	}
-	bcc := clientcontroller.NewBabylonController(bc, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+	bcc := clientcontroller.NewBabylonController(bc, cfg.BabylonConfig, logger)
 
 	commitList, err := bcc.QueryPublicRandCommitList(fpPk.MustToBTCPK(), startHeight)
 	if err != nil {

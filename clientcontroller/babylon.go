@@ -6,12 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/babylonlabs-io/babylon/client/babylonclient"
-
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
-
 	sdkErr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
+	"github.com/babylonlabs-io/babylon/client/babylonclient"
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	btcctypes "github.com/babylonlabs-io/babylon/x/btccheckpoint/types"
@@ -21,7 +18,6 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil"
-	"github.com/btcsuite/btcd/chaincfg"
 	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
@@ -30,6 +26,7 @@ import (
 	protobuf "google.golang.org/protobuf/proto"
 
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
@@ -40,20 +37,17 @@ var emptyErrs = []*sdkErr.Error{}
 type BabylonController struct {
 	bbnClient *bbnclient.Client
 	cfg       *fpcfg.BBNConfig
-	btcParams *chaincfg.Params
 	logger    *zap.Logger
 }
 
 func NewBabylonController(
 	bbnClient *bbnclient.Client,
 	cfg *fpcfg.BBNConfig,
-	btcParams *chaincfg.Params,
 	logger *zap.Logger,
 ) *BabylonController {
 	return &BabylonController{
 		bbnClient,
 		cfg,
-		btcParams,
 		logger,
 	}
 }
