@@ -833,7 +833,7 @@ operational key used by the finality provider.
 
 2. **Configure Withdrawals**:
   Ensure the withdraw address is set to the beneficiary key using the
-  `set-withdraw-addr` command.
+  `set-withdraw-addr` command [6.2.3 Set Withdraw Address](#623-set-withdraw-address).
 
 3. **Setup the Operational Key**:
   Set the operational key name in the keyring home directory in the
