@@ -82,7 +82,7 @@ func runCommandCommitPubRand(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
-	cc, err := fpcc.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+	cc, err := fpcc.NewClientController(cfg.ChainType, cfg.BabylonConfig, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create rpc client for the Babylon chain: %w", err)
 	}

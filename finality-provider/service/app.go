@@ -52,7 +52,7 @@ func NewFinalityProviderAppFromConfig(
 	db kvdb.Backend,
 	logger *zap.Logger,
 ) (*FinalityProviderApp, error) {
-	cc, err := clientcontroller.NewClientController(cfg.ChainType, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+	cc, err := clientcontroller.NewClientController(cfg.ChainType, cfg.BabylonConfig, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
 	}

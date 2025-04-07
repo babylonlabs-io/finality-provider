@@ -1,16 +1,15 @@
 package clientcontroller
 
 import (
-	"cosmossdk.io/math"
 	"fmt"
+
+	"cosmossdk.io/math"
 	bbnclient "github.com/babylonlabs-io/babylon/client/client"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-	"github.com/btcsuite/btcd/chaincfg"
 	"go.uber.org/zap"
-
-	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -94,7 +93,7 @@ type ClientController interface {
 	Close() error
 }
 
-func NewClientController(chainType string, bbnConfig *fpcfg.BBNConfig, netParams *chaincfg.Params, logger *zap.Logger) (ClientController, error) {
+func NewClientController(chainType string, bbnConfig *fpcfg.BBNConfig, logger *zap.Logger) (ClientController, error) {
 	var (
 		cc  ClientController
 		err error
@@ -111,7 +110,7 @@ func NewClientController(chainType string, bbnConfig *fpcfg.BBNConfig, netParams
 
 	switch chainType {
 	case babylonConsumerChainType:
-		cc = NewBabylonController(bc, bbnConfig, netParams, logger)
+		cc = NewBabylonController(bc, bbnConfig, logger)
 	default:
 		return nil, fmt.Errorf("unsupported consumer chain")
 	}

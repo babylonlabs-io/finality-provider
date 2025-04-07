@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/btcutil"
-	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/jessevdk/go-flags"
 	"go.uber.org/zap/zapcore"
 
@@ -30,7 +29,6 @@ const (
 	defaultSubmitRetryInterval         = 1 * time.Second
 	defaultSignatureSubmissionInterval = 1 * time.Second
 	defaultMaxSubmissionRetries        = 20
-	defaultBitcoinNetwork              = "signet"
 	defaultDataDirname                 = "data"
 	// TimestampingDelayBlocks is an estimation on the delay
 	// for a commit to become available due to BTC timestamping protocol,
@@ -70,7 +68,6 @@ var (
 	//   ~/Users/<username>/Library/Application Support/Fpd on MacOS
 	DefaultFpdDir = btcutil.AppDataDir("fpd", false)
 
-	defaultBTCNetParams       = chaincfg.SigNetParams
 	defaultEOTSManagerAddress = "127.0.0.1:" + strconv.Itoa(eotscfg.DefaultRPCPort)
 	DefaultRPCListener        = "127.0.0.1:" + strconv.Itoa(DefaultRPCPort)
 	DefaultDataDir            = DataDir(DefaultFpdDir)
@@ -89,10 +86,6 @@ type Config struct {
 	BatchSubmissionSize         uint32        `long:"batchsubmissionsize" description:"The size of a batch in one submission"`
 	SubmissionRetryInterval     time.Duration `long:"submissionretryinterval" description:"The interval between each attempt to submit finality signature or public randomness after a failure"`
 	SignatureSubmissionInterval time.Duration `long:"signaturesubmissioninterval" description:"The interval between each finality signature(s) submission"`
-
-	BitcoinNetwork string `long:"bitcoinnetwork" description:"Bitcoin network to run on" choice:"mainnet" choice:"regtest" choice:"testnet" choice:"simnet" choice:"signet"`
-
-	BTCNetParams chaincfg.Params
 
 	PollerConfig *ChainPollerConfig `group:"chainpollerconfig" namespace:"chainpollerconfig"`
 
@@ -122,8 +115,6 @@ func DefaultConfigWithHome(homePath string) Config {
 		SubmissionRetryInterval:     defaultSubmitRetryInterval,
 		SignatureSubmissionInterval: defaultSignatureSubmissionInterval,
 		MaxSubmissionRetries:        defaultMaxSubmissionRetries,
-		BitcoinNetwork:              defaultBitcoinNetwork,
-		BTCNetParams:                defaultBTCNetParams,
 		EOTSManagerAddress:          defaultEOTSManagerAddress,
 		RPCListener:                 DefaultRPCListener,
 		Metrics:                     metrics.DefaultFpConfig(),
@@ -224,13 +215,6 @@ func (cfg *Config) Validate() error {
 		return fmt.Errorf("metrics configuration validation failed: %w", err)
 	}
 
-	btcNetParams, err := NetParamsBTC(cfg.BitcoinNetwork)
-	if err != nil {
-		return fmt.Errorf("invalid BTC network: %w", err)
-	}
-
-	cfg.BTCNetParams = btcNetParams
-
 	return nil
 }
 
@@ -274,22 +258,4 @@ func (cfg *Config) validateBatchAndRetryConfigs() error {
 	}
 
 	return nil
-}
-
-// NetParamsBTC parses the BTC net params from config.
-func NetParamsBTC(btcNet string) (chaincfg.Params, error) {
-	switch btcNet {
-	case "mainnet":
-		return chaincfg.MainNetParams, nil
-	case "testnet":
-		return chaincfg.TestNet3Params, nil
-	case "regtest":
-		return chaincfg.RegressionNetParams, nil
-	case "simnet":
-		return chaincfg.SimNetParams, nil
-	case "signet":
-		return chaincfg.SigNetParams, nil
-	default:
-		return chaincfg.Params{}, fmt.Errorf("invalid network: %v", btcNet)
-	}
 }
