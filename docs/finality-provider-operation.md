@@ -911,7 +911,7 @@ Parameters:
 
 #### 6.7.2 Set Withdraw Address
 
-To recover the local status of a finality provider, use the following command:
+To set the withdraw address to the beneficiary key, use the following command:
 
 ```shell
 fpd set-withdraw-addr <operational-address> --from <registered-bbn-address>
