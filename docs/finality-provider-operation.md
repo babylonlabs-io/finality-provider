@@ -906,7 +906,7 @@ Parameters:
 
 * `<address>`: The Babylon address of the stakeholder in bech32 string.
 
-#### 6.8.1 Set Withdraw Address
+#### 6.7.2 Set Withdraw Address
 
 To recover the local status of a finality provider, use the following command:
 
@@ -929,7 +929,7 @@ This command should ask to
 `confirm transaction before signing and broadcasting [y/N]:` and output the
 transaction hash.
 
-#### 6.8.2 Withdraw Rewards
+#### 6.7.3 Withdraw Rewards
 
 Once the address is set, be sure to set the operational key name in the
 keyring home directory in the `[babylon]` config in `fpd.conf`.
