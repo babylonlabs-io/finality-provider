@@ -953,8 +953,7 @@ Parameters:
 * `<type>`: The type of reward to withdraw (one of `finality_provider`,
   `btc_delegation`)
 * `--from`: The finality provider's registered Babylon address.
-* `<registered-bbn-address>`: Corresponds to the operational key and is where
-  withdraw rewards are sent to
+* `<registered-bbn-address>`: Address rewards are withdrawn to.
 * `--keyring-backend`: The keyring backend to use.
 * `--home`: The home directory for the finality provider.
 * `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
