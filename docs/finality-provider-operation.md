@@ -36,7 +36,7 @@ gain an overall understanding of the finality provider.
    2. [Rewards and Refunding](#62-rewards-and-refunding)
    3. [Start Finality Provider](#63-start-finality-provider)
    4. [Statuses of Finality Provider](#64-statuses-of-finality-provider)
-   5. [Edit your finality provider](#65-edit-your-finality-provider)
+   5. [Edit finality provider](#65-edit-finality-provider)
    6. [Jailing and Unjailing](#66-jailing-and-unjailing)
    7. [Slashing](#67-slashing-and-anti-slashing)
    8. [Prometheus Metrics](#68-prometheus-metrics)
@@ -624,7 +624,7 @@ finality provider instance at a time.
 
 ## 6. Finality Provider Operations
 
-### 6.1 Create Finality Provider
+### 6.1. Create Finality Provider
 
 The `create-finality-provider` command initializes a new finality provider,
 submits `MsgCreateFinalityProvider` to register it on the Babylon chain, and
@@ -731,15 +731,14 @@ The response includes:
   transaction, which you can use to verify the success of the transaction
   on the Babylon chain.
 
-### 6.2 Rewards and Refunding
+### 6.2. Rewards and Refunding
 
 Rewards are accumulated in a reward gauge, and a finality provider becomes
-eligible for a rewards gauge when it meets certain conditions, such as
-having an `ACTIVE` status, participating in voting, and obtaining
-delegations. The distribution of rewards is based on the provider's
-voting power portion relative to other voters.
+eligible for rewards if it has participated sending finality votes.
+The distribution of rewards is based on the provider's voting power portion
+relative to other voters.
 
-#### 6.2.1 Querying Rewards
+#### 6.2.1. Querying Rewards
 
 To query rewards of a given stakeholder address, use the following command.
 
@@ -751,7 +750,7 @@ Parameters:
 
 * `<address>`: The Babylon address of the stakeholder in bech32 string.
 
-#### 6.2.2 Withdraw Rewards
+#### 6.2.2. Withdraw Rewards
 
 The `fpd withdraw-reward` command will withdraw all accumulated rewards of the
 given finality provider. The finality provider must first be active and have
@@ -767,7 +766,6 @@ fpd withdraw-reward <type> --from <registered-bbn-address>
 > used for sending the withdrawal transaction is under use by the finality provider
 > sending operational transaction. This issue will be resolved after following the
 > setup instructions in [6.2.4 Refunding finality provider](#624-refund-finality-provider).
-
 
 Parameters:
 
@@ -789,7 +787,7 @@ This will withdraw **ALL** accumulated rewards to the address you set in the
 the rewards will be withdrawn to the finality provider's `BABY` address used
 in registration.
 
-#### 6.2.3 Set Withdraw Address
+#### 6.2.3. Set Withdraw Address
 
 To set the withdraw address to the beneficiary key, use the following command:
 
@@ -814,7 +812,7 @@ This command should ask to
 `confirm transaction before signing and broadcasting [y/N]:` and output the
 transaction hash.
 
-### 6.2.4 Refund finality provider
+### 6.2.4. Refund Finality Provider
 
 To support the gas costs associated with committing randomness, which are not
 refunded by the protocol, we recommend setting up a refunding flow.
@@ -833,7 +831,7 @@ operational key used by the finality provider.
 
 2. **Configure Withdrawals**:
   Ensure the withdraw address is set to the beneficiary key using the
-  `set-withdraw-addr` command see [6.2.3 Set Withdraw Address](#623-set-withdraw-address).
+  `set-withdraw-addr` command. See [6.2.3 Set Withdraw Address](#623-set-withdraw-address).
 
 3. **Setup the Operational Key**:
   Set the operational key name in the keyring home directory in the
@@ -841,16 +839,17 @@ operational key used by the finality provider.
 
 4. **Add a cron job**:
   Add a cron job to (1) execute the `withdraw-reward` commands in
-  ([6.2.2 Withdraw Rewards](#622-withdraw-rewards)) periodically
-  to withdraw funds to the beneficiary address periodically, and (2) transfer
-  funds from the beneficiary key to the operational key as needed.
+  [6.2.2 Withdraw Rewards](#622-withdraw-rewards) to withdraw funds to the
+  beneficiary address periodically, and (2) transfer funds from the beneficiary
+  key to the operational key as needed.
 
 Only maintain the minimum balance required for finality provider operations in
 the operational key as this is a hot key. Excess funds should be kept safely
 in the benefiary address.
 
-> 💡 **Tip**: In general, committing randomness relates to the number of
-> randomness in a commit. This cost is around 5-10bbn for operations.
+> 💡 **Tip**: Committing randomness has a constant cost of `0.000130BBN` per
+> commit. Therefore, reserving `5-10bbn` for operations should be enough for a
+> long time.
 
 ### 6.3. Start Finality Provider
 
@@ -895,7 +894,7 @@ finality provider.
 For more information on statuses please refer to diagram in the core documentation
 [fp-core](fp-core.md).
 
-### 6.5 Edit your finality provider
+### 6.5. Edit Finality Provider
 
 If you need to edit your finality provider's information, you can use the
 following command:
@@ -929,7 +928,7 @@ edited successfully:
 fpd finality-provider-info <hex-string-of-eots-public-key>
 ```
 
-### 6.6 Jailing and Unjailing
+### 6.6. Jailing and Unjailing
 
 When jailed, the following happens to a finality provider:
 
@@ -959,7 +958,7 @@ Parameters:
 If unjailing is successful, you may start running the finality provider by
 `fpd start --eots-pk <hex-string-of-eots-public-key>`.
 
-### 6.7 Slashing and Anti-slashing
+### 6.7. Slashing and Anti-slashing
 
 **Slashing occurs** when a finality provider **double signs**, meaning that the
 finality provider signs conflicting blocks at the same height. This results in
@@ -976,7 +975,7 @@ Therefore, a proper slashing protection mechanism is required.
 For details about how our built-in anti-slashing works, please refer to
 our technical document [Slashing Protection](../docs/slashing-protection.md).
 
-### 6.8 Prometheus Metrics
+### 6.8. Prometheus Metrics
 
 The finality provider exposes Prometheus metrics for monitoring your
 finality provider. The metrics endpoint is configurable in `fpd.conf`:
@@ -1011,7 +1010,7 @@ For a complete list of available metrics, see:
 
 ## 7. Recovery and Backup
 
-### 7.1 Critical Assets
+### 7.1. Critical Assets
 
 The following assets **must** be backed up frequently to prevent loss of service or funds:
 
@@ -1038,7 +1037,7 @@ For Finality Provider:
   * State info of the finality provider
   * Loss of anti-slashing protection
 
-### 7.2 Backup Recommendations
+### 7.2. Backup Recommendations
 
 1. Regular Backups:
    * Daily backup of keyring directories
@@ -1061,13 +1060,13 @@ For Finality Provider:
 > keys in the keyring directories is **irrecoverable** and will result in
 > permanent loss of your finality provider position and accumulated rewards.
 
-### 7.3 Recover finality-provider db
+### 7.3. Recover finality-provider db
 
 The `finality-provider.db` file contains both the finality provider's running
 status and the public randomness merkle proof. Either information loss
 compromised will lead to service halt, but they are recoverable.
 
-#### 7.3.1 Recover local status of a finality provider
+#### 7.3.1. Recover local status of a finality provider
 
 The local status of a finality provider is defined as follows:
 
@@ -1089,7 +1088,7 @@ Babylon chain. Specifically, this can be achieved by repeating the
 cmd will download the info of the finality provider locally if it is already
 registered on Babylon.
 
-#### 7.3.2 Recover public randomness proof
+#### 7.3.2. Recover public randomness proof
 
 Every finality vote must contain the public randomness proof to prove that the
 randomness used in the signature is already committed on Babylon. Loss of
