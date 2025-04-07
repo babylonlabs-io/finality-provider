@@ -965,7 +965,50 @@ This will withdraw **ALL** accumulated rewards to the address you set in the
 `set-withdraw-addr` command if you set one. If no withdrawal address was set,
 the rewards will be withdrawn to your finality provider address.
 
-Congratulations! You have successfully set up and operated a finality provider.
+#### 6.8 Refunding finality provider
+
+To support the gas costs associated with committing randomness, which are not
+refunded by the protocol, we recommend setting up a refunding flow.
+This involves periodically transferring rewards from a beneficiary key to the
+operational key used by the finality provider.
+
+**How to set up the refunding process:**
+
+1. Ensure you have two keys:
+   * Beneficiary Key: Receives staking rewards.
+   * Operational Key: Used by the finality provider daemon to submit transactions.
+
+If this step hasnt been completed, follow the steps in
+[5.2 Add key for the Babylon account](#52-add-key-for-the-babylon-account) and
+create 2 additional keys. If you have a Babylon node running, you can also
+directly create the keys there.
+
+2. Configure Withdrawals:
+  To set the withdraw address to the beneficiary key, use the following command:
+
+  ```shell
+  fpd set-withdraw-addr <beneficiary-key> --from <registered-bbn-address>
+  --keyring-backend test --home <home-dir> --fees <fees>
+  ```
+
+  This sets the withdraw address to the beneficiary key to enable
+  withdrawing rewards periodically.
+
+3. Fund the Operational Key:
+  Lastly, set the operational key name in the keyring home directory in the
+  `[babylon]` config in `fpd.conf`.
+
+> Important: The `fpd` must be stopped before performing this function.
+
+Once the `fpd` is stopped, run the following to withdraw rewards.
+The finality provider must first be active and have voting power to proceed and
+recieve rewards.
+
+Add a cron job to transfer funds from the beneficiary key to the operational
+key as needed.
+
+Only maintain the minimum balance required for finality provider operations in
+the operational key. Excess funds should be kept in more secure storage.
 
 ## 7. Recovery and Backup
 
@@ -1031,13 +1074,13 @@ The local status of a finality provider is defined as follows:
 
 ```go
 type StoredFinalityProvider struct {
-	FPAddr          string
-	BtcPk           *btcec.PublicKey
-	Description     *stakingtypes.Description
-	Commission      *sdkmath.LegacyDec
-	ChainID         string
-	LastVotedHeight uint64
-	Status          proto.FinalityProviderStatus
+ FPAddr          string
+ BtcPk           *btcec.PublicKey
+ Description     *stakingtypes.Description
+ Commission      *sdkmath.LegacyDec
+ ChainID         string
+ LastVotedHeight uint64
+ Status          proto.FinalityProviderStatus
 }
 ```
 
@@ -1054,6 +1097,7 @@ randomness used in the signature is already committed on Babylon. Loss of
 public randomness proof leads to direct failure of the vote submission.
 
 To recover the public randomness proof, the following steps should be followed:
+
 1. Ensure the `fpd` is stopped.
 2. Unjail your finality provider if needed.
 3. Run the recovery command
