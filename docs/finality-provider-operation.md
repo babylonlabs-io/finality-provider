@@ -36,7 +36,7 @@ gain an overall understanding of the finality provider.
    2. [Rewards and Refunding](#62-rewards-and-refunding)
    3. [Start Finality Provider](#63-start-finality-provider)
    4. [Statuses of Finality Provider](#64-statuses-of-finality-provider)
-   5. [Editing your finality provider](#65-editing-your-finality-provider)
+   5. [Edit your finality provider](#65-edit-your-finality-provider)
    6. [Jailing and Unjailing](#66-jailing-and-unjailing)
    7. [Slashing](#67-slashing-and-anti-slashing)
    8. [Prometheus Metrics](#68-prometheus-metrics)
@@ -753,27 +753,28 @@ Parameters:
 
 #### 6.2.2 Withdraw Rewards
 
-This command will withdraw all accumulated rewards. The `fpd` must be **stopped**
-before performing this action as it uses the registered key as the operational
-key. If the operator follows the steps in
-[6.2.4 Refunding finality provider](#624-refunding-finality-provider)
-this will not cause any issues.
-
-Once the `fpd` is stopped, run the following to withdraw rewards.
-The finality provider must first be active and have sent finality votes to be
-eligible to receive rewards.
+The `fpd withdraw-reward` command will withdraw all accumulated rewards of the
+given finality provider. The finality provider must first be active and have
+sent finality votes to be eligible to receive rewards.
 
 ```shell
 fpd withdraw-reward <type> --from <registered-bbn-address>
 --keyring-backend test --home <home-dir> --fees <fees>
 ```
 
+> ⚠️ **Important**: The `fpd` must be **stopped** before performing this action
+> otherwise, account sequence mismatch error might be encountered because the key
+> used for sending the withdrawal transaction is under use by the finality provider
+> sending operational transaction. This issue will be resolved after following the
+> setup instructions in [6.2.4 Refunding finality provider](#624-refund-finality-provider).
+
+
 Parameters:
 
 * `<type>`: The type of reward to withdraw (one of `finality_provider`,
   `btc_delegation`)
-* `--from`: The finality provider's registered Babylon address.
-* `<registered-bbn-address>`: Address rewards are withdrawn to.
+* `--from <registered-bbn-address>`: The finality provider's BABY address used
+  in registration.
 * `--keyring-backend`: The keyring backend to use.
 * `--home`: The home directory for the finality provider.
 * `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
@@ -785,7 +786,8 @@ transaction hash.
 
 This will withdraw **ALL** accumulated rewards to the address you set in the
 `set-withdraw-addr` command if you set one. If no withdrawal address was set,
-the rewards will be withdrawn to your finality provider address.
+the rewards will be withdrawn to the finality provider's `BABY` address used
+in registration.
 
 #### 6.2.3 Set Withdraw Address
 
@@ -812,7 +814,7 @@ This command should ask to
 `confirm transaction before signing and broadcasting [y/N]:` and output the
 transaction hash.
 
-### 6.2.4 Refunding finality provider
+### 6.2.4 Refund finality provider
 
 To support the gas costs associated with committing randomness, which are not
 refunded by the protocol, we recommend setting up a refunding flow.
@@ -822,10 +824,10 @@ operational key used by the finality provider.
 #### How to set up the refunding process
 
 1. Ensure you have two keys:
-   * Beneficiary Key: Receives staking rewards.
+   * Beneficiary Key: Receives finality provider rewards.
    * Operational Key: Used by the finality provider daemon to submit transactions.
 
-  If this step hasnt been completed, follow the steps in
+  Follow the steps in
   [5.2 Add key for the Babylon account](#52-add-key-for-the-babylon-account) and
   create 2 additional keys.
 
@@ -833,24 +835,26 @@ operational key used by the finality provider.
   Ensure the withdraw address is set to the beneficiary key using the
   `set-withdraw-addr` command.
 
-  This sets the withdraw address to the beneficiary key to enable
-  withdrawing rewards periodically.
-
-3. **Fund the Operational Key**:
+3. **Setup the Operational Key**:
   Set the operational key name in the keyring home directory in the
   `[babylon]` config in `fpd.conf`.
 
 4. **Add a cron job**:
-  Add a cron job to transfer funds from the beneficiary key to the operational
-  key as needed.
+  Add a cron job to (1) execute the `withdraw-reward` commands periodically
+  to withdraw funds to the beneficiary address periodically, and (2) transfer
+  funds from the beneficiary key to the operational key as needed.
 
 Only maintain the minimum balance required for finality provider operations in
-the operational key. Excess funds should be kept in more secure storage.
+the operational key as this is a hot key. Excess funds should be kept safely
+in the benefiary address.
+
+> 💡 **Tip**: In general, committing randomness relates to the number of
+> randomness in a commit. This cost is around 5-10bbn for operations.
 
 ### 6.3. Start Finality Provider
 
-After successful registration, you may start the finality provider instance
-by running:
+After successful registration and properly set up your operational keys,
+you may start the finality provider instance by running:
 
 ```shell
 fpd start --eots-pk <hex-string-of-eots-public-key>
@@ -890,7 +894,7 @@ finality provider.
 For more information on statuses please refer to diagram in the core documentation
 [fp-core](fp-core.md).
 
-### 6.5 Editing your finality provider
+### 6.5 Edit your finality provider
 
 If you need to edit your finality provider's information, you can use the
 following command:
@@ -1068,13 +1072,13 @@ The local status of a finality provider is defined as follows:
 
 ```go
 type StoredFinalityProvider struct {
-FPAddr          string
-BtcPk           *btcec.PublicKey
-Description     *stakingtypes.Description
-Commission      *sdkmath.LegacyDec
-ChainID         string
-LastVotedHeight uint64
-Status          proto.FinalityProviderStatus
+  FPAddr          string
+  BtcPk           *btcec.PublicKey
+  Description     *stakingtypes.Description
+  Commission      *sdkmath.LegacyDec
+  ChainID         string
+  LastVotedHeight uint64
+  Status          proto.FinalityProviderStatus
 }
 ```
 
