@@ -840,7 +840,8 @@ operational key used by the finality provider.
   `[babylon]` config in `fpd.conf`.
 
 4. **Add a cron job**:
-  Add a cron job to (1) execute the `withdraw-reward` commands periodically
+  Add a cron job to (1) execute the `withdraw-reward` commands in
+  ([6.2.2 Withdraw Rewards](#622-withdraw-rewards)) periodically
   to withdraw funds to the beneficiary address periodically, and (2) transfer
   funds from the beneficiary key to the operational key as needed.
 
