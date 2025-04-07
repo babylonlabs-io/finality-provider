@@ -965,7 +965,7 @@ This will withdraw **ALL** accumulated rewards to the address you set in the
 `set-withdraw-addr` command if you set one. If no withdrawal address was set,
 the rewards will be withdrawn to your finality provider address.
 
-#### 6.8 Refunding finality provider
+### 6.8 Refunding finality provider
 
 To support the gas costs associated with committing randomness, which are not
 refunded by the protocol, we recommend setting up a refunding flow.
