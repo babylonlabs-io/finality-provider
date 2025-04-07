@@ -33,16 +33,13 @@ gain an overall understanding of the finality provider.
    4. [Starting the Finality Provider Daemon](#54-starting-the-finality-provider-daemon)
 6. [Finality Provider Operation](#6-finality-provider-operations)
    1. [Create Finality Provider](#61-create-finality-provider)
-   2. [Statuses of Finality Provider](#62-statuses-of-finality-provider)
-   3. [Editing your finality provider](#63-editing-your-finality-provider)
-   4. [Jailing and Unjailing](#64-jailing-and-unjailing)
-   5. [Slashing](#65-slashing-and-anti-slashing)
-   6. [Prometheus Metrics](#66-prometheus-metrics)
-   7. [Rewards](#67-rewards)
-      1. [Querying Rewards](#671-querying-rewards)
-      2. [Withdraw Rewards](#672-withdraw-rewards)
-      3. [Set Withdraw Address](#673-set-withdraw-address)
-   8. [Refunding finality provider](#68-refunding-finality-provider)
+   2. [Rewards and Refunding](#62-rewards-and-refunding)
+   3. [Start Finality Provider](#63-start-finality-provider)
+   4. [Statuses of Finality Provider](#64-statuses-of-finality-provider)
+   5. [Editing your finality provider](#65-editing-your-finality-provider)
+   6. [Jailing and Unjailing](#66-jailing-and-unjailing)
+   7. [Slashing](#67-slashing-and-anti-slashing)
+   8. [Prometheus Metrics](#68-prometheus-metrics)
 7. [Recovery and backup](#7-recovery-and-backup)
    1. [Critical assets](#71-critical-assets)
    2. [Backup recommendations](#72-backup-recommendations)
@@ -260,7 +257,7 @@ the same `keyname` for an existing keyname.
 
 The command will return a JSON response containing your EOTS key details:
 
-```
+```shell
 {
     "name": "eots",
     "pub_key_hex":
@@ -517,7 +514,7 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > Babylon full node instead of relying on third parties. You can find
 > instructions on setting up a Babylon node
 > [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/babylon-node/README.md).
-
+>
 > ⚠️ **Critical RPC Configuration**:
 > When configuring your finality provider to a Babylon RPC node, you should
 > connect to a **single** node directly. Additionally you **must**
@@ -567,7 +564,7 @@ The command flags:
 
 It will start the finality provider daemon listening for registration and other
 operations. If there is already a finality provider created (described in a
-later [section](#51-create-finality-provider)), `fpd start` will also start
+later [section](#61-create-finality-provider)), `fpd start` will also start
 the finality provider. If there are multiple finality providers created,
 `--eots-pk` is required.
 
@@ -734,162 +731,7 @@ The response includes:
   transaction, which you can use to verify the success of the transaction
   on the Babylon chain.
 
-### 6.2. Statuses of Finality Provider
-
-Once the finality provider has been created, it will have the `REGISTERED` status.
-
-Below you can see a list of the statuses that a finality provider can transition
-to:
-
-* `REGISTERED`: defines a finality provider that has been created and registered
-  to the consumer chain but has no delegated stake
-* `ACTIVE`: defines a finality provider that is delegated to vote
-* `INACTIVE`: defines a finality provider whose delegations are reduced to
-  zero but not slashed
-* `JAILED`: defines a finality provider that has been jailed
-* `SLASHED`: Defines a finality provider that has been permanently removed from
-  the network for double signing (signing conflicting blocks at the same height).
-  This state is irreversible.
-
-To check the status of a finality provider, you can use the following command:
-
-```shell
-fpd finality-provider-info <hex-string-of-eots-public-key>
-```
-
-This will return the same response as the `create-finality-provider`
-command but you will be able to check in real time the status of the
-finality provider.
-
-For more information on statuses please refer to diagram in the core documentation
-[fp-core](fp-core.md).
-
-After successful registration, you may start the finality provider instance
-by running:
-
-```shell
-fpd start --eots-pk <hex-string-of-eots-public-key>
-```
-
-If `--eots-pk` is not specified, the command will start the finality provider
-if it is the only one stored in the database. If multiple finality providers
-are in the database, specifying `--eots-pk` is required.
-
-### 6.3. Editing your finality provider
-
-If you need to edit your finality provider's information, you can use the
-following command:
-
-```shell
-fpd edit-finality-provider <hex-string-of-eots-public-key> \
-  --commission-rate <commission-rate> \
-  --home <path-to-fpd-home-dir>
-  # Add any other parameters you would like to modify
-```
-
-Parameters:
-
-* `<hex-string-of-eots-public-key>`: The EOTS public key of the finality provider
-* `--commission-rate`: A required flag for the commission rate for the finality
-  provider
-* `--home`: An optional flag for the path to your finality provider daemon home
-  directory
-
-Parameters you can edit:
-
-* `--moniker`: A human-readable name for your finality provider
-* `--website`: Your finality provider's website
-* `--security-contact`: Contact email for security issues
-* `--details`: Additional description of your finality provider
-
-You can then use the following command to check if the finality provider has been
-edited successfully:
-
-```shell
-fpd finality-provider-info <hex-string-of-eots-public-key>
-```
-
-### 6.4. Jailing and Unjailing
-
-When jailed, the following happens to a finality provider:
-
-* Their voting power becomes `0`
-* Status is set to `JAILED`
-* Delegator rewards stop
-
-To unjail a finality provider, you must complete the following steps:
-
-1. Fix the underlying issue that caused jailing (e.g., ensure your node is
-   properly synced and voting)
-2. Wait for the jailing period to pass (defined by finality module parameters)
-3. Send the unjail transaction to the Babylon chain using the following command:
-
-```shell
-fpd unjail-finality-provider <eots-pk> --daemon-address <rpc-address> --home <path>
-```
-
-Parameters:
-
-* `<eots-pk>`: Your finality provider's EOTS public key in hex format
-* `--daemon-address`: RPC server address of fpd (default: `127.0.0.1:12581`)
-* `--home`: Path to your finality provider daemon home directory
-
-> ⚠️ Before unjailing, ensure you've fixed the underlying issue that caused jailing
-
-If unjailing is successful, you may start running the finality provider by
-`fpd start --eots-pk <hex-string-of-eots-public-key>`.
-
-### 6.5. Slashing and Anti-slashing
-
-**Slashing occurs** when a finality provider **double signs**, meaning that the
-finality provider signs conflicting blocks at the same height. This results in
-the extraction of the finality provider's private key and their immediate
-removal from the active set. For details about how the slashing works in the
-BTC staking protocol, please refer to our [light paper](https://docs.babylonlabs.io/papers/btc_staking_litepaper(EN).pdf).
-
-> ⚠️ **Critical**: Slashing is irreversible and results in
-> permanent removal from the network.
-
-Apart from malicious behavior, honest finality providers face [slashing risks](https://cubist.dev/blog/slashing-risks-you-need-to-think-about-when-restaking)
-due to factors like hardware failures or software bugs.
-Therefore, a proper slashing protection mechanism is required.
-For details about how our built-in anti-slashing works, please refer to
-our technical document [Slashing Protection](../docs/slashing-protection.md).
-
-### 6.6. Prometheus Metrics
-
-The finality provider exposes Prometheus metrics for monitoring your
-finality provider. The metrics endpoint is configurable in `fpd.conf`:
-
-#### Core Metrics
-
-1. **Status for Finality Providers**
-   * `fp_status`: Current status of a finality provider
-   * `babylon_tip_height`: The current tip height of the Babylon network
-   * `last_polled_height`: The most recent block height checked by the poller
-
-2. **Key Operations**
-   * `fp_seconds_since_last_vote`: Seconds since the last finality sig vote
-   * `fp_seconds_since_last_randomness`: Seconds since the last public
-      randomness commitment
-   * `fp_total_failed_votes`: The total number of failed votes
-   * `fp_total_failed_randomness`: The total number of failed
-      randomness commitments
-
-Each metric with `fp_` prefix includes the finality provider's BTC public key
-hex as a label.
-
-> 💡 **Tip**: Monitor these metrics to detect issues before they lead to jailing:
->
-> * Large gaps in `fp_seconds_since_last_vote`
-> * Increasing `fp_total_failed_votes`
-
-For a complete list of available metrics, see:
-
-* Finality Provider metrics: [fp_collectors.go](../metrics/fp_collectors.go)
-* EOTS metrics: [eots_collectors.go](../metrics/eots_collectors.go)
-
-### 6.7 Rewards
+### 6.2 Rewards and Refunding
 
 Rewards are accumulated in a reward gauge, and a finality provider becomes
 eligible for a rewards gauge when it meets certain conditions, such as
@@ -897,7 +739,7 @@ having an `ACTIVE` status, participating in voting, and obtaining
 delegations. The distribution of rewards is based on the provider's
 voting power portion relative to other voters.
 
-#### 6.7.1 Querying Rewards
+#### 6.2.1 Querying Rewards
 
 To query rewards of a given stakeholder address, use the following command.
 
@@ -909,12 +751,12 @@ Parameters:
 
 * `<address>`: The Babylon address of the stakeholder in bech32 string.
 
-#### 6.7.2 Withdraw Rewards
+#### 6.2.2 Withdraw Rewards
 
 This command will withdraw all accumulated rewards. The `fpd` must be **stopped**
 before performing this action as it uses the registered key as the operational
 key. If the operator follows the steps in
-[6.8 Refunding finality provider](#68-refunding-finality-provider)
+[6.2.4 Refunding finality provider](#624-refunding-finality-provider)
 this will not cause any issues.
 
 Once the `fpd` is stopped, run the following to withdraw rewards.
@@ -945,7 +787,7 @@ This will withdraw **ALL** accumulated rewards to the address you set in the
 `set-withdraw-addr` command if you set one. If no withdrawal address was set,
 the rewards will be withdrawn to your finality provider address.
 
-#### 6.7.3 Set Withdraw Address
+#### 6.2.3 Set Withdraw Address
 
 To set the withdraw address to the beneficiary key, use the following command:
 
@@ -958,7 +800,8 @@ Parameters:
 
 * `<beneficiary-address>`: Corresponds to the beneficiary key and is where
   withdraw rewards are sent to.
-* `<registered-bbn-address>`: The finality provider's registered Babylon address.
+* `<registered-bbn-address>`: Corresponds to the key used in registration and is where
+  withdraw rewards are sent to by default if no other address is set via `set-withdraw-addr`
 * `--from`: The finality provider's registered Babylon address.
 * `--keyring-backend`: The keyring backend to use.
 * `--home`: The home directory for the finality provider.
@@ -969,7 +812,7 @@ This command should ask to
 `confirm transaction before signing and broadcasting [y/N]:` and output the
 transaction hash.
 
-### 6.8 Refunding finality provider
+### 6.2.4 Refunding finality provider
 
 To support the gas costs associated with committing randomness, which are not
 refunded by the protocol, we recommend setting up a refunding flow.
@@ -1007,6 +850,163 @@ operational key used by the finality provider.
 
 Only maintain the minimum balance required for finality provider operations in
 the operational key. Excess funds should be kept in more secure storage.
+
+### 6.3. Start Finality Provider
+
+After successful registration, you may start the finality provider instance
+by running:
+
+```shell
+fpd start --eots-pk <hex-string-of-eots-public-key>
+```
+
+If `--eots-pk` is not specified, the command will start the finality provider
+if it is the only one stored in the database. If multiple finality providers
+are in the database, specifying `--eots-pk` is required.
+
+### 6.4. Statuses of Finality Provider
+
+Once the finality provider has been created, it will have the `REGISTERED` status.
+
+Below you can see a list of the statuses that a finality provider can transition
+to:
+
+* `REGISTERED`: defines a finality provider that has been created and registered
+  to the consumer chain but has no delegated stake
+* `ACTIVE`: defines a finality provider that is delegated to vote
+* `INACTIVE`: defines a finality provider whose delegations are reduced to
+  zero but not slashed
+* `JAILED`: defines a finality provider that has been jailed
+* `SLASHED`: Defines a finality provider that has been permanently removed from
+  the network for double signing (signing conflicting blocks at the same height).
+  This state is irreversible.
+
+To check the status of a finality provider, you can use the following command:
+
+```shell
+fpd finality-provider-info <hex-string-of-eots-public-key>
+```
+
+This will return the same response as the `create-finality-provider`
+command but you will be able to check in real time the status of the
+finality provider.
+
+For more information on statuses please refer to diagram in the core documentation
+[fp-core](fp-core.md).
+
+### 6.5 Editing your finality provider
+
+If you need to edit your finality provider's information, you can use the
+following command:
+
+```shell
+fpd edit-finality-provider <hex-string-of-eots-public-key> \
+  --commission-rate <commission-rate> \
+  --home <path-to-fpd-home-dir>
+  # Add any other parameters you would like to modify
+```
+
+Parameters:
+
+* `<hex-string-of-eots-public-key>`: The EOTS public key of the finality provider
+* `--commission-rate`: A required flag for the commission rate for the finality
+  provider
+* `--home`: An optional flag for the path to your finality provider daemon home
+  directory
+
+Parameters you can edit:
+
+* `--moniker`: A human-readable name for your finality provider
+* `--website`: Your finality provider's website
+* `--security-contact`: Contact email for security issues
+* `--details`: Additional description of your finality provider
+
+You can then use the following command to check if the finality provider has been
+edited successfully:
+
+```shell
+fpd finality-provider-info <hex-string-of-eots-public-key>
+```
+
+### 6.6 Jailing and Unjailing
+
+When jailed, the following happens to a finality provider:
+
+* Their voting power becomes `0`
+* Status is set to `JAILED`
+* Delegator rewards stop
+
+To unjail a finality provider, you must complete the following steps:
+
+1. Fix the underlying issue that caused jailing (e.g., ensure your node is
+   properly synced and voting)
+2. Wait for the jailing period to pass (defined by finality module parameters)
+3. Send the unjail transaction to the Babylon chain using the following command:
+
+```shell
+fpd unjail-finality-provider <eots-pk> --daemon-address <rpc-address> --home <path>
+```
+
+Parameters:
+
+* `<eots-pk>`: Your finality provider's EOTS public key in hex format
+* `--daemon-address`: RPC server address of fpd (default: `127.0.0.1:12581`)
+* `--home`: Path to your finality provider daemon home directory
+
+> ⚠️ Before unjailing, ensure you've fixed the underlying issue that caused jailing
+
+If unjailing is successful, you may start running the finality provider by
+`fpd start --eots-pk <hex-string-of-eots-public-key>`.
+
+### 6.7 Slashing and Anti-slashing
+
+**Slashing occurs** when a finality provider **double signs**, meaning that the
+finality provider signs conflicting blocks at the same height. This results in
+the extraction of the finality provider's private key and their immediate
+removal from the active set. For details about how the slashing works in the
+BTC staking protocol, please refer to our [light paper](https://docs.babylonlabs.io/papers/btc_staking_litepaper(EN).pdf).
+
+> ⚠️ **Critical**: Slashing is irreversible and results in
+> permanent removal from the network.
+
+Apart from malicious behavior, honest finality providers face [slashing risks](https://cubist.dev/blog/slashing-risks-you-need-to-think-about-when-restaking)
+due to factors like hardware failures or software bugs.
+Therefore, a proper slashing protection mechanism is required.
+For details about how our built-in anti-slashing works, please refer to
+our technical document [Slashing Protection](../docs/slashing-protection.md).
+
+### 6.8 Prometheus Metrics
+
+The finality provider exposes Prometheus metrics for monitoring your
+finality provider. The metrics endpoint is configurable in `fpd.conf`:
+
+#### Core Metrics
+
+1. **Status for Finality Providers**
+   * `fp_status`: Current status of a finality provider
+   * `babylon_tip_height`: The current tip height of the Babylon network
+   * `last_polled_height`: The most recent block height checked by the poller
+
+2. **Key Operations**
+   * `fp_seconds_since_last_vote`: Seconds since the last finality sig vote
+   * `fp_seconds_since_last_randomness`: Seconds since the last public
+      randomness commitment
+   * `fp_total_failed_votes`: The total number of failed votes
+   * `fp_total_failed_randomness`: The total number of failed
+      randomness commitments
+
+Each metric with `fp_` prefix includes the finality provider's BTC public key
+hex as a label.
+
+> 💡 **Tip**: Monitor these metrics to detect issues before they lead to jailing:
+>
+> * Large gaps in `fp_seconds_since_last_vote`
+> * Increasing `fp_total_failed_votes`
+
+For a complete list of available metrics, see:
+
+* Finality Provider metrics: [fp_collectors.go](../metrics/fp_collectors.go)
+* EOTS metrics: [eots_collectors.go](../metrics/eots_collectors.go)
 
 ## 7. Recovery and Backup
 
