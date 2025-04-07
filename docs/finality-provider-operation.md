@@ -841,7 +841,7 @@ operational key used by the finality provider.
   withdrawing rewards periodically.
 
 3. Fund the Operational Key:
-  Lastly, set the operational key name in the keyring home directory in the
+  Set the operational key name in the keyring home directory in the
   `[babylon]` config in `fpd.conf`.
 
 4. Add a cron job:
