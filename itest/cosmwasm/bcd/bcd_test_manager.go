@@ -109,7 +109,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 			t.Logf("failed to create Babylon client: %v", err)
 			return false
 		}
-		bc, err = bbncc.NewBabylonController(bbnCl, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		bc, err = bbncc.NewBabylonController(bbnCl, cfg.BabylonConfig, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon controller: %v", err)
 			return false
