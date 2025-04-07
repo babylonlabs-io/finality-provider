@@ -107,9 +107,6 @@ func DefaultFpConfig(keyringDir, homeDir string) *config.Config {
 	cfg.NumPubRandMax = 1000
 	cfg.TimestampingDelayBlocks = 0
 
-	cfg.BitcoinNetwork = "simnet"
-	cfg.BTCNetParams = chaincfg.SimNetParams
-
 	cfg.PollerConfig.PollInterval = 1 * time.Millisecond
 	cfg.PollerConfig.AutoChainScanningMode = false
 

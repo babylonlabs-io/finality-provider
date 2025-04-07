@@ -108,7 +108,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 			time.Sleep(100 * time.Millisecond)
 			return false
 		}
-		bc, err = bbncc.NewBabylonController(bbnCl, cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		bc, err = bbncc.NewBabylonController(bbnCl, cfg.BabylonConfig, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon controller: %v", err)
 			time.Sleep(100 * time.Millisecond)
@@ -121,7 +121,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 			time.Sleep(200 * time.Millisecond)
 			return false
 		}
-		bcc, err = bbncc.NewBabylonConsumerController(cfg.BabylonConfig, &cfg.BTCNetParams, logger)
+		bcc, err = bbncc.NewBabylonConsumerController(cfg.BabylonConfig, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon consumer controller: %v", err)
 			time.Sleep(100 * time.Millisecond)
@@ -215,7 +215,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	require.NoError(t, err)
 	err = bc.Start()
 	require.NoError(t, err)
-	bcc, err := bbncc.NewBabylonConsumerController(cfg.BabylonConfig, &cfg.BTCNetParams, tm.logger)
+	bcc, err := bbncc.NewBabylonConsumerController(cfg.BabylonConfig, tm.logger)
 	require.NoError(t, err)
 
 	// Create and start finality provider app

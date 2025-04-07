@@ -20,7 +20,6 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil"
-	"github.com/btcsuite/btcd/chaincfg"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	sttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -40,20 +39,17 @@ var emptyErrs = []*sdkErr.Error{}
 type BabylonController struct {
 	bbnClient *bbnclient.Client
 	cfg       *fpcfg.BBNConfig
-	btcParams *chaincfg.Params
 	logger    *zap.Logger
 }
 
 func NewBabylonController(
 	bbnClient *bbnclient.Client,
 	cfg *fpcfg.BBNConfig,
-	btcParams *chaincfg.Params,
 	logger *zap.Logger,
 ) (*BabylonController, error) {
 	return &BabylonController{
 		bbnClient,
 		cfg,
-		btcParams,
 		logger,
 	}, nil
 }

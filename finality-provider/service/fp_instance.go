@@ -705,7 +705,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 	for i, b := range blocks {
 		eotsSig, err := fp.SignFinalitySig(b)
 		if err != nil {
-			if !errors.Is(err, eotstypes.ErrDoubleSign) {
+			if !strings.Contains(err.Error(), eotstypes.ErrDoubleSign.Error()) {
 				return nil, err
 			}
 			// Skip this block and its corresponding items if we encounter ErrDoubleSign
