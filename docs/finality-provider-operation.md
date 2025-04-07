@@ -819,7 +819,7 @@ refunded by the protocol, we recommend setting up a refunding flow.
 This involves periodically transferring rewards from a beneficiary key to the
 operational key used by the finality provider.
 
-**How to set up the refunding process:**
+#### How to set up the refunding process
 
 1. Ensure you have two keys:
    * Beneficiary Key: Receives staking rewards.
@@ -829,22 +829,18 @@ operational key used by the finality provider.
   [5.2 Add key for the Babylon account](#52-add-key-for-the-babylon-account) and
   create 2 additional keys.
 
-2. Configure Withdrawals:
-  To set the withdraw address to the beneficiary key, use the following command:
-
-  ```shell
-  fpd set-withdraw-addr <beneficiary-key> --from <registered-bbn-address>
-  --keyring-backend test --home <home-dir> --fees <fees>
-  ```
+2. **Configure Withdrawals**:
+  Ensure the withdraw address is set to the beneficiary key using the
+  `set-withdraw-addr` command.
 
   This sets the withdraw address to the beneficiary key to enable
   withdrawing rewards periodically.
 
-3. Fund the Operational Key:
+3. **Fund the Operational Key**:
   Set the operational key name in the keyring home directory in the
   `[babylon]` config in `fpd.conf`.
 
-4. Add a cron job:
+4. **Add a cron job**:
   Add a cron job to transfer funds from the beneficiary key to the operational
   key as needed.
 
