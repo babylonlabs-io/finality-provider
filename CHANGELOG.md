@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#436](https://github.com/babylonlabs-io/finality-provider/pull/436) chore: ignore double sign error
+
 ## v1.0.0
 
 ## v1.0.0-rc.6
