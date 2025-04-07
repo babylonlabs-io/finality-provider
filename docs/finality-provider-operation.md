@@ -906,7 +906,7 @@ Parameters:
 
 * `<address>`: The Babylon address of the stakeholder in bech32 string.
 
-#### 6.8 Recover local status of a finality provider
+#### 6.8.1 Set Withdraw Address
 
 To recover the local status of a finality provider, use the following command:
 
@@ -929,6 +929,8 @@ This command should ask to
 `confirm transaction before signing and broadcasting [y/N]:` and output the
 transaction hash.
 
+#### 6.8.2 Withdraw Rewards
+
 Once the address is set, be sure to set the operational key name in the
 keyring home directory in the `[babylon]` config in `fpd.conf`.
 
@@ -939,7 +941,7 @@ The finality provider must first be active and have voting power to proceed and
 recieve rewards.
 
 ```shell
-fpd withdraw-reward <type> --from <operational-address>
+fpd withdraw-reward <type> --from <registered-bbn-address>
 --keyring-backend test --home <home-dir> --fees <fees>
 ```
 
@@ -948,7 +950,7 @@ Parameters:
 * `<type>`: The type of reward to withdraw (one of `finality_provider`,
   `btc_delegation`)
 * `--from`: The finality provider's registered Babylon address.
-* `<operational-address>`: Corresponds to the operational key and is where
+* `<registered-bbn-address>`: Corresponds to the operational key and is where
   withdraw rewards are sent to
 * `--keyring-backend`: The keyring backend to use.
 * `--home`: The home directory for the finality provider.
