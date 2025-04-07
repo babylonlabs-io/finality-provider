@@ -210,10 +210,8 @@ Parameters:
 
 * **keyring-directory***:
   * EOTS private keys are securely stored using Cosmos SDK's keyring system
-  * Test backend is used for daemon access (required for automated signing)
+  * Test backend is mandatory for daemon access (required for automated signing)
   * Keys are used for EOTS signatures
-  * Other keyring backends (file/os) are supported but not recommended
-    for daemon use
 
 * **eotsd.log**:
   * Key creation and import events
