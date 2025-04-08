@@ -20,17 +20,12 @@ import (
 	"time"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-	"github.com/stretchr/testify/require"
 
-	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	goflags "github.com/jessevdk/go-flags"
-	"github.com/stretchr/testify/require"
 
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
