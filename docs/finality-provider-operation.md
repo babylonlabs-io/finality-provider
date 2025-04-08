@@ -690,7 +690,7 @@ with the finality provider details, similar to the following:
 To create a finality provider using the JSON file, you can use the following command:
 
 ```shell
-fpd create-finality-provider --json-file <path-to-json-file>
+fpd create-finality-provider --from-file <path-to-json-file>
 ```
 
 Upon successful creation, the command will return a JSON response containing
