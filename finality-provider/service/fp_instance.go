@@ -20,7 +20,6 @@ import (
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
-	eotstypes "github.com/babylonlabs-io/finality-provider/eotsmanager/types"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
@@ -705,13 +704,14 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 	for i, b := range blocks {
 		eotsSig, err := fp.SignFinalitySig(b)
 		if err != nil {
-			if !strings.Contains(err.Error(), eotstypes.ErrDoubleSign.Error()) {
+			if !errors.Is(err, ErrFailedPrecondition) {
 				return nil, err
 			}
-			// Skip this block and its corresponding items if we encounter ErrDoubleSign
-			fp.logger.Warn("encountered double sign error, skipping block",
+			// Skip this block and its corresponding items if we encounter FailedPrecondition
+			fp.logger.Warn("encountered FailedPrecondition error, skipping block",
 				zap.Uint64("height", b.Height),
-				zap.String("hash", hex.EncodeToString(b.Hash)))
+				zap.String("hash", hex.EncodeToString(b.Hash)),
+				zap.Error(err))
 
 			continue
 		}

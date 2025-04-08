@@ -180,8 +180,7 @@ func TestDoubleSigning(t *testing.T) {
 
 	// confirm we have double sign protection
 	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b, true)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "double sign")
+	require.Contains(t, err.Error(), "FailedPrecondition")
 
 	_, extractedKey, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b, false)
 	require.NoError(t, err)

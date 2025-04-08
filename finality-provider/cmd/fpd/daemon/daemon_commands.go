@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/cometbft/cometbft/crypto/tmhash"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/cometbft/cometbft/crypto/tmhash"
 
 	"cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/types"

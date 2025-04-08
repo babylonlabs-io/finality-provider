@@ -2,12 +2,16 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/gogo/status"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/proto"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/types"
 )
 
 // rpcServer is the main RPC server for the EOTS daemon that handles
@@ -64,6 +68,10 @@ func (r *rpcServer) SignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 	*proto.SignEOTSResponse, error) {
 	sig, err := r.em.SignEOTS(req.Uid, req.ChainId, req.Msg, req.Height)
 	if err != nil {
+		if errors.Is(err, types.ErrDoubleSign) {
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		}
+
 		return nil, err
 	}
 
