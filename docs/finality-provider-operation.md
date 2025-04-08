@@ -33,13 +33,13 @@ gain an overall understanding of the finality provider.
     4. [Starting the Finality Provider Daemon](#54-starting-the-finality-provider-daemon)
 6. [Finality Provider Operation](#6-finality-provider-operations)
    1. [Create Finality Provider](#61-create-finality-provider)
-   2. [Statuses of Finality Provider](#62-statuses-of-finality-provider)
-   3. [Editing your finality provider](#63-editing-your-finality-provider)
-   4. [Jailing and Unjailing](#64-jailing-and-unjailing)
-   5. [Slashing](#65-slashing-and-anti-slashing)
-   6. [Prometheus Metrics](#66-prometheus-metrics)
-   7. [Rewards](#67-rewards)
-      1. [Querying Rewards](#671-querying-rewards)
+   2. [Rewards and Refunding](#62-rewards-and-refunding)
+   3. [Start Finality Provider](#63-start-finality-provider)
+   4. [Statuses of Finality Provider](#64-statuses-of-finality-provider)
+   5. [Edit finality provider](#65-edit-finality-provider)
+   6. [Jailing and Unjailing](#66-jailing-and-unjailing)
+   7. [Slashing](#67-slashing-and-anti-slashing)
+   8. [Prometheus Metrics](#68-prometheus-metrics)
 7. [Recovery and backup](#7-recovery-and-backup)
    1. [Critical assets](#71-critical-assets)
    2. [Backup recommendations](#72-backup-recommendations)
@@ -255,7 +255,7 @@ the same `keyname` for an existing keyname.
 
 The command will return a JSON response containing your EOTS key details:
 
-```
+```shell
 {
     "name": "eots",
     "pub_key_hex":
@@ -558,7 +558,7 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > Babylon full node instead of relying on third parties. You can find
 > instructions on setting up a Babylon node
 > [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/babylon-node/README.md).
-
+>
 > ⚠️ **Critical RPC Configuration**:
 > When configuring your finality provider to a Babylon RPC node, you should
 > connect to a **single** node directly. Additionally you **must**
@@ -601,7 +601,7 @@ The command flags:
 
 It will start the finality provider daemon listening for registration and other
 operations. If there is already a finality provider created (described in a
-later [section](#51-initialize-the-finality-provider-daemon), `fpd start` will also start
+later [section](#61-create-finality-provider)), `fpd start` will also start
 the finality provider. If there are multiple finality providers created,
 `--eots-pk` is required.
 
@@ -661,7 +661,7 @@ finality provider instance at a time.
 
 ## 6. Finality Provider Operations
 
-### 6.1 Create Finality Provider
+### 6.1. Create Finality Provider
 
 The `create-finality-provider` command initializes a new finality provider,
 submits `MsgCreateFinalityProvider` to register it on the Babylon chain, and
@@ -768,7 +768,140 @@ The response includes:
   transaction, which you can use to verify the success of the transaction
   on the Babylon chain.
 
-### 6.2. Statuses of Finality Provider
+### 6.2. Rewards and Refunding
+
+Rewards are accumulated in a reward gauge, and a finality provider becomes
+eligible for rewards if it has participated sending finality votes.
+The distribution of rewards is based on the provider's voting power portion
+relative to other voters.
+
+#### 6.2.1. Querying Rewards
+
+To query rewards of a given stakeholder address, use the following command.
+
+```shell
+fpd reward-gauges <address>
+```
+
+Parameters:
+
+* `<address>`: The Babylon address of the stakeholder in bech32 string.
+
+#### 6.2.2. Withdraw Rewards
+
+The `fpd withdraw-reward` command will withdraw all accumulated rewards of the
+given finality provider. The finality provider must first be active and have
+sent finality votes to be eligible to receive rewards.
+
+```shell
+fpd withdraw-reward <type> --from <registered-bbn-address>
+--keyring-backend test --home <home-dir> --fees <fees>
+```
+
+> ⚠️ **Important**: The `fpd` must be **stopped** before performing this action
+> otherwise, account sequence mismatch error might be encountered because the key
+> used for sending the withdrawal transaction is under use by the finality provider
+> sending operational transaction. This issue will be resolved after following the
+> setup instructions in [6.2.4 Refunding finality provider](#624-refund-finality-provider).
+
+Parameters:
+
+* `<type>`: The type of reward to withdraw (one of `finality_provider`,
+  `btc_delegation`)
+* `--from <registered-bbn-address>`: The finality provider's BABY address used
+  in registration.
+* `--keyring-backend`: The keyring backend to use.
+* `--home`: The home directory for the finality provider.
+* `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
+  These fees are paid from the account specified in `--from`.
+
+Again, this command should ask to
+`confirm transaction before signing and broadcasting [y/N]:` and output the
+transaction hash.
+
+This will withdraw **ALL** accumulated rewards to the address you set in the
+`set-withdraw-addr` command if you set one. If no withdrawal address was set,
+the rewards will be withdrawn to the finality provider's `BABY` address used
+in registration.
+
+#### 6.2.3. Set Withdraw Address
+
+To set the withdraw address to the beneficiary key, use the following command:
+
+```shell
+fpd set-withdraw-addr <beneficiary-address> --from <registered-bbn-address>
+--keyring-backend test --home <home-dir> --fees <fees>
+```
+
+Parameters:
+
+* `<beneficiary-address>`: Corresponds to the beneficiary key and is where
+  withdraw rewards are sent to.
+* `<registered-bbn-address>`: Corresponds to the key used in registration and is where
+  withdraw rewards are sent to by default if no other address is set via `set-withdraw-addr`
+* `--from`: The finality provider's registered Babylon address.
+* `--keyring-backend`: The keyring backend to use.
+* `--home`: The home directory for the finality provider.
+* `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
+  These fees are paid from the account specified in `--from`.
+
+This command should ask to
+`confirm transaction before signing and broadcasting [y/N]:` and output the
+transaction hash.
+
+### 6.2.4. Refund Finality Provider
+
+To support the gas costs associated with committing randomness, which are not
+refunded by the protocol, we recommend setting up a refunding flow.
+This involves periodically transferring rewards from a beneficiary key to the
+operational key used by the finality provider.
+
+#### How to set up the refunding process
+
+1. Ensure you have two keys:
+   * Beneficiary Key: Receives finality provider rewards.
+   * Operational Key: Used by the finality provider daemon to submit transactions.
+
+  Follow the steps in
+  [5.2 Add key for the Babylon account](#52-add-key-for-the-babylon-account) and
+  create 2 additional keys.
+
+2. **Configure Withdrawals**:
+  Ensure the withdraw address is set to the beneficiary key using the
+  `set-withdraw-addr` command. See [6.2.3 Set Withdraw Address](#623-set-withdraw-address).
+
+3. **Setup the Operational Key**:
+  Set the operational key name in the keyring home directory in the
+  `[babylon]` config in `fpd.conf`.
+
+4. **Add a cron job**:
+  Add a cron job to (1) execute the `withdraw-reward` commands in
+  [6.2.2 Withdraw Rewards](#622-withdraw-rewards) to withdraw funds to the
+  beneficiary address periodically, and (2) transfer funds from the beneficiary
+  key to the operational key as needed.
+
+Only maintain the minimum balance required for finality provider operations in
+the operational key as this is a hot key. Excess funds should be kept safely
+in the benefiary address.
+
+> 💡 **Tip**: Committing randomness has a constant cost of `0.000130BBN` per
+> commit. Therefore, reserving `5-10bbn` for operations should be enough for a
+> long time.
+
+### 6.3. Start Finality Provider
+
+After successful registration and properly set up your operational keys,
+you may start the finality provider instance by running:
+
+```shell
+fpd start --eots-pk <hex-string-of-eots-public-key>
+```
+
+If `--eots-pk` is not specified, the command will start the finality provider
+if it is the only one stored in the database. If multiple finality providers
+are in the database, specifying `--eots-pk` is required.
+
+### 6.4. Statuses of Finality Provider
 
 Once the finality provider has been created, it will have the `REGISTERED` status.
 
@@ -798,18 +931,7 @@ finality provider.
 For more information on statuses please refer to diagram in the core documentation
 [fp-core](fp-core.md).
 
-After successful registration, you may start the finality provider instance
-by running:
-
-```shell
-fpd start --eots-pk <hex-string-of-eots-public-key>
-```
-
-If `--eots-pk` is not specified, the command will start the finality provider
-if it is the only one stored in the database. If multiple finality providers
-are in the database, specifying `--eots-pk` is required.
-
-### 6.3. Editing your finality provider
+### 6.5. Edit Finality Provider
 
 If you need to edit your finality provider's information, you can use the
 following command:
@@ -843,7 +965,7 @@ edited successfully:
 fpd finality-provider-info <hex-string-of-eots-public-key>
 ```
 
-### 6.4. Jailing and Unjailing
+### 6.6. Jailing and Unjailing
 
 When jailed, the following happens to a finality provider:
 
@@ -873,7 +995,7 @@ Parameters:
 If unjailing is successful, you may start running the finality provider by
 `fpd start --eots-pk <hex-string-of-eots-public-key>`.
 
-### 6.5. Slashing and Anti-slashing
+### 6.7. Slashing and Anti-slashing
 
 **Slashing occurs** when a finality provider **double signs**, meaning that the
 finality provider signs conflicting blocks at the same height. This results in
@@ -890,7 +1012,7 @@ Therefore, a proper slashing protection mechanism is required.
 For details about how our built-in anti-slashing works, please refer to
 our technical document [Slashing Protection](../docs/slashing-protection.md).
 
-### 6.6. Prometheus Metrics
+### 6.8. Prometheus Metrics
 
 The finality provider exposes Prometheus metrics for monitoring your
 finality provider. The metrics endpoint is configurable in `fpd.conf`:
@@ -923,79 +1045,9 @@ For a complete list of available metrics, see:
 * Finality Provider metrics: [fp_collectors.go](../metrics/fp_collectors.go)
 * EOTS metrics: [eots_collectors.go](../metrics/eots_collectors.go)
 
-### 6.7 Rewards
-
-Rewards are accumulated in a reward gauge, and a finality provider becomes
-eligible for a rewards gauge when it meets certain conditions, such as
-having an `ACTIVE` status, participating in voting, and obtaining
-delegations. The distribution of rewards is based on the provider's
-voting power portion relative to other voters.
-
-#### 6.7.1 Querying Rewards
-
-To query rewards of a given stakeholder address, use the following command.
-
-```shell
-fpd reward-gauges <address>
-```
-
-Parameters:
-
-* `<address>`: The Babylon address of the stakeholder in bech32 string.
-
-#### 6.8 Recover local status of a finality provider
-
-To recover the local status of a finality provider, use the following command:
-
-```shell
-fpd set-withdraw-addr <new-address> --from <registered-bbn-address>
---keyring-backend test --home <home-dir> --fees <fees>
-```
-
-Parameters:
-
-* `<new-address>`: The new address to withdraw rewards to.
-* `--from`: The finality provider's registered Babylon address.
-* `--keyring-backend`: The keyring backend to use.
-* `--home`: The home directory for the finality provider.
-* `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
-  These fees are paid from the account specified in `--from`.
-
-This command should ask to
-`confirm transaction before signing and broadcasting [y/N]:` and output the
-transaction hash.
-
-Once the address is set, rewards can be withdrawn by running the
-following command:
-
-```shell
-fpd withdraw-reward <type> --from <registered-bbn-address>
---keyring-backend test --home <home-dir> --fees <fees>
-```
-
-Parameters:
-
-* `<type>`: The type of reward to withdraw (one of `finality_provider`,
-  `btc_staker`)
-* `--from`: The finality provider's registered Babylon address.
-* `--keyring-backend`: The keyring backend to use.
-* `--home`: The home directory for the finality provider.
-* `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
-  These fees are paid from the account specified in `--from`.
-
-Again, this command should ask to
-`confirm transaction before signing and broadcasting [y/N]:` and output the
-transaction hash.
-
-This will withdraw **ALL** accumulated rewards to the address you set in the
-`set-withdraw-addr` command if you set one. If no withdrawal address was set,
-the rewards will be withdrawn to your finality provider address.
-
-Congratulations! You have successfully set up and operated a finality provider.
-
 ## 7. Recovery and Backup
 
-### 7.1 Critical Assets
+### 7.1. Critical Assets
 
 The following assets **must** be backed up frequently to prevent loss of service or funds:
 
@@ -1022,7 +1074,7 @@ For Finality Provider:
   * State info of the finality provider
   * Loss of anti-slashing protection
 
-### 7.2 Backup Recommendations
+### 7.2. Backup Recommendations
 
 1. Regular Backups:
    * Daily backup of keyring directories
@@ -1045,25 +1097,25 @@ For Finality Provider:
 > keys in the keyring directories is **irrecoverable** and will result in
 > permanent loss of your finality provider position and accumulated rewards.
 
-### 7.3 Recover finality-provider db
+### 7.3. Recover finality-provider db
 
 The `finality-provider.db` file contains both the finality provider's running
 status and the public randomness merkle proof. Either information loss
 compromised will lead to service halt, but they are recoverable.
 
-#### 7.3.1 Recover local status of a finality provider
+#### 7.3.1. Recover local status of a finality provider
 
 The local status of a finality provider is defined as follows:
 
 ```go
 type StoredFinalityProvider struct {
-	FPAddr          string
-	BtcPk           *btcec.PublicKey
-	Description     *stakingtypes.Description
-	Commission      *sdkmath.LegacyDec
-	ChainID         string
-	LastVotedHeight uint64
-	Status          proto.FinalityProviderStatus
+  FPAddr          string
+  BtcPk           *btcec.PublicKey
+  Description     *stakingtypes.Description
+  Commission      *sdkmath.LegacyDec
+  ChainID         string
+  LastVotedHeight uint64
+  Status          proto.FinalityProviderStatus
 }
 ```
 
@@ -1073,7 +1125,7 @@ Babylon chain. Specifically, this can be achieved by repeating the
 cmd will download the info of the finality provider locally if it is already
 registered on Babylon.
 
-#### 7.3.2 Recover public randomness proof
+#### 7.3.2. Recover public randomness proof
 
 Every finality vote must contain the public randomness proof to prove that the
 randomness used in the signature is already committed on Babylon. Loss of
