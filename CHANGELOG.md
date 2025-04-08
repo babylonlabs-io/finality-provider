@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 * [#427](https://github.com/babylonlabs-io/finality-provider/pull/427) fix: handle uninitialized commissionInfo when editing fp
 * [#435](https://github.com/babylonlabs-io/finality-provider/pull/435) chore: remove unused bitcoinnetwork config
+* [#320](https://github.com/babylonlabs-io/finality-provider/pull/320) chore: show `pubkey_hex` at `eotsd keys show` and `eotsd keys list`
 
 ## v1.0.0
 
