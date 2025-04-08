@@ -26,6 +26,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	goflags "github.com/jessevdk/go-flags"
+	"github.com/stretchr/testify/require"
 
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
