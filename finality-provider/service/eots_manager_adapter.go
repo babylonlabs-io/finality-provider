@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"strings"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -13,6 +14,8 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
+
+const failedPreconditionErrStr = "FailedPrecondition"
 
 // InitEOTSManagerClient initializes an EOTS manager client with HMAC authentication
 func InitEOTSManagerClient(address string, hmacKey string) (eotsmanager.EOTSManager, error) {
@@ -62,11 +65,15 @@ func getMsgToSignForVote(blockHeight uint64, blockHash []byte) []byte {
 	return append(sdk.Uint64ToBigEndian(blockHeight), blockHash...)
 }
 
-func (fp *FinalityProviderInstance) signFinalitySig(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
+func (fp *FinalityProviderInstance) SignFinalitySig(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
 	// build proper finality signature request
 	msgToSign := getMsgToSignForVote(b.Height, b.Hash)
 	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
 	if err != nil {
+		if strings.Contains(err.Error(), failedPreconditionErrStr) {
+			return nil, ErrFailedPrecondition
+		}
+
 		return nil, fmt.Errorf("failed to sign EOTS: %w", err)
 	}
 

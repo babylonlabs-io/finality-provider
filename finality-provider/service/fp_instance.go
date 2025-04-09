@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
@@ -658,7 +659,9 @@ func (fp *FinalityProviderInstance) SubmitFinalitySignature(b *types.BlockInfo) 
 }
 
 // SubmitBatchFinalitySignatures builds and sends a finality signature over the given block to the consumer chain
-// NOTE: the input blocks should be in the ascending order of height
+// Contract:
+//  1. the input blocks should be in the ascending order of height
+//  2. the returned response could be nil due to no transactions might be made in the end
 func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*types.BlockInfo) (*types.TxResponse, error) {
 	if len(blocks) == 0 {
 		return nil, fmt.Errorf("should not submit batch finality signature with zero block")
@@ -687,18 +690,44 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 		return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w\nplease recover the randomness proof from db", err)
 	}
 
-	// sign blocks
-	sigList := make([]*btcec.ModNScalar, 0, len(blocks))
-	for _, b := range blocks {
-		eotsSig, err := fp.signFinalitySig(b)
+	// Create slices to store only the valid items
+	validBlocks := make([]*types.BlockInfo, 0, len(blocks))
+	validPrList := make([]*btcec.FieldVal, 0, len(blocks))
+	validProofList := make([][]byte, 0, len(blocks))
+	validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
+
+	// Process each block and collect only valid items
+	// (skip ones encountering double sign error)
+	for i, b := range blocks {
+		eotsSig, err := fp.SignFinalitySig(b)
 		if err != nil {
-			return nil, err
+			if !errors.Is(err, ErrFailedPrecondition) {
+				return nil, err
+			}
+			// Skip this block and its corresponding items if we encounter FailedPrecondition
+			fp.logger.Warn("encountered FailedPrecondition error, skipping block",
+				zap.Uint64("height", b.Height),
+				zap.String("hash", hex.EncodeToString(b.Hash)),
+				zap.Error(err))
+
+			continue
 		}
-		sigList = append(sigList, eotsSig.ToModNScalar())
+		// If signature is valid, append all corresponding items
+		validBlocks = append(validBlocks, b)
+		validPrList = append(validPrList, prList[i])
+		validProofList = append(validProofList, proofBytesList[i])
+		validSigList = append(validSigList, eotsSig.ToModNScalar())
 	}
 
-	// send finality signature to the consumer chain
-	res, err := fp.cc.SubmitBatchFinalitySigs(fp.GetBtcPk(), blocks, prList, proofBytesList, sigList)
+	// If all blocks were skipped, return early
+	if len(validBlocks) == 0 {
+		fp.logger.Info("all blocks were skipped due to double sign errors")
+
+		return nil, nil
+	}
+
+	// send finality signature to the consumer chain with only valid items
+	res, err := fp.cc.SubmitBatchFinalitySigs(fp.GetBtcPk(), validBlocks, validPrList, validProofList, validSigList)
 	if err != nil {
 		if strings.Contains(err.Error(), "jailed") {
 			return nil, ErrFinalityProviderJailed
@@ -710,7 +739,8 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 		return nil, err
 	}
 
-	// update DB
+	// update state with the highest height of this batch even though
+	// some of the votes are skipped due to double sign error
 	highBlock := blocks[len(blocks)-1]
 	fp.MustUpdateStateAfterFinalitySigSubmission(highBlock.Height)
 
@@ -747,7 +777,7 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 	}
 
 	if useSafeEOTSFunc {
-		eotsSignerFunc = fp.signFinalitySig
+		eotsSignerFunc = fp.SignFinalitySig
 	}
 
 	// sign block
