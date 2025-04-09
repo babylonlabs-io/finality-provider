@@ -287,8 +287,13 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 	}
 
 	for _, k := range keys {
-		cmd.Printf("Key Name: %s\nAddress: %s\nEOTS PK: %s\n\n",
-			k.Name, k.Address, k.EOTSPK)
+		if cmd.Name() == "list" {
+			cmd.Printf("Key Name: %s\nEOTS PK: %s\n\n",
+				k.Name, k.EOTSPK)
+		} else {
+			cmd.Printf("Key Name: %s\nAddress: %s\nEOTS PK: %s\n\n",
+				k.Name, k.Address, k.EOTSPK)
+		}
 	}
 
 	return nil
