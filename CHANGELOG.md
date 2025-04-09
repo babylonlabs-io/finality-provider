@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 * [#436](https://github.com/babylonlabs-io/finality-provider/pull/436) chore: ignore double sign error
 * [#435](https://github.com/babylonlabs-io/finality-provider/pull/435) chore: remove unused bitcoinnetwork config
+* [#447](https://github.com/babylonlabs-io/finality-provider/pull/447) chore: remove the address
 
 ## v1.0.0
 
