@@ -893,3 +893,39 @@ func ParseRespBTCDelToBTCDel(resp *bstypes.BTCDelegationResponse) (btcDel *bstyp
 
 	return btcDel, nil
 }
+
+func (tm *TestManager) WaitForFpVoteCastAtHeight(t *testing.T, fpIns *service.FinalityProviderInstance, height uint64) {
+	var lastVotedHeight uint64
+	require.Eventually(t, func() bool {
+		votedHeight := fpIns.GetLastVotedHeight()
+		if votedHeight >= height {
+			lastVotedHeight = votedHeight
+			return true
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	t.Logf("the fp voted at height %d", lastVotedHeight)
+}
+
+func (tm *TestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
+	beforeBlock, err := tm.BBNClient.QueryBestBlock()
+	require.NoError(t, err)
+
+	var afterHeight uint64
+	require.Eventually(t, func() bool {
+		afterBlock, err := tm.BBNClient.QueryBestBlock()
+		if err != nil {
+			return false
+		}
+
+		if afterBlock.Height >= uint64(n)+beforeBlock.Height {
+			afterHeight = afterBlock.Height
+			return true
+		}
+
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	return afterHeight
+}
