@@ -664,7 +664,9 @@ func (fp *FinalityProviderInstance) SubmitFinalitySignature(b *types.BlockInfo) 
 }
 
 // SubmitBatchFinalitySignatures builds and sends a finality signature over the given block to the consumer chain
-// NOTE: the input blocks should be in the ascending order of height
+// Contract:
+//  1. the input blocks should be in the ascending order of height
+//  2. the returned response could be nil due to no transactions might be made in the end
 func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*types.BlockInfo) (*types.TxResponse, error) {
 	if len(blocks) == 0 {
 		return nil, fmt.Errorf("should not submit batch finality signature with zero block")
