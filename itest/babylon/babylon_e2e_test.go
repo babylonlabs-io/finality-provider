@@ -9,9 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
-	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
-	"github.com/babylonlabs-io/finality-provider/testutil"
 	"log"
 	"math/rand"
 	"os"
@@ -19,6 +16,10 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -76,6 +77,57 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 	t.Logf("the block at height %v is finalized", lastVotedHeight)
 }
 
+// TestSkippingDoubleSignError tests the scenario where the finality-provider
+// should skip the block when encountering a double sign request from the
+// eots manager
+func TestSkippingDoubleSignError(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
+	defer tm.Stop(t)
+
+	fpIns := fps[0]
+
+	// check the public randomness is committed
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
+
+	// send a BTC delegation
+	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, e2eutils.StakingTime, e2eutils.StakingAmount)
+
+	// check the BTC delegation is pending
+	delsResp := tm.WaitForNPendingDels(t, 1)
+	del, err := e2eutils.ParseRespBTCDelToBTCDel(delsResp[0])
+	require.NoError(t, err)
+
+	// send covenant sigs
+	tm.InsertCovenantSigForDelegation(t, del)
+
+	// check the BTC delegation is active
+	_ = tm.WaitForNActiveDels(t, 1)
+
+	_ = tm.WaitForFpVoteCast(t, fpIns)
+
+	// stop the fp and manually submits a finality sig for a future height
+	err = fpIns.Stop()
+	require.NoError(t, err)
+	currentHeight := tm.WaitForNBlocks(t, 1)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	b := &types.BlockInfo{
+		Height: currentHeight,
+		Hash:   datagen.GenRandomByteArray(r, 32),
+	}
+	t.Logf("manually sending a vote for height %d", currentHeight)
+	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b, true)
+	require.NoError(t, err)
+
+	// restart the fp to see if it will skip sending the height
+	err = fpIns.Start()
+	require.NoError(t, err)
+
+	// assert that the fp voting continues
+	tm.WaitForFpVoteCastAtHeight(t, fpIns, currentHeight+1)
+}
+
 // TestDoubleSigning tests the attack scenario where the finality-provider
 // sends a finality vote over a conflicting block
 // in this case, the BTC private key should be extracted by Babylon
@@ -128,8 +180,7 @@ func TestDoubleSigning(t *testing.T) {
 
 	// confirm we have double sign protection
 	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b, true)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "double sign")
+	require.Contains(t, err.Error(), "FailedPrecondition")
 
 	_, extractedKey, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b, false)
 	require.NoError(t, err)

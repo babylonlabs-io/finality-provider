@@ -357,6 +357,20 @@ func (tm *TestManager) WaitForFpVoteCast(t *testing.T, fpIns *service.FinalityPr
 	return lastVotedHeight
 }
 
+func (tm *TestManager) WaitForFpVoteCastAtHeight(t *testing.T, fpIns *service.FinalityProviderInstance, height uint64) {
+	var lastVotedHeight uint64
+	require.Eventually(t, func() bool {
+		votedHeight := fpIns.GetLastVotedHeight()
+		if votedHeight >= height {
+			lastVotedHeight = votedHeight
+			return true
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	t.Logf("the fp voted at height %d", lastVotedHeight)
+}
+
 func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
 	blockBeforeStop, err := tm.BBNConsumerClient.QueryLatestBlockHeight()
 	require.NoError(t, err)
@@ -376,6 +390,28 @@ func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *
 
 	err = fpIns.Start()
 	require.NoError(t, err)
+}
+
+func (tm *TestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
+	beforeHeight, err := tm.BBNConsumerClient.QueryLatestBlockHeight()
+	require.NoError(t, err)
+
+	var afterHeight uint64
+	require.Eventually(t, func() bool {
+		height, err := tm.BBNConsumerClient.QueryLatestBlockHeight()
+		if err != nil {
+			return false
+		}
+
+		if height >= uint64(n)+beforeHeight {
+			afterHeight = height
+			return true
+		}
+
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	return afterHeight
 }
 
 func (tm *TestManager) WaitForNFinalizedBlocks(t *testing.T, n uint) *types.BlockInfo {
