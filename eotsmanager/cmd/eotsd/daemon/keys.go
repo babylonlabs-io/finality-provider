@@ -54,33 +54,15 @@ func NewKeysCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			// load eots keys
+
 			eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, args[0])
 			if err != nil {
-				// try by address
-				records, err := clientCtx.Keyring.List()
-				if err != nil {
-					return err
-				}
-				for _, r := range records {
-					addr, err := r.GetAddress()
-					if err != nil {
-						continue
-					}
-					if addr.String() == args[0] {
-						eotsPk, err = eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, r.Name)
-						if err != nil {
-							return err
-						}
-
-						return printShowKey(cmd, r.Name, eotsPk)
-					}
-				}
-
-				return fmt.Errorf("key not found: %s", args[0])
+				return err
 			}
 
-			return printShowKey(cmd, args[0], eotsPk)
+			cmd.Printf("Key Name: %s\nEOTS PK: %s\n\n", args[0], eotsPk.MarshalHex())
+
+			return nil
 		}
 	}
 
@@ -319,22 +301,6 @@ func getAllEOTSKeys(cmd *cobra.Command) (map[string][]byte, error) {
 	}
 
 	return res, nil
-}
-
-func printShowKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey) error {
-	clientCtx, err := client.GetClientQueryContext(cmd)
-	if err != nil {
-		return err
-	}
-
-	k, err := clientCtx.Keyring.Key(keyName)
-	if err != nil {
-		return fmt.Errorf("failed to get public get key %s: %w", keyName, err)
-	}
-
-	cmd.Printf("Key Name: %s\nEOTS PK: %s\n\n", k.Name, eotsPk.MarshalHex())
-
-	return nil
 }
 
 func printFromKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey) error {
