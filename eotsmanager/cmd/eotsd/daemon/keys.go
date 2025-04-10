@@ -335,7 +335,6 @@ func printShowKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey
 	cmd.Printf("Key Name: %s\nEOTS PK: %s\n\n", k.Name, eotsPk.MarshalHex())
 
 	return nil
-
 }
 
 func printFromKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey) error {
