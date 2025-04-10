@@ -73,7 +73,7 @@ func NewKeysCmd() *cobra.Command {
 							return err
 						}
 
-						return printFromKey(cmd, r.Name, eotsPk)
+						return printShowKey(cmd, r.Name, eotsPk)
 					}
 				}
 
@@ -240,9 +240,8 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 	}
 
 	type keyInfo struct {
-		Name    string `json:"name"`
-		Address string `json:"address"`
-		EOTSPK  string `json:"eots_pk"`
+		Name   string `json:"name"`
+		EOTSPK string `json:"eots_pk"`
 	}
 
 	var keys []keyInfo
@@ -253,20 +252,9 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 		}
 		eotsPk := types.NewBIP340PubKeyFromBTCPK(pk)
 
-		k, exists := keyMap[keyName]
-		if !exists {
-			continue
-		}
-
-		addr, err := k.GetAddress()
-		if err != nil {
-			return err
-		}
-
 		keys = append(keys, keyInfo{
-			Name:    keyName,
-			Address: addr.String(),
-			EOTSPK:  eotsPk.MarshalHex(),
+			Name:   keyName,
+			EOTSPK: eotsPk.MarshalHex(),
 		})
 	}
 
@@ -287,13 +275,8 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 	}
 
 	for _, k := range keys {
-		if cmd.Name() == "list" {
-			cmd.Printf("Key Name: %s\nEOTS PK: %s\n\n",
-				k.Name, k.EOTSPK)
-		} else {
-			cmd.Printf("Key Name: %s\nAddress: %s\nEOTS PK: %s\n\n",
-				k.Name, k.Address, k.EOTSPK)
-		}
+		cmd.Printf("Key Name: %s\nEOTS PK: %s\n\n",
+			k.Name, k.EOTSPK)
 	}
 
 	return nil
@@ -336,6 +319,23 @@ func getAllEOTSKeys(cmd *cobra.Command) (map[string][]byte, error) {
 	}
 
 	return res, nil
+}
+
+func printShowKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey) error {
+	clientCtx, err := client.GetClientQueryContext(cmd)
+	if err != nil {
+		return err
+	}
+
+	k, err := clientCtx.Keyring.Key(keyName)
+	if err != nil {
+		return fmt.Errorf("failed to get public get key %s: %w", keyName, err)
+	}
+
+	cmd.Printf("Key Name: %s\nEOTS PK: %s\n\n", k.Name, eotsPk.MarshalHex())
+
+	return nil
+
 }
 
 func printFromKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey) error {
