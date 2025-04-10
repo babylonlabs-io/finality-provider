@@ -80,7 +80,7 @@ func NewKeysCmd() *cobra.Command {
 				return fmt.Errorf("key not found: %s", args[0])
 			}
 
-			return printFromKey(cmd, args[0], eotsPk)
+			return printShowKey(cmd, args[0], eotsPk)
 		}
 	}
 
