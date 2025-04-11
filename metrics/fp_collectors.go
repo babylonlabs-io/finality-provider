@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"strconv"
 	"sync"
 	"time"
 
@@ -22,6 +23,7 @@ type FpMetrics struct {
 	fpSecondsSinceLastVote          *prometheus.GaugeVec
 	fpSecondsSinceLastRandomness    *prometheus.GaugeVec
 	fpLastVotedHeight               *prometheus.GaugeVec
+	fpVotedHeight                   *prometheus.GaugeVec
 	fpLastProcessedHeight           *prometheus.GaugeVec
 	fpLastCommittedRandomnessHeight *prometheus.GaugeVec
 	fpTotalBlocksWithoutVotingPower *prometheus.CounterVec
@@ -85,6 +87,13 @@ func NewFpMetrics() *FpMetrics {
 					Help: "The last block height voted by a finality provider.",
 				},
 				[]string{"fp_btc_pk_hex"},
+			),
+			fpVotedHeight: prometheus.NewGaugeVec(
+				prometheus.GaugeOpts{
+					Name: "fp_voted_height",
+					Help: "The block height voted by a finality provider.",
+				},
+				[]string{"fp_btc_pk_hex", "height"},
 			),
 			fpLastProcessedHeight: prometheus.NewGaugeVec(
 				prometheus.GaugeOpts{
@@ -202,6 +211,11 @@ func (fm *FpMetrics) RecordFpSecondsSinceLastRandomness(fpBtcPkHex string, secon
 // RecordFpLastVotedHeight records the last block height voted by a finality provider
 func (fm *FpMetrics) RecordFpLastVotedHeight(fpBtcPkHex string, height uint64) {
 	fm.fpLastVotedHeight.WithLabelValues(fpBtcPkHex).Set(float64(height))
+}
+
+// RecordFpVotedHeight records the block height voted by a finality provider
+func (fm *FpMetrics) RecordFpVotedHeight(fpBtcPkHex string, height uint64) {
+	fm.fpVotedHeight.WithLabelValues(fpBtcPkHex, strconv.FormatUint(height, 10)).SetToCurrentTime()
 }
 
 // RecordFpLastProcessedHeight records the last block height processed by a finality provider
