@@ -98,6 +98,7 @@ func (fp *FinalityProviderInstance) MustUpdateStateAfterFinalitySigSubmission(he
 		fp.logger.Fatal("failed to update state after finality signature submitted",
 			zap.String("pk", fp.GetBtcPkHex()), zap.Uint64("height", height))
 	}
+	fp.metrics.RecordFpVoteTime(fp.GetBtcPkHex())
 	fp.metrics.RecordFpLastVotedHeight(fp.GetBtcPkHex(), height)
 	fp.metrics.RecordFpLastProcessedHeight(fp.GetBtcPkHex(), height)
 }
