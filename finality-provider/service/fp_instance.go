@@ -744,6 +744,11 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 		return nil, err
 	}
 
+	// update the metrics with voted blocks
+	for _, b := range validBlocks {
+		fp.metrics.RecordFpVotedHeight(fp.GetBtcPkHex(), b.Height)
+	}
+
 	// update state with the highest height of this batch even though
 	// some of the votes are skipped due to double sign error
 	highBlock := blocks[len(blocks)-1]
