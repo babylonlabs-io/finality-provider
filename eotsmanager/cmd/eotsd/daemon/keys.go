@@ -57,10 +57,10 @@ func NewKeysCmd() *cobra.Command {
 
 			eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, args[0])
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to load eots pk from db by key name %s", args[0])
 			}
 
-			cmd.Printf("Key Name: %s\nEOTS PK: %s\n\n", args[0], eotsPk.MarshalHex())
+			cmd.Printf("Key Name: %s\nEOTS PK: %s\n", args[0], eotsPk.MarshalHex())
 
 			return nil
 		}
@@ -257,7 +257,7 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 	}
 
 	for _, k := range keys {
-		cmd.Printf("Key Name: %s\nEOTS PK: %s\n\n",
+		cmd.Printf("Key Name: %s\nEOTS PK: %s\n",
 			k.Name, k.EOTSPK)
 	}
 
