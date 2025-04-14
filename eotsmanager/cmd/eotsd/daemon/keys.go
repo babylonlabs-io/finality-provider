@@ -54,33 +54,15 @@ func NewKeysCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			// load eots keys
+
 			eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, args[0])
 			if err != nil {
-				// try by address
-				records, err := clientCtx.Keyring.List()
-				if err != nil {
-					return err
-				}
-				for _, r := range records {
-					addr, err := r.GetAddress()
-					if err != nil {
-						continue
-					}
-					if addr.String() == args[0] {
-						eotsPk, err = eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, r.Name)
-						if err != nil {
-							return err
-						}
-
-						return printFromKey(cmd, r.Name, eotsPk)
-					}
-				}
-
-				return fmt.Errorf("key not found: %s", args[0])
+				return fmt.Errorf("failed to load eots pk from db by key name %s", args[0])
 			}
 
-			return printFromKey(cmd, args[0], eotsPk)
+			cmd.Printf("Key Name: %s\nEOTS PK: %s\n", args[0], eotsPk.MarshalHex())
+
+			return nil
 		}
 	}
 
@@ -240,9 +222,8 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 	}
 
 	type keyInfo struct {
-		Name    string `json:"name"`
-		Address string `json:"address"`
-		EOTSPK  string `json:"eots_pk"`
+		Name   string `json:"name"`
+		EOTSPK string `json:"eots_pk"`
 	}
 
 	var keys []keyInfo
@@ -253,20 +234,9 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 		}
 		eotsPk := types.NewBIP340PubKeyFromBTCPK(pk)
 
-		k, exists := keyMap[keyName]
-		if !exists {
-			continue
-		}
-
-		addr, err := k.GetAddress()
-		if err != nil {
-			return err
-		}
-
 		keys = append(keys, keyInfo{
-			Name:    keyName,
-			Address: addr.String(),
-			EOTSPK:  eotsPk.MarshalHex(),
+			Name:   keyName,
+			EOTSPK: eotsPk.MarshalHex(),
 		})
 	}
 
@@ -287,13 +257,8 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 	}
 
 	for _, k := range keys {
-		if cmd.Name() == "list" {
-			cmd.Printf("Key Name: %s\nEOTS PK: %s\n\n",
-				k.Name, k.EOTSPK)
-		} else {
-			cmd.Printf("Key Name: %s\nAddress: %s\nEOTS PK: %s\n\n",
-				k.Name, k.Address, k.EOTSPK)
-		}
+		cmd.Printf("Key Name: %s\nEOTS PK: %s\n",
+			k.Name, k.EOTSPK)
 	}
 
 	return nil

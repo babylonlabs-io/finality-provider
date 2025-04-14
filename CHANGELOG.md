@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#436](https://github.com/babylonlabs-io/finality-provider/pull/436) chore: ignore double sign error
 * [#435](https://github.com/babylonlabs-io/finality-provider/pull/435) chore: remove unused bitcoinnetwork config
 * [#447](https://github.com/babylonlabs-io/finality-provider/pull/447) chore: remove the address
+* [#449](https://github.com/babylonlabs-io/finality-provider/pull/449) chore: remove bbn address from eots keys - show and list
 * [#450](https://github.com/babylonlabs-io/finality-provider/pull/450) chore: metrics for votes
 
 ## v1.0.0
