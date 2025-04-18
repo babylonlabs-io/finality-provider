@@ -1,13 +1,13 @@
 # HMAC Security for Finality Provider
 
-This document describes the HMAC (Hash-based Message Authentication Code) authentication system used to secure the 
-communication between the Finality Provider Daemon (FPD) and the Extractable One-Time Signature Daemon (EOTSD). 
+This document describes the HMAC (Hash-based Message Authentication Code) authentication system used to secure the
+communication between the Finality Provider Daemon (FPD) and the Extractable One-Time Signature Daemon (EOTSD).
 HMAC ensures that only authorized requests from FPD are processed by EOTSD, which handles sensitive key operations.
 
 ## Overview
 
-The Finality Provider (FPD) and EOTS Manager (EOTSD) are separate components. EOTSD manages EOTS keys, 
-generates randomness, and signs EOTS signatures and schnorr signatures, making it a critical security target. 
+The Finality Provider (FPD) and EOTS Manager (EOTSD) are separate components. EOTSD manages EOTS keys,
+generates randomness, and signs EOTS signatures and schnorr signatures, making it a critical security target.
 HMAC authentication adds a layer of protection, preventing unauthorized access to these signing capabilities.
 
 ## Security Classification of EOTSD Messages
@@ -44,7 +44,8 @@ Example output: Wt+Nxkn1DpNCFJtxQSxTKoSoKzx1C9XwHTMbT6ir9m0= (Your key will be d
 
 ## Configuration Methods
 
-### 1. FPD Configuration (fpd.conf):
+### 1. FPD Configuration (fpd.conf)
+
 Set the hmackey option within your fpd.conf file:
 
 ```
