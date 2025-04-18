@@ -1,17 +1,16 @@
 # Finality Provider Operation
 
-This document guides operators through the complete
+This is an operational guide intended for technical finality provider administrators.
+This guide covers the complete
 lifecycle of running a finality provider, including:
 
 * Installing and configuring the finality provider toolset
-  (EOTS Manager and Finality Provider daemon)
-* Managing keys (EOTS key for signatures and Babylon key for rewards)
-* Registering your finality provider on the Babylon network
-* Operating and maintaining your finality provider
-* Collecting rewards
+  (EOTS Manager and Finality Provider daemon).
+* Managing keys (EOTS key for EOTS signatures and Babylon key for rewards).
+* Registering finality providers on Babylon Genesis.
+* Operating finality provider.
+* Claiming rewards.
 
-This is an operational guide intended for technical finality provider administrators.
-For conceptual understanding, see our [Technical Documentation](./fp-core.md).
 Please review the [high-level explainer](../README.md) before proceeding to
 gain an overall understanding of the finality provider.
 
@@ -49,24 +48,24 @@ gain an overall understanding of the finality provider.
 
 ## 1. A note about Phase-1 Finality Providers
 
-Thank you for participating in the first phase of the Babylon launch. This guide
-provides instructions for setting up the full finality provider toolset required
-for your participation in the second phase of the Babylon launch.
+This node is for you if you have participated in Phase-1 of Babylon
+Genesis to help you transition to Phase-2.
 
-Finality providers that received delegations on the first phase of the launch
-are required to transition their finality providers to the second phase
+Finality providers that received delegations in Phase-1
+are required to transition their finality providers to Phase-2
 using the same EOTS key that they used and registered with during Phase-1.
 The usage of a different key corresponds to setting up an entirely
 different finality provider which will not inherit the Phase-1 delegations.
-Not transitioning your Phase-1 finality provider prevents your Phase-1 delegations
-from transitioning to the second phase.
+If you don't transition your Phase-1 finality provider to Phase-2, all the
+received Phase-1 delegations cannot transition to Phase-2.
 
-If you already have set up a key during Phase-1, please proceed to
-[Adding Keys](#42-add-an-eots-key) to import your Phase-1 key.
+If you already have set up a key during Phase-1, you can proceed to
+[Import an existing EOTS key](#422-import-an-existing-eots-key) to import
+your Phase-1 key to the EOTS manager.
 
 ## 2. System Requirements
 
-Recommended specifications for running a Babylon Finality Provider:
+Recommended specifications for running a Finality Provider:
 
 * CPU: 2 vCPUs
 * RAM: 4GB
@@ -80,20 +79,8 @@ These are the minimum specifications for running a finality provider.
 Requirements may vary based on network activity and your operational needs.
 For production environments, you may want to consider using more robust hardware.
 
-**Recovery and Backup**
-At the time of writing, the following assets **must not** be lost and should be
-backed up frequently. Loss will lead to inability to submit transactions to the
-Babylon chain, which will in turn lead to FP jailing and halt BTC Staking reward
-accumulation.
-
-* The `keyring-xx` folder contains your Babylon keyring, used to submit public
-  randomness and finality signatures to Babylon.
-* The `finality-provider.db` contains essential operational data
-  including finality signatures, public randomness proofs, and state information.
-  Loss will prevent voting until recovered.
-
-The ability to recreate the `finality-provider.db` will be offered in the next
-few months.
+For security tips of running a finality provider, please refer to
+[Slashing Protection](./slashing-protection.md), [HMAC Security](./hmac-security.md), and [7. Recovery and Backup](#7-recovery-and-backup).
 
 ## 3. Install Finality Provider Toolset
 
@@ -129,11 +116,11 @@ make install
 
 This command will:
 
-* Build and compile all Go packages
+* Build and compile all Go packages.
 * Install binaries to `$GOPATH/bin`:
   * `eotsd`: EOTS manager daemon
-  * `fpd`: Finality provider daemon
-* Make commands globally accessible from your terminal
+  * `fpd`: Finality provider daemon.
+* Make commands globally accessible from your terminal.
 
 ### 3.3. Verify Installation
 
@@ -152,6 +139,7 @@ depending on your shell.
 
 ```shell
 echo 'export PATH=$HOME/go/bin:$PATH' >> ~/.profile
+source ~/.profile
 ```
 
 ## 4. Setting up the EOTS Daemon
@@ -170,8 +158,10 @@ with the following command:
 eotsd init --home <path>
 ```
 
-If `eotsd.conf` already exists `init` will not succeed, if the operator wishes to
-overwrite the config file they need to use `--force`.
+If the home directly already exists, `init` will not succeed.
+> ⚡ Specifying `--force` to `init` will overwrite `eotsd.conf` with default
+> config values if the home directory already exists.
+> Please backup `eotsd.conf` before you run `init` with `--force`.
 
 Parameters:
 
@@ -205,12 +195,11 @@ Parameters:
 
 * **eotsd.db**:
   * EOTS key to key name mappings
-  * BIP340 public key data
-  * Key metadata
+  * EOTS signing history for [Slashing Protection](./slashing-protection.md).
 
 * **keyring-directory***:
   * EOTS private keys are securely stored using Cosmos SDK's keyring system
-  * Test backend is mandatory for daemon access (required for automated signing)
+  * `test` keyring-backend is mandatory for daemon access for automated signing.
   * Keys are used for EOTS signatures
 
 * **eotsd.log**:
@@ -221,11 +210,11 @@ Parameters:
 
 ### 4.2. Add an EOTS Key
 
-This section explains the process of setting up the private keys for the
-EOTS manager. Operators *must* create an EOTS key before starting the
+This section explains the process of creating EOTS keys using the EOTS manager.
+Operators *MUST* create an EOTS key before starting the
 EOTS daemon.
 
-We will be using the [Cosmos SDK](https://docs.cosmos.network/v0.50/user/run-node/keyring)
+The EOTS manager uses [Cosmos SDK](https://docs.cosmos.network/v0.50/user/run-node/keyring)
 backends for key storage.
 
 Since this key is accessed by an automated daemon process, it must be stored
@@ -279,7 +268,6 @@ There are 3 supported methods of loading your existing EOTS keys:
 
 1. using a mnemonic phrase
 2. importing the `.asc` file
-3. importing a backed up home directory
 
 We have outlined each of these three paths for you below.
 
@@ -324,28 +312,21 @@ To load the key, use the following command:
 eotsd keys import <name> <path-to-key> --home <path> --keyring-backend test
 ```
 
-#### Option 3: Using a File System Backup
-
-If you backed up your entire EOTS home directory,
-you can load it manually to the machine you intend to operate
-the EOTS daemon on and specify its location as the `--home` argument.
-
 #### Verify the Key Import
 
 After importing, you can verify that your EOTS key was successfully loaded:
 
 ```shell
-eotsd keys list <key-name> --home <path> --keyring-backend test
+eotsd keys list --home <path> --keyring-backend test
 ```
 
 Parameters:
 
-* `<key-name>`: Name of the EOTS key to verify
 * `--keyring-backend`: Type of keyring backend to use (`test`)
 * `--home`: Directory containing EOTS Manager configuration and data
 
-You should see your EOTS key listed with the correct details, confirming that
-it has been imported correctly.
+You should see your EOTS key listed with the correct details if the import is
+successful.
 
 > ⚠️ **Important**:
 > If you are a finality provider transitioning your stack from Phase-1,
@@ -381,6 +362,7 @@ EOTS Manager Daemon is fully active!
 >   port to trusted sources. You can edit the `EOTSManagerAddress` in
 >   the configuration file of the finality provider to
 >   reference the address of the machine where `eotsd` is running
+> * setup HMAC to secure the communication between `eotsd` and `fpd`. See [HMAC Security](./hmac-security.md).
 
 ## 5. Setting up the Finality Provider
 
