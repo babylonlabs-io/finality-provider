@@ -7,9 +7,9 @@ lifecycle of running a finality provider, including:
 * Installing and configuring the finality provider toolset
   (EOTS Manager and Finality Provider daemon).
 * Managing keys (EOTS key for EOTS signatures and Babylon Genesis key for rewards).
-* Registering finality providers on Babylon Genesis.
-* Operating finality provider.
-* Claiming rewards.
+* Registering a finality provider on Babylon Genesis.
+* Operating a finality provider.
+* Claiming finality provider commission rewards.
 
 Please review the [high-level explainer](../README.md) before proceeding to
 gain an overall understanding of the finality provider.
@@ -35,7 +35,7 @@ gain an overall understanding of the finality provider.
    2. [Rewards](#62-rewards)
    3. [Set Up Operation Key](#63-set-up-operation-key)
    4. [Start Finality Provider](#64-start-finality-provider)
-   5. [Statuses of Finality Provider](#65-statuses-of-finality-provider)
+   5. [Status of Finality Provider](#65-status-of-finality-provider)
    6. [Edit finality provider](#66-edit-finality-provider)
    7. [Jailing and Unjailing](#67-jailing-and-unjailing)
    8. [Slashing](#68-slashing-and-anti-slashing)
@@ -49,16 +49,16 @@ gain an overall understanding of the finality provider.
 
 ## 1. A note about Phase-1 Finality Providers
 
-This node is for you if you have participated in Phase-1 of Babylon
+This note is for you if you have participated in Phase-1 of Babylon
 Genesis to help you transition to Phase-2.
 
 Finality providers that received delegations in Phase-1
-are required to transition their finality providers to Phase-2
+are required to register their finality providers on Babylon Genesis
 using the same EOTS key that they used and registered with during Phase-1.
 The usage of a different key corresponds to setting up an entirely
 different finality provider which will not inherit the Phase-1 delegations.
-If you don't transition your Phase-1 finality provider to Phase-2, all the
-received Phase-1 delegations cannot transition to Phase-2.
+If you don't register your Phase-1 finality provider on Babylon Genesis, all the
+received Phase-1 delegations will not be able to register on Babylon Genesis.
 
 If you already have set up a key during Phase-1, you can proceed to
 [Import an existing EOTS key](#422-import-an-existing-eots-key) to import
@@ -81,7 +81,9 @@ Requirements may vary based on network activity and your operational needs.
 For production environments, you may want to consider using more robust hardware.
 
 For security tips of running a finality provider, please refer to
-[Slashing Protection](./slashing-protection.md), [HMAC Security](./hmac-security.md), and [7. Recovery and Backup](#7-recovery-and-backup).
+[Slashing Protection](./slashing-protection.md),
+[HMAC Security](./hmac-security.md),
+and [7. Recovery and Backup](#7-recovery-and-backup).
 
 ## 3. Install Finality Provider Toolset
 
@@ -212,12 +214,9 @@ Parameters:
 ### 4.2. Add an EOTS Key
 
 This section explains the process of creating EOTS keys using the EOTS manager.
-Operators *MUST* create an EOTS key before starting the
-EOTS daemon.
 
 The EOTS manager uses [Cosmos SDK](https://docs.cosmos.network/v0.50/user/run-node/keyring)
 backends for key storage.
-
 Since this key is accessed by an automated daemon process, it must be stored
 unencrypted on disk and associated with the `test` keyring backend.
 This ensures that we can access the eots keys when requested to promptly submit
@@ -363,7 +362,8 @@ EOTS Manager Daemon is fully active!
 >   port to trusted sources. You can edit the `EOTSManagerAddress` in
 >   the configuration file of the finality provider to
 >   reference the address of the machine where `eotsd` is running
-> * setup HMAC to secure the communication between `eotsd` and `fpd`. See [HMAC Security](./hmac-security.md).
+> * setup HMAC to secure the communication between `eotsd` and `fpd`. See
+>   [HMAC Security](./hmac-security.md).
 
 ## 5. Setting up the Finality Provider
 
@@ -506,13 +506,13 @@ Configuration parameters explained:
 
 Please verify the `chain-id` and other network parameters from the official
 [Babylon Genesis Networks
-repository](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/).
+repository](https://github.com/babylonlabs-io/networks).
 
 Another notable configurable parameter is `NumPubRand`, which is the number of
 public randomness that will be generated and submitted in one commit to Babylon
 Genesis. This value is set to `50,000` by default, which is sufficient for
 roughly 5 days of usage with block production time at `10s`.
-Larger values can be set to tolerate longer down times with larger size of
+Larger values can be set to tolerate longer downtime with larger size of
 merkle proofs for each randomness, resulting in higher gas fees when submitting
 future finality signatures and larger storage requirements.
 
@@ -717,12 +717,14 @@ relative to other voters.
 To query rewards of a given stakeholder address, use the following command.
 
 ```shell
-fpd reward-gauges <address>
+fpd reward-gauges <address> --node <babylon-genesis-rpc-address>
 ```
 
 Parameters:
 
 * `<address>`: The Babylon Genesis address of the stakeholder in bech32 string.
+* `--node <babylon-genesis-rpc-address>`: <host>:<port> to Babylon Genesis
+RPC interface for this chain (default `tcp://localhost:26657`)
 
 #### 6.2.2. Withdraw Rewards
 
@@ -733,13 +735,20 @@ sent finality votes to be eligible to receive rewards.
 ```shell
 fpd withdraw-reward <type> --from <registered-bbn-address>
 --keyring-backend test --home <home-dir> --fees <fees>
+--node <babylon-genesis-rpc-address>
 ```
 
-> ⚠️ **Important**: The `fpd` must be **stopped** before performing this action
+> ⚠️ **Important**: The `fpd` should be **stopped** before performing this action.
 > otherwise, account sequence mismatch error might be encountered because the key
 > used for sending the withdrawal transaction is under use by the finality provider
 > sending operational transaction. This issue will be resolved after following the
-> setup instructions in [6.2.4 Refunding finality provider](#624-refund-finality-provider).
+> setup instructions in [6.3. Set Up Operation Key](#63-set-up-operation-key).
+
+The rewards will go to `<registered-bbn-address>` by default. If you want to
+set a different address to receive rewards, please refer to
+[6.2.3. Set Withdraw Address](#623-set-withdraw-address). But still, the
+registration key is always needed when withdrawing the rewards. So the
+registration key **MUST** be kept safe.
 
 Parameters:
 
@@ -751,6 +760,8 @@ Parameters:
 * `--home`: The home directory for the finality provider.
 * `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
   These fees are paid from the account specified in `--from`.
+* `--node <babylon-genesis-rpc-address>`: <host>:<port> to Babylon Genesis
+    RPC interface for this chain (default `tcp://localhost:26657`).
 
 Again, this command should ask to
 `confirm transaction before signing and broadcasting [y/N]:` and output the
@@ -763,12 +774,17 @@ in registration.
 
 #### 6.2.3. Set Withdraw Address
 
-To set the withdraw address to the beneficiary key, use the following command:
+The default beneficiary is the address that corresponds to the registration key.
+To change the beneficiary address, use the following command:
 
 ```shell
 fpd set-withdraw-addr <beneficiary-address> --from <registered-bbn-address>
 --keyring-backend test --home <home-dir> --fees <fees>
+--node <babylon-genesis-rpc-address>
 ```
+
+Note that change of the beneficiary address is unlimited but for every change,
+the registration key is always needed.
 
 Parameters:
 
@@ -781,6 +797,8 @@ Parameters:
 * `--home`: The home directory for the finality provider.
 * `--fees`: The fees to pay for the transaction, should be over `400ubbn`.
   These fees are paid from the account specified in `--from`.
+* `--node <babylon-genesis-rpc-address>`: <host>:<port> to Babylon Genesis
+    RPC interface for this chain (default `tcp://localhost:26657`).
 
 This command should ask to
 `confirm transaction before signing and broadcasting [y/N]:` and output the
@@ -791,13 +809,15 @@ transaction hash.
 Finality providers consume gas for operations with Babylon Genesis.
 Given that the cost of sending finality signatures is refunded automatically
 after success, the only cost of operating a finality provider is randomness
-commit, which is made periodically with very low gas cost.
+commit, which is made periodically with low gas cost.
 
 Therefore, it is recommended to use a separate key specifically for operations.
-This leaves key used for registration key isolated and only needed for claiming
-rewards. Given that the operation key is totally replaceable, it can hold only
-a miminum amount of funds to keep the finality provider running for a long
-period of time.
+This leaves the key used for registration isolated and only needed for claiming
+rewards. The operation key is totally replaceable in the sense that it is not
+tied to a finality provider, and it can be replaced by any key that is properly
+funded.
+Therefore, it can hold only a minimum amount of funds to keep the finality
+provider running for a long period of time.
 
 You may follow the following procedure to set up the operation key.
 
@@ -811,8 +831,8 @@ You may follow the following procedure to set up the operation key.
 
 4. Restart the finality provider daemon.
 
-> 💡 **Tip**: Committing randomness has a constant cost of `0.000130BBN` per
-> commit. Therefore, reserving `5-10bbn` for operations should be enough for a
+> 💡 **Tip**: Committing randomness has a constant cost of `0.00013 BABY` per
+> commit. Therefore, reserving `5-10 BABY` for operations should be enough for a
 > long time.
 
 ### 6.4. Start Finality Provider
@@ -828,7 +848,7 @@ If `--eots-pk` is not specified, the command will start the finality provider
 if it is the only one stored in the database. If multiple finality providers
 are in the database, specifying `--eots-pk` is required.
 
-### 6.5. Statuses of Finality Provider
+### 6.5. Status of Finality Provider
 
 Once the finality provider has been created, it will have the `REGISTERED` status.
 
