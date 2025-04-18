@@ -60,7 +60,7 @@ Internal variables need to satisfy the following rules:
   only takes into effect after the committed epoch is finalized. So the finality
   provider should start sending the commit as soon as possible.
 * If the remaining randomness is not sufficient (defined by config) by the
-  current babylon height, the finality provider should make a new commit.
+  current Babylon Genesis height, the finality provider should make a new commit.
 * The next commit should be made with `start_height` right after the last
   committed height. This is to ensure no gap between each commit.
 
