@@ -26,6 +26,10 @@ service EOTSManager {
   // SaveEOTSKeyName saves a new key name mapping for the EOTS public key
   rpc SaveEOTSKeyName (SaveEOTSKeyNameRequest)
       returns (SaveEOTSKeyNameResponse);
+
+  // UnlockKey unlocks the keyring with the given passphrase
+  rpc UnlockKey (UnlockKeyRequest)
+      returns (UnlockKeyResponse);
 }
 
 message PingRequest {}
@@ -97,3 +101,13 @@ message SaveEOTSKeyNameRequest {
 }
 
 message SaveEOTSKeyNameResponse {}
+
+message UnlockKeyRequest {
+  // uid is the identifier of an EOTS key, i.e., public key following BIP-340 spec
+  bytes uid = 1;
+  // passphrase of the keyring
+  string passphrase = 2;
+}
+
+message UnlockKeyResponse {
+}
