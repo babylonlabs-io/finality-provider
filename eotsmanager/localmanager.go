@@ -77,13 +77,13 @@ func InitKeyring(homeDir, keyringBackend string, input *strings.Reader) (keyring
 	)
 }
 
-func (lm *LocalEOTSManager) CreateKey(name string) ([]byte, error) {
+func (lm *LocalEOTSManager) CreateKey(name, passphrase string) ([]byte, error) {
 	mnemonic, err := NewMnemonic()
 	if err != nil {
 		return nil, err
 	}
 
-	eotsPk, err := lm.CreateKeyWithMnemonic(name, mnemonic)
+	eotsPk, err := lm.CreateKeyWithMnemonic(name, mnemonic, passphrase)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,11 @@ func NewMnemonic() (string, error) {
 	return mnemonic, nil
 }
 
-func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, mnemonic string) (*bbntypes.BIP340PubKey, error) {
+func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, mnemonic, passphrase string) (*bbntypes.BIP340PubKey, error) {
+	if lm.kr.Backend() == keyring.BackendFile && len(passphrase) < 8 {
+		return nil, fmt.Errorf("passphrase should be at least 8 characters")
+	}
+
 	if lm.keyExists(name) {
 		return nil, eotstypes.ErrFinalityProviderAlreadyExisted
 	}
@@ -117,7 +121,8 @@ func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, mnemonic string) (*bbnty
 		return nil, err
 	}
 
-	_, err = lm.kr.NewAccount(name, mnemonic, "", "", algo)
+	lm.input.Reset(passphrase + "\n" + passphrase)
+	_, err = lm.kr.NewAccount(name, mnemonic, passphrase, "", algo)
 	if err != nil {
 		return nil, err
 	}
