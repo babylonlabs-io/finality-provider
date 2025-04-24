@@ -653,7 +653,7 @@ Required parameters:
 * `--commission-max-rate`: The maximum commission rate percentage (between 0 and 1) that
   you'll receive from delegators
 * `--commission-max-change-rate`: The maximum commission change rate percentage
-  (per day)(between 0 and 1) that you'll receive from delegators
+  (per day)
 * `--key-name`: The key name in your Babylon Genesis keyring that your finality
   provider will be associated with
 * `--moniker`: A human-readable name for your finality provider
