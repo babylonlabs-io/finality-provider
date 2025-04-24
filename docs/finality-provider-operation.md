@@ -648,12 +648,12 @@ Required parameters:
   instance that the finality provider should use. If one is not provided the
   finality provider will request the creation of a new one from the connected
   EOTS manager instance.
-* `--commission-rate`: The commission rate (between 0 and 1) that you'll receive from
-  delegators
-* `--commission-max-rate`: The maximum commission rate (between 0 and 1) that
-  you'll receive from delegators
-* `--commission-max-change-rate`: The maximum commission change rate (between 0 and 1)
+* `--commission-rate`: The initial commission rate percentage (between 0 and 1)
   that you'll receive from delegators
+* `--commission-max-rate`: The maximum commission rate percentage (between 0 and 1) that
+  you'll receive from delegators
+* `--commission-max-change-rate`: The maximum commission change rate percentage
+  (per day)(between 0 and 1) that you'll receive from delegators
 * `--key-name`: The key name in your Babylon Genesis keyring that your finality
   provider will be associated with
 * `--moniker`: A human-readable name for your finality provider
