@@ -629,9 +629,9 @@ saves the finality provider information in the database.
 fpd create-finality-provider \
   --chain-id <chain-id> \
   --eots-pk <eots-pk-hex> \
-  --commission-rate 0.05 \
-  --commission-max-rate 0.05 \
-  --commission-max-change-rate 0.05 \
+  --commission-rate 0.1 \
+  --commission-max-rate 0.2 \
+  --commission-max-change-rate 0.01 \
   --key-name finality-provider \
   --moniker "MyFinalityProvider" \
   --website "https://myfinalityprovider.com" \
