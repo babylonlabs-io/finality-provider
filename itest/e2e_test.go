@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"log"
 	"math/rand"
 	"os"
@@ -342,7 +343,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 	cmd := daemon.CommandCreateFP()
 
 	eotsKeyName := "eots-key-2"
-	eotsPkBz, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
+	eotsPkBz, err := tm.EOTSServerHandler.CreateKey(eotsKeyName, "")
 	require.NoError(t, err)
 	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
 	require.NoError(t, err)
@@ -442,7 +443,7 @@ func TestPrintEotsCmd(t *testing.T) {
 	expected := make(map[string]string)
 	for i := 0; i < r.Intn(10); i++ {
 		eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
-		ekey, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
+		ekey, err := tm.EOTSServerHandler.CreateKey(eotsKeyName, "")
 		require.NoError(t, err)
 		pk, err := schnorr.ParsePubKey(ekey)
 		require.NoError(t, err)
@@ -558,7 +559,7 @@ func TestEotsdRollbackCmd(t *testing.T) {
 	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
 	require.NoError(t, err)
 
-	key, err := eh.CreateKey("eots-key-1")
+	key, err := eh.CreateKey("eots-key-1", "")
 	require.NoError(t, err)
 
 	err = eotsCli.Ping()
@@ -608,6 +609,65 @@ func TestEotsdRollbackCmd(t *testing.T) {
 	}
 
 	for i := 0; i < rollbackHeight; i++ {
+		exists, err := eh.IsRecordInDb(key, []byte(testChainID), uint64(i))
+		require.NoError(t, err)
+		require.True(t, exists)
+	}
+}
+
+// TestEotsdUnlockCmd tests the EOTS manager unlock command, demonstrating file backend keyring
+func TestEotsdUnlockCmd(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	testDir := t.TempDir()
+
+	eotsHomeDir := filepath.Join(testDir, "eots-home")
+	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
+	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+	eotsCfg.KeyringBackend = keyring.BackendFile
+
+	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh.Start(ctx)
+
+	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
+	require.NoError(t, err)
+
+	const passphrase = "test-passphrase"
+	key, err := eh.CreateKey("eots-key-1", passphrase)
+	require.NoError(t, err)
+
+	err = eotsCli.Ping()
+	require.NoError(t, err)
+
+	cmd := eotscmd.NewUnlockKeyringCmd()
+	require.NoError(t, err)
+
+	eotsPK, err := bbntypes.NewBIP340PubKey(key)
+	require.NoError(t, err)
+
+	cmd.SetArgs([]string{
+		"--eots-pk=" + eotsPK.MarshalHex(),
+		"--rpc-client=" + eotsCfg.RPCListener,
+		"--passphrase=" + passphrase,
+	})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	const numRecords = 10
+
+	for i := 0; i < numRecords; i++ {
+		_, err = eotsCli.SignEOTS(
+			key,
+			[]byte(testChainID),
+			[]byte("test"),
+			uint64(i),
+		)
+		require.NoError(t, err)
+	}
+
+	for i := 0; i < numRecords; i++ {
 		exists, err := eh.IsRecordInDb(key, []byte(testChainID), uint64(i))
 		require.NoError(t, err)
 		require.True(t, exists)

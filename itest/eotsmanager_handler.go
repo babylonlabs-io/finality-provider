@@ -59,8 +59,8 @@ func (eh *EOTSServerHandler) startServer(ctx context.Context) {
 	require.NoError(eh.t, err)
 }
 
-func (eh *EOTSServerHandler) CreateKey(name string) ([]byte, error) {
-	return eh.eotsManager.CreateKey(name)
+func (eh *EOTSServerHandler) CreateKey(name, passphrase string) ([]byte, error) {
+	return eh.eotsManager.CreateKey(name, passphrase)
 }
 
 func (eh *EOTSServerHandler) GetFPPrivKey(t *testing.T, fpPk []byte) *btcec.PrivateKey {
@@ -81,4 +81,8 @@ func (eh *EOTSServerHandler) Stop() error {
 
 func (eh *EOTSServerHandler) IsRecordInDb(eotsPk []byte, chainID []byte, height uint64) (bool, error) {
 	return eh.eotsManager.IsRecordInDB(eotsPk, chainID, height)
+}
+
+func (eh *EOTSServerHandler) Unlock(eotsPk []byte, passphrase string) error {
+	return eh.eotsManager.Unlock(eotsPk, passphrase)
 }
