@@ -10,7 +10,7 @@ import (
 func NewUnlockKeyringCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unlock",
-		Short: "Unlocks the file based keyring to load the private key in memory for signing",
+		Short: "Unlocks the file based keyring to load the EOTS private key in memory for signing",
 		RunE:  unlockKeyring,
 	}
 
@@ -65,7 +65,7 @@ func unlockKeyring(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to unlock keyring: %w", err)
 	}
 
-	cmd.Printf("Successfully unlocked keystore to load private key for %s in memory of eotsd\n", eotsFpPubKeyStr)
+	cmd.Printf("Successfully unlocked keystore to load the EOTX private key for %s in memory of eotsd\n", eotsFpPubKeyStr)
 
 	return nil
 }
