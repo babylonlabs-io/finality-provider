@@ -628,7 +628,7 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
 	eotsCfg.KeyringBackend = keyring.BackendFile
 
-	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 
 	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
