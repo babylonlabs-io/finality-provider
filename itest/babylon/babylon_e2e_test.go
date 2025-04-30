@@ -582,6 +582,7 @@ func TestEotsdRollbackCmd(t *testing.T) {
 
 	var eotsCli *client.EOTSManagerGRpcClient
 	err := retry.Do(func() error {
+		var err error
 		eotsCli, err = client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
 		return err
 	}, retry.Context(ctx), retry.Attempts(5))
