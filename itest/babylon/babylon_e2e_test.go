@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/avast/retry-go/v4"
 	"log"
 	"math/rand"
 	"os"
@@ -579,7 +580,11 @@ func TestEotsdRollbackCmd(t *testing.T) {
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 
-	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
+	var eotsCli *client.EOTSManagerGRpcClient
+	err := retry.Do(func() error {
+		eotsCli, err = client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
+		return err
+	}, retry.Context(ctx), retry.Attempts(5))
 	require.NoError(t, err)
 
 	key, err := eh.CreateKey("eots-key-1")
