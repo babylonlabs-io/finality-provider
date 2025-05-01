@@ -153,12 +153,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 	eh.Start(ctx)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	var eotsCli *client.EOTSManagerGRpcClient
-	err = retry.Do(func() error {
-		eotsCli, err = client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
-		return err
-	}, retry.Context(ctx), retry.Attempts(5))
-	require.NoError(t, err)
+	eotsCli := NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
 
 	tm := &TestManager{
 		BaseTestManager: &base_test_manager.BaseTestManager{
@@ -449,4 +444,16 @@ func (tm *TestManager) WaitForNFinalizedBlocks(t *testing.T, n uint) *types.Bloc
 func newDescription(moniker string) *stakingtypes.Description {
 	dec := stakingtypes.NewDescription(moniker, "", "", "", "")
 	return &dec
+}
+
+func NewEOTSManagerGrpcClientWithRetry(t *testing.T, cfg *eotsconfig.Config) *client.EOTSManagerGRpcClient {
+	var err error
+	var eotsCli *client.EOTSManagerGRpcClient
+	err = retry.Do(func() error {
+		eotsCli, err = client.NewEOTSManagerGRpcClient(cfg.RPCListener, cfg.HMACKey)
+		return err
+	}, retry.Attempts(5))
+	require.NoError(t, err)
+
+	return eotsCli
 }

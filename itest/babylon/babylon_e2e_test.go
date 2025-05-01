@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/avast/retry-go/v4"
 	"log"
 	"math/rand"
 	"os"
@@ -18,7 +17,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 
@@ -580,13 +578,7 @@ func TestEotsdRollbackCmd(t *testing.T) {
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 
-	var eotsCli *client.EOTSManagerGRpcClient
-	err := retry.Do(func() error {
-		var err error
-		eotsCli, err = client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
-		return err
-	}, retry.Context(ctx), retry.Attempts(5))
-	require.NoError(t, err)
+	eotsCli := NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
 
 	key, err := eh.CreateKey("eots-key-1")
 	require.NoError(t, err)
