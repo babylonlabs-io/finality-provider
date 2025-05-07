@@ -31,5 +31,9 @@ type EOTSManager interface {
 	// or passPhrase is incorrect
 	SignSchnorrSig(uid []byte, msg []byte) (*schnorr.Signature, error)
 
+	// Unlock unlocks the EOTS manager keyring with the given passphrase loading the private key into memory
+	// this should be called upon starting of the EOTS manager and only for `file` based keyring
+	Unlock(uid []byte, passphrase string) error
+
 	Close() error
 }

@@ -139,7 +139,7 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 			return nil, err
 		}
 
-		kr, err := eotsmanager.InitKeyring(clientCtx.HomeDir, clientCtx.Keyring.Backend())
+		kr, err := eotsmanager.InitKeyring(clientCtx.HomeDir, clientCtx.Keyring.Backend(), strings.NewReader(""))
 		if err != nil {
 			return nil, fmt.Errorf("failed to init keyring: %w", err)
 		}
@@ -201,7 +201,7 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	kr, err := eotsmanager.InitKeyring(homePath, backend)
+	kr, err := eotsmanager.InitKeyring(homePath, backend, strings.NewReader(""))
 	if err != nil {
 		return fmt.Errorf("failed to init keyring: %w", err)
 	}
