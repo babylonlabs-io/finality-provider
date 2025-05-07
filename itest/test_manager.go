@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/avast/retry-go/v4"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -142,8 +143,7 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
-	require.NoError(t, err)
+	eotsCli := NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
 
 	tm := &TestManager{
 		EOTSServerHandler: eh,
@@ -369,7 +369,7 @@ func (tm *TestManager) CheckBlockFinalization(t *testing.T, height uint64, num i
 			t.Logf("failed to get the votes at height %v: %s", height, err.Error())
 			return false
 		}
-		return len(votes) == num
+		return len(votes) >= num // votes could come in faster than we poll
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	// as the votes have been collected, the block should be finalized
@@ -928,4 +928,16 @@ func (tm *TestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	return afterHeight
+}
+
+func NewEOTSManagerGrpcClientWithRetry(t *testing.T, cfg *eotsconfig.Config) *client.EOTSManagerGRpcClient {
+	var err error
+	var eotsCli *client.EOTSManagerGRpcClient
+	err = retry.Do(func() error {
+		eotsCli, err = client.NewEOTSManagerGRpcClient(cfg.RPCListener, "")
+		return err
+	}, retry.Attempts(5))
+	require.NoError(t, err)
+
+	return eotsCli
 }
