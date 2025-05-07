@@ -1,11 +1,10 @@
 package eotsmanager
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"os"
+	"strings"
 	"sync"
 
 	"github.com/babylonlabs-io/finality-provider/metrics"
@@ -34,11 +33,13 @@ const (
 var _ EOTSManager = &LocalEOTSManager{}
 
 type LocalEOTSManager struct {
-	mu      sync.Mutex
-	kr      keyring.Keyring
-	es      *store.EOTSStore
-	logger  *zap.Logger
-	metrics *metrics.EotsMetrics
+	mu          sync.Mutex
+	kr          keyring.Keyring
+	es          *store.EOTSStore
+	logger      *zap.Logger
+	input       *strings.Reader // to send passphrase to the keyring
+	privateKeys map[string]*btcec.PrivateKey
+	metrics     *metrics.EotsMetrics
 }
 
 func NewLocalEOTSManager(homeDir, keyringBackend string, dbbackend kvdb.Backend, logger *zap.Logger) (*LocalEOTSManager, error) {
@@ -47,7 +48,9 @@ func NewLocalEOTSManager(homeDir, keyringBackend string, dbbackend kvdb.Backend,
 		return nil, fmt.Errorf("failed to initialize store: %w", err)
 	}
 
-	kr, err := InitKeyring(homeDir, keyringBackend)
+	inputReader := strings.NewReader("")
+
+	kr, err := InitKeyring(homeDir, keyringBackend, inputReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize keyring: %w", err)
 	}
@@ -55,30 +58,32 @@ func NewLocalEOTSManager(homeDir, keyringBackend string, dbbackend kvdb.Backend,
 	eotsMetrics := metrics.NewEotsMetrics()
 
 	return &LocalEOTSManager{
-		kr:      kr,
-		es:      es,
-		logger:  logger,
-		metrics: eotsMetrics,
+		kr:          kr,
+		es:          es,
+		logger:      logger,
+		metrics:     eotsMetrics,
+		input:       inputReader,
+		privateKeys: make(map[string]*btcec.PrivateKey), // key name -> private key
 	}, nil
 }
 
-func InitKeyring(homeDir, keyringBackend string) (keyring.Keyring, error) {
+func InitKeyring(homeDir, keyringBackend string, input *strings.Reader) (keyring.Keyring, error) {
 	return keyring.New(
 		"eots-manager",
 		keyringBackend,
 		homeDir,
-		bufio.NewReader(os.Stdin),
+		input,
 		codec.MakeCodec(),
 	)
 }
 
-func (lm *LocalEOTSManager) CreateKey(name string) ([]byte, error) {
+func (lm *LocalEOTSManager) CreateKey(name, passphrase string) ([]byte, error) {
 	mnemonic, err := NewMnemonic()
 	if err != nil {
 		return nil, err
 	}
 
-	eotsPk, err := lm.CreateKeyWithMnemonic(name, mnemonic)
+	eotsPk, err := lm.CreateKeyWithMnemonic(name, mnemonic, passphrase)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +106,11 @@ func NewMnemonic() (string, error) {
 	return mnemonic, nil
 }
 
-func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, mnemonic string) (*bbntypes.BIP340PubKey, error) {
+func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, mnemonic, passphrase string) (*bbntypes.BIP340PubKey, error) {
+	if lm.kr.Backend() == keyring.BackendFile && len(passphrase) < 8 {
+		return nil, fmt.Errorf("passphrase should be at least 8 characters")
+	}
+
 	if lm.keyExists(name) {
 		return nil, eotstypes.ErrFinalityProviderAlreadyExisted
 	}
@@ -112,7 +121,8 @@ func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, mnemonic string) (*bbnty
 		return nil, err
 	}
 
-	_, err = lm.kr.NewAccount(name, mnemonic, "", "", algo)
+	lm.input.Reset(passphrase + "\n" + passphrase)
+	_, err = lm.kr.NewAccount(name, mnemonic, passphrase, "", algo)
 	if err != nil {
 		return nil, err
 	}
@@ -345,6 +355,67 @@ func (lm *LocalEOTSManager) getEOTSPrivKey(fpPk []byte) (*btcec.PrivateKey, erro
 }
 
 func (lm *LocalEOTSManager) eotsPrivKeyFromKeyName(keyName string) (*btcec.PrivateKey, error) {
+	var (
+		privKey *btcec.PrivateKey
+		err     error
+	)
+
+	switch lm.kr.Backend() {
+	case keyring.BackendTest:
+		privKey, err = lm.getKeyFromKeyring(keyName, "")
+		if err != nil {
+			return nil, err
+		}
+	case keyring.BackendFile:
+		privKey, err = lm.getKeyFromMap(keyName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return privKey, nil
+}
+
+func (lm *LocalEOTSManager) Unlock(fpPk []byte, passphrase string) error {
+	lm.mu.Lock()
+	defer lm.mu.Unlock()
+
+	keyName, err := lm.es.GetEOTSKeyName(fpPk)
+	if err != nil {
+		return err
+	}
+
+	privKey, err := lm.getKeyFromKeyring(keyName, passphrase)
+	if err != nil {
+		return fmt.Errorf("failed to unlock the key ring: %w", err)
+	}
+
+	if _, ok := lm.privateKeys[keyName]; ok {
+		return fmt.Errorf("private key already unlocked for key name: %s, fpPk: %s", keyName, hex.EncodeToString(fpPk))
+	}
+
+	lm.privateKeys[keyName] = privKey
+
+	return nil
+}
+
+func (lm *LocalEOTSManager) getKeyFromMap(keyName string) (*btcec.PrivateKey, error) {
+	// we don't call the lock here because we are already in the lock in caller function
+	privKey, ok := lm.privateKeys[keyName]
+	if !ok {
+		return nil, fmt.Errorf("private key not found in map for key name: %s", keyName)
+	}
+
+	if privKey == nil {
+		return nil, fmt.Errorf("private key is nil for key name: %s", keyName)
+	}
+
+	return privKey, nil
+}
+
+func (lm *LocalEOTSManager) getKeyFromKeyring(keyName, passphrase string) (*btcec.PrivateKey, error) {
+	lm.input.Reset(passphrase)
+
 	k, err := lm.kr.Key(keyName)
 	if err != nil {
 		return nil, err

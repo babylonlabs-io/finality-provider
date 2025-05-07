@@ -180,7 +180,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
 	eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
-	eotsPkBz, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
+	eotsPkBz, err := tm.EOTSServerHandler.CreateKey(eotsKeyName, "")
 	require.NoError(t, err)
 
 	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)

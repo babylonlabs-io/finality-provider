@@ -1,6 +1,7 @@
 package eotsmanager_test
 
 import (
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -22,12 +23,22 @@ import (
 func FuzzCreateKey(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		fpName := testutil.GenRandomHexStr(r, 4)
 		homeDir := filepath.Join(t.TempDir(), "eots-home")
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(homeDir)
 		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
+
+		useFileKeyring := rand.Intn(2) == 1
+		var passphrase string
+
+		if useFileKeyring {
+			eotsCfg.KeyringBackend = keyring.BackendFile
+			passphrase = testutil.GenRandomHexStr(r, 8)
+		}
+
 		require.NoError(t, err)
 		defer func() {
 			dbBackend.Close()
@@ -38,8 +49,13 @@ func FuzzCreateKey(f *testing.F) {
 		lm, err := eotsmanager.NewLocalEOTSManager(homeDir, eotsCfg.KeyringBackend, dbBackend, zap.NewNop())
 		require.NoError(t, err)
 
-		fpPk, err := lm.CreateKey(fpName)
+		fpPk, err := lm.CreateKey(fpName, passphrase)
 		require.NoError(t, err)
+
+		if useFileKeyring {
+			err = lm.Unlock(fpPk, passphrase)
+			require.NoError(t, err)
+		}
 
 		fpRecord, err := lm.KeyRecord(fpPk)
 		require.NoError(t, err)
@@ -49,7 +65,7 @@ func FuzzCreateKey(f *testing.F) {
 		require.NoError(t, err)
 		require.NotNil(t, sig)
 
-		_, err = lm.CreateKey(fpName)
+		_, err = lm.CreateKey(fpName, passphrase)
 		require.ErrorIs(t, err, types.ErrFinalityProviderAlreadyExisted)
 	})
 }
@@ -57,12 +73,22 @@ func FuzzCreateKey(f *testing.F) {
 func FuzzCreateRandomnessPairList(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		fpName := testutil.GenRandomHexStr(r, 4)
 		homeDir := filepath.Join(t.TempDir(), "eots-home")
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(homeDir)
 		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
+
+		useFileKeyring := rand.Intn(2) == 1
+		var passphrase string
+
+		if useFileKeyring {
+			eotsCfg.KeyringBackend = keyring.BackendFile
+			passphrase = testutil.GenRandomHexStr(r, 8)
+		}
+
 		defer func() {
 			dbBackend.Close()
 			err := os.RemoveAll(homeDir)
@@ -72,8 +98,13 @@ func FuzzCreateRandomnessPairList(f *testing.F) {
 		lm, err := eotsmanager.NewLocalEOTSManager(homeDir, eotsCfg.KeyringBackend, dbBackend, zap.NewNop())
 		require.NoError(t, err)
 
-		fpPk, err := lm.CreateKey(fpName)
+		fpPk, err := lm.CreateKey(fpName, passphrase)
 		require.NoError(t, err)
+
+		if useFileKeyring {
+			err = lm.Unlock(fpPk, passphrase)
+			require.NoError(t, err)
+		}
 
 		chainID := datagen.GenRandomByteArray(r, 10)
 		startHeight := datagen.RandomInt(r, 100)
@@ -93,6 +124,7 @@ func FuzzCreateRandomnessPairList(f *testing.F) {
 func FuzzSignRecord(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		homeDir := filepath.Join(t.TempDir(), "eots-home")
@@ -104,6 +136,15 @@ func FuzzSignRecord(f *testing.F) {
 			require.NoError(t, err)
 		}()
 		require.NoError(t, err)
+
+		useFileKeyring := rand.Intn(2) == 1
+		var passphrase string
+
+		if useFileKeyring {
+			eotsCfg.KeyringBackend = keyring.BackendFile
+			passphrase = testutil.GenRandomHexStr(r, 8)
+		}
+
 		lm, err := eotsmanager.NewLocalEOTSManager(homeDir, eotsCfg.KeyringBackend, dbBackend, zap.NewNop())
 		require.NoError(t, err)
 
@@ -112,10 +153,15 @@ func FuzzSignRecord(f *testing.F) {
 
 		msg := datagen.GenRandomByteArray(r, 32)
 		numFps := 3
+
 		for i := 0; i < numFps; i++ {
 			chainID := datagen.GenRandomByteArray(r, 10)
 			fpName := testutil.GenRandomHexStr(r, 4)
-			fpPk, err := lm.CreateKey(fpName)
+			fpPk, err := lm.CreateKey(fpName, passphrase)
+			if useFileKeyring {
+				err = lm.Unlock(fpPk, passphrase)
+				require.NoError(t, err)
+			}
 			require.NoError(t, err)
 			pubRandList, err := lm.CreateRandomnessPairList(fpPk, chainID, startHeight, uint32(numRand))
 			require.NoError(t, err)

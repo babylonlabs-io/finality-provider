@@ -370,7 +370,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	babylonKeyName := babylonCfg.BabylonConfig.Key
 
 	// create and register Babylon FP
-	eotsPk, err := ctm.EOTSServerHandler.CreateKey(babylonKeyName)
+	eotsPk, err := ctm.EOTSServerHandler.CreateKey(babylonKeyName, "")
 	require.NoError(t, err)
 	babylonFpPk, err := bbntypes.NewBIP340PubKey(eotsPk)
 	require.NoError(t, err)
@@ -387,7 +387,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	consumerKeyName := consumerCfg.OPStackL2Config.Key + "2"
 
 	// create and register consumer FP
-	consumerEotsPk, err := ctm.EOTSServerHandler.CreateKey(consumerKeyName)
+	consumerEotsPk, err := ctm.EOTSServerHandler.CreateKey(consumerKeyName, "")
 	require.NoError(t, err)
 	consumerFpPk, err := bbntypes.NewBIP340PubKey(consumerEotsPk)
 	require.NoError(t, err)

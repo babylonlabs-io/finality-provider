@@ -50,6 +50,14 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
 		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
+		useFileKeyring := rand.Intn(2) == 1
+		var passphrase string
+
+		if useFileKeyring {
+			eotsCfg.KeyringBackend = sdkkeyring.BackendFile
+			passphrase = testutil.GenRandomHexStr(r, 8)
+		}
+
 		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
 		defer func() {
@@ -96,8 +104,12 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		var eotsPk *bbntypes.BIP340PubKey
 		eotsKeyName := testutil.GenRandomHexStr(r, 4)
 		require.NoError(t, err)
-		eotsPkBz, err := em.CreateKey(eotsKeyName)
+		eotsPkBz, err := em.CreateKey(eotsKeyName, passphrase)
 		require.NoError(t, err)
+		if useFileKeyring {
+			err = em.Unlock(eotsPkBz, passphrase)
+			require.NoError(t, err)
+		}
 		eotsPk, err = bbntypes.NewBIP340PubKey(eotsPkBz)
 		require.NoError(t, err)
 
@@ -262,6 +274,14 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
 		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
+		useFileKeyring := rand.Intn(2) == 1
+		var passphraseEots string
+
+		if useFileKeyring {
+			eotsCfg.KeyringBackend = sdkkeyring.BackendFile
+			passphraseEots = testutil.GenRandomHexStr(r, 8)
+		}
+
 		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
 		defer func() {
@@ -305,10 +325,15 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 		var eotsPk *bbntypes.BIP340PubKey
 		eotsKeyName := testutil.GenRandomHexStr(r, 4)
 		require.NoError(t, err)
-		eotsPkBz, err := em.CreateKey(eotsKeyName)
+		eotsPkBz, err := em.CreateKey(eotsKeyName, passphraseEots)
 		require.NoError(t, err)
 		eotsPk, err = bbntypes.NewBIP340PubKey(eotsPkBz)
 		require.NoError(t, err)
+
+		if useFileKeyring {
+			err = em.Unlock(eotsPkBz, passphraseEots)
+			require.NoError(t, err)
+		}
 
 		// generate keyring
 		keyName := testutil.GenRandomHexStr(r, 4)
@@ -350,6 +375,14 @@ func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg
 	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
 	eotsdb, err := eotsCfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
+	useFileKeyring := rand.Intn(2) == 1
+	var passphraseEots string
+
+	if useFileKeyring {
+		eotsCfg.KeyringBackend = sdkkeyring.BackendFile
+		passphraseEots = testutil.GenRandomHexStr(r, 8)
+	}
+
 	em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, eotsdb, logger)
 	require.NoError(t, err)
 
@@ -375,8 +408,14 @@ func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg
 	require.NoError(t, err)
 	kc, err := keyring.NewChainKeyringControllerWithKeyring(kr, keyName)
 	require.NoError(t, err)
-	btcPkBytes, err := em.CreateKey(keyName)
+	btcPkBytes, err := em.CreateKey(keyName, passphraseEots)
 	require.NoError(t, err)
+
+	if useFileKeyring {
+		err = em.Unlock(btcPkBytes, passphraseEots)
+		require.NoError(t, err)
+	}
+
 	btcPk, err := bbntypes.NewBIP340PubKey(btcPkBytes)
 	require.NoError(t, err)
 	keyInfo, err := kc.CreateChainKey(passphrase, hdPath, "")

@@ -38,7 +38,7 @@ func TestHMACMismatch(t *testing.T) {
 	require.Equal(t, fpHmacKey, tm.FpConfig.HMACKey, "HMAC key should be set in the FP config")
 
 	eotsKeyName := "test-key-hmac-mismatch"
-	eotsPkBytes, err := tm.EOTSServerHandler.CreateKey(eotsKeyName)
+	eotsPkBytes, err := tm.EOTSServerHandler.CreateKey(eotsKeyName, "")
 	require.NoError(t, err)
 
 	msgToSign := []byte("test message for signing that is")

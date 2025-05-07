@@ -239,7 +239,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	commission := testutil.ZeroCommissionRate()
 	desc := e2eutils.NewDescription(moniker)
 
-	eotsPk, err := ctm.EOTSServerHandler.CreateKey(keyName)
+	eotsPk, err := ctm.EOTSServerHandler.CreateKey(keyName, "")
 	require.NoError(t, err)
 	eotsPubKey, err := bbntypes.NewBIP340PubKey(eotsPk)
 	require.NoError(t, err)

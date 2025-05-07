@@ -38,7 +38,7 @@ func startFn(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load config at %s: %w", homePath, err)
 	}
 
-	if cfg.KeyringBackend != "test" {
+	if cfg.KeyringBackend != "test" && cfg.KeyringBackend != "file" {
 		return fmt.Errorf("the keyring backend in config must be `test` for automatic signing, got %s", cfg.KeyringBackend)
 	}
 

@@ -151,6 +151,20 @@ func (c *EOTSManagerGRpcClient) SignSchnorrSig(uid, msg []byte) (*schnorr.Signat
 	return sig, nil
 }
 
+func (c *EOTSManagerGRpcClient) Unlock(uid []byte, passphrase string) error {
+	req := &proto.UnlockKeyRequest{
+		Uid:        uid,
+		Passphrase: passphrase,
+	}
+
+	_, err := c.client.UnlockKey(context.Background(), req)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *EOTSManagerGRpcClient) Close() error {
 	return c.conn.Close()
 }
