@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"log"
 	"math/rand"
