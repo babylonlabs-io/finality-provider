@@ -3,6 +3,7 @@ package e2etest_babylon
 import (
 	"context"
 	"fmt"
+	"github.com/avast/retry-go/v4"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -152,8 +153,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 	eh.Start(ctx)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, fpHmacKey)
-	require.NoError(t, err)
+	eotsCli := NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
 
 	tm := &TestManager{
 		BaseTestManager: &base_test_manager.BaseTestManager{
@@ -330,7 +330,7 @@ func (tm *TestManager) CheckBlockFinalization(t *testing.T, height uint64, num i
 			t.Logf("failed to get the votes at height %v: %s", height, err.Error())
 			return false
 		}
-		return len(votes) == num
+		return len(votes) >= num // votes could come in faster than we poll
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	// As the votes have been collected, the block should be finalized
@@ -444,4 +444,16 @@ func (tm *TestManager) WaitForNFinalizedBlocks(t *testing.T, n uint) *types.Bloc
 func newDescription(moniker string) *stakingtypes.Description {
 	dec := stakingtypes.NewDescription(moniker, "", "", "", "")
 	return &dec
+}
+
+func NewEOTSManagerGrpcClientWithRetry(t *testing.T, cfg *eotsconfig.Config) *client.EOTSManagerGRpcClient {
+	var err error
+	var eotsCli *client.EOTSManagerGRpcClient
+	err = retry.Do(func() error {
+		eotsCli, err = client.NewEOTSManagerGRpcClient(cfg.RPCListener, "")
+		return err
+	}, retry.Attempts(5))
+	require.NoError(t, err)
+
+	return eotsCli
 }

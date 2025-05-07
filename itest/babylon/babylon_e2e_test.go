@@ -17,7 +17,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 
@@ -579,8 +578,7 @@ func TestEotsdRollbackCmd(t *testing.T) {
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 
-	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
-	require.NoError(t, err)
+	eotsCli := NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
 
 	key, err := eh.CreateKey("eots-key-1")
 	require.NoError(t, err)
