@@ -1,6 +1,3 @@
-//go:build e2e_babylon
-// +build e2e_babylon
-
 package e2etest_babylon
 
 import (
@@ -631,6 +628,79 @@ func TestEotsdRollbackCmd(t *testing.T) {
 
 	for i := 0; i < rollbackHeight; i++ {
 		exists, err := eh.IsRecordInDb(key, []byte(testChainID), uint64(i))
+		require.NoError(t, err)
+		require.True(t, exists)
+	}
+}
+
+func TestEotsdBackupCmd(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	testDir := t.TempDir()
+
+	eotsHomeDir := filepath.Join(testDir, "eots-home")
+	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
+	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+
+	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh.Start(ctx)
+
+	eotsCli := NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
+
+	key, err := eh.CreateKey("eots-key-1")
+	require.NoError(t, err)
+
+	err = eotsCli.Ping()
+	require.NoError(t, err)
+
+	cmd := eotscmd.NewBackupCmd()
+	require.NoError(t, err)
+
+	backupHome := t.TempDir()
+	backupPath := fmt.Sprintf("%s/data", backupHome)
+	dbPath := fmt.Sprintf("%s/data/eots.db", eotsHomeDir)
+
+	cmd.SetArgs([]string{
+		"--db-path=" + dbPath,
+		"--rpc-client=" + eotsCfg.RPCListener,
+		"--backup-dir=" + backupPath,
+	})
+
+	const numRecords = 10
+	for i := 0; i < numRecords; i++ {
+		_, err = eotsCli.SignEOTS(
+			key,
+			[]byte(testChainID),
+			[]byte("test"),
+			uint64(i),
+		)
+		require.NoError(t, err)
+	}
+
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	// confirm the records are in the original db
+	for i := 0; i < numRecords; i++ {
+		exists, err := eh.IsRecordInDb(key, []byte(testChainID), uint64(i))
+		require.NoError(t, err)
+		require.True(t, exists)
+	}
+
+	// initialize a new eotsd instance with the backup db
+	eotsCfgBkp := eotscfg.DefaultConfigWithHomePath(backupHome)
+	eotsCfgBkp.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eotsCfgBkp.Metrics.Port = testutil.AllocateUniquePort(t)
+	eotsCfgBkp.DatabaseConfig.DBPath = backupPath
+
+	ehBkp := e2eutils.NewEOTSServerHandler(t, eotsCfgBkp, backupHome)
+	ehBkp.Start(ctx)
+
+	// confirm the records are in the backup db
+	for i := 0; i < numRecords; i++ {
+		exists, err := ehBkp.IsRecordInDb(key, []byte(testChainID), uint64(i))
 		require.NoError(t, err)
 		require.True(t, exists)
 	}
