@@ -322,13 +322,12 @@ func FuzzEOTSStore_BackupWithConcurrentWrites(f *testing.F) {
 	f.Fuzz(func(t *testing.T, seed int64) {
 		t.Parallel()
 		var (
-			wg              sync.WaitGroup
-			allKeysMu       sync.Mutex
-			writeIndex      atomic.Int64
-			writeLimit      = 100
-			writeSleep      = 5 * time.Millisecond
-			allKeys         = map[string]keyPair{}
-			keyWrittenIndex = map[string]int64{}
+			wg         sync.WaitGroup
+			allKeysMu  sync.Mutex
+			writeIndex atomic.Int64
+			writeLimit = 100
+			writeSleep = 5 * time.Millisecond
+			allKeys    = map[string]keyPair{}
 		)
 
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -371,7 +370,6 @@ func FuzzEOTSStore_BackupWithConcurrentWrites(f *testing.F) {
 					btcPk: pk,
 					index: idx,
 				}
-				keyWrittenIndex[kname] = idx
 				allKeysMu.Unlock()
 
 				time.Sleep(writeSleep)
