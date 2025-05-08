@@ -310,59 +310,9 @@ func FuzzDeleteSignRecordsFromHeight(f *testing.F) {
 	})
 }
 
-// FuzzEOTSStore tests save and show EOTS key names properly
-func FuzzEOTSStoreBackup(f *testing.F) {
-	testutil.AddRandomSeedsToFuzzer(f, 10)
-	f.Fuzz(func(t *testing.T, seed int64) {
-		t.Parallel()
-		r := rand.New(rand.NewSource(seed))
-
-		homePath := t.TempDir()
-		cfg := config.DefaultDBConfigWithHomePath(homePath)
-
-		dbBackend, err := cfg.GetDBBackend()
-		require.NoError(t, err)
-
-		vs, err := store.NewEOTSStore(dbBackend)
-		require.NoError(t, err)
-
-		defer func() {
-			dbBackend.Close()
-			err := os.RemoveAll(homePath)
-			require.NoError(t, err)
-		}()
-
-		expectedKeyName := testutil.GenRandomHexStr(r, 10)
-		_, btcPk, err := datagen.GenRandomBTCKeyPair(r)
-		require.NoError(t, err)
-
-		// add key name for the first time
-		err = vs.AddEOTSKeyName(btcPk, expectedKeyName)
-		require.NoError(t, err)
-
-		backupHome := t.TempDir()
-		backupPath := fmt.Sprintf("%s/data", backupHome)
-		dbpath := fmt.Sprintf("%s/data/eots.db", homePath)
-
-		err = vs.BackupDB(dbpath, backupPath)
-		require.NoError(t, err)
-
-		cfgBkp := config.DefaultDBConfigWithHomePath(homePath)
-		cfgBkp.DBPath = backupPath
-		dbBackendBkp, err := cfgBkp.GetDBBackend()
-		require.NoError(t, err)
-
-		vsBkp, err := store.NewEOTSStore(dbBackendBkp)
-		keyNameFromBackupDB, err := vsBkp.GetEOTSKeyName(schnorr.SerializePubKey(btcPk))
-		require.NoError(t, err)
-		require.Equal(t, expectedKeyName, keyNameFromBackupDB)
-
-		keyNameFromDB, err := vs.GetEOTSKeyName(schnorr.SerializePubKey(btcPk))
-		require.NoError(t, err)
-		require.Equal(t, expectedKeyName, keyNameFromDB)
-	})
-}
-
+// FuzzEOTSStore_BackupWithConcurrentWrites performs fuzz testing for EOTSStore's backup functionality under concurrent writes.
+// Ensures that the backup contains only keys written up to the point the backup is initiated, despite ongoing writes.
+// Validates the integrity of written keys in the original DB and verifies backup consistency with the expected state.
 func FuzzEOTSStore_BackupWithConcurrentWrites(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	type keyPair struct {
