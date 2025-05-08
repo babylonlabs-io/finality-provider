@@ -306,23 +306,24 @@ func (s *EOTSStore) BackupDB(dbPath string, backupDir string) error {
 	}
 
 	// Create backup filename with timestamp
-	backupName := fmt.Sprintf("eots.db")
+	backupName := "eots.db"
 	backupPath := filepath.Join(backupDir, backupName)
 
 	// Create the directory if it doesn't exist
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
-		return fmt.Errorf("failed to create backup directory: %v", err)
+	if err := os.MkdirAll(backupDir, 0750); err != nil {
+		return fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
 	// Open the backup file
+	// #nosec G304 -- backupPath is provided by operators
 	backupFile, err := os.Create(backupPath)
 	if err != nil {
-		return fmt.Errorf("failed to create backup file: %v", err)
+		return fmt.Errorf("failed to create backup file: %w", err)
 	}
 	defer backupFile.Close()
 
 	if err := s.db.Copy(backupFile); err != nil {
-		return fmt.Errorf("failed to copy database contents: %v", err)
+		return fmt.Errorf("failed to copy database contents: %w", err)
 	}
 
 	return nil

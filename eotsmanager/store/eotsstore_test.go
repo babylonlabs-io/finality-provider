@@ -321,7 +321,7 @@ func FuzzEOTSStore_BackupWithConcurrentWrites(f *testing.F) {
 	}
 	f.Fuzz(func(t *testing.T, seed int64) {
 		t.Parallel()
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		r := rand.New(rand.NewSource(seed))
 
 		var (
 			wg         sync.WaitGroup

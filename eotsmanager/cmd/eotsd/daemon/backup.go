@@ -15,11 +15,11 @@ func NewBackupCmd() *cobra.Command {
 
 	f := cmd.Flags()
 
-	f.String(flagDbPath, "", "Full path to eots.db")
+	f.String(flagDBPath, "", "Full path to eots.db")
 	f.String(flagBackupDir, "", "Full path to backup directory")
 	f.String(rpcClientFlag, "", "The RPC address of a running eotsd")
 
-	if err := cmd.MarkFlagRequired(flagDbPath); err != nil {
+	if err := cmd.MarkFlagRequired(flagDBPath); err != nil {
 		panic(err)
 	}
 	if err := cmd.MarkFlagRequired(flagBackupDir); err != nil {
@@ -35,7 +35,7 @@ func NewBackupCmd() *cobra.Command {
 func backup(cmd *cobra.Command, _ []string) error {
 	f := cmd.Flags()
 
-	dbPath, err := f.GetString(flagDbPath)
+	dbPath, err := f.GetString(flagDBPath)
 	if err != nil {
 		return fmt.Errorf("failed to get db-path flag: %w", err)
 	}
