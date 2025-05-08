@@ -385,3 +385,7 @@ func (lm *LocalEOTSManager) IsRecordInDB(eotsPk []byte, chainID []byte, height u
 
 	return found, nil
 }
+
+func (lm *LocalEOTSManager) Backup(dbPath string, backupDir string) error {
+	return lm.es.BackupDB(dbPath, backupDir)
+}

@@ -18,4 +18,6 @@ const (
 	flagIndex             = "index"
 	flagRecover           = "recover"
 	flagMnemonicSrc       = "source"
+	flagDbPath            = "db-path"
+	flagBackupDir         = "backup-dir"
 )

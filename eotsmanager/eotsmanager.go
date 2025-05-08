@@ -31,5 +31,9 @@ type EOTSManager interface {
 	// or passPhrase is incorrect
 	SignSchnorrSig(uid []byte, msg []byte) (*schnorr.Signature, error)
 
+	// Backup performs a hot backup of the database using a read-only transaction, eotsd can be running
+	// when this function is called, but writing to the db is blocked until the backup is done
+	Backup(dbPath string, backupDir string) error
+
 	Close() error
 }

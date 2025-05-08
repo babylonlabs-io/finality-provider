@@ -116,3 +116,11 @@ func (r *rpcServer) SaveEOTSKeyName(
 
 	return &proto.SaveEOTSKeyNameResponse{}, r.em.SaveEOTSKeyName(eotsPk, req.KeyName)
 }
+
+func (r *rpcServer) Backup(_ context.Context, req *proto.BackupRequest) (*proto.BackupResponse, error) {
+	if err := r.em.Backup(req.DbPath, req.BackupDir); err != nil {
+		return nil, err
+	}
+
+	return &proto.BackupResponse{}, nil
+}

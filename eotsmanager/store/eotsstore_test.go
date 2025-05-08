@@ -2,9 +2,14 @@ package store_test
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/btcsuite/btcd/btcec/v2"
 	"math/rand"
 	"os"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/babylonlabs-io/babylon/testutil/datagen"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -302,5 +307,183 @@ func FuzzDeleteSignRecordsFromHeight(f *testing.F) {
 		require.Error(t, err)
 		err = vs.DeleteSignRecordsFromHeight(targetPk, nil, 0)
 		require.Error(t, err)
+	})
+}
+
+// FuzzEOTSStore tests save and show EOTS key names properly
+func FuzzEOTSStoreBackup(f *testing.F) {
+	testutil.AddRandomSeedsToFuzzer(f, 10)
+	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
+		r := rand.New(rand.NewSource(seed))
+
+		homePath := t.TempDir()
+		cfg := config.DefaultDBConfigWithHomePath(homePath)
+
+		dbBackend, err := cfg.GetDBBackend()
+		require.NoError(t, err)
+
+		vs, err := store.NewEOTSStore(dbBackend)
+		require.NoError(t, err)
+
+		defer func() {
+			dbBackend.Close()
+			err := os.RemoveAll(homePath)
+			require.NoError(t, err)
+		}()
+
+		expectedKeyName := testutil.GenRandomHexStr(r, 10)
+		_, btcPk, err := datagen.GenRandomBTCKeyPair(r)
+		require.NoError(t, err)
+
+		// add key name for the first time
+		err = vs.AddEOTSKeyName(btcPk, expectedKeyName)
+		require.NoError(t, err)
+
+		backupHome := t.TempDir()
+		backupPath := fmt.Sprintf("%s/data", backupHome)
+		dbpath := fmt.Sprintf("%s/data/eots.db", homePath)
+
+		err = vs.BackupDB(dbpath, backupPath)
+		require.NoError(t, err)
+
+		cfgBkp := config.DefaultDBConfigWithHomePath(homePath)
+		cfgBkp.DBPath = backupPath
+		dbBackendBkp, err := cfgBkp.GetDBBackend()
+		require.NoError(t, err)
+
+		vsBkp, err := store.NewEOTSStore(dbBackendBkp)
+		keyNameFromBackupDB, err := vsBkp.GetEOTSKeyName(schnorr.SerializePubKey(btcPk))
+		require.NoError(t, err)
+		require.Equal(t, expectedKeyName, keyNameFromBackupDB)
+
+		keyNameFromDB, err := vs.GetEOTSKeyName(schnorr.SerializePubKey(btcPk))
+		require.NoError(t, err)
+		require.Equal(t, expectedKeyName, keyNameFromDB)
+	})
+}
+
+func FuzzEOTSStore_BackupWithConcurrentWrites(f *testing.F) {
+	testutil.AddRandomSeedsToFuzzer(f, 10)
+	type keyPair struct {
+		btcPk *btcec.PublicKey
+		index int64
+	}
+	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
+		var (
+			wg              sync.WaitGroup
+			allKeysMu       sync.Mutex
+			writeIndex      atomic.Int64
+			writeLimit      = 100
+			writeSleep      = 5 * time.Millisecond
+			allKeys         = map[string]keyPair{}
+			keyWrittenIndex = map[string]int64{}
+		)
+
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		homePath := t.TempDir()
+		cfg := config.DefaultDBConfigWithHomePath(homePath)
+		dbBackend, err := cfg.GetDBBackend()
+		require.NoError(t, err)
+
+		vs, err := store.NewEOTSStore(dbBackend)
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			dbBackend.Close()
+		})
+
+		// Write initial key
+		initialKeyName := testutil.GenRandomHexStr(r, 10)
+		_, initialPk, err := datagen.GenRandomBTCKeyPair(r)
+		require.NoError(t, err)
+
+		err = vs.AddEOTSKeyName(initialPk, initialKeyName)
+		require.NoError(t, err)
+
+		// Start concurrent writes
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < writeLimit; i++ {
+				idx := writeIndex.Add(1)
+
+				kname := testutil.GenRandomHexStr(r, 10)
+				_, pk, err := datagen.GenRandomBTCKeyPair(r)
+				require.NoError(t, err)
+
+				err = vs.AddEOTSKeyName(pk, kname)
+				require.NoError(t, err)
+
+				allKeysMu.Lock()
+				allKeys[kname] = keyPair{
+					btcPk: pk,
+					index: idx,
+				}
+				keyWrittenIndex[kname] = idx
+				allKeysMu.Unlock()
+
+				time.Sleep(writeSleep)
+			}
+		}()
+
+		sleepMs := 100 + r.Intn(201) // 100 to 300 ms
+		// Allow writes to accumulate
+		time.Sleep(time.Duration(sleepMs) * time.Millisecond)
+
+		// Capture write index before backup starts
+		indexBeforeBackup := writeIndex.Load()
+
+		// Perform backup
+		backupHome := t.TempDir()
+		backupPath := fmt.Sprintf("%s/data", backupHome)
+		dbPath := fmt.Sprintf("%s/data/eots.db", homePath)
+
+		err = vs.BackupDB(dbPath, backupPath)
+		require.NoError(t, err)
+
+		wg.Wait()
+
+		// Verify the original DB has all keys
+		for name, pair := range allKeys {
+			got, err := vs.GetEOTSKeyName(schnorr.SerializePubKey(pair.btcPk))
+			require.NoError(t, err)
+			require.Equal(t, name, got)
+		}
+
+		// Open and check backup DB
+		cfgBkp := config.DefaultDBConfigWithHomePath(backupHome)
+		cfgBkp.DBPath = backupPath
+		dbBackendBkp, err := cfgBkp.GetDBBackend()
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			dbBackendBkp.Close()
+		})
+
+		vsBkp, err := store.NewEOTSStore(dbBackendBkp)
+		require.NoError(t, err)
+
+		found := 0
+		foundBeforeCutoff := 0
+		for name, pair := range allKeys {
+			val, err := vsBkp.GetEOTSKeyName(schnorr.SerializePubKey(pair.btcPk))
+			if err == nil {
+				require.Equal(t, name, val)
+				found++
+				if pair.index <= indexBeforeBackup {
+					foundBeforeCutoff++
+				}
+			}
+		}
+
+		t.Logf("Total keys written: %d", writeLimit)
+		t.Logf("Backup cutoff index: %d", indexBeforeBackup)
+		t.Logf("Keys found in backup: %d", found)
+		t.Logf("Keys expected before cutoff: %d", foundBeforeCutoff)
+
+		require.Greater(t, found, 0, "Backup should have at least some keys")
+		require.Equal(t, foundBeforeCutoff, found, "Backup should only contain keys written before cutoff")
 	})
 }

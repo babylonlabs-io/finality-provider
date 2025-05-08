@@ -151,6 +151,19 @@ func (c *EOTSManagerGRpcClient) SignSchnorrSig(uid, msg []byte) (*schnorr.Signat
 	return sig, nil
 }
 
+func (c *EOTSManagerGRpcClient) Backup(dbPath string, backupDir string) error {
+	req := &proto.BackupRequest{
+		DbPath:    dbPath,
+		BackupDir: backupDir,
+	}
+
+	if _, err := c.client.Backup(context.Background(), req); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *EOTSManagerGRpcClient) Close() error {
 	return c.conn.Close()
 }

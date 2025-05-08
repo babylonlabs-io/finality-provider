@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"os"
+	"path/filepath"
 	"time"
 
 	pm "google.golang.org/protobuf/proto"
@@ -291,4 +293,37 @@ func ExtractHeightFromKey(key []byte) (uint64, error) {
 
 	// Use sdk.BigEndianToUint64 to convert back to uint64
 	return sdk.BigEndianToUint64(heightBytes), nil
+}
+
+// BackupDB performs a hot backup of the database using a read-only transaction
+func (s *EOTSStore) BackupDB(dbPath string, backupDir string) error {
+	if dbPath == "" {
+		return fmt.Errorf("database path must be provided")
+	}
+
+	if backupDir == "" {
+		return fmt.Errorf("backup dir path must be provided")
+	}
+
+	// Create backup filename with timestamp
+	backupName := fmt.Sprintf("eots.db")
+	backupPath := filepath.Join(backupDir, backupName)
+
+	// Create the directory if it doesn't exist
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		return fmt.Errorf("failed to create backup directory: %v", err)
+	}
+
+	// Open the backup file
+	backupFile, err := os.Create(backupPath)
+	if err != nil {
+		return fmt.Errorf("failed to create backup file: %v", err)
+	}
+	defer backupFile.Close()
+
+	if err := s.db.Copy(backupFile); err != nil {
+		return fmt.Errorf("failed to copy database contents: %v", err)
+	}
+
+	return nil
 }
