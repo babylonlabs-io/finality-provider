@@ -137,7 +137,7 @@ func (fp *FinalityProviderInstance) Start() error {
 	return nil
 }
 
-func (fp *FinalityProviderInstance) Stop() error {
+func (fp *FinalityProviderInstance) Stop(closeDB bool) error {
 	if !fp.isStarted.Swap(false) {
 		return fmt.Errorf("the finality-provider %s has already stopped", fp.GetBtcPkHex())
 	}
@@ -151,8 +151,10 @@ func (fp *FinalityProviderInstance) Stop() error {
 	close(fp.quit)
 	fp.wg.Wait()
 
-	if err := fp.pubRandState.close(); err != nil {
-		return fmt.Errorf("failed to close the pub rand state: %w", err)
+	if closeDB {
+		if err := fp.pubRandState.close(); err != nil {
+			return fmt.Errorf("failed to close the pub rand state: %w", err)
+		}
 	}
 
 	fp.logger.Info("the finality-provider instance is successfully stopped", zap.String("pk", fp.GetBtcPkHex()))
