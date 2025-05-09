@@ -32,6 +32,7 @@ func CommandStart() *cobra.Command {
 	cmd.Flags().String(fpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
 	cmd.Flags().String(rpcListenerFlag, "", "The address that the RPC server listens to")
 	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
+	cmd.Flags().Bool(noFpStartFlag, false, "The address that the RPC server listens to")
 
 	return cmd
 }
@@ -86,7 +87,12 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load app: %w", err)
 	}
 
-	if err := startApp(fpApp, fpStr); err != nil {
+	noFpStart, err := flags.GetBool(noFpStartFlag)
+	if err != nil {
+		return fmt.Errorf("failed to read flag %s, %w", noFpStartFlag, err)
+	}
+
+	if err := startApp(fpApp, fpStr, noFpStart); err != nil {
 		return fmt.Errorf("failed to start app: %w", err)
 	}
 
@@ -113,12 +119,19 @@ func loadApp(
 func startApp(
 	fpApp *service.FinalityProviderApp,
 	fpPkStr string,
+	noFpStart bool,
 ) error {
 	// only start the app without starting any finality provider instance
 	// this is needed for new finality provider registration or unjailing
 	// finality providers
 	if err := fpApp.Start(); err != nil {
 		return fmt.Errorf("failed to start the finality provider app: %w", err)
+	}
+
+	if noFpStart {
+		fpApp.Logger().Info("Skip starting any fps as flag specified")
+
+		return nil
 	}
 
 	// fp instance will be started if public key is specified

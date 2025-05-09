@@ -9,6 +9,7 @@ const (
 	appHashFlag          = "app-hash"
 	chainIDFlag          = "chain-id"
 	checkDoubleSignFlag  = "check-double-sign"
+	noFpStartFlag        = "no-fp-start"
 	fromFile             = "from-file"
 	upToHeight           = "up-to-height"
 
