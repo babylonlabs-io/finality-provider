@@ -440,6 +440,8 @@ func FuzzEOTSStore_BackupWithConcurrentWrites(f *testing.F) {
 }
 
 func TestEOTSStore_BackupWithConcurrentWrites(t *testing.T) {
+	t.Parallel()
+
 	sizes := []struct {
 		name  string
 		count int
@@ -520,6 +522,7 @@ func TestEOTSStore_BackupWithConcurrentWrites(t *testing.T) {
 						}
 						totalSize += info.Size()
 					}
+					
 					return nil
 				})
 				require.NoError(t, err)
