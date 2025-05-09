@@ -151,6 +151,10 @@ func (fp *FinalityProviderInstance) Stop() error {
 	close(fp.quit)
 	fp.wg.Wait()
 
+	if err := fp.pubRandState.close(); err != nil {
+		return fmt.Errorf("failed to close the pub rand state: %w", err)
+	}
+
 	fp.logger.Info("the finality-provider instance is successfully stopped", zap.String("pk", fp.GetBtcPkHex()))
 
 	return nil
