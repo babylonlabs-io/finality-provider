@@ -374,7 +374,7 @@ func (tm *TestManager) WaitForFpVoteCastAtHeight(t *testing.T, fpIns *service.Fi
 func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
 	blockBeforeStop, err := tm.BBNConsumerClient.QueryLatestBlockHeight()
 	require.NoError(t, err)
-	err = fpIns.Stop()
+	err = fpIns.Stop(false)
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {

@@ -319,7 +319,7 @@ func (app *FinalityProviderApp) Stop() error {
 			pkHex := app.fpIns.GetBtcPkHex()
 			app.logger.Info("stopping finality provider", zap.String("pk", pkHex))
 
-			if err := app.fpIns.Stop(); err != nil {
+			if err := app.fpIns.Stop(true); err != nil {
 				stopErr = fmt.Errorf("failed to close the fp instance: %w", err)
 
 				return
@@ -552,7 +552,7 @@ func (app *FinalityProviderApp) removeFinalityProviderInstance() error {
 		return fmt.Errorf("the finality provider instance does not exist")
 	}
 	if fpi.IsRunning() {
-		if err := fpi.Stop(); err != nil {
+		if err := fpi.Stop(true); err != nil {
 			return fmt.Errorf("failed to stop the finality provider instance %s", fpi.GetBtcPkHex())
 		}
 	}

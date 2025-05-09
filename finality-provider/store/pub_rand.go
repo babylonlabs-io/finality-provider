@@ -204,3 +204,7 @@ func (s *PubRandProofStore) RemovePubRandProofList(chainID []byte, pk []byte, ta
 
 	return nil
 }
+
+func (s *PubRandProofStore) Close() error {
+	return s.db.Close()
+}

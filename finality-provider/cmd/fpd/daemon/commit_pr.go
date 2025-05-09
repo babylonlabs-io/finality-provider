@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"math"
 	"path/filepath"
 	"strconv"
@@ -34,6 +35,7 @@ WARNING: this can drain the finality provider's balance if the target height is 
 		RunE:    fpcmd.RunEWithClientCtx(runCommandCommitPubRand),
 	}
 	cmd.Flags().Uint64("start-height", math.MaxUint64, "The block height to start committing pubrand from (optional)")
+	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 
 	return cmd
 }
