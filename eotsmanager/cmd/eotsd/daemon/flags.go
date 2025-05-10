@@ -17,5 +17,7 @@ const (
 	flagHDPath            = "hd-path"
 	flagIndex             = "index"
 	flagRecover           = "recover"
-	flagMnemonicSrc       = "source"
+	flagMnemonicSrc = "source"
+	flagDBPath      = "db-path"
+	flagBackupDir   = "backup-dir"
 )

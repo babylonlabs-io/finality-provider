@@ -26,6 +26,10 @@ service EOTSManager {
   // SaveEOTSKeyName saves a new key name mapping for the EOTS public key
   rpc SaveEOTSKeyName (SaveEOTSKeyNameRequest)
       returns (SaveEOTSKeyNameResponse);
+
+  // Backup - etosd db
+  rpc Backup (BackupRequest)
+      returns (BackupResponse);
 }
 
 message PingRequest {}
@@ -97,3 +101,12 @@ message SaveEOTSKeyNameRequest {
 }
 
 message SaveEOTSKeyNameResponse {}
+
+message BackupRequest {
+  // db_path of the eotsd.db
+  string db_path = 1;
+  // backup_dir is the directory where the backup file will be stored
+  string backup_dir = 2;
+}
+
+message BackupResponse {}
