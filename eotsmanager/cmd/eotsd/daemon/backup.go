@@ -37,17 +37,17 @@ func backup(cmd *cobra.Command, _ []string) error {
 
 	dbPath, err := f.GetString(flagDBPath)
 	if err != nil {
-		return fmt.Errorf("failed to get db-path flag: %w", err)
+		return fmt.Errorf("failed to get db-path %s flag: %w", flagDBPath, err)
 	}
 
 	backupDir, err := f.GetString(flagBackupDir)
 	if err != nil {
-		return fmt.Errorf("failed to get backup-dir flag: %w", err)
+		return fmt.Errorf("failed to get %s flag: %w", flagBackupDir, err)
 	}
 
 	rpcListener, err := cmd.Flags().GetString(rpcClientFlag)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get %s flag: %w", rpcClientFlag, err)
 	}
 
 	eotsdClient, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, "")
@@ -56,7 +56,7 @@ func backup(cmd *cobra.Command, _ []string) error {
 	}
 
 	if err := eotsdClient.Backup(dbPath, backupDir); err != nil {
-		return fmt.Errorf("failed to unlock keyring: %w", err)
+		return fmt.Errorf("failed to do backup: %w", err)
 	}
 
 	cmd.Printf("Successfully created backup at %s", backupDir)
