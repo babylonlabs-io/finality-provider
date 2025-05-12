@@ -165,7 +165,7 @@ func startFinalityProviderAppWithRegisteredFp(
 	// create registered finality-provider
 	eotsKeyName := testutil.GenRandomHexStr(r, 4)
 	require.NoError(t, err)
-	eotsPkBz, err := em.CreateKey(eotsKeyName)
+	eotsPkBz, err := em.CreateKey(eotsKeyName, "")
 	require.NoError(t, err)
 	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
 	require.NoError(t, err)
