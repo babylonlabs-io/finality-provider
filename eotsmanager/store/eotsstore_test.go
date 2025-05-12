@@ -439,7 +439,8 @@ func FuzzEOTSStore_BackupWithConcurrentWrites(f *testing.F) {
 	})
 }
 
-func TestEOTSStore_BackupWithConcurrentWrites(t *testing.T) {
+// TestEOTSStore_BackupTime tests the backup time of the EOTSStore with various sizes of data populated in the database.
+func TestEOTSStore_BackupTime(t *testing.T) {
 	t.Parallel()
 
 	sizes := []struct {
@@ -522,7 +523,7 @@ func TestEOTSStore_BackupWithConcurrentWrites(t *testing.T) {
 						}
 						totalSize += info.Size()
 					}
-					
+
 					return nil
 				})
 				require.NoError(t, err)
