@@ -124,3 +124,12 @@ func (r *rpcServer) Backup(_ context.Context, req *proto.BackupRequest) (*proto.
 
 	return &proto.BackupResponse{}, nil
 }
+
+func (r *rpcServer) UnlockKey(_ context.Context, req *proto.UnlockKeyRequest) (*proto.UnlockKeyResponse, error) {
+	err := r.em.Unlock(req.Uid, req.Passphrase)
+	if err != nil {
+		return nil, err
+	}
+
+	return &proto.UnlockKeyResponse{}, nil
+}

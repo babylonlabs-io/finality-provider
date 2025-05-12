@@ -25,6 +25,7 @@ const (
 	EOTSManager_UnsafeSignEOTS_FullMethodName           = "/proto.EOTSManager/UnsafeSignEOTS"
 	EOTSManager_SignSchnorrSig_FullMethodName           = "/proto.EOTSManager/SignSchnorrSig"
 	EOTSManager_SaveEOTSKeyName_FullMethodName          = "/proto.EOTSManager/SaveEOTSKeyName"
+	EOTSManager_UnlockKey_FullMethodName                = "/proto.EOTSManager/UnlockKey"
 	EOTSManager_Backup_FullMethodName                   = "/proto.EOTSManager/Backup"
 )
 
@@ -43,6 +44,8 @@ type EOTSManagerClient interface {
 	SignSchnorrSig(ctx context.Context, in *SignSchnorrSigRequest, opts ...grpc.CallOption) (*SignSchnorrSigResponse, error)
 	// SaveEOTSKeyName saves a new key name mapping for the EOTS public key
 	SaveEOTSKeyName(ctx context.Context, in *SaveEOTSKeyNameRequest, opts ...grpc.CallOption) (*SaveEOTSKeyNameResponse, error)
+	// UnlockKey unlocks the keyring with the given passphrase
+	UnlockKey(ctx context.Context, in *UnlockKeyRequest, opts ...grpc.CallOption) (*UnlockKeyResponse, error)
 	// Backup - etosd db
 	Backup(ctx context.Context, in *BackupRequest, opts ...grpc.CallOption) (*BackupResponse, error)
 }
@@ -109,6 +112,15 @@ func (c *eOTSManagerClient) SaveEOTSKeyName(ctx context.Context, in *SaveEOTSKey
 	return out, nil
 }
 
+func (c *eOTSManagerClient) UnlockKey(ctx context.Context, in *UnlockKeyRequest, opts ...grpc.CallOption) (*UnlockKeyResponse, error) {
+	out := new(UnlockKeyResponse)
+	err := c.cc.Invoke(ctx, EOTSManager_UnlockKey_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eOTSManagerClient) Backup(ctx context.Context, in *BackupRequest, opts ...grpc.CallOption) (*BackupResponse, error) {
 	out := new(BackupResponse)
 	err := c.cc.Invoke(ctx, EOTSManager_Backup_FullMethodName, in, out, opts...)
@@ -133,6 +145,8 @@ type EOTSManagerServer interface {
 	SignSchnorrSig(context.Context, *SignSchnorrSigRequest) (*SignSchnorrSigResponse, error)
 	// SaveEOTSKeyName saves a new key name mapping for the EOTS public key
 	SaveEOTSKeyName(context.Context, *SaveEOTSKeyNameRequest) (*SaveEOTSKeyNameResponse, error)
+	// UnlockKey unlocks the keyring with the given passphrase
+	UnlockKey(context.Context, *UnlockKeyRequest) (*UnlockKeyResponse, error)
 	// Backup - etosd db
 	Backup(context.Context, *BackupRequest) (*BackupResponse, error)
 	mustEmbedUnimplementedEOTSManagerServer()
@@ -159,6 +173,9 @@ func (UnimplementedEOTSManagerServer) SignSchnorrSig(context.Context, *SignSchno
 }
 func (UnimplementedEOTSManagerServer) SaveEOTSKeyName(context.Context, *SaveEOTSKeyNameRequest) (*SaveEOTSKeyNameResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveEOTSKeyName not implemented")
+}
+func (UnimplementedEOTSManagerServer) UnlockKey(context.Context, *UnlockKeyRequest) (*UnlockKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnlockKey not implemented")
 }
 func (UnimplementedEOTSManagerServer) Backup(context.Context, *BackupRequest) (*BackupResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Backup not implemented")
@@ -284,6 +301,24 @@ func _EOTSManager_SaveEOTSKeyName_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EOTSManager_UnlockKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnlockKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EOTSManagerServer).UnlockKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EOTSManager_UnlockKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EOTSManagerServer).UnlockKey(ctx, req.(*UnlockKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EOTSManager_Backup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(BackupRequest)
 	if err := dec(in); err != nil {
@@ -332,6 +367,10 @@ var EOTSManager_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SaveEOTSKeyName",
 			Handler:    _EOTSManager_SaveEOTSKeyName_Handler,
+		},
+		{
+			MethodName: "UnlockKey",
+			Handler:    _EOTSManager_UnlockKey_Handler,
 		},
 		{
 			MethodName: "Backup",

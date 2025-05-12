@@ -28,6 +28,7 @@ func NewRootCmd() *cobra.Command {
 		NewPopCmd(),
 		NewSignStoreRollbackCmd(),
 		NewBackupCmd(),
+		NewUnlockKeyringCmd(),
 	)
 
 	return rootCmd
