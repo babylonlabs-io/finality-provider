@@ -727,7 +727,6 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	eh.Start(ctx)
 
 	eotsCli := NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
-	require.NoError(t, err)
 
 	const passphrase = "test-passphrase"
 	key, err := eh.CreateKey("eots-key-1", passphrase)
