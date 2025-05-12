@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"log"
 	"math/rand"
@@ -724,10 +723,10 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
 	eotsCfg.KeyringBackend = keyring.BackendFile
 
-	eh := NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
+	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 
-	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
+	eotsCli := NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
 	require.NoError(t, err)
 
 	const passphrase = "test-passphrase"
