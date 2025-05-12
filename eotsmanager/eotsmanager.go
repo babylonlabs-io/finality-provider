@@ -24,12 +24,19 @@ type EOTSManager interface {
 	// UnsafeSignEOTS should only be used in e2e tests for demonstration purposes.
 	// Does not offer double sign protection.
 	// Use SignEOTS for real operations.
+	// uid represents EOTS key
 	UnsafeSignEOTS(uid []byte, chainID []byte, msg []byte, height uint64) (*btcec.ModNScalar, error)
 
 	// SignSchnorrSig signs a Schnorr signature using the private key of the finality provider
 	// It fails if the finality provider does not exist or the message size is not 32 bytes
-	// or passPhrase is incorrect
+	// or passPhrase is incorrect.
+	// uid represents EOTS key
 	SignSchnorrSig(uid []byte, msg []byte) (*schnorr.Signature, error)
+
+	// Unlock makes the private key for the given EOTS key (uid) accessible in memory using the provided passphrase.
+	// After a successful call to Unlock, signing operations using this key will succeed.
+	// This should be called during startup for `file`-based keyring, which requires explicit unlocking.
+	Unlock(uid []byte, passphrase string) error
 
 	Close() error
 }
