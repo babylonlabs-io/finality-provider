@@ -685,11 +685,11 @@ func TestUnsafeCommitPubRandCmd(t *testing.T) {
 	tm.WaitForFpPubRandTimestamped(t, fpIns)
 
 	// send a BTC delegation
-	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, e2eutils.StakingTime, e2eutils.StakingAmount)
+	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, stakingTime, stakingAmount)
 
 	// check the BTC delegation is pending
 	delsResp := tm.WaitForNPendingDels(t, 1)
-	del, err := e2eutils.ParseRespBTCDelToBTCDel(delsResp[0])
+	del, err := ParseRespBTCDelToBTCDel(delsResp[0])
 	require.NoError(t, err)
 
 	// send covenant sigs
