@@ -27,3 +27,7 @@ func (st *pubRandState) getPubRandProof(pk, chainID []byte, height uint64) ([]by
 func (st *pubRandState) getPubRandProofList(pk, chainID []byte, height uint64, numPubRand uint64) ([][]byte, error) {
 	return st.s.GetPubRandProofList(chainID, pk, height, numPubRand)
 }
+
+func (st *pubRandState) close() error {
+	return st.s.Close()
+}
