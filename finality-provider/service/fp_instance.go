@@ -151,6 +151,18 @@ func (fp *FinalityProviderInstance) Stop() error {
 	return nil
 }
 
+func (fp *FinalityProviderInstance) Shutdown() error {
+	if err := fp.Stop(); err != nil {
+		return err
+	}
+
+	if err := fp.pubRandState.close(); err != nil {
+		return fmt.Errorf("failed to close the pub rand state: %w", err)
+	}
+
+	return nil
+}
+
 func (fp *FinalityProviderInstance) GetConfig() *fpcfg.Config {
 	return fp.cfg
 }
