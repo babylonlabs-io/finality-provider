@@ -107,7 +107,7 @@ func TestSkippingDoubleSignError(t *testing.T) {
 	_ = tm.WaitForFpVoteCast(t, fpIns)
 
 	// stop the fp and manually submits a finality sig for a future height
-	err = fpIns.Stop(false)
+	err = fpIns.Stop()
 	require.NoError(t, err)
 	currentHeight := tm.WaitForNBlocks(t, 1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -675,14 +675,14 @@ func TestUnsafeCommitPubRandCmd(t *testing.T) {
 	err = goflags.NewIniParser(fileParser).WriteFile(cfg.CfgFile(fpHomePath), goflags.IniIncludeDefaults)
 	require.NoError(t, err)
 
-	err = fpIns.Stop(true)
+	err = fpIns.Shutdown()
 	require.NoError(t, err)
 
 	// run the cmd
 	cmd := daemon.CommandCommitPubRand()
 	cmd.SetArgs([]string{
 		fpIns.GetBtcPkBIP340().MarshalHex(),
-		"50000",
+		"30000",
 		"--home=" + fpHomePath,
 	})
 	t1 := time.Now()
