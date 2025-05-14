@@ -42,6 +42,10 @@ service FinalityProviders {
     // UnsafeRemoveMerkleProof removes merkle proofs up to target height
     rpc UnsafeRemoveMerkleProof (RemoveMerkleProofRequest)
         returns (EmptyResponse);
+
+    // Backup - fpd db
+    rpc Backup (BackupRequest)
+        returns (BackupResponse);
 }
 
 message GetInfoRequest {
@@ -331,3 +335,12 @@ message RemoveMerkleProofRequest {
 // Define an empty response message
 message EmptyResponse {
 }
+
+message BackupRequest {
+    // db_path of the fpd.db
+    string db_path = 1;
+    // backup_dir is the directory where the backup file will be stored
+    string backup_dir = 2;
+}
+
+message BackupResponse {}

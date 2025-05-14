@@ -153,3 +153,17 @@ func (c *FinalityProviderServiceGRpcClient) UnsafeRemoveMerkleProof(
 
 	return nil
 }
+
+// Backup - rpc call to call the backup of fpd
+func (c *FinalityProviderServiceGRpcClient) Backup(
+	ctx context.Context, dbPath string, backupDir string) error {
+	_, err := c.client.Backup(ctx, &proto.BackupRequest{
+		DbPath:    dbPath,
+		BackupDir: backupDir,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

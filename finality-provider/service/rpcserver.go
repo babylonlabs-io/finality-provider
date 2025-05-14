@@ -260,6 +260,11 @@ func (r *rpcServer) UnsafeRemoveMerkleProof(_ context.Context, req *proto.Remove
 	return nil, nil
 }
 
+// Backup - performs hot backup on fpd database
+func (r *rpcServer) Backup(_ context.Context, req *proto.BackupRequest) (*proto.EmptyResponse, error) {
+	return nil, r.app.pubRandStore.BackupDB(req.DbPath, req.BackupDir)
+}
+
 func parseEotsPk(eotsPkHex string) (*bbntypes.BIP340PubKey, error) {
 	if eotsPkHex == "" {
 		return nil, fmt.Errorf("eots-pk cannot be empty")

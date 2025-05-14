@@ -41,7 +41,7 @@ func main() {
 		daemon.CommandEditFinalityDescription(), daemon.CommandCommitPubRand(), daemon.CommandRecoverProof(),
 		incentivecli.NewWithdrawRewardCmd(), incentivecli.NewSetWithdrawAddressCmd(),
 		incentivecli.CmdQueryRewardGauges(),
-		version.CommandVersion("fpd"), daemon.CommandUnsafePruneMerkleProof(),
+		version.CommandVersion("fpd"), daemon.CommandUnsafePruneMerkleProof(), daemon.NewBackupCmd(),
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

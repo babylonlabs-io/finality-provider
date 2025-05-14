@@ -538,6 +538,8 @@ func TestSigHeightOutdated(t *testing.T) {
 
 	fpIns := fps[0]
 
+	fpIns.GetPubRandList()
+
 	tm.WaitForFpPubRandTimestamped(t, fpIns)
 
 	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, e2eutils.StakingTime, e2eutils.StakingAmount)

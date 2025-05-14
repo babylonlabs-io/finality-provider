@@ -789,3 +789,67 @@ func getCommissionRates(rateStr, maxRateStr, maxChangeRateStr string) (*proto.Co
 
 	return proto.NewCommissionRates(rate, maxRate, maxRateChange), nil
 }
+
+func NewBackupCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "backup",
+		Short: "Runs a hot backup of fpd.db while the fpd is running.",
+		Long:  "Runs a hot backup of fpd.db. The fpd can continue to run while the backup is being created.",
+		RunE:  backup,
+	}
+
+	f := cmd.Flags()
+
+	f.String(flagDBPath, "", "Full path to fpd.db")
+	f.String(flagBackupDir, "", "Full path to backup directory")
+	f.String(fpdDaemonAddressFlag, "", "The RPC address of a running fpd")
+
+	if err := cmd.MarkFlagRequired(flagDBPath); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired(flagBackupDir); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired(fpdDaemonAddressFlag); err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func backup(cmd *cobra.Command, _ []string) error {
+	f := cmd.Flags()
+
+	dbPath, err := f.GetString(flagDBPath)
+	if err != nil {
+		return fmt.Errorf("failed to get db-path %s flag: %w", flagDBPath, err)
+	}
+
+	backupDir, err := f.GetString(flagBackupDir)
+	if err != nil {
+		return fmt.Errorf("failed to get %s flag: %w", flagBackupDir, err)
+	}
+
+	rpcListener, err := cmd.Flags().GetString(fpdDaemonAddressFlag)
+	if err != nil {
+		return fmt.Errorf("failed to get %s flag: %w", fpdDaemonAddressFlag, err)
+	}
+
+	grpcClient, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(rpcListener)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := cleanUp(); err != nil {
+			fmt.Printf("Failed to clean up grpc client: %v\n", err)
+		}
+	}()
+
+	if err := grpcClient.Backup(cmd.Context(), dbPath, backupDir); err != nil {
+		return fmt.Errorf("failed to backup database: %w", err)
+	}
+
+	cmd.Printf("Successfully created backup at %s", backupDir)
+
+	return nil
+}
