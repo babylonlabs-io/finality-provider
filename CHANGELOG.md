@@ -47,6 +47,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#464](https://github.com/babylonlabs-io/finality-provider/pull/464) chore: fix flaky tests
 * [#469](https://github.com/babylonlabs-io/finality-provider/pull/469) feat: unlock eotsd keyring
 * [#469](https://github.com/babylonlabs-io/finality-provider/pull/469) chore: e2e unsafe pub rand commit
+* [#466](https://github.com/babylonlabs-io/finality-provider/pull/466) feat: hot backup eotsd
 
 ## v1.0.0
 

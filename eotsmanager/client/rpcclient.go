@@ -165,6 +165,19 @@ func (c *EOTSManagerGRpcClient) Unlock(uid []byte, passphrase string) error {
 	return nil
 }
 
+func (c *EOTSManagerGRpcClient) Backup(dbPath string, backupDir string) error {
+	req := &proto.BackupRequest{
+		DbPath:    dbPath,
+		BackupDir: backupDir,
+	}
+
+	if _, err := c.client.Backup(context.Background(), req); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *EOTSManagerGRpcClient) Close() error {
 	return c.conn.Close()
 }
