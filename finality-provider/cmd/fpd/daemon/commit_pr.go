@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"math"
 	"path/filepath"
 	"strconv"
@@ -33,6 +34,7 @@ WARNING: this can drain the finality provider's balance if the target height is 
 		RunE:    runCommandCommitPubRand,
 	}
 	cmd.Flags().Uint64("start-height", math.MaxUint64, "The block height to start committing pubrand from (optional)")
+	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 
 	return cmd
 }
@@ -52,11 +54,21 @@ func runCommandCommitPubRand(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get homePath from context like in start.go
+
 	clientCtx := client.GetClientContextFromCmd(cmd)
-	homePath, err := filepath.Abs(clientCtx.HomeDir)
+	homePath := clientCtx.HomeDir
+	if clientCtx.HomeDir == "" {
+		homePath, err = cmd.Flags().GetString("home")
+		if err != nil {
+			return err
+		}
+	}
+
+	homePath, err = filepath.Abs(homePath)
 	if err != nil {
 		return err
 	}
+
 	homePath = util.CleanAndExpandPath(homePath)
 
 	cfg, err := fpcfg.LoadConfig(homePath)
