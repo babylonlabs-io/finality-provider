@@ -54,11 +54,21 @@ func runCommandCommitPubRand(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get homePath from context like in start.go
+
 	clientCtx := client.GetClientContextFromCmd(cmd)
-	homePath, err := filepath.Abs(clientCtx.HomeDir)
+	homePath := clientCtx.HomeDir
+	if clientCtx.HomeDir == "" {
+		homePath, err = cmd.Flags().GetString("home")
+		if err != nil {
+			return err
+		}
+	}
+
+	homePath, err = filepath.Abs(homePath)
 	if err != nil {
 		return err
 	}
+
 	homePath = util.CleanAndExpandPath(homePath)
 
 	cfg, err := fpcfg.LoadConfig(homePath)
