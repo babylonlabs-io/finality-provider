@@ -767,3 +767,58 @@ func TestEotsdUnlockCmd(t *testing.T) {
 		require.True(t, exists)
 	}
 }
+
+func TestUnsafeCommitPubRandCmd(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
+	defer tm.Stop(t)
+
+	fpIns := fps[0]
+
+	// check the public randomness is committed
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
+
+	// send a BTC delegation
+	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, e2eutils.StakingTime, e2eutils.StakingAmount)
+
+	// check the BTC delegation is pending
+	delsResp := tm.WaitForNPendingDels(t, 1)
+	del, err := e2eutils.ParseRespBTCDelToBTCDel(delsResp[0])
+	require.NoError(t, err)
+
+	// send covenant sigs
+	tm.InsertCovenantSigForDelegation(t, del)
+
+	// check the BTC delegation is active
+	_ = tm.WaitForNActiveDels(t, 1)
+
+	// check the last voted block is finalized
+	lastVotedHeight := tm.WaitForFpVoteCast(t, fpIns)
+	tm.CheckBlockFinalization(t, lastVotedHeight, 1)
+	t.Logf("the block at height %v is finalized", lastVotedHeight)
+
+	_ = tm.WaitForNFinalizedBlocks(t, 1)
+	fpCfg := fpIns.GetConfig()
+
+	fpCfg.EOTSManagerAddress = tm.EOTSServerHandler.Config().RPCListener
+	fpHomePath := filepath.Dir(fpCfg.DatabaseConfig.DBPath)
+	fileParser := goflags.NewParser(fpCfg, goflags.Default)
+	err = goflags.NewIniParser(fileParser).WriteFile(cfg.CfgFile(fpHomePath), goflags.IniIncludeDefaults)
+	require.NoError(t, err)
+
+	err = fpIns.Shutdown()
+	require.NoError(t, err)
+
+	// run the cmd
+	cmd := daemon.CommandCommitPubRand()
+	cmd.SetArgs([]string{
+		fpIns.GetBtcPkBIP340().MarshalHex(),
+		"30000",
+		"--home=" + fpHomePath,
+	})
+	t1 := time.Now()
+	err = cmd.Execute()
+	require.NoError(t, err)
+	t.Logf("Committing public randomness took %v", time.Since(t1))
+}
