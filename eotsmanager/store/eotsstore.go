@@ -7,6 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	pm "google.golang.org/protobuf/proto"
@@ -26,10 +27,11 @@ var (
 
 type EOTSStore struct {
 	db kvdb.Backend
+	mu sync.Mutex
 }
 
 func NewEOTSStore(db kvdb.Backend) (*EOTSStore, error) {
-	s := &EOTSStore{db}
+	s := &EOTSStore{db: db}
 	if err := s.initBuckets(); err != nil {
 		return nil, err
 	}
@@ -296,35 +298,39 @@ func ExtractHeightFromKey(key []byte) (uint64, error) {
 }
 
 // BackupDB performs a hot backup of the database using a read-only transaction
-func (s *EOTSStore) BackupDB(dbPath string, backupDir string) error {
+func (s *EOTSStore) BackupDB(dbPath string, backupDir string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if dbPath == "" {
-		return fmt.Errorf("database path must be provided")
+		return "", fmt.Errorf("database path must be provided")
 	}
 
 	if backupDir == "" {
-		return fmt.Errorf("backup dir path must be provided")
+		return "", fmt.Errorf("backup dir path must be provided")
 	}
 
 	// Create backup filename with timestamp
-	backupName := "eots.db"
+	timestamp := time.Now().Format("20060102_150405")
+	backupName := fmt.Sprintf("eots_%s.db", timestamp)
 	backupPath := filepath.Join(backupDir, backupName)
 
 	// Create the directory if it doesn't exist
 	if err := os.MkdirAll(backupDir, 0750); err != nil {
-		return fmt.Errorf("failed to create backup directory: %w", err)
+		return "", fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
 	// Open the backup file
 	// #nosec G304 -- backupPath is provided by operators
 	backupFile, err := os.Create(backupPath)
 	if err != nil {
-		return fmt.Errorf("failed to create backup file: %w", err)
+		return "", fmt.Errorf("failed to create backup file: %w", err)
 	}
 	defer backupFile.Close()
 
 	if err := s.db.Copy(backupFile); err != nil {
-		return fmt.Errorf("failed to copy database contents: %w", err)
+		return "", fmt.Errorf("failed to copy database contents: %w", err)
 	}
 
-	return nil
+	return backupName, nil
 }

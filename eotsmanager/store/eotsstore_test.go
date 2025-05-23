@@ -391,7 +391,7 @@ func FuzzEOTSStore_BackupWithConcurrentWrites(f *testing.F) {
 		backupPath := fmt.Sprintf("%s/data", backupHome)
 		dbPath := fmt.Sprintf("%s/data/eots.db", homePath)
 
-		err = vs.BackupDB(dbPath, backupPath)
+		bkpName, err := vs.BackupDB(dbPath, backupPath)
 		require.NoError(t, err)
 
 		wg.Wait()
@@ -406,6 +406,7 @@ func FuzzEOTSStore_BackupWithConcurrentWrites(f *testing.F) {
 		// Open and check backup DB
 		cfgBkp := config.DefaultDBConfigWithHomePath(backupHome)
 		cfgBkp.DBPath = backupPath
+		cfgBkp.DBFileName = bkpName
 		dbBackendBkp, err := cfgBkp.GetDBBackend()
 		require.NoError(t, err)
 
@@ -507,7 +508,7 @@ func TestEOTSStore_BackupTime(t *testing.T) {
 				dbPath := fmt.Sprintf("%s/data/eots.db", homePath)
 
 				startTime := time.Now()
-				err := vs.BackupDB(dbPath, backupPath)
+				_, err := vs.BackupDB(dbPath, backupPath)
 				duration := time.Since(startTime)
 				require.NoError(t, err)
 				t.Logf("Backup %d took: %v", i+1, duration)
@@ -534,11 +535,12 @@ func TestEOTSStore_BackupTime(t *testing.T) {
 			backupPath := fmt.Sprintf("%s/data", backupHome)
 			dbPath := fmt.Sprintf("%s/data/eots.db", homePath)
 
-			err = vs.BackupDB(dbPath, backupPath)
+			bkpName, err := vs.BackupDB(dbPath, backupPath)
 			require.NoError(t, err)
 
 			cfgBkp := config.DefaultDBConfigWithHomePath(backupHome)
 			cfgBkp.DBPath = backupPath
+			cfgBkp.DBFileName = bkpName
 			dbBackendBkp, err := cfgBkp.GetDBBackend()
 			if err != nil {
 				t.Fatalf("Failed to open backup DB: %v", err)

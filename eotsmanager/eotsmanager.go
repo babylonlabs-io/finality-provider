@@ -40,7 +40,7 @@ type EOTSManager interface {
 
 	// Backup performs a hot backup of the database using a read-only transaction, eotsd can be running
 	// when this function is called, but writing to the db is blocked until the backup is done
-	Backup(dbPath string, backupDir string) error
+	Backup(dbPath string, backupDir string) (string, error)
 
 	Close() error
 }

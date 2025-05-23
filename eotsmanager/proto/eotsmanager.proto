@@ -122,4 +122,6 @@ message BackupRequest {
   string backup_dir = 2;
 }
 
-message BackupResponse {}
+message BackupResponse {
+  string backup_name = 1;
+}

@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -683,6 +684,10 @@ func TestEotsdBackupCmd(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	var outputBuffer bytes.Buffer
+	cmd.SetOut(&outputBuffer)
+	cmd.SetErr(&outputBuffer)
+
 	err = cmd.Execute()
 	require.NoError(t, err)
 
@@ -693,12 +698,24 @@ func TestEotsdBackupCmd(t *testing.T) {
 		require.True(t, exists)
 	}
 
+	output := outputBuffer.String()
+	t.Logf("Captured output: %s", output)
+
+	splitOutput := strings.Split(output, ":")
+	if len(splitOutput) != 2 {
+		t.Fatalf("Invalid output format: %s", output)
+	}
+
+	bkpDBPath := strings.TrimSpace(splitOutput[1])
+	bkpDBPathSplit := strings.Split(bkpDBPath, "/")
+	bkpDBName := bkpDBPathSplit[len(bkpDBPathSplit)-1]
+
 	// initialize a new eotsd instance with the backup db
 	eotsCfgBkp := eotscfg.DefaultConfigWithHomePath(backupHome)
 	eotsCfgBkp.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eotsCfgBkp.Metrics.Port = testutil.AllocateUniquePort(t)
 	eotsCfgBkp.DatabaseConfig.DBPath = backupPath
-
+	eotsCfgBkp.DatabaseConfig.DBFileName = bkpDBName
 	ehBkp := e2eutils.NewEOTSServerHandler(t, eotsCfgBkp, backupHome)
 	ehBkp.Start(ctx)
 

@@ -55,11 +55,13 @@ func backup(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if err := eotsdClient.Backup(dbPath, backupDir); err != nil {
+	backupName, err := eotsdClient.Backup(dbPath, backupDir)
+	if err != nil {
 		return fmt.Errorf("failed to do backup: %w", err)
 	}
 
-	cmd.Printf("Successfully created backup at %s", backupDir)
+	path := fmt.Sprintf("%s/%s", backupDir, backupName)
+	cmd.Printf("Successfully created backup at: %s", path)
 
 	return nil
 }
