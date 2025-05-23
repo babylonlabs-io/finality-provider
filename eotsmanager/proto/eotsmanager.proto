@@ -30,6 +30,10 @@ service EOTSManager {
   // UnlockKey unlocks the keyring with the given passphrase
   rpc UnlockKey (UnlockKeyRequest)
       returns (UnlockKeyResponse);
+
+  // Backup - etosd db
+  rpc Backup (BackupRequest)
+      returns (BackupResponse);
 }
 
 message PingRequest {}
@@ -110,4 +114,14 @@ message UnlockKeyRequest {
 }
 
 message UnlockKeyResponse {
+}
+message BackupRequest {
+  // db_path of the eotsd.db
+  string db_path = 1;
+  // backup_dir is the directory where the backup file will be stored
+  string backup_dir = 2;
+}
+
+message BackupResponse {
+  string backup_name = 1;
 }

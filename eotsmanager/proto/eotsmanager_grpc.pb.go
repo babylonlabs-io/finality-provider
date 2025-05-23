@@ -26,6 +26,7 @@ const (
 	EOTSManager_SignSchnorrSig_FullMethodName           = "/proto.EOTSManager/SignSchnorrSig"
 	EOTSManager_SaveEOTSKeyName_FullMethodName          = "/proto.EOTSManager/SaveEOTSKeyName"
 	EOTSManager_UnlockKey_FullMethodName                = "/proto.EOTSManager/UnlockKey"
+	EOTSManager_Backup_FullMethodName                   = "/proto.EOTSManager/Backup"
 )
 
 // EOTSManagerClient is the client API for EOTSManager service.
@@ -45,6 +46,8 @@ type EOTSManagerClient interface {
 	SaveEOTSKeyName(ctx context.Context, in *SaveEOTSKeyNameRequest, opts ...grpc.CallOption) (*SaveEOTSKeyNameResponse, error)
 	// UnlockKey unlocks the keyring with the given passphrase
 	UnlockKey(ctx context.Context, in *UnlockKeyRequest, opts ...grpc.CallOption) (*UnlockKeyResponse, error)
+	// Backup - etosd db
+	Backup(ctx context.Context, in *BackupRequest, opts ...grpc.CallOption) (*BackupResponse, error)
 }
 
 type eOTSManagerClient struct {
@@ -118,6 +121,15 @@ func (c *eOTSManagerClient) UnlockKey(ctx context.Context, in *UnlockKeyRequest,
 	return out, nil
 }
 
+func (c *eOTSManagerClient) Backup(ctx context.Context, in *BackupRequest, opts ...grpc.CallOption) (*BackupResponse, error) {
+	out := new(BackupResponse)
+	err := c.cc.Invoke(ctx, EOTSManager_Backup_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EOTSManagerServer is the server API for EOTSManager service.
 // All implementations must embed UnimplementedEOTSManagerServer
 // for forward compatibility
@@ -135,6 +147,8 @@ type EOTSManagerServer interface {
 	SaveEOTSKeyName(context.Context, *SaveEOTSKeyNameRequest) (*SaveEOTSKeyNameResponse, error)
 	// UnlockKey unlocks the keyring with the given passphrase
 	UnlockKey(context.Context, *UnlockKeyRequest) (*UnlockKeyResponse, error)
+	// Backup - etosd db
+	Backup(context.Context, *BackupRequest) (*BackupResponse, error)
 	mustEmbedUnimplementedEOTSManagerServer()
 }
 
@@ -162,6 +176,9 @@ func (UnimplementedEOTSManagerServer) SaveEOTSKeyName(context.Context, *SaveEOTS
 }
 func (UnimplementedEOTSManagerServer) UnlockKey(context.Context, *UnlockKeyRequest) (*UnlockKeyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnlockKey not implemented")
+}
+func (UnimplementedEOTSManagerServer) Backup(context.Context, *BackupRequest) (*BackupResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Backup not implemented")
 }
 func (UnimplementedEOTSManagerServer) mustEmbedUnimplementedEOTSManagerServer() {}
 
@@ -302,6 +319,24 @@ func _EOTSManager_UnlockKey_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EOTSManager_Backup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BackupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EOTSManagerServer).Backup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EOTSManager_Backup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EOTSManagerServer).Backup(ctx, req.(*BackupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // EOTSManager_ServiceDesc is the grpc.ServiceDesc for EOTSManager service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -336,6 +371,10 @@ var EOTSManager_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UnlockKey",
 			Handler:    _EOTSManager_UnlockKey_Handler,
+		},
+		{
+			MethodName: "Backup",
+			Handler:    _EOTSManager_Backup_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -19,4 +19,6 @@ const (
 	flagRecover           = "recover"
 	flagMnemonicSrc       = "source"
 	passphraseFlag        = "passphrase"
+	flagDBPath      = "db-path"
+	flagBackupDir   = "backup-dir"
 )

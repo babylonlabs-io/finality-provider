@@ -38,5 +38,9 @@ type EOTSManager interface {
 	// This should be called during startup for `file`-based keyring, which requires explicit unlocking.
 	Unlock(uid []byte, passphrase string) error
 
+	// Backup performs a hot backup of the database using a read-only transaction, eotsd can be running
+	// when this function is called, but writing to the db is blocked until the backup is done
+	Backup(dbPath string, backupDir string) (string, error)
+
 	Close() error
 }
