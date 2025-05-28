@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v1.1.0-rc.0
+
 ### Bug Fixes
 
 * [#427](https://github.com/babylonlabs-io/finality-provider/pull/427) fix: handle uninitialized commissionInfo when editing fp
