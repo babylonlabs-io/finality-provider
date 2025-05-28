@@ -80,6 +80,7 @@ func (m *Manager) RunBabylondResource(
 				"--epoch-interval=%d --slashing-pk-script=%s "+
 				"--covenant-quorum=%d --covenant-pks=%s && "+
 				"chmod -R 777 /home && "+
+				"export BABYLON_BLS_PASSWORD=password && "+
 				"babylond start --home=/home/node0/babylond",
 			epochInterval,
 			hex.EncodeToString(slashingPkScript),
