@@ -3,7 +3,7 @@ package service
 import (
 	"sync"
 
-	bbntypes "github.com/babylonlabs-io/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v2/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"go.uber.org/zap"
 

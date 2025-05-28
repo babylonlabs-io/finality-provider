@@ -8,10 +8,10 @@ import (
 	reflect "reflect"
 
 	math "cosmossdk.io/math"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v2/x/btcstaking/types"
 
-	types "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	types0 "github.com/babylonlabs-io/babylon/x/finality/types"
+	types "github.com/babylonlabs-io/babylon/v2/x/btcstaking/types"
+	types0 "github.com/babylonlabs-io/babylon/v2/x/finality/types"
 	types1 "github.com/babylonlabs-io/finality-provider/types"
 	btcec "github.com/btcsuite/btcd/btcec/v2"
 	schnorr "github.com/btcsuite/btcd/btcec/v2/schnorr"

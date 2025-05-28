@@ -6,8 +6,8 @@ import (
 	"math"
 	"path/filepath"
 
-	bbnclient "github.com/babylonlabs-io/babylon/client/client"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
+	bbnclient "github.com/babylonlabs-io/babylon/v2/client/client"
+	bbntypes "github.com/babylonlabs-io/babylon/v2/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"

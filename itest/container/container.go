@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bbn "github.com/babylonlabs-io/babylon/types"
+	"github.com/babylonlabs-io/babylon/v2/testutil/datagen"
+	bbn "github.com/babylonlabs-io/babylon/v2/types"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
@@ -80,6 +80,7 @@ func (m *Manager) RunBabylondResource(
 				"--epoch-interval=%d --slashing-pk-script=%s "+
 				"--covenant-quorum=%d --covenant-pks=%s && "+
 				"chmod -R 777 /home && "+
+				"export BABYLON_BLS_PASSWORD=password && "+
 				"babylond start --home=/home/node0/babylond",
 			epochInterval,
 			hex.EncodeToString(slashingPkScript),

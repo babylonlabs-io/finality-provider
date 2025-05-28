@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	sdkmath "cosmossdk.io/math"
-	bbn "github.com/babylonlabs-io/babylon/types"
-	btcstktypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	bbn "github.com/babylonlabs-io/babylon/v2/types"
+	btcstktypes "github.com/babylonlabs-io/babylon/v2/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"

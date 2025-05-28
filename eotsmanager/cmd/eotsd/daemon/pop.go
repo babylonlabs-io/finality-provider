@@ -18,8 +18,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/spf13/cobra"
 
-	bbnparams "github.com/babylonlabs-io/babylon/app/params"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
+	bbnparams "github.com/babylonlabs-io/babylon/v2/app/params"
+	bbntypes "github.com/babylonlabs-io/babylon/v2/types"
 
 	"github.com/babylonlabs-io/finality-provider/codec"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"

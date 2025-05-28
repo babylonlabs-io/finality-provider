@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"cosmossdk.io/math"
-	bbnclient "github.com/babylonlabs-io/babylon/client/client"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	bbnclient "github.com/babylonlabs-io/babylon/v2/client/client"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v2/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/v2/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"go.uber.org/zap"

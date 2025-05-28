@@ -12,7 +12,7 @@ import (
 	"github.com/cometbft/cometbft/crypto/tmhash"
 
 	"cosmossdk.io/math"
-	"github.com/babylonlabs-io/babylon/types"
+	"github.com/babylonlabs-io/babylon/v2/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
