@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	bbncfg "github.com/babylonlabs-io/babylon/client/config"
+	bbncfg "github.com/babylonlabs-io/babylon/v2/client/config"
 )
 
 type BBNConfig struct {

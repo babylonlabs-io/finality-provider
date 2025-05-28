@@ -3,13 +3,13 @@ package cmd
 import (
 	"os"
 
-	"github.com/babylonlabs-io/babylon/app/params"
-	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	"github.com/babylonlabs-io/babylon/v2/app/params"
+	bstypes "github.com/babylonlabs-io/babylon/v2/x/btcstaking/types"
+	incentivetypes "github.com/babylonlabs-io/babylon/v2/x/incentive/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/std"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
-	incentivetypes "github.com/babylonlabs-io/babylon/x/incentive/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 

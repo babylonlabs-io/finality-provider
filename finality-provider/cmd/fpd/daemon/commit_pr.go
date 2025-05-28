@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	bbntypes "github.com/babylonlabs-io/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v2/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 

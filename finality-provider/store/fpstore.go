@@ -14,7 +14,7 @@ import (
 	pm "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	bstypes "github.com/babylonlabs-io/babylon/v2/x/btcstaking/types"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 )
 

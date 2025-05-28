@@ -2,7 +2,7 @@ package daemon
 
 import (
 	"fmt"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v2/types"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"

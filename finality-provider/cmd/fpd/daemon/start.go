@@ -5,7 +5,7 @@ import (
 	"net"
 	"path/filepath"
 
-	"github.com/babylonlabs-io/babylon/types"
+	"github.com/babylonlabs-io/babylon/v2/types"
 	"github.com/btcsuite/btcwallet/walletdb"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"

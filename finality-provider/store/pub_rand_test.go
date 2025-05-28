@@ -1,7 +1,7 @@
 package store_test
 
 import (
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	"github.com/babylonlabs-io/babylon/v2/testutil/datagen"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/testutil"

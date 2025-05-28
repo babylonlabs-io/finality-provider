@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
-	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	"github.com/babylonlabs-io/babylon/v2/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v2/types"
+	ftypes "github.com/babylonlabs-io/babylon/v2/x/finality/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 

@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/babylonlabs-io/babylon/client/babylonclient"
+	"github.com/babylonlabs-io/babylon/v2/client/babylonclient"
 )
 
 type TxResponse struct {
