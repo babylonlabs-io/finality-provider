@@ -27,6 +27,7 @@ func NewRootCmd() *cobra.Command {
 		version.CommandVersion("eotsd"),
 		NewPopCmd(),
 		NewSignStoreRollbackCmd(),
+		NewBackupCmd(),
 		NewUnlockKeyringCmd(),
 	)
 

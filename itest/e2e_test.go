@@ -9,13 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -614,6 +614,95 @@ func TestEotsdRollbackCmd(t *testing.T) {
 	}
 }
 
+func TestEotsdBackupCmd(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	testDir := t.TempDir()
+
+	eotsHomeDir := filepath.Join(testDir, "eots-home")
+	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
+	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+
+	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh.Start(ctx)
+
+	eotsCli := NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
+
+	key, err := eh.CreateKey("eots-key-1", "")
+	require.NoError(t, err)
+
+	err = eotsCli.Ping()
+	require.NoError(t, err)
+
+	cmd := eotscmd.NewBackupCmd()
+	require.NoError(t, err)
+
+	backupHome := t.TempDir()
+	backupPath := fmt.Sprintf("%s/data", backupHome)
+	dbPath := fmt.Sprintf("%s/data/eots.db", eotsHomeDir)
+
+	cmd.SetArgs([]string{
+		"--db-path=" + dbPath,
+		"--rpc-client=" + eotsCfg.RPCListener,
+		"--backup-dir=" + backupPath,
+	})
+
+	const numRecords = 10
+	for i := 0; i < numRecords; i++ {
+		_, err = eotsCli.SignEOTS(
+			key,
+			[]byte(testChainID),
+			[]byte("test"),
+			uint64(i),
+		)
+		require.NoError(t, err)
+	}
+
+	var outputBuffer bytes.Buffer
+	cmd.SetOut(&outputBuffer)
+	cmd.SetErr(&outputBuffer)
+
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	// confirm the records are in the original db
+	for i := 0; i < numRecords; i++ {
+		exists, err := eh.IsRecordInDb(key, []byte(testChainID), uint64(i))
+		require.NoError(t, err)
+		require.True(t, exists)
+	}
+
+	output := outputBuffer.String()
+	t.Logf("Captured output: %s", output)
+
+	splitOutput := strings.Split(output, ":")
+	if len(splitOutput) != 2 {
+		t.Fatalf("Invalid output format: %s", output)
+	}
+
+	bkpDBPath := strings.TrimSpace(splitOutput[1])
+	bkpDBPathSplit := strings.Split(bkpDBPath, "/")
+	bkpDBName := bkpDBPathSplit[len(bkpDBPathSplit)-1]
+
+	// initialize a new eotsd instance with the backup db
+	eotsCfgBkp := eotscfg.DefaultConfigWithHomePath(backupHome)
+	eotsCfgBkp.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eotsCfgBkp.Metrics.Port = testutil.AllocateUniquePort(t)
+	eotsCfgBkp.DatabaseConfig.DBPath = backupPath
+	eotsCfgBkp.DatabaseConfig.DBFileName = bkpDBName
+	ehBkp := e2eutils.NewEOTSServerHandler(t, eotsCfgBkp, backupHome)
+	ehBkp.Start(ctx)
+
+	// confirm the records are in the backup db
+	for i := 0; i < numRecords; i++ {
+		exists, err := ehBkp.IsRecordInDb(key, []byte(testChainID), uint64(i))
+		require.NoError(t, err)
+		require.True(t, exists)
+	}
+}
+
 // TestEotsdUnlockCmd tests the EOTS manager unlock command, demonstrating file backend keyring
 func TestEotsdUnlockCmd(t *testing.T) {
 	t.Parallel()
@@ -630,8 +719,7 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 
-	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
-	require.NoError(t, err)
+	eotsCli := NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
 
 	const passphrase = "test-passphrase"
 	key, err := eh.CreateKey("eots-key-1", passphrase)
