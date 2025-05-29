@@ -117,6 +117,17 @@ func (r *rpcServer) SaveEOTSKeyName(
 	return &proto.SaveEOTSKeyNameResponse{}, r.em.SaveEOTSKeyName(eotsPk, req.KeyName)
 }
 
+func (r *rpcServer) Backup(_ context.Context, req *proto.BackupRequest) (*proto.BackupResponse, error) {
+	backupName, err := r.em.Backup(req.DbPath, req.BackupDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return &proto.BackupResponse{
+		BackupName: backupName,
+	}, nil
+}
+
 func (r *rpcServer) UnlockKey(_ context.Context, req *proto.UnlockKeyRequest) (*proto.UnlockKeyResponse, error) {
 	err := r.em.Unlock(req.Uid, req.Passphrase)
 	if err != nil {
