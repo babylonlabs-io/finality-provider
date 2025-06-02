@@ -751,10 +751,9 @@ func TestEotsdUnlockCmd(t *testing.T) {
 
 	err = eotsCli.Ping()
 	require.NoError(t, err)
-	
+
 	cmd := eotscmd.NewUnlockKeyringCmd()
 	require.NoError(t, err)
-
 	eotsPK, err := bbntypes.NewBIP340PubKey(key)
 	require.NoError(t, err)
 
