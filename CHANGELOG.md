@@ -37,12 +37,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug Fixes
+
+* [#480](https://github.com/babylonlabs-io/finality-provider/pull/480) chore: add mutex to SignSchnorrSigFromKeyname
+
+## v1.1.0-rc.0
+
 ### Improvements
 
 * [#469](https://github.com/babylonlabs-io/finality-provider/pull/469) chore: e2e unsafe pub rand commit
 * [#466](https://github.com/babylonlabs-io/finality-provider/pull/466) feat: hot backup eotsd
 
-## v1.1.0-rc.0
 
 ### Bug Fixes
 
@@ -88,11 +93,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Improvements
 
 * [#358](https://github.com/babylonlabs-io/finality-provider/pull/358) Bump Babylon dependency and add changes related to `x/btcstaking` module
-changes in messages and state
-
-### Bug Fixes
-
-* [#368](https://github.com/babylonlabs-io/finality-provider/pull/368) fix: fpd config validate
 * [#391](https://github.com/babylonlabs-io/finality-provider/pull/391) Improve config and operation doc
 * [#382](https://github.com/babylonlabs-io/finality-provider/pull/382) chore: enforcing keyring-backend test in `fpd start` and `eotsd start`
 * [#397](https://github.com/babylonlabs-io/finality-provider/pull/397) chore: overwrite randomness proof
