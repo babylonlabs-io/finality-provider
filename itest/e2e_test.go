@@ -625,7 +625,7 @@ func TestEotsdBackupCmd(t *testing.T) {
 	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 
 	eotsCli := NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
@@ -692,7 +692,7 @@ func TestEotsdBackupCmd(t *testing.T) {
 	eotsCfgBkp.Metrics.Port = testutil.AllocateUniquePort(t)
 	eotsCfgBkp.DatabaseConfig.DBPath = backupPath
 	eotsCfgBkp.DatabaseConfig.DBFileName = bkpDBName
-	ehBkp := e2eutils.NewEOTSServerHandler(t, eotsCfgBkp, backupHome)
+	ehBkp := NewEOTSServerHandler(t, eotsCfgBkp, backupHome)
 	ehBkp.Start(ctx)
 
 	// confirm the records are in the backup db
