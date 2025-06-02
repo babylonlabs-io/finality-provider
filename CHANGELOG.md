@@ -37,6 +37,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v1.1.0-rc.0
+
+### Improvements
+
+* [#469](https://github.com/babylonlabs-io/finality-provider/pull/469) chore: e2e unsafe pub rand commit
+* [#466](https://github.com/babylonlabs-io/finality-provider/pull/466) feat: hot backup eotsd
+
+
+### Bug Fixes
+
+* [#427](https://github.com/babylonlabs-io/finality-provider/pull/427) fix: handle uninitialized commissionInfo when editing fp
+
 ### Improvements
 
 * [#436](https://github.com/babylonlabs-io/finality-provider/pull/436) chore: ignore double sign error
@@ -46,8 +58,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#450](https://github.com/babylonlabs-io/finality-provider/pull/450) chore: metrics for votes
 * [#464](https://github.com/babylonlabs-io/finality-provider/pull/464) chore: fix flaky tests
 * [#469](https://github.com/babylonlabs-io/finality-provider/pull/469) feat: unlock eotsd keyring
-* [#469](https://github.com/babylonlabs-io/finality-provider/pull/469) chore: e2e unsafe pub rand commit
-* [#466](https://github.com/babylonlabs-io/finality-provider/pull/466) feat: hot backup eotsd
+* [#475](https://github.com/babylonlabs-io/finality-provider/pull/475) chore: bump bbn v2.0.0-rc.0
 
 ## v1.0.0
 
@@ -81,7 +92,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#337](https://github.com/babylonlabs-io/finality-provider/pull/337) Cleanup EOTS manager interfaces
 * [#351](https://github.com/babylonlabs-io/finality-provider/pull/351) Add recover proof cmd
 * [#356](https://github.com/babylonlabs-io/finality-provider/pull/356) Add finality provider `reward-gauges` query cmd
-changes in messages and state
 
 ### Bug Fixes
 
