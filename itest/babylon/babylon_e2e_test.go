@@ -752,6 +752,13 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	err = eotsCli.Ping()
 	require.NoError(t, err)
 
+	eh.Stop()
+	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eh = e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh.Start(ctx)
+	eotsCli = NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
+
 	cmd := eotscmd.NewUnlockKeyringCmd()
 	require.NoError(t, err)
 
