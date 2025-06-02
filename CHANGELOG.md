@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug Fixes
+
+* [#480](https://github.com/babylonlabs-io/finality-provider/pull/480) chore: add mutex to SignSchnorrSigFromKeyname
+
 ## v1.1.0-rc.0
 
 ### Improvements
