@@ -123,6 +123,8 @@ func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, mnemonic, passphrase str
 		return nil, err
 	}
 
+	// when the first key is created for the `file` keyring backend, it will prompt for a passphrase twice
+	// https://github.com/cosmos/cosmos-sdk/blob/v0.50.12/crypto/keyring/keyring.go#L735
 	lm.input.Reset(passphrase + "\n" + passphrase)
 	_, err = lm.kr.NewAccount(name, mnemonic, "", "", algo)
 	if err != nil {
