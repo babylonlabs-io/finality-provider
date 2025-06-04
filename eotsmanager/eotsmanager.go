@@ -16,8 +16,8 @@ type EOTSManager interface {
 
 	// SignEOTS signs an EOTS using the private key of the finality provider and the corresponding
 	// secret randomness of the given chain at the given height
-	// It fails if the finality provider does not exist or there's no randomness committed to the given height
-	// or passPhrase is incorrect. Has built-in anti-slashing mechanism to ensure signature
+	// It fails if the finality provider does not exist or there's no randomness committed to the given height.
+	// Has built-in anti-slashing mechanism to ensure signature
 	// for the same height will not be signed twice.
 	SignEOTS(uid []byte, chainID []byte, msg []byte, height uint64) (*btcec.ModNScalar, error)
 
@@ -28,12 +28,11 @@ type EOTSManager interface {
 	UnsafeSignEOTS(uid []byte, chainID []byte, msg []byte, height uint64) (*btcec.ModNScalar, error)
 
 	// SignSchnorrSig signs a Schnorr signature using the private key of the finality provider
-	// It fails if the finality provider does not exist or the message size is not 32 bytes
-	// or passPhrase is incorrect.
+	// It fails if the finality provider does not exist or the message size is not 32 bytes.
 	// uid represents EOTS key
 	SignSchnorrSig(uid []byte, msg []byte) (*schnorr.Signature, error)
 
-	// Unlock makes the private key for the given EOTS key (uid) accessible in memory using the provided passphrase.
+	// Unlock makes the private key for the given EOTS key (uid) accessible in memory using the provided keyring passphrase.
 	// After a successful call to Unlock, signing operations using this key will succeed.
 	// This should be called during startup for `file`-based keyring, which requires explicit unlocking.
 	Unlock(uid []byte, passphrase string) error
