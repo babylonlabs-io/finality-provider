@@ -77,6 +77,8 @@ func InitKeyring(homeDir, keyringBackend string, input *strings.Reader) (keyring
 	)
 }
 
+// CreateKey creates a new EOTS key with a random mnemonic and returns the public key in bytes.
+// passphrase is used to unlock the keyring if it is file based.
 func (lm *LocalEOTSManager) CreateKey(name, passphrase string) ([]byte, error) {
 	mnemonic, err := NewMnemonic()
 	if err != nil {
@@ -121,8 +123,10 @@ func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, mnemonic, passphrase str
 		return nil, err
 	}
 
+	// when the first key is created for the `file` keyring backend, it will prompt for a passphrase twice
+	// https://github.com/cosmos/cosmos-sdk/blob/v0.50.12/crypto/keyring/keyring.go#L735
 	lm.input.Reset(passphrase + "\n" + passphrase)
-	_, err = lm.kr.NewAccount(name, mnemonic, passphrase, "", algo)
+	_, err = lm.kr.NewAccount(name, mnemonic, "", "", algo)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +300,7 @@ func (lm *LocalEOTSManager) signSchnorrSigFromPrivKey(privKey *btcec.PrivateKey,
 func (lm *LocalEOTSManager) SignSchnorrSigFromKeyname(keyName string, msg []byte) (*schnorr.Signature, *bbntypes.BIP340PubKey, error) {
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
-	
+
 	eotsPk, err := lm.LoadBIP340PubKeyFromKeyName(keyName)
 	if err != nil {
 		return nil, nil, err
