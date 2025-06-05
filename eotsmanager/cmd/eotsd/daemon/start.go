@@ -39,7 +39,7 @@ func startFn(cmd *cobra.Command, _ []string) error {
 	}
 
 	if cfg.KeyringBackend != "test" && cfg.KeyringBackend != "file" {
-		return fmt.Errorf("the keyring backend in config must be `test` for automatic signing, got %s", cfg.KeyringBackend)
+		return fmt.Errorf("the keyring backend in config must be `test` or `file`, got %s", cfg.KeyringBackend)
 	}
 
 	rpcListener, err := cmd.Flags().GetString(rpcListenerFlag)

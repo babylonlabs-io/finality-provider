@@ -65,7 +65,7 @@ func unlockKeyring(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to unlock keyring: %w", err)
 	}
 
-	cmd.Printf("Successfully unlocked keystore to load the EOTX private key for %s in memory of eotsd\n", eotsFpPubKeyStr)
+	cmd.Printf("Successfully unlocked keystore to load the EOTS private key for %s in memory of eotsd\n", eotsFpPubKeyStr)
 
 	return nil
 }

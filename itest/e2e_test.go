@@ -728,11 +728,29 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	err = eotsCli.Ping()
 	require.NoError(t, err)
 
+	// stop the eotsd to simulate a restart otherwise keyring password will already be set in the file keyring
+	// (set during the creation of the key)
+	eh.Stop()
+	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	eh = e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh.Start(ctx)
+	eotsCli = NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
+
 	cmd := eotscmd.NewUnlockKeyringCmd()
 	require.NoError(t, err)
 
 	eotsPK, err := bbntypes.NewBIP340PubKey(key)
 	require.NoError(t, err)
+
+	const wrongPassphrase = "wrong-passphrase"
+	cmd.SetArgs([]string{
+		"--eots-pk=" + eotsPK.MarshalHex(),
+		"--rpc-client=" + eotsCfg.RPCListener,
+		"--passphrase=" + wrongPassphrase,
+	})
+	err = cmd.Execute()
+	require.Error(t, err)
 
 	cmd.SetArgs([]string{
 		"--eots-pk=" + eotsPK.MarshalHex(),
