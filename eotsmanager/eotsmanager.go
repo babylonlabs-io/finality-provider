@@ -32,7 +32,7 @@ type EOTSManager interface {
 	// uid represents EOTS key
 	SignSchnorrSig(uid []byte, msg []byte) (*schnorr.Signature, error)
 
-	// Unlock makes the private key for the given EOTS key (uid) accessible in memory using the provided keyring passphrase.
+	// Unlock makes the private key for the given EOTS key (uid) accessible in memory using the provided keyring password.
 	// After a successful call to Unlock, signing operations using this key will succeed.
 	// This should be called during startup for `file`-based keyring, which requires explicit unlocking.
 	Unlock(uid []byte, passphrase string) error
