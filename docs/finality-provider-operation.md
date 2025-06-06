@@ -222,7 +222,8 @@ Parameters:
 
 * **keyring-directory***:
   * EOTS private keys are securely stored using Cosmos SDK's keyring system
-  * `test` keyring-backend is mandatory for daemon access for automated signing.
+  * `test` keyring-backend should only be used for test environments.
+  * `file` keyring-backend is used for production environments but requires call to `Unlock` command.
   * Keys are used for EOTS signatures
 
 * **eotsd.log**:
@@ -373,6 +374,27 @@ this value by specifying a custom address with the `--rpc-listener` flag.
 EOTS Manager Daemon is fully active!
 ```
 
+#### 5.3.1. ⚠️ `Unlock` file based keyring ⚠️
+
+If you are using a `file` based keyring-backend, you need to unlock the keyring by executing the following command:
+
+```shell
+eotsd unlock --eots-pk <eots-pk> --rpc-client <eotsd-address>
+```
+
+You will be prompted to enter the password for the keyring. After which the signing operations will be available and eotsd can
+run uninterrupted.
+
+Alternatively to inputting the password, you can specify the password with the environment variable `EOTS_KEYRING_PASSWORD`:
+
+```shell
+export EOTSD_KEYRING_PASSWORD=<your-password>
+```
+
+If you have HMAC security enabled, you can also specify the HMAC key either with:
+- `HMAC_KEY` environment variable
+- Providing the `--home` path to the eotsd home directory which contains the config file.
+
 >**🔒 Security Tip**:
 >
 > * `eotsd` holds your private keys which are used for signing
@@ -384,6 +406,7 @@ EOTS Manager Daemon is fully active!
 >   reference the address of the machine where `eotsd` is running
 > * setup HMAC to secure the communication between `eotsd` and `fpd`. See
 >   [HMAC Security](./hmac-security.md).
+
 
 ## 6. Setting up the Finality Provider
 
