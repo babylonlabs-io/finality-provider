@@ -26,6 +26,7 @@ gain an overall understanding of the finality provider.
       1. [Create an EOTS key](#521-create-an-eots-key)
       2. [Import an existing EOTS key](#522-import-an-existing-eots-key)
    3. [Starting the EOTS Daemon](#53-starting-the-eots-daemon)
+      1. [Unlock file-based keyring](#531-unlock-file-based-keyring)
 6. [Setting up the Finality Provider](#6-setting-up-the-finality-provider)
    1. [Initialize the Finality Provider Daemon](#61-initialize-the-finality-provider-daemon)
    2. [Add key for the Babylon Genesis account](#62-add-key-for-the-babylon-genesis-account)
@@ -222,7 +223,9 @@ Parameters:
 
 * **keyring-directory***:
   * EOTS private keys are securely stored using Cosmos SDK's keyring system
-  * `test` keyring-backend is mandatory for daemon access for automated signing.
+  * `test` keyring-backend should only be used for test environments.
+  * `file` keyring-backend is used for production environments but requires call to `Unlock` command. 
+  See the section [Unlock file-based keyring](#531-unlock-file-based-keyring)
   * Keys are used for EOTS signatures
 
 * **eotsd.log**:
@@ -373,6 +376,32 @@ this value by specifying a custom address with the `--rpc-listener` flag.
 EOTS Manager Daemon is fully active!
 ```
 
+#### 5.3.1. Unlock file-based keyring
+
+⚠️⚠️⚠️ Mandatory step for file-based keyring backend ⚠️⚠️⚠️
+
+If you are using a `file` based keyring-backend, you need to unlock the keyring by executing the `unlock` command.
+Unlock is required after the eotsd daemon is started, otherwise if the unlock command is not run the daemon will error and not be able to sign.
+This only applies to the `file` keyring backend, if you are using the `test` keyring backend, you can skip this step.
+
+```shell
+eotsd unlock --eots-pk <eots-pk> --rpc-client <eotsd-address>
+```
+
+You will be prompted to enter the password for the keyring. After which the signing operations will be available and eotsd can
+run uninterrupted.
+
+An alternative to providing the password as an input is specifying the password with the environment variable `EOTS_KEYRING_PASSWORD`:
+
+```shell
+export EOTSD_KEYRING_PASSWORD=<your-password>
+```
+
+If you have HMAC security enabled, you can also specify the HMAC key either with:
+* `HMAC_KEY` environment variable, or
+* providing the `--home` path to the eotsd home directory which contains the config file with hmac key set up.
+
+---
 >**🔒 Security Tip**:
 >
 > * `eotsd` holds your private keys which are used for signing
