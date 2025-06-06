@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#487](https://github.com/babylonlabs-io/finality-provider/pull/487) chore: unlock cmd hmac and password from input
+
 ### Bug Fixes
 
 * [#480](https://github.com/babylonlabs-io/finality-provider/pull/480) chore: add mutex to SignSchnorrSigFromKeyname

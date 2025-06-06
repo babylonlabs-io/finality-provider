@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/spf13/cobra"
 	"log"
 	"math/rand"
 	"os"
@@ -715,6 +716,10 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
 	eotsCfg.KeyringBackend = keyring.BackendFile
+	eotsCfg.HMACKey = "some-hmac-key"
+
+	err := os.Setenv("HMAC_KEY", eotsCfg.HMACKey)
+	require.NoError(t, err)
 
 	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
@@ -733,7 +738,7 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	eh.Stop()
 	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
 	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	eh = e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
+	eh = NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 	eotsCli = NewEOTSManagerGrpcClientWithRetry(t, eotsCfg)
 
@@ -744,10 +749,12 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	require.NoError(t, err)
 
 	const wrongPassphrase = "wrong-passphrase"
+	eotscmd.UnlockCmdPasswordReader = func(_ *cobra.Command) (string, error) {
+		return wrongPassphrase, nil
+	}
 	cmd.SetArgs([]string{
 		"--eots-pk=" + eotsPK.MarshalHex(),
 		"--rpc-client=" + eotsCfg.RPCListener,
-		"--passphrase=" + wrongPassphrase,
 	})
 	err = cmd.Execute()
 	require.Error(t, err)
@@ -755,8 +762,12 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	cmd.SetArgs([]string{
 		"--eots-pk=" + eotsPK.MarshalHex(),
 		"--rpc-client=" + eotsCfg.RPCListener,
-		"--passphrase=" + passphrase,
 	})
+
+	eotscmd.UnlockCmdPasswordReader = func(_ *cobra.Command) (string, error) {
+		return passphrase, nil
+	}
+
 	err = cmd.Execute()
 	require.NoError(t, err)
 

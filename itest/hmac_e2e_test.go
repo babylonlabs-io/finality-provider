@@ -42,7 +42,10 @@ func TestHMACMismatch(t *testing.T) {
 	require.NoError(t, err)
 
 	msgToSign := []byte("test message for signing that is")
-	_, err = tm.EOTSClient.SignSchnorrSig(eotsPkBytes, msgToSign)
+	tm.EOTSServerHandler.Config().HMACKey = fpHmacKey // use wrong key
+
+	eotsClient := NewEOTSManagerGrpcClientWithRetry(t, tm.EOTSServerHandler.Config())
+	_, err = eotsClient.SignSchnorrSig(eotsPkBytes, msgToSign)
 	require.Error(t, err, "SignSchnorrSig should fail with mismatched HMAC keys")
 	require.Contains(t, err.Error(), "Unauthenticated", "Expected HMAC authentication error during SignSchnorrSig")
 

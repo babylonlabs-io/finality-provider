@@ -1,3 +1,6 @@
+//go:build e2e
+// +build e2e
+
 package e2etest
 
 import (
@@ -934,7 +937,7 @@ func NewEOTSManagerGrpcClientWithRetry(t *testing.T, cfg *eotsconfig.Config) *cl
 	var err error
 	var eotsCli *client.EOTSManagerGRpcClient
 	err = retry.Do(func() error {
-		eotsCli, err = client.NewEOTSManagerGRpcClient(cfg.RPCListener, "")
+		eotsCli, err = client.NewEOTSManagerGRpcClient(cfg.RPCListener, cfg.HMACKey)
 		return err
 	}, retry.Attempts(5))
 	require.NoError(t, err)
