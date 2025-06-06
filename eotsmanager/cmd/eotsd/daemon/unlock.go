@@ -21,15 +21,17 @@ func passwordReader(cmd *cobra.Command) (string, error) {
 func NewUnlockKeyringCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unlock",
-		Short: "Unlocks the file based keyring to load the EOTS private key in memory for signing",
-		RunE:  unlockKeyring,
+		Short: `Unlocks the "file" based keyring to load the EOTS private key in memory for signing`,
+		Long: `Unlocks the "file" based keyring. Keyring password can be provided either through environment variable 
+"EOTSD_KEYRING_PASSWORD" or through input when executing the command. If the "EOTSD_KEYRING_PASSWORD" the command doesn't prompt for password.'`,
+		RunE: unlockKeyring,
 	}
 
 	f := cmd.Flags()
 
 	f.String(eotsPkFlag, "", "EOTS public key of the finality-provider")
 	f.String(rpcClientFlag, "", "The RPC address of a running eotsd")
-	f.String(flagHMAC, "", "When using HMAC either pass here as flag or set env variable HMAC_KEY.")
+	f.String(flagHMAC, "", "The HMAC key for authentication with EOTSD. When using HMAC either pass here as flag or set env variable HMAC_KEY.")
 
 	if err := cmd.MarkFlagRequired(eotsPkFlag); err != nil {
 		panic(err)
@@ -64,9 +66,12 @@ func unlockKeyring(cmd *cobra.Command, _ []string) error {
 		hmac = envHmac
 	}
 
-	passphrase, err := UnlockCmdPasswordReader(cmd)
-	if err != nil {
-		return fmt.Errorf("failed to read passphrase: %w", err)
+	passphrase, exists := os.LookupEnv("EOTSD_KEYRING_PASSWORD")
+	if !exists {
+		passphrase, err = UnlockCmdPasswordReader(cmd)
+		if err != nil {
+			return fmt.Errorf("failed to read passphrase: %w", err)
+		}
 	}
 
 	eotsdClient, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, hmac)
