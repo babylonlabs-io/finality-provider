@@ -378,7 +378,11 @@ EOTS Manager Daemon is fully active!
 
 #### 5.3.1. Unlock file-based keyring
 
-⚠️ If you are using a `file` based keyring-backend, you need to unlock the keyring by executing the following command:
+⚠️⚠️⚠️ Mandatory step for file-based keyring backend ⚠️⚠️⚠️
+
+If you are using a `file` based keyring-backend, you need to unlock the keyring by executing the `unlock` command.
+Unlock is required after the eotsd daemon is started, otherwise if the unlock command is not run the daemon will error and not be able to sign.
+This only applies to the `file` keyring backend, if you are using the `test` keyring backend, you can skip this step.
 
 ```shell
 eotsd unlock --eots-pk <eots-pk> --rpc-client <eotsd-address>
@@ -387,16 +391,18 @@ eotsd unlock --eots-pk <eots-pk> --rpc-client <eotsd-address>
 You will be prompted to enter the password for the keyring. After which the signing operations will be available and eotsd can
 run uninterrupted.
 
-Alternatively to inputting the password, you can specify the password with the environment variable `EOTS_KEYRING_PASSWORD`:
+An alternative to providing the password as an input is specifying the password with the environment variable `EOTS_KEYRING_PASSWORD`:
 
 ```shell
 export EOTSD_KEYRING_PASSWORD=<your-password>
 ```
 
 If you have HMAC security enabled, you can also specify the HMAC key either with:
-- `HMAC_KEY` environment variable
-- Providing the `--home` path to the eotsd home directory which contains the config file.
+* `HMAC_KEY` environment variable
+* Providing the `--home` path to the eotsd home directory which contains the config file.
 
+
+---
 >**🔒 Security Tip**:
 >
 > * `eotsd` holds your private keys which are used for signing
