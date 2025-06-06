@@ -26,6 +26,7 @@ gain an overall understanding of the finality provider.
       1. [Create an EOTS key](#521-create-an-eots-key)
       2. [Import an existing EOTS key](#522-import-an-existing-eots-key)
    3. [Starting the EOTS Daemon](#53-starting-the-eots-daemon)
+      1. [Unlock file-based keyring](#531-unlock-file-based-keyring)
 6. [Setting up the Finality Provider](#6-setting-up-the-finality-provider)
    1. [Initialize the Finality Provider Daemon](#61-initialize-the-finality-provider-daemon)
    2. [Add key for the Babylon Genesis account](#62-add-key-for-the-babylon-genesis-account)
@@ -223,7 +224,8 @@ Parameters:
 * **keyring-directory***:
   * EOTS private keys are securely stored using Cosmos SDK's keyring system
   * `test` keyring-backend should only be used for test environments.
-  * `file` keyring-backend is used for production environments but requires call to `Unlock` command.
+  * `file` keyring-backend is used for production environments but requires call to `Unlock` command. 
+  See the section [Unlock file-based keyring](#531-unlock-file-based-keyring)
   * Keys are used for EOTS signatures
 
 * **eotsd.log**:
@@ -374,9 +376,9 @@ this value by specifying a custom address with the `--rpc-listener` flag.
 EOTS Manager Daemon is fully active!
 ```
 
-#### 5.3.1. ⚠️ `Unlock` file based keyring ⚠️
+#### 5.3.1. Unlock file-based keyring
 
-If you are using a `file` based keyring-backend, you need to unlock the keyring by executing the following command:
+⚠️ If you are using a `file` based keyring-backend, you need to unlock the keyring by executing the following command:
 
 ```shell
 eotsd unlock --eots-pk <eots-pk> --rpc-client <eotsd-address>
