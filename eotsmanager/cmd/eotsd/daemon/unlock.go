@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 	"os"
@@ -22,8 +24,16 @@ func NewUnlockKeyringCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unlock",
 		Short: `Unlocks the "file" based keyring to load the EOTS private key in memory for signing`,
-		Long: `Unlocks the "file" based keyring. Keyring password can be provided either through environment variable 
-"EOTSD_KEYRING_PASSWORD" or through input when executing the command. If the "EOTSD_KEYRING_PASSWORD" the command doesn't prompt for password.'`,
+		Long: `Unlocks the "file"-based keyring to load the EOTS private key into memory for signing operations.
+
+The keyring password can be provided in two ways:
+  - By setting the "EOTSD_KEYRING_PASSWORD" environment variable.
+  - By entering it interactively when prompted (if the environment variable is not set).
+
+The HMAC key can also be provided in two ways:
+  - By specifying the "home" flag, which points to the eotsd home directory containing the config.
+  - By setting the "HMAC_KEY" environment variable, which takes precedence over the "home" flag.`,
+
 		RunE: unlockKeyring,
 	}
 
@@ -31,7 +41,7 @@ func NewUnlockKeyringCmd() *cobra.Command {
 
 	f.String(eotsPkFlag, "", "EOTS public key of the finality-provider")
 	f.String(rpcClientFlag, "", "The RPC address of a running eotsd")
-	f.String(flagHMAC, "", "The HMAC key for authentication with EOTSD. When using HMAC either pass here as flag or set env variable HMAC_KEY.")
+	f.String(sdkflags.FlagHome, "", "The path to the eotsd home directory")
 
 	if err := cmd.MarkFlagRequired(eotsPkFlag); err != nil {
 		panic(err)
@@ -56,14 +66,25 @@ func unlockKeyring(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to get %s flag: %w", rpcClientFlag, err)
 	}
 
-	hmac, err := cmd.Flags().GetString(flagHMAC)
-	if err != nil {
-		return fmt.Errorf("failed to get %s flag: %w", flagHMAC, err)
-	}
+	hmac, exists := os.LookupEnv("HMAC_KEY")
+	if !exists {
+		flagHome, err := cmd.Flags().GetString(sdkflags.FlagHome)
+		if err != nil {
+			return fmt.Errorf("failed to get %s flag: %w", sdkflags.FlagHome, err)
+		}
+		if flagHome != "" {
+			homePath, err := getHomePath(cmd)
+			if err != nil {
+				return fmt.Errorf("failed to load home flag: %w", err)
+			}
 
-	envHmac, exists := os.LookupEnv("HMAC_KEY")
-	if hmac == "" && exists {
-		hmac = envHmac
+			cfg, err := config.LoadConfig(homePath)
+			if err != nil {
+				return fmt.Errorf("failed to load config at %s: %w", homePath, err)
+			}
+
+			hmac = cfg.HMACKey
+		}
 	}
 
 	passphrase, exists := os.LookupEnv("EOTSD_KEYRING_PASSWORD")

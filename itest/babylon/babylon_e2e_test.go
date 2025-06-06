@@ -740,6 +740,10 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
 	eotsCfg.KeyringBackend = keyring.BackendFile
+	eotsCfg.HMACKey = "some-hmac-key"
+
+	err := os.Setenv("HMAC_KEY", eotsCfg.HMACKey)
+	require.NoError(t, err)
 
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
