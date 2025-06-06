@@ -18,7 +18,6 @@ const (
 	flagIndex             = "index"
 	flagRecover           = "recover"
 	flagMnemonicSrc       = "source"
-	flagPassphrase        = "passphrase"
 	flagDBPath            = "db-path"
 	flagBackupDir         = "backup-dir"
 	flagHMAC              = "hmac"
