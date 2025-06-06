@@ -398,9 +398,8 @@ export EOTSD_KEYRING_PASSWORD=<your-password>
 ```
 
 If you have HMAC security enabled, you can also specify the HMAC key either with:
-* `HMAC_KEY` environment variable
-* Providing the `--home` path to the eotsd home directory which contains the config file.
-
+* `HMAC_KEY` environment variable, or
+* providing the `--home` path to the eotsd home directory which contains the config file with hmac key set up.
 
 ---
 >**🔒 Security Tip**:
@@ -414,7 +413,6 @@ If you have HMAC security enabled, you can also specify the HMAC key either with
 >   reference the address of the machine where `eotsd` is running
 > * setup HMAC to secure the communication between `eotsd` and `fpd`. See
 >   [HMAC Security](./hmac-security.md).
-
 
 ## 6. Setting up the Finality Provider
 

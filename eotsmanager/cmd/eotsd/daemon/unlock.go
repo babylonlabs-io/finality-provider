@@ -68,22 +68,10 @@ func unlockKeyring(cmd *cobra.Command, _ []string) error {
 
 	hmac, exists := os.LookupEnv("HMAC_KEY")
 	if !exists {
-		flagHome, err := cmd.Flags().GetString(sdkflags.FlagHome)
+		var err error
+		hmac, err = getHMACFromConfig(cmd)
 		if err != nil {
-			return fmt.Errorf("failed to get %s flag: %w", sdkflags.FlagHome, err)
-		}
-		if flagHome != "" {
-			homePath, err := getHomePath(cmd)
-			if err != nil {
-				return fmt.Errorf("failed to load home flag: %w", err)
-			}
-
-			cfg, err := config.LoadConfig(homePath)
-			if err != nil {
-				return fmt.Errorf("failed to load config at %s: %w", homePath, err)
-			}
-
-			hmac = cfg.HMACKey
+			return err
 		}
 	}
 
@@ -112,4 +100,27 @@ func unlockKeyring(cmd *cobra.Command, _ []string) error {
 	cmd.Printf("Successfully unlocked keystore to load the EOTS private key for %s in memory of eotsd\n", eotsFpPubKeyStr)
 
 	return nil
+}
+
+func getHMACFromConfig(cmd *cobra.Command) (string, error) {
+	flagHome, err := cmd.Flags().GetString(sdkflags.FlagHome)
+	if err != nil {
+		return "", fmt.Errorf("failed to get %s flag: %w", sdkflags.FlagHome, err)
+	}
+
+	if flagHome == "" {
+		return "", nil
+	}
+
+	homePath, err := getHomePath(cmd)
+	if err != nil {
+		return "", fmt.Errorf("failed to load home flag: %w", err)
+	}
+
+	cfg, err := config.LoadConfig(homePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to load config at %s: %w", homePath, err)
+	}
+
+	return cfg.HMACKey, nil
 }
