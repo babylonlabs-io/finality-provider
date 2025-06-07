@@ -79,8 +79,8 @@ func LoadConfig(homePath string) (*Config, error) {
 }
 
 // Validate check the given configuration to be sane. This makes sure no
-// illegal values or combination of values are set. All file system paths are
-// normalized. The cleaned up config is returned on success.
+// invalid values or combination of values are set. All file system paths are
+// normalized.
 func (cfg *Config) Validate() error {
 	_, err := net.ResolveTCPAddr("tcp", cfg.RPCListener)
 	if err != nil {
@@ -89,6 +89,10 @@ func (cfg *Config) Validate() error {
 
 	if cfg.KeyringBackend == "" {
 		return fmt.Errorf("the keyring backend should not be empty")
+	}
+
+	if cfg.KeyringBackend != keyring.BackendTest && cfg.KeyringBackend != keyring.BackendFile {
+		return fmt.Errorf("the keyring backend should be be either 'test' or 'file', got '%s'", cfg.KeyringBackend)
 	}
 
 	if cfg.Metrics == nil {

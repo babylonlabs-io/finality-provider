@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"net"
 
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
@@ -38,7 +39,7 @@ func startFn(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load config at %s: %w", homePath, err)
 	}
 
-	if cfg.KeyringBackend != "test" && cfg.KeyringBackend != "file" {
+	if cfg.KeyringBackend != keyring.BackendTest && cfg.KeyringBackend != keyring.BackendFile {
 		return fmt.Errorf("the keyring backend in config must be `test` or `file`, got %s", cfg.KeyringBackend)
 	}
 
