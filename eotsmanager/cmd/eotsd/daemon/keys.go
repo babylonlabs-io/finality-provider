@@ -67,6 +67,8 @@ func NewKeysCmd() *cobra.Command {
 	}
 
 	addCmd.Flags().String(rpcClientFlag, "", "The RPC address of a running eotsd to connect and save new key")
+	addCmd.Flags().Bool(flagMigrate, false, "Used during key migration to skip printing and saving "+
+		"the key name mapping, avoiding redundant keyring unlock prompts.")
 
 	// Override the original RunE function to run almost the same as
 	// the sdk, but it allows empty hd path and allow to save the key
@@ -74,24 +76,35 @@ func NewKeysCmd() *cobra.Command {
 	addCmd.RunE = func(cmd *cobra.Command, args []string) error {
 		oldOut := cmd.OutOrStdout()
 
+		migrate, err := cmd.Flags().GetBool(flagMigrate)
+		if err != nil {
+			return err
+		}
+
 		// Create a buffer to intercept the key items
 		var buf bytes.Buffer
 		cmd.SetOut(&buf)
 
 		// Run the original command
-		err := runAddCmdPrepare(cmd, args)
-		if err != nil {
+		if err := runAddCmdPrepare(cmd, args); err != nil {
 			return err
 		}
 
 		cmd.SetOut(oldOut)
 		keyName := args[0]
-		eotsPk, err := saveKeyNameMapping(cmd, keyName)
-		if err != nil {
-			return err
+
+		if !migrate {
+			eotsPk, err := saveKeyNameMapping(cmd, keyName)
+			if err != nil {
+				return err
+			}
+
+			if err := printFromKey(cmd, keyName, eotsPk); err != nil {
+				return fmt.Errorf("failed to print key %s: %w", keyName, err)
+			}
 		}
 
-		return printFromKey(cmd, keyName, eotsPk)
+		return nil
 	}
 
 	saveKeyOnPostRun(keysCmd, "import")

@@ -283,6 +283,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 		}
 	}
 
+	fmt.Printf("before NEW ACCOUNT-----------: %s\n", name)
 	_, err = kb.NewAccount(name, mnemonic, bip39Passphrase, hdPath, algo)
 	if err != nil {
 		return err
