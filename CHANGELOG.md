@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Improvements
 
 * [#487](https://github.com/babylonlabs-io/finality-provider/pull/487) chore: unlock cmd hmac and password from input
+* [#489](https://github.com/babylonlabs-io/finality-provider/pull/489) chore: validate keyring-backend in cfg
 
 ### Bug Fixes
 
