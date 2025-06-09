@@ -37,8 +37,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v1.1.0-rc.1
+
 ### Improvements
 
+* [#469](https://github.com/babylonlabs-io/finality-provider/pull/469) chore: e2e unsafe pub rand commit
+* [#466](https://github.com/babylonlabs-io/finality-provider/pull/466) feat: hot backup eotsd
 * [#487](https://github.com/babylonlabs-io/finality-provider/pull/487) chore: unlock cmd hmac and password from input
 * [#489](https://github.com/babylonlabs-io/finality-provider/pull/489) chore: validate keyring-backend in cfg
 
@@ -47,12 +51,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#480](https://github.com/babylonlabs-io/finality-provider/pull/480) chore: add mutex to SignSchnorrSigFromKeyname
 
 ## v1.1.0-rc.0
-
-### Improvements
-
-* [#469](https://github.com/babylonlabs-io/finality-provider/pull/469) chore: e2e unsafe pub rand commit
-* [#466](https://github.com/babylonlabs-io/finality-provider/pull/466) feat: hot backup eotsd
-
 
 ### Bug Fixes
 
