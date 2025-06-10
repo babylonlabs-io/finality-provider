@@ -33,12 +33,7 @@ const (
 	mnemonicShowCtxKey  = "mnemonic_show_ctx"
 )
 
-func runAddCmdPrepare(cmd *cobra.Command, args []string) error {
-	clientCtx, err := client.GetClientQueryContext(cmd)
-	if err != nil {
-		return err
-	}
-
+func runAddCmdPrepare(cmd *cobra.Command, clientCtx client.Context, args []string) error {
 	buf := bufio.NewReader(clientCtx.Input)
 
 	return runAddCmd(clientCtx, cmd, args, buf)
@@ -283,7 +278,6 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 		}
 	}
 
-	fmt.Printf("before NEW ACCOUNT-----------: %s\n", name)
 	_, err = kb.NewAccount(name, mnemonic, bip39Passphrase, hdPath, algo)
 	if err != nil {
 		return err
