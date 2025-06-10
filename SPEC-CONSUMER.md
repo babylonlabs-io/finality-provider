@@ -1,4 +1,4 @@
-# RFC 035: Finality provider standard for Consumer chains and rollups
+# Finality provider specification for Consumer chains and rollups
 
 - [Changelog](#changelog)
 - [Abstract](#abstract)
@@ -17,16 +17,16 @@
 
 ## Abstract
 
-This RFC specifies the design and requirements of the interface for the finality
-provider program, to interact and integrate with different blockchains, such as
-Babylon itself, and Cosmos and Ethereum rollups, to provide finality signatures
-based on Bitcoin staking.
+This document specifies the design and requirements of the interface for the
+finality provider program, to interact and integrate with different blockchains,
+such as Babylon itself, and Cosmos and Ethereum rollups, to provide finality
+signatures based on Bitcoin staking.
 
-The main purpose of this RFC is to provide a standard interface for integrators
-of Babylon's Bitcoin staking protocol. So that they can implement only the part
-of the finality program that is specific to their blockchain or rollup
-architecture, while reusing the common components that are shared across all
-blockchain types.
+The main purpose of this specification is to provide a standard interface for
+integrators of Babylon's Bitcoin staking protocol. So that they can implement
+only the part of the finality program that is specific to their blockchain or
+rollup architecture, while reusing the common components that are shared across
+all blockchain types.
 
 ## Background
 
@@ -221,7 +221,7 @@ As of this writing, there are three finality provider adapter implementations:
     the OP Stack architecture.
 
 **Comparison**: While all of these implementations follow the general principles
-outlined in this RFC, they target different architectures.
+outlined in this document, they target different architectures.
 The OP Stack L2 is specifically designed for OP Stack chains, and leverages
 CosmWasm for deployment in Babylon, whereas the CosmWasm Adapter is more
 general-purpose, and can be used by any Cosmos-based chain that supports
