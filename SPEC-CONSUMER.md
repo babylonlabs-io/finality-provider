@@ -79,8 +79,9 @@ provider program:
    can implement the finality provider program to generate public randomness
    commitments and submit finality signatures for blocks in their respective
    rollups. These commitments and signatures will be stored in the Babylon chain
-   (i.e. using a variant of `op-finality-contract`. See RFC-035 for details),
-   and used to provide finality for the rollup blocks.
+   (i.e. using a variant of [`rollup-bsn-contracts`](https://github.com/babylonlabs-io/rollup-bsn-contracts).
+   See `SPEC.md` in that repository for details), and used to provide finality
+   for the rollup blocks.
 
 ## Specification
 
@@ -212,13 +213,14 @@ As of this writing, there are three finality provider adapter implementations:
 2. **CosmWasm Finality Provider Adapter** - Under [clientcontroller/cosmwasm](https://github.com/babylonlabs-io/finality-provider/tree/main/clientcontroller/cosmwasm)
     This implementation is designed for Cosmos-based chains, allowing them to
     leverage the finality provider functionality by integrating with the Cosmos
-    chain through CosmWasm smart contracts (the `babylon-contract` repository)
-    and a thin integration layer (the `babylon-sdk`).
+    chain through CosmWasm smart contracts (the [`cosmos-bsn-contracts`](https://github.com/babylonlabs-io/cosmos-bsn-contracts)
+    repository) and a thin integration layer (the [`babylon-sdk`](https://github.com/babylonlabs-io/babylon-sdk)
+    repository).
 3. **OP Stack L2 Finality Provider Adapter** - Under [clientcontroller/opstackl2](https://github.com/babylonlabs-io/finality-provider/tree/main/clientcontroller/opstackl2)
     This implementation is tailored for OP Stack rollups, specifically designed
     to work with the OP Finality Gadget, which is a finality provider contract
-    that runs on Babylon (the `op-finality-gadget` repository), and complements
-    the OP Stack architecture.
+    that runs on Babylon (based on the [`rollup-bsn-contracts`](https://github.com/babylonlabs-io/rollup-bsn-contracts)
+    repository), and complements the OP Stack architecture.
 
 **Comparison**: While all of these implementations follow the general principles
 outlined in this document, they target different architectures.
