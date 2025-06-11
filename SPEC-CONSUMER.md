@@ -102,8 +102,8 @@ The specification distinguishes between required ("MUST") and recommended
 */
 type ConsumerController interface {
     // MUST: Core messages
-    // CommitPubRandList commits a list of EOTS public randomness the consumer chain
-    // it returns tx hash and error
+    // CommitPubRandList commits a list of EOTS public randomness to the consumer chain.
+    // It returns tx hash and error
     CommitPubRandList(fpPk *btcec.PublicKey, startHeight uint64, numPubRand uint64, commitment []byte, sig *schnorr.Signature) (*types.TxResponse, error)
 
     // MUST: Core messages
