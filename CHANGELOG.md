@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
+* [#494](https://github.com/babylonlabs-io/finality-provider/pull/494) Add spec for Consumers.
 * [#469](https://github.com/babylonlabs-io/finality-provider/pull/469) chore: e2e unsafe pub rand commit
 * [#466](https://github.com/babylonlabs-io/finality-provider/pull/466) feat: hot backup eotsd
 * [#487](https://github.com/babylonlabs-io/finality-provider/pull/487) chore: unlock cmd hmac and password from input
