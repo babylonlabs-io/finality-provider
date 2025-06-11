@@ -95,7 +95,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	return fpServer.RunUntilShutdown(cmd.Context())
 }
 
-// loadApp initialize a finality provider app based on config and flags set.
+// loadApp initializes a finality provider app based on config and flags set.
 func loadApp(
 	logger *zap.Logger,
 	cfg *fpcfg.Config,
