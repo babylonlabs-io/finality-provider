@@ -3,7 +3,9 @@ package daemon
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
 	"io"
 	"strings"
 
@@ -65,7 +67,6 @@ func NewKeysCmd() *cobra.Command {
 	}
 
 	addCmd.Flags().String(rpcClientFlag, "", "The RPC address of a running eotsd to connect and save new key")
-	addCmd.Flags().Bool(flagMigrate, false, "Used during key migration to skip saving the key into eotsd.db")
 
 	// Override the original RunE function to run almost the same as
 	// the sdk, but it allows empty hd path and allow to save the key
@@ -139,11 +140,6 @@ func saveKeyNameMapping(cmd *cobra.Command, clientCtx client.Context, keyName st
 		return nil, err
 	}
 
-	migrate, err := cmd.Flags().GetBool(flagMigrate)
-	if err != nil {
-		return nil, err
-	}
-
 	if len(rpcListener) > 0 {
 		eotsClient, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, "")
 		if err != nil {
@@ -155,10 +151,12 @@ func saveKeyNameMapping(cmd *cobra.Command, clientCtx client.Context, keyName st
 			return nil, fmt.Errorf("failed to get public key for key %s: %w", keyName, err)
 		}
 
-		if !migrate {
-			if err := eotsClient.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
-				return nil, fmt.Errorf("failed to save key name mapping: %w", err)
+		if err := eotsClient.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
+			// ignore the err, keyring will handle it
+			if errors.Is(err, store.ErrDuplicateEOTSKeyName) {
+				return eotsPk, nil
 			}
+			return nil, fmt.Errorf("failed to save key name mapping: %w", err)
 		}
 
 		return eotsPk, nil
@@ -190,10 +188,13 @@ func saveKeyNameMapping(cmd *cobra.Command, clientCtx client.Context, keyName st
 	}
 
 	// Save the public key to key name mapping
-	if !migrate {
-		if err := eotsManager.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
-			return nil, fmt.Errorf("failed to save key name mapping: %w", err)
+	if err := eotsManager.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
+		// ignore the err, keyring will handle it
+		if errors.Is(err, store.ErrDuplicateEOTSKeyName) {
+			return eotsPk, nil
 		}
+
+		return nil, fmt.Errorf("failed to save key name mapping: %w", err)
 	}
 
 	return eotsPk, nil
