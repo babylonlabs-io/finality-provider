@@ -156,6 +156,7 @@ func saveKeyNameMapping(cmd *cobra.Command, clientCtx client.Context, keyName st
 			if errors.Is(err, store.ErrDuplicateEOTSKeyName) {
 				return eotsPk, nil
 			}
+			
 			return nil, fmt.Errorf("failed to save key name mapping: %w", err)
 		}
 
