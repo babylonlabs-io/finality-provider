@@ -20,4 +20,5 @@ const (
 	flagMnemonicSrc       = "source"
 	flagDBPath            = "db-path"
 	flagBackupDir         = "backup-dir"
+	flagMigrate           = "migrate"
 )

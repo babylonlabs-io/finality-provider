@@ -33,12 +33,7 @@ const (
 	mnemonicShowCtxKey  = "mnemonic_show_ctx"
 )
 
-func runAddCmdPrepare(cmd *cobra.Command, args []string) error {
-	clientCtx, err := client.GetClientQueryContext(cmd)
-	if err != nil {
-		return err
-	}
-
+func runAddCmdPrepare(cmd *cobra.Command, clientCtx client.Context, args []string) error {
 	buf := bufio.NewReader(clientCtx.Input)
 
 	return runAddCmd(clientCtx, cmd, args, buf)
