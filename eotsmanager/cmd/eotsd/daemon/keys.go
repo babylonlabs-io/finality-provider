@@ -156,7 +156,7 @@ func saveKeyNameMapping(cmd *cobra.Command, clientCtx client.Context, keyName st
 			if errors.Is(err, store.ErrDuplicateEOTSKeyName) {
 				return eotsPk, nil
 			}
-			
+
 			return nil, fmt.Errorf("failed to save key name mapping: %w", err)
 		}
 
@@ -193,6 +193,11 @@ func saveKeyNameMapping(cmd *cobra.Command, clientCtx client.Context, keyName st
 		// ignore the err, keyring will handle it
 		if errors.Is(err, store.ErrDuplicateEOTSKeyName) {
 			return eotsPk, nil
+		}
+
+		if errors.Is(err, store.ErrDuplicateEOTSKeyRecord) {
+			return nil, fmt.Errorf("key name %s already exists in the database for a different eotsPK. "+
+				"Delete this key from the keyring and save it under a different name", keyName)
 		}
 
 		return nil, fmt.Errorf("failed to save key name mapping: %w", err)
