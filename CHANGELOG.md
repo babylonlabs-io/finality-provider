@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Improvements
 
 * [#493](https://github.com/babylonlabs-io/finality-provider/pull/493) chore: key migration for test keyring
+* [#498](https://github.com/babylonlabs-io/finality-provider/pull/498) chore: bump bbn v2.0.0
 
 ## v1.1.0-rc.1
 
