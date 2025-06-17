@@ -8,16 +8,37 @@ import (
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
+	"io"
 	"os"
 )
 
 var UnlockCmdPasswordReader = passwordReader
 
 func passwordReader(cmd *cobra.Command) (string, error) {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return "", fmt.Errorf("failed to stat stdin: %w", err)
+	}
+
+	if (fi.Mode() & os.ModeCharDevice) == 0 {
+		// Not a terminal, read full input from stdin
+		passphrase, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return "", fmt.Errorf("failed to read passphrase from stdin: %w", err)
+		}
+
+		return string(passphrase), nil
+	}
+
+	// TTY: interactive prompt
 	cmd.Print("Enter password to unlock keyring: ")
 	passphrase, err := term.ReadPassword(int(os.Stdin.Fd()))
+	cmd.Println()
+	if err != nil {
+		return "", fmt.Errorf("failed to read passphrase from terminal: %w", err)
+	}
 
-	return string(passphrase), err
+	return string(passphrase), nil
 }
 
 func NewUnlockKeyringCmd() *cobra.Command {
