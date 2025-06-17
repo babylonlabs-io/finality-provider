@@ -3,7 +3,9 @@ package daemon
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
 	"io"
 	"strings"
 
@@ -60,9 +62,7 @@ func NewKeysCmd() *cobra.Command {
 				return fmt.Errorf("failed to load eots pk from db by key name %s", args[0])
 			}
 
-			cmd.Printf("Key Name: %s\nEOTS PK: %s\n", args[0], eotsPk.MarshalHex())
-
-			return nil
+			return printFromKey(cmd, clientCtx, args[0], eotsPk)
 		}
 	}
 
@@ -72,6 +72,10 @@ func NewKeysCmd() *cobra.Command {
 	// the sdk, but it allows empty hd path and allow to save the key
 	// in the name mapping
 	addCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		clientCtx, err := client.GetClientQueryContext(cmd)
+		if err != nil {
+			return err
+		}
 		oldOut := cmd.OutOrStdout()
 
 		// Create a buffer to intercept the key items
@@ -79,19 +83,23 @@ func NewKeysCmd() *cobra.Command {
 		cmd.SetOut(&buf)
 
 		// Run the original command
-		err := runAddCmdPrepare(cmd, args)
-		if err != nil {
+		if err := runAddCmdPrepare(cmd, clientCtx, args); err != nil {
 			return err
 		}
 
 		cmd.SetOut(oldOut)
 		keyName := args[0]
-		eotsPk, err := saveKeyNameMapping(cmd, keyName)
+
+		eotsPk, err := saveKeyNameMapping(cmd, clientCtx, keyName)
 		if err != nil {
 			return err
 		}
 
-		return printFromKey(cmd, keyName, eotsPk)
+		if err := printFromKey(cmd, clientCtx, keyName, eotsPk); err != nil {
+			return fmt.Errorf("failed to print key %s: %w", keyName, err)
+		}
+
+		return nil
 	}
 
 	saveKeyOnPostRun(keysCmd, "import")
@@ -109,19 +117,18 @@ func saveKeyOnPostRun(cmd *cobra.Command, commandName string) {
 	subCmd.Flags().String(rpcClientFlag, "", "The RPC address of a running eotsd to connect and save new key")
 
 	subCmd.PostRunE = func(cmd *cobra.Command, args []string) error {
+		clientCtx, err := client.GetClientQueryContext(cmd)
+		if err != nil {
+			return err
+		}
 		keyName := args[0]
-		_, err := saveKeyNameMapping(cmd, keyName)
+		_, err = saveKeyNameMapping(cmd, clientCtx, keyName)
 
 		return err
 	}
 }
 
-func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey, error) {
-	clientCtx, err := client.GetClientQueryContext(cmd)
-	if err != nil {
-		return nil, err
-	}
-
+func saveKeyNameMapping(cmd *cobra.Command, clientCtx client.Context, keyName string) (*types.BIP340PubKey, error) {
 	// Load configuration
 	cfg, err := config.LoadConfig(clientCtx.HomeDir)
 	if err != nil {
@@ -134,22 +141,22 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 	}
 
 	if len(rpcListener) > 0 {
-		client, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, "")
+		eotsClient, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, "")
 		if err != nil {
 			return nil, err
 		}
 
-		kr, err := eotsmanager.InitKeyring(clientCtx.HomeDir, clientCtx.Keyring.Backend(), strings.NewReader(""))
-		if err != nil {
-			return nil, fmt.Errorf("failed to init keyring: %w", err)
-		}
-
-		eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(kr, keyName)
+		eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, keyName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get public key for key %s: %w", keyName, err)
 		}
 
-		if err := client.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
+		if err := eotsClient.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
+			// ignore the err, keyring will handle it
+			if errors.Is(err, store.ErrDuplicateEOTSKeyName) {
+				return eotsPk, nil
+			}
+
 			return nil, fmt.Errorf("failed to save key name mapping: %w", err)
 		}
 
@@ -176,13 +183,23 @@ func saveKeyNameMapping(cmd *cobra.Command, keyName string) (*types.BIP340PubKey
 	}
 
 	// Get the public key for the newly added key
-	eotsPk, err := eotsManager.LoadBIP340PubKeyFromKeyName(keyName)
+	eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, keyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get public key for key %s: %w", keyName, err)
 	}
 
 	// Save the public key to key name mapping
 	if err := eotsManager.SaveEOTSKeyName(eotsPk.MustToBTCPK(), keyName); err != nil {
+		// ignore the err, keyring will handle it
+		if errors.Is(err, store.ErrDuplicateEOTSKeyName) {
+			return eotsPk, nil
+		}
+
+		if errors.Is(err, store.ErrDuplicateEOTSKeyRecord) {
+			return nil, fmt.Errorf("key name %s already exists in the database for a different eotsPK. "+
+				"Delete this key from the keyring and save it under a different name", keyName)
+		}
+
 		return nil, fmt.Errorf("failed to save key name mapping: %w", err)
 	}
 
@@ -303,12 +320,7 @@ func getAllEOTSKeys(cmd *cobra.Command) (map[string][]byte, error) {
 	return res, nil
 }
 
-func printFromKey(cmd *cobra.Command, keyName string, eotsPk *types.BIP340PubKey) error {
-	clientCtx, err := client.GetClientQueryContext(cmd)
-	if err != nil {
-		return err
-	}
-
+func printFromKey(cmd *cobra.Command, clientCtx client.Context, keyName string, eotsPk *types.BIP340PubKey) error {
 	k, err := clientCtx.Keyring.Key(keyName)
 	if err != nil {
 		return fmt.Errorf("failed to get public get key %s: %w", keyName, err)

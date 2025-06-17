@@ -17,4 +17,7 @@ var (
 
 	// ErrDuplicateSignRecord indicates err if sign record is already saved at given height
 	ErrDuplicateSignRecord = errors.New("sign record for given height already exists")
+
+	// ErrDuplicateEOTSKeyRecord The EOTS key and key name we try to add already exists in db
+	ErrDuplicateEOTSKeyRecord = errors.New("EOTS key with the same key name already exists")
 )
