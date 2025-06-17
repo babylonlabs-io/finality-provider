@@ -60,7 +60,7 @@ func FuzzEOTSStore(f *testing.F) {
 			btcPk,
 			expectedKeyName,
 		)
-		require.ErrorIs(t, err, store.ErrDuplicateEOTSKeyName)
+		require.ErrorIs(t, err, store.ErrDuplicateEOTSKeyRecord)
 
 		keyNameFromDB, err := vs.GetEOTSKeyName(schnorr.SerializePubKey(btcPk))
 		require.NoError(t, err)

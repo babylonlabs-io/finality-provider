@@ -68,6 +68,11 @@ func (s *EOTSStore) AddEOTSKeyName(
 		}
 
 		// check btc pk first to avoid duplicates
+		keyFromDBBytes := eotsBucket.Get(pkBytes)
+		if string(keyFromDBBytes) == keyName {
+			return ErrDuplicateEOTSKeyRecord
+		}
+
 		if eotsBucket.Get(pkBytes) != nil {
 			return ErrDuplicateEOTSKeyName
 		}
