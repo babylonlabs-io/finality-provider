@@ -100,8 +100,11 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}
 
+	fpMetrics := metrics.NewFpMetrics()
+	poller := service.NewChainPoller(logger, cfg.PollerConfig, consumerCon, fpMetrics)
+
 	fp, err := service.NewFinalityProviderInstance(
-		fpPk, cfg, fpStore, pubRandStore, cc, consumerCon, em, metrics.NewFpMetrics(),
+		fpPk, cfg, fpStore, pubRandStore, cc, consumerCon, em, poller, fpMetrics,
 		make(chan<- *service.CriticalError), logger)
 	if err != nil {
 		return fmt.Errorf("failed to create finality-provider %s instance: %w", fpPk.MarshalHex(), err)

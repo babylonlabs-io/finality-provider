@@ -26,7 +26,7 @@ const (
 )
 
 // Ensure ChainPoller implements BlockPoller interface
-var _ types.BlockPoller[*types.BlockInfo] = (*ChainPoller)(nil)
+var _ types.BlockPoller[types.BlockDescription] = (*ChainPoller)(nil)
 
 type ChainPoller struct {
 	mu            sync.RWMutex
@@ -42,8 +42,6 @@ type ChainPoller struct {
 	blockBuffer   []*types.BlockInfo
 	bufferMu      sync.RWMutex
 	blockReady    chan struct{}
-	pollingCtx    context.Context
-	pollingCancel context.CancelFunc
 }
 
 func NewChainPoller(
@@ -64,39 +62,24 @@ func NewChainPoller(
 	}
 }
 
-// NextBlock implements BlockPoller interface
-func (cp *ChainPoller) NextBlock(ctx context.Context) (*types.BlockInfo, error) {
+// TryNextBlock implements BlockPoller interface - non-blocking version
+func (cp *ChainPoller) TryNextBlock() (types.BlockDescription, bool) {
 	if !cp.isStarted.Load() {
-		return nil, fmt.Errorf("chain poller is not started")
+		return nil, false
 	}
 
-	for {
-		cp.bufferMu.RLock()
-		if len(cp.blockBuffer) > 0 {
-			block := cp.blockBuffer[0]
-			cp.blockBuffer = cp.blockBuffer[1:]
-			cp.bufferMu.RUnlock()
+	cp.mu.RLock()
+	if len(cp.blockBuffer) > 0 {
+		block := cp.blockBuffer[0]
+		cp.blockBuffer = cp.blockBuffer[1:]
+		cp.currentHeight = block.Height
+		cp.mu.RUnlock()
 
-			// Update current height
-			cp.mu.Lock()
-			cp.currentHeight = block.Height
-			cp.mu.Unlock()
-
-			return block, nil
-		}
-		cp.bufferMu.RUnlock()
-
-		// Wait for new blocks or context cancellation
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-cp.quit:
-			return nil, fmt.Errorf("chain poller stopped")
-		case <-cp.blockReady:
-			// Continue to check buffer again
-			continue
-		}
+		return block, true
 	}
+	cp.mu.RUnlock()
+
+	return nil, false
 }
 
 // SetStartHeight implements BlockPoller interface
@@ -111,10 +94,8 @@ func (cp *ChainPoller) SetStartHeight(ctx context.Context, height uint64) error 
 	cp.nextHeight = height
 	cp.mu.Unlock()
 
-	cp.pollingCtx, cp.pollingCancel = context.WithCancel(ctx)
-
 	cp.wg.Add(1)
-	go cp.pollChain(cp.pollingCtx)
+	go cp.pollChain(ctx)
 
 	cp.metrics.RecordPollerStartingHeight(height)
 	cp.logger.Info("the chain poller is successfully started")
@@ -126,7 +107,7 @@ func (cp *ChainPoller) SetStartHeight(ctx context.Context, height uint64) error 
 func (cp *ChainPoller) CurrentHeight() uint64 {
 	cp.mu.RLock()
 	defer cp.mu.RUnlock()
-	
+
 	return cp.currentHeight
 }
 
@@ -136,11 +117,6 @@ func (cp *ChainPoller) Stop() error {
 	}
 
 	cp.logger.Info("stopping the chain poller")
-
-	if cp.pollingCancel != nil {
-		cp.pollingCancel()
-	}
-
 	if err := cp.consumerCon.Close(); err != nil {
 		return err
 	}
@@ -237,6 +213,7 @@ func (cp *ChainPoller) waitForActivation(ctx context.Context) {
 				cp.nextHeight = activatedHeight
 			}
 			cp.mu.Unlock()
+
 			return
 		}
 		select {
@@ -372,6 +349,7 @@ func (cp *ChainPoller) tryPollChain(latestBlockHeight, blockToRetrieve uint64) e
 func (cp *ChainPoller) getNextHeight() uint64 {
 	cp.mu.RLock()
 	defer cp.mu.RUnlock()
+
 	return cp.nextHeight
 }
 

@@ -103,6 +103,19 @@ func GenBlocks(r *rand.Rand, startHeight, endHeight uint64) []*types.BlockInfo {
 	return blocks
 }
 
+func GenBlocksDesc(r *rand.Rand, startHeight, endHeight uint64) []types.BlockDescription {
+	blocks := make([]types.BlockDescription, 0)
+	for i := startHeight; i <= endHeight; i++ {
+		b := &types.BlockInfo{
+			Height: i,
+			Hash:   datagen.GenRandomByteArray(r, 32),
+		}
+		blocks = append(blocks, b)
+	}
+
+	return blocks
+}
+
 func CreateChainKey(keyringDir, chainID, keyName, backend, passphrase, hdPath, mnemonic string) (*types.ChainKeyInfo, error) {
 	sdkCtx, err := fpkr.CreateClientCtx(
 		keyringDir, chainID,

@@ -51,7 +51,7 @@ func FuzzChainPoller_Start(f *testing.F) {
 		m := metrics.NewFpMetrics()
 		pollerCfg.PollInterval = 10 * time.Millisecond
 		poller := service.NewChainPoller(testutil.GetTestLogger(t), &pollerCfg, mockConsumerController, m)
-		err := poller.SetStartHeight(startHeight)
+		err := poller.SetStartHeight(context.Background(), startHeight)
 		require.NoError(t, err)
 		defer func() {
 			err := poller.Stop()
@@ -59,9 +59,9 @@ func FuzzChainPoller_Start(f *testing.F) {
 		}()
 
 		for i := startHeight; i <= endHeight; i++ {
-			info, err := poller.NextBlock(context.Background())
-			require.NoError(t, err)
-			require.Equal(t, i, info.Height)
+			time.Sleep(15 * time.Millisecond)
+			info, _ := poller.TryNextBlock()
+			require.Equal(t, i, info.GetHeight())
 		}
 	})
 }

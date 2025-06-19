@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/types"
 	"strings"
 	"sync"
 
@@ -38,6 +39,7 @@ type FinalityProviderApp struct {
 	pubRandStore *store.PubRandProofStore
 	config       *fpcfg.Config
 	logger       *zap.Logger
+	poller       types.BlockPoller[types.BlockDescription]
 
 	fpInsMu     sync.RWMutex // Protects fpIns
 	fpIns       *FinalityProviderInstance
@@ -78,7 +80,10 @@ func NewFinalityProviderAppFromConfig(
 
 	logger.Info("successfully connected to a remote EOTS manager", zap.String("address", cfg.EOTSManagerAddress))
 
-	return NewFinalityProviderApp(cfg, cc, consumerCon, em, db, logger)
+	fpMetrics := metrics.NewFpMetrics()
+	poller := NewChainPoller(logger, cfg.PollerConfig, consumerCon, fpMetrics)
+
+	return NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, fpMetrics, db, logger)
 }
 
 func NewFinalityProviderApp(
@@ -86,6 +91,8 @@ func NewFinalityProviderApp(
 	cc ccapi.ClientController,
 	consumerCon ccapi.ConsumerController,
 	em eotsmanager.EOTSManager,
+	poller types.BlockPoller[types.BlockDescription],
+	metrics *metrics.FpMetrics,
 	db kvdb.Backend,
 	logger *zap.Logger,
 ) (*FinalityProviderApp, error) {
@@ -107,8 +114,6 @@ func NewFinalityProviderApp(
 		return nil, fmt.Errorf("failed to create keyring: %w", err)
 	}
 
-	fpMetrics := metrics.NewFpMetrics()
-
 	return &FinalityProviderApp{
 		cc:                                cc,
 		consumerCon:                       consumerCon,
@@ -118,7 +123,8 @@ func NewFinalityProviderApp(
 		config:                            config,
 		logger:                            logger,
 		eotsManager:                       em,
-		metrics:                           fpMetrics,
+		poller:                            poller,
+		metrics:                           metrics,
 		quit:                              make(chan struct{}),
 		unjailFinalityProviderRequestChan: make(chan *UnjailFinalityProviderRequest),
 		createFinalityProviderRequestChan: make(chan *CreateFinalityProviderRequest),
@@ -512,7 +518,7 @@ func (app *FinalityProviderApp) startFinalityProviderInstance(
 
 	if app.fpIns == nil {
 		fpIns, err := NewFinalityProviderInstance(
-			pk, app.config, app.fps, app.pubRandStore, app.cc, app.consumerCon, app.eotsManager,
+			pk, app.config, app.fps, app.pubRandStore, app.cc, app.consumerCon, app.eotsManager, app.poller,
 			app.metrics, app.criticalErrChan, app.logger,
 		)
 		if err != nil {

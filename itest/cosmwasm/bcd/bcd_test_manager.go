@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -166,10 +167,13 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
 	require.NoError(t, err)
 
+	fpMetrics := metrics.NewFpMetrics()
+	poller := service.NewChainPoller(logger, cfg.PollerConfig, wcc, fpMetrics)
+
 	// 5. prepare finality-provider
 	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, wcc, eotsCli, fpdb, logger)
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, wcc, eotsCli, poller, fpMetrics, fpdb, logger)
 	require.NoError(t, err)
 	err = fpApp.Start()
 	require.NoError(t, err)

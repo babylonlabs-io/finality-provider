@@ -61,14 +61,9 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 	return fp.em.SignSchnorrSig(fp.btcPk.MustMarshal(), hash)
 }
 
-func getMsgToSignForVote(blockHeight uint64, blockHash []byte) []byte {
-	return append(sdk.Uint64ToBigEndian(blockHeight), blockHash...)
-}
-
-func (fp *FinalityProviderInstance) SignFinalitySig(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
+func (fp *FinalityProviderInstance) SignFinalitySig(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
 	// build proper finality signature request
-	msgToSign := getMsgToSignForVote(b.Height, b.Hash)
-	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
+	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), b.MsgToSign(), b.GetHeight())
 	if err != nil {
 		if strings.Contains(err.Error(), failedPreconditionErrStr) {
 			return nil, ErrFailedPrecondition

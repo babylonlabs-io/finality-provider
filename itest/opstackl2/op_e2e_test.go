@@ -77,7 +77,7 @@ func TestFinalitySigSubmission(t *testing.T) {
 	require.NoError(t, err)
 
 	// mock batch of blocks with start height 1 and end height 3
-	blocks := testutil.GenBlocks(
+	blocks := testutil.GenBlocksDesc(
 		rand.New(rand.NewSource(time.Now().UnixNano())),
 		1,
 		3,
@@ -91,9 +91,9 @@ func TestFinalitySigSubmission(t *testing.T) {
 	// fill the query message with the block height and hash
 	queryMsg := map[string]interface{}{
 		"block_voters": map[string]interface{}{
-			"height": blocks[2].Height,
+			"height": blocks[2].GetHeight(),
 			// it requires the block hash without the 0x prefix
-			"hash": strings.TrimPrefix(hex.EncodeToString(blocks[2].Hash), "0x"),
+			"hash": strings.TrimPrefix(hex.EncodeToString(blocks[2].GetHash()), "0x"),
 		},
 	}
 
