@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"context"
 	"math/rand"
 	"testing"
 	"time"
@@ -50,7 +51,7 @@ func FuzzChainPoller_Start(f *testing.F) {
 		m := metrics.NewFpMetrics()
 		pollerCfg.PollInterval = 10 * time.Millisecond
 		poller := service.NewChainPoller(testutil.GetTestLogger(t), &pollerCfg, mockConsumerController, m)
-		err := poller.Start(startHeight)
+		err := poller.SetStartHeight(startHeight)
 		require.NoError(t, err)
 		defer func() {
 			err := poller.Stop()
@@ -58,12 +59,9 @@ func FuzzChainPoller_Start(f *testing.F) {
 		}()
 
 		for i := startHeight; i <= endHeight; i++ {
-			select {
-			case info := <-poller.GetBlockInfoChan():
-				require.Equal(t, i, info.Height)
-			case <-time.After(10 * time.Second):
-				t.Fatalf("Failed to get block info")
-			}
+			info, err := poller.NextBlock(context.Background())
+			require.NoError(t, err)
+			require.Equal(t, i, info.Height)
 		}
 	})
 }

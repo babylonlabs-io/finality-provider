@@ -1,18 +1,17 @@
 package service
 
 import (
+	"context"
 	"fmt"
-	"sync"
-	"time"
-
 	"github.com/avast/retry-go/v4"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
-
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
+	"sync"
+	"time"
 )
 
 var (
@@ -26,6 +25,9 @@ const (
 	maxFailedCycles = 20
 )
 
+// Ensure ChainPoller implements BlockPoller interface
+var _ types.BlockPoller[*types.BlockInfo] = (*ChainPoller)(nil)
+
 type ChainPoller struct {
 	mu            sync.RWMutex
 	wg            sync.WaitGroup
@@ -34,9 +36,14 @@ type ChainPoller struct {
 	consumerCon   ccapi.ConsumerController
 	cfg           *cfg.ChainPollerConfig
 	metrics       *metrics.FpMetrics
-	blockInfoChan chan *types.BlockInfo
 	logger        *zap.Logger
 	nextHeight    uint64
+	currentHeight uint64
+	blockBuffer   []*types.BlockInfo
+	bufferMu      sync.RWMutex
+	blockReady    chan struct{}
+	pollingCtx    context.Context
+	pollingCancel context.CancelFunc
 }
 
 func NewChainPoller(
@@ -46,32 +53,81 @@ func NewChainPoller(
 	metrics *metrics.FpMetrics,
 ) *ChainPoller {
 	return &ChainPoller{
-		isStarted:     atomic.NewBool(false),
-		logger:        logger,
-		cfg:           cfg,
-		consumerCon:   consumerCon,
-		metrics:       metrics,
-		blockInfoChan: make(chan *types.BlockInfo, cfg.BufferSize),
-		quit:          make(chan struct{}),
+		isStarted:   atomic.NewBool(false),
+		logger:      logger,
+		cfg:         cfg,
+		consumerCon: consumerCon,
+		metrics:     metrics,
+		quit:        make(chan struct{}),
+		blockReady:  make(chan struct{}, 1),
+		blockBuffer: make([]*types.BlockInfo, 0),
 	}
 }
 
-func (cp *ChainPoller) Start(startHeight uint64) error {
-	if cp.isStarted.Swap(true) {
-		return fmt.Errorf("the poller is already started")
+// NextBlock implements BlockPoller interface
+func (cp *ChainPoller) NextBlock(ctx context.Context) (*types.BlockInfo, error) {
+	if !cp.isStarted.Load() {
+		return nil, fmt.Errorf("chain poller is not started")
 	}
 
-	cp.logger.Info("starting the chain poller")
+	for {
+		cp.bufferMu.RLock()
+		if len(cp.blockBuffer) > 0 {
+			block := cp.blockBuffer[0]
+			cp.blockBuffer = cp.blockBuffer[1:]
+			cp.bufferMu.RUnlock()
 
-	cp.nextHeight = startHeight
+			// Update current height
+			cp.mu.Lock()
+			cp.currentHeight = block.Height
+			cp.mu.Unlock()
+
+			return block, nil
+		}
+		cp.bufferMu.RUnlock()
+
+		// Wait for new blocks or context cancellation
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-cp.quit:
+			return nil, fmt.Errorf("chain poller stopped")
+		case <-cp.blockReady:
+			// Continue to check buffer again
+			continue
+		}
+	}
+}
+
+// SetStartHeight implements BlockPoller interface
+func (cp *ChainPoller) SetStartHeight(ctx context.Context, height uint64) error {
+	if cp.isStarted.Swap(true) {
+		return fmt.Errorf("the chain poller has already started")
+	}
+
+	cp.logger.Info("starting the chain poller", zap.Uint64("start_height", height))
+
+	cp.mu.Lock()
+	cp.nextHeight = height
+	cp.mu.Unlock()
+
+	cp.pollingCtx, cp.pollingCancel = context.WithCancel(ctx)
 
 	cp.wg.Add(1)
-	go cp.pollChain()
+	go cp.pollChain(cp.pollingCtx)
 
-	cp.metrics.RecordPollerStartingHeight(startHeight)
+	cp.metrics.RecordPollerStartingHeight(height)
 	cp.logger.Info("the chain poller is successfully started")
 
 	return nil
+}
+
+// CurrentHeight implements BlockPoller interface
+func (cp *ChainPoller) CurrentHeight() uint64 {
+	cp.mu.RLock()
+	defer cp.mu.RUnlock()
+	
+	return cp.currentHeight
 }
 
 func (cp *ChainPoller) Stop() error {
@@ -80,10 +136,15 @@ func (cp *ChainPoller) Stop() error {
 	}
 
 	cp.logger.Info("stopping the chain poller")
-	err := cp.consumerCon.Close()
-	if err != nil {
+
+	if cp.pollingCancel != nil {
+		cp.pollingCancel()
+	}
+
+	if err := cp.consumerCon.Close(); err != nil {
 		return err
 	}
+
 	close(cp.quit)
 	cp.wg.Wait()
 
@@ -94,11 +155,6 @@ func (cp *ChainPoller) Stop() error {
 
 func (cp *ChainPoller) IsRunning() bool {
 	return cp.isStarted.Load()
-}
-
-// GetBlockInfoChan returns the read-only channel for incoming blocks
-func (cp *ChainPoller) GetBlockInfoChan() <-chan *types.BlockInfo {
-	return cp.blockInfoChan
 }
 
 func (cp *ChainPoller) blocksWithRetry(start, end uint64, limit uint32) ([]*types.BlockInfo, error) {
@@ -168,7 +224,7 @@ func (cp *ChainPoller) latestBlockHeightWithRetry() (uint64, error) {
 }
 
 // waitForActivation waits until BTC staking is activated
-func (cp *ChainPoller) waitForActivation() {
+func (cp *ChainPoller) waitForActivation(ctx context.Context) {
 	// ensure that the startHeight is no lower than the activated height
 	for {
 		activatedHeight, err := cp.consumerCon.QueryActivatedHeight()
@@ -176,10 +232,11 @@ func (cp *ChainPoller) waitForActivation() {
 			// TODO: distinguish between "BTC staking is not activated" and other errors
 			cp.logger.Debug("failed to query the consumer chain for the activated height", zap.Error(err))
 		} else {
+			cp.mu.Lock()
 			if cp.nextHeight < activatedHeight {
 				cp.nextHeight = activatedHeight
 			}
-
+			cp.mu.Unlock()
 			return
 		}
 		select {
@@ -187,14 +244,16 @@ func (cp *ChainPoller) waitForActivation() {
 			continue
 		case <-cp.quit:
 			return
+		case <-ctx.Done():
+			return
 		}
 	}
 }
 
-func (cp *ChainPoller) pollChain() {
+func (cp *ChainPoller) pollChain(ctx context.Context) {
 	defer cp.wg.Done()
 
-	cp.waitForActivation()
+	cp.waitForActivation(ctx)
 
 	ticker := time.NewTicker(cp.cfg.PollInterval)
 	defer ticker.Stop()
@@ -202,6 +261,15 @@ func (cp *ChainPoller) pollChain() {
 	var failedCycles uint32
 
 	for {
+		select {
+		case <-cp.quit:
+			return
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// Continue with polling logic
+		}
+
 		latestBlockHeight, err := cp.latestBlockHeightWithRetry()
 		if err != nil {
 			failedCycles++
@@ -212,7 +280,7 @@ func (cp *ChainPoller) pollChain() {
 			)
 		} else {
 			// start polling in the first iteration
-			blockToRetrieve := cp.NextHeight()
+			blockToRetrieve := cp.getNextHeight()
 			err := cp.tryPollChain(latestBlockHeight, blockToRetrieve)
 
 			// update the failed cycles
@@ -243,12 +311,6 @@ func (cp *ChainPoller) pollChain() {
 		if failedCycles > maxFailedCycles {
 			cp.logger.Fatal("the poller has reached the max failed cycles, exiting")
 		}
-		select {
-		case <-ticker.C:
-			continue
-		case <-cp.quit:
-			return
-		}
 	}
 }
 
@@ -263,24 +325,24 @@ func (cp *ChainPoller) tryPollChain(latestBlockHeight, blockToRetrieve uint64) e
 			zap.Uint64("next_height", blockToRetrieve),
 			zap.Uint64("latest_height", latestBlockHeight),
 		)
+
+		return nil
 	case blockToRetrieve == latestBlockHeight:
 		var latestBlock *types.BlockInfo
 		latestBlock, err = cp.consumerCon.QueryBlock(latestBlockHeight)
+		if err != nil {
+			return err
+		}
 		blocks = []*types.BlockInfo{latestBlock}
 	default:
 		blocks, err = cp.blocksWithRetry(blockToRetrieve, latestBlockHeight, cp.cfg.PollSize)
+		if err != nil {
+			return err
+		}
 	}
 
-	// find error need return
-	if err != nil {
-		return err
-	}
-
-	// no error and we got the header we wanted to get, bump the state and push
-	// notification about data
+	// no error and we got the blocks we wanted to get
 	if len(blocks) == 0 {
-		// NOTE: when no found blocks, we need to wait PollInterval to
-		// await too much requests.
 		return nil
 	}
 
@@ -293,26 +355,28 @@ func (cp *ChainPoller) tryPollChain(latestBlockHeight, blockToRetrieve uint64) e
 		zap.Uint64("start_height", blockToRetrieve),
 		zap.Uint64("end_height", lb.Height))
 
-	// push the data to the channel
-	// Note: if the consumer is too slow -- the buffer is full
-	// the channel will block, and we will stop retrieving data from the node
-	for _, block := range blocks {
-		cp.blockInfoChan <- block
+	// Add blocks to buffer
+	cp.bufferMu.Lock()
+	cp.blockBuffer = append(cp.blockBuffer, blocks...)
+	cp.bufferMu.Unlock()
+
+	// Signal that new blocks are available
+	select {
+	case cp.blockReady <- struct{}{}:
+	default:
 	}
 
 	return nil
 }
 
-func (cp *ChainPoller) NextHeight() uint64 {
+func (cp *ChainPoller) getNextHeight() uint64 {
 	cp.mu.RLock()
 	defer cp.mu.RUnlock()
-
 	return cp.nextHeight
 }
 
 func (cp *ChainPoller) setNextHeight(height uint64) {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
-
 	cp.nextHeight = height
 }

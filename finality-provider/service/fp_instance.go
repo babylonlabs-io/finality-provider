@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -123,7 +124,8 @@ func (fp *FinalityProviderInstance) Start() error {
 
 	poller := NewChainPoller(fp.logger, fp.cfg.PollerConfig, fp.consumerCon, fp.metrics)
 
-	if err := poller.Start(startHeight); err != nil {
+	// TODO(Lazar955): context
+	if err := poller.SetStartHeight(context.Background(), startHeight); err != nil {
 		return fmt.Errorf("failed to start the poller with start height %d: %w", startHeight, err)
 	}
 
@@ -216,7 +218,8 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 // processAndSubmitSignatures handles the logic of fetching blocks, checking jail status,
 // processing them, and submitting signatures
 func (fp *FinalityProviderInstance) processAndSubmitSignatures() {
-	pollerBlocks := fp.getBatchBlocksFromChan()
+	// TODO(Lazar955): use context with timeout
+	pollerBlocks := fp.getBatchBlocksFromPoller(context.Background())
 	if len(pollerBlocks) == 0 {
 		return
 	}
@@ -337,21 +340,30 @@ func (fp *FinalityProviderInstance) processBlocksToVote(blocks []*types.BlockInf
 	return processedBlocks, nil
 }
 
-func (fp *FinalityProviderInstance) getBatchBlocksFromChan() []*types.BlockInfo {
+func (fp *FinalityProviderInstance) getBatchBlocksFromPoller(ctx context.Context) []*types.BlockInfo {
 	var pollerBlocks []*types.BlockInfo
+
 	for {
 		select {
-		case b := <-fp.poller.GetBlockInfoChan():
-			pollerBlocks = append(pollerBlocks, b)
-			if len(pollerBlocks) == int(fp.cfg.BatchSubmissionSize) {
-				return pollerBlocks
-			}
-		case <-fp.quit:
-			fp.logger.Info("the get all blocks loop is closing")
+		case <-ctx.Done():
+			fp.logger.Info("the get batch blocks loop is closing")
 
 			return nil
 		default:
-			return pollerBlocks
+			block, err := fp.poller.NextBlock(ctx)
+			if err != nil {
+				if strings.Contains(err.Error(), "next block call cancelled") {
+					return pollerBlocks
+				}
+				fp.logger.Info("the get batch blocks loop is closing", zap.Error(err))
+
+				return nil
+			}
+
+			pollerBlocks = append(pollerBlocks, block)
+			if len(pollerBlocks) == int(fp.cfg.BatchSubmissionSize) {
+				return pollerBlocks
+			}
 		}
 	}
 }
