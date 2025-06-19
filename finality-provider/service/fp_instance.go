@@ -125,14 +125,10 @@ func (fp *FinalityProviderInstance) Start() error {
 	fp.logger.Info("starting the finality provider instance",
 		zap.String("pk", fp.GetBtcPkHex()), zap.Uint64("height", startHeight))
 
-	poller := NewChainPoller(fp.logger, fp.cfg.PollerConfig, fp.consumerCon, fp.metrics)
-
-	// TODO(Lazar955): context
-	if err := poller.SetStartHeight(context.Background(), startHeight); err != nil {
+	if err := fp.poller.SetStartHeight(context.Background(), startHeight); err != nil {
 		return fmt.Errorf("failed to start the poller with start height %d: %w", startHeight, err)
 	}
 
-	fp.poller = poller
 	fp.quit = make(chan struct{})
 
 	fp.wg.Add(2)
