@@ -31,7 +31,7 @@ var _ types.BlockPoller[types.BlockDescription] = (*ChainPoller)(nil)
 
 // ChainPoller is responsible for polling the blockchain for new blocks and sending them to a processing channel.
 type ChainPoller struct {
-	stateMu sync.RWMutex
+	mu sync.RWMutex
 
 	wg        sync.WaitGroup
 	isStarted *atomic.Bool
@@ -119,11 +119,11 @@ func (cp *ChainPoller) SetStartHeight(ctx context.Context, height uint64) error 
 		zap.Uint64("start_height", height),
 		zap.Int("buffer_size", cp.blockChanSize))
 
-	cp.stateMu.Lock()
+	cp.mu.Lock()
 	cp.nextHeight = height
 	cp.quit = make(chan struct{})
 	cp.blockChan = make(chan *types.BlockInfo, cp.blockChanSize)
-	cp.stateMu.Unlock()
+	cp.mu.Unlock()
 
 	cp.wg.Add(1)
 	go cp.pollChain(ctx)
@@ -142,7 +142,6 @@ func (cp *ChainPoller) Stop() error {
 
 	cp.logger.Info("stopping the chain poller")
 	close(cp.quit)
-	cp.wg.Wait()
 	close(cp.blockChan)
 
 	// Close connection
@@ -151,6 +150,7 @@ func (cp *ChainPoller) Stop() error {
 
 		return err
 	}
+	cp.wg.Wait()
 
 	cp.logger.Info("the chain poller is successfully stopped")
 
@@ -177,14 +177,14 @@ func (cp *ChainPoller) waitForActivation(ctx context.Context) error {
 				continue
 			}
 
-			cp.stateMu.Lock()
+			cp.mu.Lock()
 			if cp.nextHeight < activatedHeight {
 				cp.logger.Info("adjusting start height to activation height",
 					zap.Uint64("old_height", cp.nextHeight),
 					zap.Uint64("activation_height", activatedHeight))
 				cp.nextHeight = activatedHeight
 			}
-			cp.stateMu.Unlock()
+			cp.mu.Unlock()
 
 			cp.logger.Info("BTC staking is activated", zap.Uint64("activation_height", activatedHeight))
 
@@ -324,15 +324,15 @@ func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, bloc
 }
 
 func (cp *ChainPoller) getNextHeight() uint64 {
-	cp.stateMu.RLock()
-	defer cp.stateMu.RUnlock()
+	cp.mu.RLock()
+	defer cp.mu.RUnlock()
 
 	return cp.nextHeight
 }
 
 func (cp *ChainPoller) setNextHeight(height uint64) {
-	cp.stateMu.Lock()
-	defer cp.stateMu.Unlock()
+	cp.mu.Lock()
+	defer cp.mu.Unlock()
 	cp.nextHeight = height
 }
 
