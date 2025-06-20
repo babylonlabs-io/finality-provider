@@ -24,11 +24,11 @@ var (
 
 const (
 	maxFailedCycles   = 20
-	defaultBufferSize = 100 // Channel buffer size
+	defaultBufferSize = 100
 )
 
+// ChainPoller is responsible for polling the blockchain for new blocks and sending them to a processing channel.
 type ChainPoller struct {
-	// State protection
 	stateMu sync.RWMutex
 
 	wg        sync.WaitGroup
@@ -42,7 +42,6 @@ type ChainPoller struct {
 
 	nextHeight uint64
 
-	// Channel-based block delivery
 	blockChan     chan *types.BlockInfo
 	blockChanSize int
 }
@@ -84,7 +83,7 @@ func (cp *ChainPoller) TryNextBlock() (types.BlockDescription, bool) {
 
 		return block, true
 	default:
-		return nil, false // non-blocking
+		return nil, false
 	}
 }
 
@@ -108,6 +107,7 @@ func (cp *ChainPoller) NextBlock(ctx context.Context) (types.BlockDescription, e
 	}
 }
 
+// SetStartHeight configures the starting block height for the chain poller and begins polling from this height.
 func (cp *ChainPoller) SetStartHeight(ctx context.Context, height uint64) error {
 	if cp.isStarted.Swap(true) {
 		return fmt.Errorf("the chain poller has already started")
@@ -132,20 +132,15 @@ func (cp *ChainPoller) SetStartHeight(ctx context.Context, height uint64) error 
 	return nil
 }
 
+// Stop stops the chain poller, waits for the polling goroutine to finish, and closes the block channel.
 func (cp *ChainPoller) Stop() error {
 	if !cp.isStarted.Swap(false) {
 		return fmt.Errorf("the chain poller has already stopped")
 	}
 
 	cp.logger.Info("stopping the chain poller")
-
-	// Signal shutdown
 	close(cp.quit)
-
-	// Wait for polling goroutine to finish
 	cp.wg.Wait()
-
-	// Close the block channel to signal no more blocks
 	close(cp.blockChan)
 
 	// Close connection
@@ -160,10 +155,7 @@ func (cp *ChainPoller) Stop() error {
 	return nil
 }
 
-func (cp *ChainPoller) IsRunning() bool {
-	return cp.isStarted.Load()
-}
-
+// waitForActivation waits until BTC staking is activated, adjusting the start height if necessary.
 func (cp *ChainPoller) waitForActivation(ctx context.Context) error {
 	cp.logger.Info("waiting for BTC staking activation")
 	ticker := time.NewTicker(cp.cfg.PollInterval)
@@ -199,6 +191,7 @@ func (cp *ChainPoller) waitForActivation(ctx context.Context) error {
 	}
 }
 
+// pollChain continuously polls the blockchain for new blocks and processes them until the context or quit signal is triggered.
 func (cp *ChainPoller) pollChain(ctx context.Context) {
 	defer cp.wg.Done()
 
@@ -253,6 +246,9 @@ func (cp *ChainPoller) pollCycle(ctx context.Context) error {
 	return cp.tryPollChain(ctx, latestBlockHeight, blockToRetrieve)
 }
 
+// tryPollChain attempts to fetch a range of blocks from the chain and sends them to a processing channel with backpressure handling.
+// It handles cases where the block range starts beyond the latest height, matches the latest height, or spans multiple heights.
+// If the poller or context is terminated, it ensures proper cleanup and error handling.
 func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, blockToRetrieve uint64) error {
 	var blocks []*types.BlockInfo
 	var err error
