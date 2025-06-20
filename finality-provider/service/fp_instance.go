@@ -217,7 +217,6 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 // processAndSubmitSignatures handles the logic of fetching blocks, checking jail status,
 // processing them, and submitting signatures
 func (fp *FinalityProviderInstance) processAndSubmitSignatures() {
-	// TODO(Lazar955): use context with timeout
 	pollerBlocks := fp.getBatchBlocksFromPoller()
 	if len(pollerBlocks) == 0 {
 		return

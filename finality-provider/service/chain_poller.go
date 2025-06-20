@@ -78,6 +78,10 @@ func (cp *ChainPoller) TryNextBlock() (types.BlockDescription, bool) {
 
 	select {
 	case block := <-cp.blockChan:
+		if block == nil {
+			return nil, false
+		}
+
 		return block, true
 	default:
 		return nil, false // non-blocking
@@ -92,6 +96,10 @@ func (cp *ChainPoller) NextBlock(ctx context.Context) (types.BlockDescription, e
 
 	select {
 	case block := <-cp.blockChan:
+		if block == nil {
+			return nil, fmt.Errorf("received nil block from channel")
+		}
+
 		return block, nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -111,6 +119,8 @@ func (cp *ChainPoller) SetStartHeight(ctx context.Context, height uint64) error 
 
 	cp.stateMu.Lock()
 	cp.nextHeight = height
+	cp.quit = make(chan struct{})
+	cp.blockChan = make(chan *types.BlockInfo, cp.blockChanSize)
 	cp.stateMu.Unlock()
 
 	cp.wg.Add(1)
@@ -277,25 +287,23 @@ func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, bloc
 	// Send blocks to channel with backpressure handling
 	for _, block := range blocks {
 		select {
+		case <-cp.quit:
+			return fmt.Errorf("poller shutting down")
 		case cp.blockChan <- block:
 			// Block sent successfully
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-cp.quit:
-			return fmt.Errorf("poller shutting down")
 		default:
-			// Channel is full - this provides natural backpressure
 			cp.logger.Warn("block channel is full, consumer may be slow",
 				zap.Int("buffer_used", len(cp.blockChan)),
 				zap.Int("buffer_capacity", cp.blockChanSize),
 				zap.Uint64("block_height", block.Height))
 
-			// Try with timeout to prevent permanent blocking
 			select {
 			case cp.blockChan <- block:
 				cp.logger.Debug("block sent after backpressure delay",
 					zap.Uint64("block_height", block.Height))
-			case <-time.After(time.Second * 30): // Configurable timeout
+			case <-time.After(time.Second * 30):
 				return fmt.Errorf("failed to send block %d: channel full for too long", block.Height)
 			case <-ctx.Done():
 				return ctx.Err()
