@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/avast/retry-go/v4"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -223,7 +224,10 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	require.NoError(t, err)
 	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, eotsCli, fpdb, tm.logger)
+
+	fpMetrics := metrics.NewFpMetrics()
+	poller := service.NewChainPoller(tm.logger, cfg.PollerConfig, bcc, fpMetrics)
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, eotsCli, poller, fpMetrics, fpdb, tm.logger)
 	require.NoError(t, err)
 	err = fpApp.Start()
 	require.NoError(t, err)
