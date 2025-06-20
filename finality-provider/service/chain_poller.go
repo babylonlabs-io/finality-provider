@@ -142,6 +142,9 @@ func (cp *ChainPoller) Stop() error {
 
 	cp.logger.Info("stopping the chain poller")
 	close(cp.quit)
+
+	cp.wg.Wait()
+
 	close(cp.blockChan)
 
 	// Close connection
@@ -150,7 +153,6 @@ func (cp *ChainPoller) Stop() error {
 
 		return err
 	}
-	cp.wg.Wait()
 
 	cp.logger.Info("the chain poller is successfully stopped")
 
