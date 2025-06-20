@@ -27,6 +27,8 @@ const (
 	defaultBufferSize = 100
 )
 
+var _ types.BlockPoller[types.BlockDescription] = (*ChainPoller)(nil)
+
 // ChainPoller is responsible for polling the blockchain for new blocks and sending them to a processing channel.
 type ChainPoller struct {
 	stateMu sync.RWMutex
