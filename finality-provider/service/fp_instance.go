@@ -125,6 +125,7 @@ func (fp *FinalityProviderInstance) Start() error {
 	fp.logger.Info("starting the finality provider instance",
 		zap.String("pk", fp.GetBtcPkHex()), zap.Uint64("height", startHeight))
 
+	// todo(lazar): will fix this in next PRs
 	if err := fp.poller.SetStartHeight(context.Background(), startHeight); err != nil {
 		return fmt.Errorf("failed to start the poller with start height %d: %w", startHeight, err)
 	}
