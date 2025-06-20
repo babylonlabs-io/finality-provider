@@ -59,7 +59,7 @@ func FuzzChainPoller_Start(f *testing.F) {
 		}()
 
 		for i := startHeight; i <= endHeight; i++ {
-			time.Sleep(15 * time.Millisecond)
+			time.Sleep(50 * time.Millisecond)
 			info, _ := poller.TryNextBlock()
 			require.Equal(t, i, info.GetHeight())
 		}
