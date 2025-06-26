@@ -793,7 +793,6 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 		if fp.cfg.ContextSigningHeight > b.Height {
 			// todo(lazar): call signing context fcn
 			_ = fp.fpState.sfp.ChainID
-			_ = fp.fpState.sfp.BtcPk
 			msgToSign = getMsgToSignForVote("todo", b.Height, b.Hash)
 		} else {
 			msgToSign = getMsgToSignForVote("", b.Height, b.Hash)
