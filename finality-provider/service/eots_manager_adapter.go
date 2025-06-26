@@ -64,6 +64,9 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 	)
 
 	if fp.cfg.ContextSigningHeight > startHeight {
+		// todo(lazar): call signing context fcn
+		_ = fp.fpState.sfp.ChainID
+		_ = fp.fpState.sfp.BtcPk
 		hash, err = getHashToSignForCommitPubRandWithContext("todo", startHeight, numPubRand, commitment)
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
@@ -92,6 +95,9 @@ func (fp *FinalityProviderInstance) SignFinalitySig(b *types.BlockInfo) (*bbntyp
 	// build proper finality signature request
 	var msgToSign []byte
 	if fp.cfg.ContextSigningHeight > b.Height {
+		// todo(lazar): call signing context fcn
+		_ = fp.fpState.sfp.ChainID
+		_ = fp.fpState.sfp.BtcPk
 		msgToSign = getMsgToSignForVote("todo", b.Height, b.Hash)
 	} else {
 		msgToSign = getMsgToSignForVote("", b.Height, b.Hash)
