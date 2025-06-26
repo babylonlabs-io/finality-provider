@@ -74,6 +74,8 @@ type Config struct {
 	RPCListener string `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
 
 	Metrics *metrics.Config `group:"metrics" namespace:"metrics"`
+
+	ContextSigningHeight uint64 `long:"contextsigningheight" description:"The height at which the context signing will start"`
 }
 
 func DefaultConfigWithHome(homePath string) Config {
