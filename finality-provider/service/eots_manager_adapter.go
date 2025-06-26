@@ -70,7 +70,6 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
 		}
-		return fp.em.SignSchnorrSig(fp.btcPk.MustMarshal(), hash)
 	} else {
 		hash, err = getHashToSignForCommitPubRandWithContext("", startHeight, numPubRand, commitment)
 		if err != nil {
