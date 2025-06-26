@@ -789,7 +789,16 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 	}
 
 	eotsSignerFunc := func(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
-		msgToSign := getMsgToSignForVote(b.Height, b.Hash)
+		var msgToSign []byte
+		if fp.cfg.ContextSigningHeight > b.Height {
+			// todo(lazar): call signing context fcn
+			_ = fp.fpState.sfp.ChainID
+			_ = fp.fpState.sfp.BtcPk
+			msgToSign = getMsgToSignForVote("todo", b.Height, b.Hash)
+		} else {
+			msgToSign = getMsgToSignForVote("", b.Height, b.Hash)
+		}
+
 		sig, err := fp.em.UnsafeSignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign EOTS: %w", err)
