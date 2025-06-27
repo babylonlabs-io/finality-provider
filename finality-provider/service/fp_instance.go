@@ -732,11 +732,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []types
 		// If signature is valid, append all corresponding items
 		// TODO(Lazar955): will change this type to interface BlockDescription but for now if we do it we need to
 		// change signature of SubmitBatchFinalitySigs and all implementing methods
-		validBlocks = append(validBlocks, &types.BlockInfo{
-			Height:    b.GetHeight(),
-			Hash:      b.GetHash(),
-			Finalized: b.IsFinalized(),
-		})
+		validBlocks = append(validBlocks, types.NewBlockInfo(b.GetHeight(), b.GetHash(), b.IsFinalized()))
 		validPrList = append(validPrList, prList[i])
 		validProofList = append(validProofList, proofBytesList[i])
 		validSigList = append(validSigList, eotsSig.ToModNScalar())
@@ -782,14 +778,14 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 	b *types.BlockInfo, useSafeEOTSFunc bool,
 ) (*types.TxResponse, *btcec.PrivateKey, error) {
 	// get public randomness
-	prList, err := fp.GetPubRandList(b.Height, 1)
+	prList, err := fp.GetPubRandList(b.GetHeight(), 1)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get public randomness list: %w", err)
 	}
 	pubRand := prList[0]
 
 	// get proof
-	proofBytes, err := fp.pubRandState.getPubRandProof(fp.btcPk.MustMarshal(), fp.GetChainID(), b.Height)
+	proofBytes, err := fp.pubRandState.getPubRandProof(fp.btcPk.MustMarshal(), fp.GetChainID(), b.GetHeight())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %w", err)
 	}
@@ -967,7 +963,7 @@ func (fp *FinalityProviderInstance) latestFinalizedHeightWithRetry() (uint64, er
 			// no finalized block yet
 			return nil
 		}
-		height = block.Height
+		height = block.GetHeight()
 
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {

@@ -5,13 +5,21 @@ import sdk "github.com/cosmos/cosmos-sdk/types"
 var _ BlockDescription = (*BlockInfo)(nil)
 
 type BlockInfo struct {
-	Height    uint64
+	height    uint64
 	Hash      []byte
 	Finalized bool
 }
 
+func NewBlockInfo(height uint64, hash []byte, finalized bool) *BlockInfo {
+	return &BlockInfo{
+		height:    height,
+		Hash:      hash,
+		Finalized: finalized,
+	}
+}
+
 func (b BlockInfo) GetHeight() uint64 {
-	return b.Height
+	return b.height
 }
 
 func (b BlockInfo) GetHash() []byte {
@@ -23,5 +31,5 @@ func (b BlockInfo) IsFinalized() bool {
 }
 
 func (b BlockInfo) MsgToSign() []byte {
-	return append(sdk.Uint64ToBigEndian(b.Height), b.Hash...)
+	return append(sdk.Uint64ToBigEndian(b.height), b.Hash...)
 }

@@ -297,14 +297,14 @@ func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, bloc
 			cp.logger.Warn("block channel is full, consumer may be slow",
 				zap.Int("buffer_used", len(cp.blockChan)),
 				zap.Int("buffer_capacity", cp.blockChanSize),
-				zap.Uint64("block_height", block.Height))
+				zap.Uint64("block_height", block.GetHeight()))
 
 			select {
 			case cp.blockChan <- block:
 				cp.logger.Debug("block sent after backpressure delay",
-					zap.Uint64("block_height", block.Height))
+					zap.Uint64("block_height", block.GetHeight()))
 			case <-time.After(time.Second * 30):
-				return fmt.Errorf("failed to send block %d: channel full for too long", block.Height)
+				return fmt.Errorf("failed to send block %d: channel full for too long", block.GetHeight())
 			case <-ctx.Done():
 				return ctx.Err()
 			case <-cp.quit:
@@ -314,12 +314,12 @@ func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, bloc
 	}
 
 	lastBlock := blocks[len(blocks)-1]
-	cp.setNextHeight(lastBlock.Height + 1)
-	cp.metrics.RecordLastPolledHeight(lastBlock.Height)
+	cp.setNextHeight(lastBlock.GetHeight() + 1)
+	cp.metrics.RecordLastPolledHeight(lastBlock.GetHeight())
 
 	cp.logger.Debug("sent blocks to channel",
 		zap.Uint64("start_height", blockToRetrieve),
-		zap.Uint64("end_height", lastBlock.Height),
+		zap.Uint64("end_height", lastBlock.GetHeight()),
 		zap.Int("block_count", len(blocks)))
 
 	return nil

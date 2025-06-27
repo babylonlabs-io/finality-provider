@@ -29,9 +29,7 @@ func FuzzChainPoller_Start(f *testing.F) {
 		startHeight := currentHeight + 1
 		endHeight := startHeight + uint64(r.Int63n(10)+1)
 
-		currentBlockRes := &types.BlockInfo{
-			Height: endHeight,
-		}
+		currentBlockRes := types.NewBlockInfo(endHeight, nil, false)
 		ctl := gomock.NewController(t)
 		mockConsumerController := mocks.NewMockConsumerController(ctl)
 		mockConsumerController.EXPECT().Close().Return(nil).AnyTimes()
@@ -41,9 +39,9 @@ func FuzzChainPoller_Start(f *testing.F) {
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
 
 		for i := startHeight; i <= endHeight; i++ {
-			resBlocks := []*types.BlockInfo{{
-				Height: i,
-			}}
+			resBlocks := []*types.BlockInfo{
+				types.NewBlockInfo(i, nil, false),
+			}
 
 			mockConsumerController.EXPECT().QueryBlocks(i, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
 		}

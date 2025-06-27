@@ -148,10 +148,7 @@ func (r *rpcServer) AddFinalitySignature(_ context.Context, req *proto.AddFinali
 			return nil, errors.New(errMsg)
 		}
 
-		b := &types.BlockInfo{
-			Height: req.Height,
-			Hash:   req.AppHash,
-		}
+		b := types.NewBlockInfo(req.GetHeight(), req.GetAppHash(), false)
 
 		txRes, privKey, err := fpi.TestSubmitFinalitySignatureAndExtractPrivKey(b, req.CheckDoubleSign)
 		if err != nil {

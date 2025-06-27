@@ -27,10 +27,7 @@ func PrepareMockedConsumerControllerWithTxHash(t *testing.T, r *rand.Rand, start
 	mockConsumerController := mocks.NewMockConsumerController(ctl)
 
 	for i := startHeight; i <= currentHeight; i++ {
-		resBlock := &types.BlockInfo{
-			Height: i,
-			Hash:   GenRandomByteArray(r, 32),
-		}
+		resBlock := types.NewBlockInfo(i, GenRandomByteArray(r, 32), true)
 		mockConsumerController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
 	}
 
