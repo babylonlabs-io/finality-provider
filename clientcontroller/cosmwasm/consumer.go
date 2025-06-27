@@ -140,10 +140,10 @@ func (wc *CosmwasmConsumerController) SubmitFinalitySig(
 	msg := ExecMsg{
 		SubmitFinalitySignature: &SubmitFinalitySignature{
 			FpPubkeyHex: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex(),
-			Height:      block.Height,
+			Height:      block.GetHeight(),
 			PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(pubRand).MustMarshal(),
 			Proof:       cmtProof,
-			BlockHash:   block.Hash,
+			BlockHash:   block.GetHash(),
 			Signature:   bbntypes.NewSchnorrEOTSSigFromModNScalar(sig).MustMarshal(),
 		},
 	}
@@ -179,10 +179,10 @@ func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 		msg := ExecMsg{
 			SubmitFinalitySignature: &SubmitFinalitySignature{
 				FpPubkeyHex: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex(),
-				Height:      b.Height,
+				Height:      b.GetHeight(),
 				PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(pubRandList[i]).MustMarshal(),
 				Proof:       cmtProof,
-				BlockHash:   b.Hash,
+				BlockHash:   b.GetHash(),
 				Signature:   bbntypes.NewSchnorrEOTSSigFromModNScalar(sigs[i]).MustMarshal(),
 			},
 		}
@@ -292,10 +292,8 @@ func (wc *CosmwasmConsumerController) QueryBlock(height uint64) (*fptypes.BlockI
 		return nil, err
 	}
 
-	return &fptypes.BlockInfo{
-		Height: uint64(block.Block.Header.Height), // #nosec G115
-		Hash:   block.Block.Header.AppHash,
-	}, nil
+	// #nosec G115
+	return fptypes.NewBlockInfo(uint64(block.Block.Header.Height), block.Block.Header.AppHash, false), nil
 }
 
 // QueryLastPublicRandCommit returns the last public randomness commitments
@@ -387,7 +385,7 @@ func (wc *CosmwasmConsumerController) QueryLatestBlockHeight() (uint64, error) {
 		return 0, err
 	}
 
-	return block.Height, nil
+	return block.GetHeight(), nil
 }
 
 func (wc *CosmwasmConsumerController) QueryFinalitySignature(fpBtcPkHex string, height uint64) (*FinalitySignatureResponse, error) {
@@ -497,11 +495,7 @@ func (wc *CosmwasmConsumerController) queryLatestBlocks(startAfter, limit *uint6
 	// Process the blocks and convert them to BlockInfo
 	var blocks []*fptypes.BlockInfo
 	for _, b := range resp.Blocks {
-		block := &fptypes.BlockInfo{
-			Height: b.Height,
-			Hash:   b.AppHash,
-		}
-		blocks = append(blocks, block)
+		blocks = append(blocks, fptypes.NewBlockInfo(b.Height, b.AppHash, b.Finalized))
 	}
 
 	return blocks, nil
@@ -519,10 +513,12 @@ func (wc *CosmwasmConsumerController) queryCometBestBlock() (*fptypes.BlockInfo,
 
 	// Returning response directly, if header with specified number did not exist
 	// at request will contain nil header
-	return &fptypes.BlockInfo{
-		Height: uint64(chainInfo.BlockMetas[0].Header.Height), // #nosec G115
-		Hash:   chainInfo.BlockMetas[0].Header.AppHash,
-	}, nil
+	// #nosec G115
+	return fptypes.NewBlockInfo(
+		uint64(chainInfo.BlockMetas[0].Header.Height),
+		chainInfo.BlockMetas[0].Header.AppHash,
+		false,
+	), nil
 }
 
 func (wc *CosmwasmConsumerController) queryCometBlocksInRange(startHeight, endHeight uint64) ([]*fptypes.BlockInfo, error) {
@@ -547,16 +543,13 @@ func (wc *CosmwasmConsumerController) queryCometBlocksInRange(startHeight, endHe
 	// Process the blocks and convert them to BlockInfo
 	var blocks []*fptypes.BlockInfo
 	for _, blockMeta := range chainInfo.BlockMetas {
-		block := &fptypes.BlockInfo{
-			Height: uint64(blockMeta.Header.Height), // #nosec G115
-			Hash:   blockMeta.Header.AppHash,
-		}
-		blocks = append(blocks, block)
+		// #nosec G115
+		blocks = append(blocks, fptypes.NewBlockInfo(uint64(blockMeta.Header.Height), blockMeta.Header.AppHash, false))
 	}
 
 	// Sort the blocks by height in ascending order
 	sort.Slice(blocks, func(i, j int) bool {
-		return blocks[i].Height < blocks[j].Height
+		return blocks[i].GetHeight() < blocks[j].GetHeight()
 	})
 
 	return blocks, nil

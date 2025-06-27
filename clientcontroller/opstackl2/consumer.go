@@ -224,7 +224,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 		msg := SubmitFinalitySignatureMsg{
 			SubmitFinalitySignature: SubmitFinalitySignatureMsgParams{
 				FpPubkeyHex: fpPkHex,
-				Height:      block.Height,
+				Height:      block.GetHeight(),
 				PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(pubRandList[i]).MustMarshal(),
 				Proof:       ConvertProof(cmtProof),
 				BlockHash:   block.Hash,
@@ -255,8 +255,8 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 	cc.logger.Debug(
 		"Successfully submitted finality signatures in a batch",
 		zap.String("fp_pk_hex", fpPkHex),
-		zap.Uint64("start_height", blocks[0].Height),
-		zap.Uint64("end_height", blocks[len(blocks)-1].Height),
+		zap.Uint64("start_height", blocks[0].GetHeight()),
+		zap.Uint64("end_height", blocks[len(blocks)-1].GetHeight()),
 	)
 
 	return &types.TxResponse{TxHash: res.TxHash}, nil
@@ -343,10 +343,7 @@ func (cc *OPStackL2ConsumerController) QueryLatestFinalizedBlock() (*types.Block
 		return nil, nil
 	}
 
-	return &types.BlockInfo{
-		Height: l2Block.Number.Uint64(),
-		Hash:   l2Block.Hash().Bytes(),
-	}, nil
+	return types.NewBlockInfo(l2Block.Number.Uint64(), l2Block.Hash().Bytes(), false), nil
 }
 
 func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types.BlockInfo, error) {
@@ -386,10 +383,7 @@ func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight uint64
 	// convert to types.BlockInfo
 	blocks := make([]*types.BlockInfo, len(blockHeaders))
 	for i, header := range blockHeaders {
-		blocks[i] = &types.BlockInfo{
-			Height: header.Number.Uint64(),
-			Hash:   header.Hash().Bytes(),
-		}
+		blocks[i] = types.NewBlockInfo(header.Number.Uint64(), header.Hash().Bytes(), false)
 	}
 	cc.logger.Debug(
 		"Successfully batch query blocks",
@@ -416,10 +410,7 @@ func (cc *OPStackL2ConsumerController) QueryBlock(height uint64) (*types.BlockIn
 		zap.String("block_hash", hex.EncodeToString(blockHashBytes)),
 	)
 
-	return &types.BlockInfo{
-		Height: height,
-		Hash:   blockHashBytes,
-	}, nil
+	return types.NewBlockInfo(height, blockHashBytes, false), nil
 }
 
 // Note: this is specific to the OPStackL2ConsumerController and only used for testing
@@ -438,7 +429,7 @@ func (cc *OPStackL2ConsumerController) QueryIsBlockFinalized(height uint64) (boo
 	if l2Block == nil {
 		return false, nil
 	}
-	if height > l2Block.Height {
+	if height > l2Block.GetHeight() {
 		return false, nil
 	}
 
