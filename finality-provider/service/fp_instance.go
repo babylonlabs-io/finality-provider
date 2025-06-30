@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"math"
 	"strings"
 	"sync"
@@ -792,8 +793,8 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 		var msgToSign []byte
 		if fp.cfg.ContextSigningHeight > b.Height {
 			// todo(lazar): call signing context fcn
-			_ = fp.fpState.sfp.ChainID
-			msgToSign = getMsgToSignForVote("todo", b.Height, b.Hash)
+			signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+			msgToSign = getMsgToSignForVote(signCtx, b.Height, b.Hash)
 		} else {
 			msgToSign = getMsgToSignForVote("", b.Height, b.Hash)
 		}

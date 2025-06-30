@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"strings"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -65,8 +66,8 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 
 	if fp.cfg.ContextSigningHeight > startHeight {
 		// todo(lazar): call signing context fcn
-		_ = fp.fpState.sfp.ChainID
-		hash, err = getHashToSignForCommitPubRandWithContext("todo", startHeight, numPubRand, commitment)
+		signCtx := signingcontext.FpRandCommitContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
 		}
@@ -94,8 +95,8 @@ func (fp *FinalityProviderInstance) SignFinalitySig(b *types.BlockInfo) (*bbntyp
 	var msgToSign []byte
 	if fp.cfg.ContextSigningHeight > b.Height {
 		// todo(lazar): call signing context fcn
-		_ = fp.fpState.sfp.ChainID
-		msgToSign = getMsgToSignForVote("todo", b.Height, b.Hash)
+		signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+		msgToSign = getMsgToSignForVote(signCtx, b.Height, b.Hash)
 	} else {
 		msgToSign = getMsgToSignForVote("", b.Height, b.Hash)
 	}
