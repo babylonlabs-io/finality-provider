@@ -3,9 +3,10 @@ package service
 import (
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"strings"
 	"sync"
+
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
@@ -367,7 +368,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 
 	var signCtx string
 	if app.fpIns != nil && app.config.ContextSigningHeight > app.fpIns.poller.NextHeight()-1 {
-		signCtx = signingcontext.FpPopContextV0(chainID, signingcontext.AccFinality.String())
+		signCtx = signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String())
 	}
 
 	pop, err := app.CreatePop(fpAddr, eotsPk, signCtx)

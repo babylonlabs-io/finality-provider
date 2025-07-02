@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+
+	stakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 )
@@ -17,7 +19,8 @@ const (
 )
 
 var (
-	AccFinality = authtypes.NewModuleAddress(finalitytypes.ModuleName)
+	AccFinality   = authtypes.NewModuleAddress(finalitytypes.ModuleName)
+	AccBTCStaking = authtypes.NewModuleAddress(stakingtypes.ModuleName)
 )
 
 func btcStakingV0Context(operationTag string, chainID string, address string) string {
