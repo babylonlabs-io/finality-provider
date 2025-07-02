@@ -182,6 +182,7 @@ func genRandomBtcDelegation() (*bstypes.Params, cosmwasm.ActiveBtcDelegation) {
 		net,
 		fpBTCPKs,
 		delSK,
+		"",
 		covenantSigners,
 		covenantPKs,
 		covenantQuorum,
@@ -268,7 +269,7 @@ func GenCommitPubRandListMsg(r *rand.Rand, fpSk *btcec.PrivateKey, startHeight u
 		NumPubRand:  numPubRand,
 		Commitment:  randListInfo.Commitment,
 	}
-	hash, err := msg.HashToSign()
+	hash, err := msg.HashToSign("")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -338,7 +339,7 @@ func newMsgAddFinalitySig(
 		BlockAppHash: blockAppHash,
 		FinalitySig:  nil,
 	}
-	msgToSign := msg.MsgToSign()
+	msgToSign := msg.MsgToSign("")
 	sig, err := eots.Sign(sk, randListInfo.SRList[idx], msgToSign)
 	if err != nil {
 		return nil, err
