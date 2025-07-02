@@ -10,15 +10,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/babylonlabs-io/babylon/btcstaking"
-	txformat "github.com/babylonlabs-io/babylon/btctxformatter"
-	asig "github.com/babylonlabs-io/babylon/crypto/schnorr-adaptor-signature"
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
-	btcctypes "github.com/babylonlabs-io/babylon/x/btccheckpoint/types"
-	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
-	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	ckpttypes "github.com/babylonlabs-io/babylon/x/checkpointing/types"
+	"github.com/babylonlabs-io/babylon/v3/btcstaking"
+	txformat "github.com/babylonlabs-io/babylon/v3/btctxformatter"
+	asig "github.com/babylonlabs-io/babylon/v3/crypto/schnorr-adaptor-signature"
+	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	btcctypes "github.com/babylonlabs-io/babylon/v3/x/btccheckpoint/types"
+	btclctypes "github.com/babylonlabs-io/babylon/v3/x/btclightclient/types"
+	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	ckpttypes "github.com/babylonlabs-io/babylon/v3/x/checkpointing/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/wire"
@@ -35,6 +35,7 @@ import (
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/testutil"
@@ -88,7 +89,8 @@ func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.Publ
 	stakerAddr := tm.BBNClient.GetKeyAddress()
 
 	// proof-of-possession
-	pop, err := datagen.NewPoPBTC(stakerAddr, delBtcPrivKey)
+	fpPopContext := signingcontext.FpPopContextV0(e2eutils.ChainID, signingcontext.AccBTCStaking.String())
+	pop, err := datagen.NewPoPBTC(fpPopContext, stakerAddr, delBtcPrivKey)
 	require.NoError(t, err)
 
 	// create and insert BTC headers which include the staking tx to get staking tx info

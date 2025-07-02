@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	stakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	stakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 )
 

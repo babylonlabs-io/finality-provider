@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/babylonlabs-io/babylon/client/babylonclient"
+	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 
 	sdkErr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
-	bbnclient "github.com/babylonlabs-io/babylon/client/client"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
-	btcctypes "github.com/babylonlabs-io/babylon/x/btccheckpoint/types"
-	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	bsctypes "github.com/babylonlabs-io/babylon/x/btcstkconsumer/types"
+	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	btcctypes "github.com/babylonlabs-io/babylon/v3/x/btccheckpoint/types"
+	btclctypes "github.com/babylonlabs-io/babylon/v3/x/btclightclient/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	bsctypes "github.com/babylonlabs-io/babylon/v3/x/btcstkconsumer/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil"
@@ -469,11 +469,11 @@ func (bc *BabylonController) InsertSpvProofs(submitter string, proofs []*btcctyp
 // RegisterConsumerChain registers a consumer chain via a MsgRegisterChain to Babylon
 func (bc *BabylonController) RegisterConsumerChain(id, name, description, ethL2FinalityContractAddress string) (*types.TxResponse, error) {
 	msg := &bsctypes.MsgRegisterConsumer{
-		Signer:                       bc.MustGetTxSigner(),
-		ConsumerId:                   id,
-		ConsumerName:                 name,
-		ConsumerDescription:          description,
-		EthL2FinalityContractAddress: ethL2FinalityContractAddress,
+		Signer:                        bc.MustGetTxSigner(),
+		ConsumerId:                    id,
+		ConsumerName:                  name,
+		ConsumerDescription:           description,
+		RollupFinalityContractAddress: ethL2FinalityContractAddress,
 	}
 
 	res, err := bc.reliablySendMsg(msg, emptyErrs, emptyErrs)

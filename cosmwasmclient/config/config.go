@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/babylonlabs-io/babylon/client/babylonclient"
+	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
 )
 
 // CosmwasmConfig defines configuration for the Babylon client
