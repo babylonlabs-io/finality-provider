@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"strings"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -36,8 +37,14 @@ func (fp *FinalityProviderInstance) GetPubRandList(startHeight uint64, numPubRan
 	return pubRandList, nil
 }
 
-func getHashToSignForCommitPubRand(startHeight uint64, numPubRand uint64, commitment []byte) ([]byte, error) {
+func getHashToSignForCommitPubRandWithContext(signingContext string, startHeight, numPubRand uint64, commitment []byte) ([]byte, error) {
 	hasher := tmhash.New()
+	if len(signingContext) > 0 {
+		if _, err := hasher.Write([]byte(signingContext)); err != nil {
+			return nil, err
+		}
+	}
+
 	if _, err := hasher.Write(sdk.Uint64ToBigEndian(startHeight)); err != nil {
 		return nil, err
 	}
@@ -52,22 +59,48 @@ func getHashToSignForCommitPubRand(startHeight uint64, numPubRand uint64, commit
 }
 
 func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
-	hash, err := getHashToSignForCommitPubRand(startHeight, numPubRand, commitment)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
+	var (
+		hash []byte
+		err  error
+	)
+
+	if fp.cfg.ContextSigningHeight > startHeight {
+		// todo(lazar): call signing context fcn
+		signCtx := signingcontext.FpRandCommitContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
+		}
+	} else {
+		hash, err = getHashToSignForCommitPubRandWithContext("", startHeight, numPubRand, commitment)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
+		}
 	}
 
 	// sign the message hash using the finality-provider's BTC private key
 	return fp.em.SignSchnorrSig(fp.btcPk.MustMarshal(), hash)
 }
 
-func getMsgToSignForVote(blockHeight uint64, blockHash []byte) []byte {
-	return append(sdk.Uint64ToBigEndian(blockHeight), blockHash...)
+func getMsgToSignForVote(signingContext string, blockHeight uint64, blockHash []byte) []byte {
+	if len(signingContext) == 0 {
+		return append(sdk.Uint64ToBigEndian(blockHeight), blockHash...)
+	}
+
+	return append([]byte(signingContext), append(sdk.Uint64ToBigEndian(blockHeight), blockHash...)...)
 }
 
 func (fp *FinalityProviderInstance) SignFinalitySig(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
 	// build proper finality signature request
-	msgToSign := getMsgToSignForVote(b.Height, b.Hash)
+	var msgToSign []byte
+	if fp.cfg.ContextSigningHeight > b.Height {
+		// todo(lazar): call signing context fcn
+		signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+		msgToSign = getMsgToSignForVote(signCtx, b.Height, b.Hash)
+	} else {
+		msgToSign = getMsgToSignForVote("", b.Height, b.Hash)
+	}
+
 	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
 	if err != nil {
 		if strings.Contains(err.Error(), failedPreconditionErrStr) {

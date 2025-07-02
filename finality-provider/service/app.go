@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
+
 	bbntypes "github.com/babylonlabs-io/babylon/types"
 	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
 	"github.com/cometbft/cometbft/crypto/tmhash"
@@ -363,7 +365,13 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 	if eotsPk == nil {
 		return nil, fmt.Errorf("eots pk cannot be nil")
 	}
-	pop, err := app.CreatePop(fpAddr, eotsPk)
+
+	var signCtx string
+	if app.fpIns != nil && app.config.ContextSigningHeight > app.fpIns.poller.NextHeight()-1 {
+		signCtx = signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String())
+	}
+
+	pop, err := app.CreatePop(fpAddr, eotsPk, signCtx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proof-of-possession of the finality-provider: %w", err)
 	}
@@ -483,17 +491,25 @@ func (app *FinalityProviderApp) UnjailFinalityProvider(fpPk *bbntypes.BIP340PubK
 	}
 }
 
-func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntypes.BIP340PubKey) (*bstypes.ProofOfPossessionBTC, error) {
+func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntypes.BIP340PubKey, signCtx string) (*bstypes.ProofOfPossessionBTC, error) {
 	pop := &bstypes.ProofOfPossessionBTC{
 		BtcSigType: bstypes.BTCSigType_BIP340, // by default, we use BIP-340 encoding for BTC signature
 	}
-
 	// generate pop.BtcSig = schnorr_sign(sk_BTC, hash(bbnAddress))
 	// NOTE: *schnorr.Sign has to take the hash of the message.
 	// So we have to hash the address before signing
-	hash := tmhash.Sum(fpAddress.Bytes())
+	hasher := tmhash.New()
+	if len(signCtx) > 0 {
+		if _, err := hasher.Write([]byte(signCtx)); err != nil {
+			return nil, fmt.Errorf("failed to write signing context to the hash: %w", err)
+		}
+	}
 
-	sig, err := app.eotsManager.SignSchnorrSig(fpPk.MustMarshal(), hash)
+	if _, err := hasher.Write(fpAddress.Bytes()); err != nil {
+		return nil, fmt.Errorf("failed to write fp address to the hash: %w", err)
+	}
+
+	sig, err := app.eotsManager.SignSchnorrSig(fpPk.MustMarshal(), hasher.Sum(nil))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get schnorr signature from the EOTS manager: %w", err)
 	}
