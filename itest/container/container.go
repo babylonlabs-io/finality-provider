@@ -97,6 +97,9 @@ func (m *Manager) RunBabylondResource(
 				"e2e": "babylond",
 			},
 			User: "root:root",
+			Env: []string{
+				"BABYLON_BLS_PASSWORD=password",
+			},
 			Mounts: []string{
 				fmt.Sprintf("%s/:/home/", mounthPath),
 			},
