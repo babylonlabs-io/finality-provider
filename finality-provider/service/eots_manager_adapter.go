@@ -2,8 +2,9 @@ package service
 
 import (
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"strings"
+
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -64,19 +65,27 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 		err  error
 	)
 
-	if fp.cfg.ContextSigningHeight > startHeight {
-		// todo(lazar): call signing context fcn
-		signCtx := signingcontext.FpRandCommitContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
-		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
-		}
-	} else {
-		hash, err = getHashToSignForCommitPubRandWithContext("", startHeight, numPubRand, commitment)
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
-		}
+	// Always use signing context for Babylon v3
+	signCtx := signingcontext.FpRandCommitContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+	hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
 	}
+	// TODO: check with Konrad/Lazar
+	// Original backward compatibility logic (commented out for Babylon v3):
+	// if fp.cfg.ContextSigningHeight > startHeight {
+	// 	// todo(lazar): call signing context fcn
+	// 	signCtx := signingcontext.FpRandCommitContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+	// 	hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
+	// 	}
+	// } else {
+	// 	hash, err = getHashToSignForCommitPubRandWithContext("", startHeight, numPubRand, commitment)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
+	// 	}
+	// }
 
 	// sign the message hash using the finality-provider's BTC private key
 	return fp.em.SignSchnorrSig(fp.btcPk.MustMarshal(), hash)
@@ -92,14 +101,20 @@ func getMsgToSignForVote(signingContext string, blockHeight uint64, blockHash []
 
 func (fp *FinalityProviderInstance) SignFinalitySig(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
 	// build proper finality signature request
-	var msgToSign []byte
-	if fp.cfg.ContextSigningHeight > b.Height {
-		// todo(lazar): call signing context fcn
-		signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
-		msgToSign = getMsgToSignForVote(signCtx, b.Height, b.Hash)
-	} else {
-		msgToSign = getMsgToSignForVote("", b.Height, b.Hash)
-	}
+	// Always use signing context for Babylon v3
+	signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+	msgToSign := getMsgToSignForVote(signCtx, b.Height, b.Hash)
+
+	// TODO: check with Konrad/Lazar about this
+	// Original backward compatibility logic (commented out for Babylon v3):
+	// var msgToSign []byte
+	// if fp.cfg.ContextSigningHeight > b.Height {
+	// 	// todo(lazar): call signing context fcn
+	// 	signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+	// 	msgToSign = getMsgToSignForVote(signCtx, b.Height, b.Hash)
+	// } else {
+	// 	msgToSign = getMsgToSignForVote("", b.Height, b.Hash)
+	// }
 
 	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
 	if err != nil {

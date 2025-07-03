@@ -4,11 +4,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"math"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -790,14 +791,20 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 	}
 
 	eotsSignerFunc := func(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
-		var msgToSign []byte
-		if fp.cfg.ContextSigningHeight > b.Height {
-			// todo(lazar): call signing context fcn
-			signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
-			msgToSign = getMsgToSignForVote(signCtx, b.Height, b.Hash)
-		} else {
-			msgToSign = getMsgToSignForVote("", b.Height, b.Hash)
-		}
+		// Always use signing context for Babylon v3
+		signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+		msgToSign := getMsgToSignForVote(signCtx, b.Height, b.Hash)
+
+		// TODO: check with Konrad/Lazar about this
+		// Original backward compatibility logic (commented out for Babylon v3):
+		// var msgToSign []byte
+		// if fp.cfg.ContextSigningHeight > b.Height {
+		// 	// todo(lazar): call signing context fcn
+		// 	signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+		// 	msgToSign = getMsgToSignForVote(signCtx, b.Height, b.Hash)
+		// } else {
+		// 	msgToSign = getMsgToSignForVote("", b.Height, b.Hash)
+		// }
 
 		sig, err := fp.em.UnsafeSignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
 		if err != nil {

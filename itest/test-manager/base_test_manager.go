@@ -89,8 +89,8 @@ func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.Publ
 	stakerAddr := tm.BBNClient.GetKeyAddress()
 
 	// proof-of-possession
-	fpPopContext := signingcontext.FpPopContextV0(e2eutils.ChainID, signingcontext.AccBTCStaking.String())
-	pop, err := datagen.NewPoPBTC(fpPopContext, stakerAddr, delBtcPrivKey)
+	stakerPopContext := signingcontext.StakerPopContextV0(e2eutils.ChainID, signingcontext.AccBTCStaking.String())
+	pop, err := datagen.NewPoPBTC(stakerPopContext, stakerAddr, delBtcPrivKey)
 	require.NoError(t, err)
 
 	// create and insert BTC headers which include the staking tx to get staking tx info
