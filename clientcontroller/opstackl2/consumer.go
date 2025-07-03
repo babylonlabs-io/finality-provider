@@ -8,16 +8,16 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/babylonlabs-io/babylon/client/babylonclient"
-	bbnclient "github.com/babylonlabs-io/babylon/client/client"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
+	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	bbnapp "github.com/babylonlabs-io/babylon/app"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
+	bbnapp "github.com/babylonlabs-io/babylon/v3/app"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	fgclient "github.com/babylonlabs-io/finality-gadget/client"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
@@ -34,7 +34,7 @@ import (
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"go.uber.org/zap"
 
-	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 )
 
 const (

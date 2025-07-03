@@ -12,7 +12,7 @@ import (
 	"cosmossdk.io/errors"
 	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
 	"github.com/babylonlabs-io/babylon-sdk/x/babylon/client/cli"
-	appparams "github.com/babylonlabs-io/babylon/app/params"
+	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"

@@ -8,8 +8,8 @@ import (
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 
 	"cosmossdk.io/math"
-	bbn "github.com/babylonlabs-io/babylon/types"
-	btcstktypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	bbn "github.com/babylonlabs-io/babylon/v3/types"
+	btcstktypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"

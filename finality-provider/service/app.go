@@ -8,8 +8,8 @@ import (
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 
-	bbntypes "github.com/babylonlabs-io/babylon/types"
-	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -367,9 +367,11 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 	}
 
 	var signCtx string
-	if app.fpIns != nil && app.config.ContextSigningHeight > app.fpIns.poller.NextHeight()-1 {
-		signCtx = signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String())
-	}
+	signCtx = signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String())
+	// TODO: check with Konrad/Lazar
+	// if app.fpIns != nil && app.config.ContextSigningHeight > app.fpIns.poller.NextHeight()-1 {
+	// 	signCtx = signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String())
+	// }
 
 	pop, err := app.CreatePop(fpAddr, eotsPk, signCtx)
 	if err != nil {

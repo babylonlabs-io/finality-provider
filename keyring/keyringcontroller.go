@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
+	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -13,6 +13,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
 
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
@@ -117,8 +118,10 @@ func (kc *ChainKeyringController) CreateChainKey(passphrase, hdPath, mnemonic st
 // CreatePop creates proof-of-possession of Babylon and BTC public keys
 // the input is the bytes of BTC public key used to sign
 // this requires both keys created beforehand
-func (kc *ChainKeyringController) CreatePop(fpAddr sdk.AccAddress, btcPrivKey *btcec.PrivateKey) (*bstypes.ProofOfPossessionBTC, error) {
-	return datagen.NewPoPBTC(fpAddr, btcPrivKey)
+func (kc *ChainKeyringController) CreatePop(chainID string, fpAddr sdk.AccAddress, btcPrivKey *btcec.PrivateKey) (*bstypes.ProofOfPossessionBTC, error) {
+	// Use FpPopContextV0 with the provided chain ID
+	fpPopContext := signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String())
+	return datagen.NewPoPBTC(fpPopContext, fpAddr, btcPrivKey)
 }
 
 // Address returns the address from the keyring

@@ -6,11 +6,11 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/babylonlabs-io/babylon/crypto/eots"
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bbn "github.com/babylonlabs-io/babylon/types"
-	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	"github.com/babylonlabs-io/babylon/v3/crypto/eots"
+	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
+	bbn "github.com/babylonlabs-io/babylon/v3/types"
+	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	ftypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/cosmwasm"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
@@ -182,6 +182,7 @@ func genRandomBtcDelegation() (*bstypes.Params, cosmwasm.ActiveBtcDelegation) {
 		net,
 		fpBTCPKs,
 		delSK,
+		"",
 		covenantSigners,
 		covenantPKs,
 		covenantQuorum,
@@ -268,7 +269,7 @@ func GenCommitPubRandListMsg(r *rand.Rand, fpSk *btcec.PrivateKey, startHeight u
 		NumPubRand:  numPubRand,
 		Commitment:  randListInfo.Commitment,
 	}
-	hash, err := msg.HashToSign()
+	hash, err := msg.HashToSign("")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -338,7 +339,7 @@ func newMsgAddFinalitySig(
 		BlockAppHash: blockAppHash,
 		FinalitySig:  nil,
 	}
-	msgToSign := msg.MsgToSign()
+	msgToSign := msg.MsgToSign("")
 	sig, err := eots.Sign(sk, randListInfo.SRList[idx], msgToSign)
 	if err != nil {
 		return nil, err

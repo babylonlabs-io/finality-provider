@@ -8,12 +8,13 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/babylonlabs-io/babylon/types"
+	"github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/stretchr/testify/require"
 
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 
 	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 
@@ -22,8 +23,9 @@ import (
 )
 
 var (
-	passphrase = "testpass"
-	hdPath     = ""
+	passphrase  = "testpass"
+	hdPath      = ""
+	testChainID = "test-chain"
 )
 
 // FuzzCreatePoP tests the creation of PoP
@@ -62,9 +64,12 @@ func FuzzCreatePoP(f *testing.F) {
 		fpAddr := keyInfo.AccAddress
 		fpRecord, err := em.KeyRecord(btcPk.MustMarshal())
 		require.NoError(t, err)
-		pop, err := kc.CreatePop(fpAddr, fpRecord.PrivKey)
+		pop, err := kc.CreatePop(testChainID, fpAddr, fpRecord.PrivKey)
 		require.NoError(t, err)
-		err = pop.Verify(fpAddr, btcPk, &chaincfg.SimNetParams)
+
+		// Need to use the same signing context for verification
+		fpPopContext := signingcontext.FpPopContextV0(testChainID, signingcontext.AccBTCStaking.String())
+		err = pop.Verify(fpPopContext, fpAddr, btcPk, &chaincfg.SimNetParams)
 		require.NoError(t, err)
 	})
 }

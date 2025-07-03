@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
-	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	sdkkeyring "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -294,7 +294,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
-		rndFp, err := datagen.GenRandomFinalityProvider(r)
+		rndFp, err := datagen.GenRandomFinalityProvider(r, "")
 		require.NoError(t, err)
 
 		// Create randomized config

@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
+	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/stretchr/testify/require"
 

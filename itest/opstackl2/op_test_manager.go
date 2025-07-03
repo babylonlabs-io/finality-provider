@@ -13,7 +13,7 @@ import (
 	"time"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
