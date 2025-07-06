@@ -32,3 +32,9 @@ build/
 dist/
 
 *.swp
+
+# Local directories for testing Finality Providers and EOTS
+anvilFpHome/
+anvilEotsHome/
+babylonFpHome/
+babylonEotsHome/

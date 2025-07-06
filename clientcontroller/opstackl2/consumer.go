@@ -18,7 +18,6 @@ import (
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	bbnapp "github.com/babylonlabs-io/babylon/app"
 	bbntypes "github.com/babylonlabs-io/babylon/types"
-	fgclient "github.com/babylonlabs-io/finality-gadget/client"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
 	cwconfig "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
@@ -447,28 +446,8 @@ func (cc *OPStackL2ConsumerController) QueryIsBlockFinalized(height uint64) (boo
 
 // QueryActivatedHeight returns the L2 block number at which the finality gadget is activated.
 func (cc *OPStackL2ConsumerController) QueryActivatedHeight() (uint64, error) {
-	finalityGadgetClient, err := fgclient.NewFinalityGadgetGrpcClient(cc.Cfg.BabylonFinalityGadgetRpc)
-	if err != nil {
-		cc.logger.Error("failed to initialize Babylon Finality Gadget Grpc client", zap.Error(err))
-
-		return math.MaxUint64, err
-	}
-
-	activatedTimestamp, err := finalityGadgetClient.QueryBtcStakingActivatedTimestamp()
-	if err != nil {
-		cc.logger.Error("failed to query BTC staking activate timestamp", zap.Error(err))
-
-		return math.MaxUint64, err
-	}
-
-	l2BlockNumber, err := cc.GetBlockNumberByTimestamp(context.Background(), activatedTimestamp)
-	if err != nil {
-		cc.logger.Error("failed to convert L2 block number from the given BTC staking activation timestamp", zap.Error(err))
-
-		return math.MaxUint64, err
-	}
-
-	return l2BlockNumber, nil
+	// TODO(babylonlabs-io/finality-provider#503): Replace forced return with proper activation height logic without relying on finality gadget
+	return 0, nil
 }
 
 // QueryLatestBlockHeight gets the latest L2 block number from a RPC call
