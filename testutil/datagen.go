@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/crypto/eots"
@@ -90,14 +90,10 @@ func GenValidSlashingRate(r *rand.Rand) sdkmath.LegacyDec {
 	return sdkmath.LegacyNewDecWithPrec(int64(datagen.RandomInt(r, 41)+10), 2)
 }
 
-func GenBlocks(r *rand.Rand, startHeight, endHeight uint64) []*types.BlockInfo {
-	blocks := make([]*types.BlockInfo, 0)
+func GenBlocksDesc(r *rand.Rand, startHeight, endHeight uint64) []types.BlockDescription {
+	blocks := make([]types.BlockDescription, 0)
 	for i := startHeight; i <= endHeight; i++ {
-		b := &types.BlockInfo{
-			Height: i,
-			Hash:   datagen.GenRandomByteArray(r, 32),
-		}
-		blocks = append(blocks, b)
+		blocks = append(blocks, types.NewBlockInfo(i, datagen.GenRandomByteArray(r, 32), false))
 	}
 
 	return blocks

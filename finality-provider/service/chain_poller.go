@@ -1,18 +1,18 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
-
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
 )
 
 var (
@@ -23,20 +23,29 @@ var (
 )
 
 const (
-	maxFailedCycles = 20
+	maxFailedCycles   = 20
+	defaultBufferSize = 100
 )
 
+var _ types.BlockPoller[types.BlockDescription] = (*ChainPoller)(nil)
+
+// ChainPoller is responsible for polling the blockchain for new blocks and sending them to a processing channel.
 type ChainPoller struct {
-	mu            sync.RWMutex
-	wg            sync.WaitGroup
-	isStarted     *atomic.Bool
-	quit          chan struct{}
-	consumerCon   ccapi.ConsumerController
-	cfg           *cfg.ChainPollerConfig
-	metrics       *metrics.FpMetrics
-	blockInfoChan chan *types.BlockInfo
-	logger        *zap.Logger
-	nextHeight    uint64
+	mu sync.RWMutex
+
+	wg        sync.WaitGroup
+	isStarted *atomic.Bool
+	quit      chan struct{}
+
+	consumerCon ccapi.ConsumerController
+	cfg         *cfg.ChainPollerConfig
+	metrics     *metrics.FpMetrics
+	logger      *zap.Logger
+
+	nextHeight uint64
+
+	blockChan     chan *types.BlockInfo
+	blockChanSize int
 }
 
 func NewChainPoller(
@@ -45,156 +54,156 @@ func NewChainPoller(
 	consumerCon ccapi.ConsumerController,
 	metrics *metrics.FpMetrics,
 ) *ChainPoller {
+	bufferSize := defaultBufferSize
+	if cfg.BufferSize > 0 {
+		bufferSize = int(cfg.BufferSize)
+	}
+
 	return &ChainPoller{
 		isStarted:     atomic.NewBool(false),
 		logger:        logger,
 		cfg:           cfg,
 		consumerCon:   consumerCon,
 		metrics:       metrics,
-		blockInfoChan: make(chan *types.BlockInfo, cfg.BufferSize),
 		quit:          make(chan struct{}),
+		blockChan:     make(chan *types.BlockInfo, bufferSize),
+		blockChanSize: bufferSize,
 	}
 }
 
-func (cp *ChainPoller) Start(startHeight uint64) error {
-	if cp.isStarted.Swap(true) {
-		return fmt.Errorf("the poller is already started")
+// TryNextBlock - non-blocking return of the next block
+func (cp *ChainPoller) TryNextBlock() (types.BlockDescription, bool) {
+	if !cp.isStarted.Load() {
+		return nil, false
 	}
 
-	cp.logger.Info("starting the chain poller")
+	select {
+	case block := <-cp.blockChan:
+		if block == nil {
+			return nil, false
+		}
 
-	cp.nextHeight = startHeight
+		return block, true
+	default:
+		return nil, false
+	}
+}
+
+// NextBlock - blocking version that waits for the next block
+func (cp *ChainPoller) NextBlock(ctx context.Context) (types.BlockDescription, error) {
+	if !cp.isStarted.Load() {
+		return nil, fmt.Errorf("chain poller is not running")
+	}
+
+	select {
+	case block := <-cp.blockChan:
+		if block == nil {
+			return nil, fmt.Errorf("received nil block from channel")
+		}
+
+		return block, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-cp.quit:
+		return nil, fmt.Errorf("chain poller is shutting down")
+	}
+}
+
+// SetStartHeight configures the starting block height for the chain poller and begins polling from this height.
+func (cp *ChainPoller) SetStartHeight(ctx context.Context, height uint64) error {
+	if cp.isStarted.Swap(true) {
+		return fmt.Errorf("the chain poller has already started")
+	}
+
+	cp.logger.Info("starting the chain poller",
+		zap.Uint64("start_height", height),
+		zap.Int("buffer_size", cp.blockChanSize))
+
+	cp.mu.Lock()
+	cp.nextHeight = height
+	cp.quit = make(chan struct{})
+	cp.blockChan = make(chan *types.BlockInfo, cp.blockChanSize)
+	cp.mu.Unlock()
 
 	cp.wg.Add(1)
-	go cp.pollChain()
+	go cp.pollChain(ctx)
 
-	cp.metrics.RecordPollerStartingHeight(startHeight)
+	cp.metrics.RecordPollerStartingHeight(height)
 	cp.logger.Info("the chain poller is successfully started")
 
 	return nil
 }
 
+// Stop stops the chain poller, waits for the polling goroutine to finish, and closes the block channel.
 func (cp *ChainPoller) Stop() error {
 	if !cp.isStarted.Swap(false) {
 		return fmt.Errorf("the chain poller has already stopped")
 	}
 
 	cp.logger.Info("stopping the chain poller")
-	err := cp.consumerCon.Close()
-	if err != nil {
+	close(cp.quit)
+
+	cp.wg.Wait()
+
+	close(cp.blockChan)
+
+	// Close connection
+	if err := cp.consumerCon.Close(); err != nil {
+		cp.logger.Error("failed to close consumer connection", zap.Error(err))
+
 		return err
 	}
-	close(cp.quit)
-	cp.wg.Wait()
 
 	cp.logger.Info("the chain poller is successfully stopped")
 
 	return nil
 }
 
-func (cp *ChainPoller) IsRunning() bool {
-	return cp.isStarted.Load()
-}
+// waitForActivation waits until BTC staking is activated, adjusting the start height if necessary.
+func (cp *ChainPoller) waitForActivation(ctx context.Context) error {
+	cp.logger.Info("waiting for BTC staking activation")
+	ticker := time.NewTicker(cp.cfg.PollInterval)
+	defer ticker.Stop()
 
-// GetBlockInfoChan returns the read-only channel for incoming blocks
-func (cp *ChainPoller) GetBlockInfoChan() <-chan *types.BlockInfo {
-	return cp.blockInfoChan
-}
-
-func (cp *ChainPoller) blocksWithRetry(start, end uint64, limit uint32) ([]*types.BlockInfo, error) {
-	var (
-		block []*types.BlockInfo
-		err   error
-	)
-	if err := retry.Do(func() error {
-		block, err = cp.consumerCon.QueryBlocks(start, end, limit)
-		if err != nil {
-			return err
-		}
-
-		// no need return error when just no found new blocks,
-		// the chain to poller may not produce new blocks.
-		if len(block) == 0 {
-			cp.logger.Debug(
-				"no blocks found for range",
-				zap.Uint64("start_height", start),
-				zap.Uint64("end_height", end),
-			)
-		}
-
-		return nil
-	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
-		cp.logger.Debug(
-			"failed to query the consumer chain for block range",
-			zap.Uint("attempt", n+1),
-			zap.Uint("max_attempts", RtyAttNum),
-			zap.Uint64("start_height", start),
-			zap.Uint64("end_height", end),
-			zap.Uint32("limit", limit),
-			zap.Error(err),
-		)
-	})); err != nil {
-		return nil, err
-	}
-
-	return block, nil
-}
-
-func (cp *ChainPoller) latestBlockHeightWithRetry() (uint64, error) {
-	var (
-		latestBlockHeight uint64
-		err               error
-	)
-
-	if err := retry.Do(func() error {
-		latestBlockHeight, err = cp.consumerCon.QueryLatestBlockHeight()
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
-		cp.logger.Debug(
-			"failed to query the consumer chain for the latest block",
-			zap.Uint("attempt", n+1),
-			zap.Uint("max_attempts", RtyAttNum),
-			zap.Error(err),
-		)
-	})); err != nil {
-		return 0, err
-	}
-
-	return latestBlockHeight, nil
-}
-
-// waitForActivation waits until BTC staking is activated
-func (cp *ChainPoller) waitForActivation() {
-	// ensure that the startHeight is no lower than the activated height
 	for {
-		activatedHeight, err := cp.consumerCon.QueryActivatedHeight()
-		if err != nil {
-			// TODO: distinguish between "BTC staking is not activated" and other errors
-			cp.logger.Debug("failed to query the consumer chain for the activated height", zap.Error(err))
-		} else {
-			if cp.nextHeight < activatedHeight {
-				cp.nextHeight = activatedHeight
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-cp.quit:
+			return fmt.Errorf("poller shutting down")
+		case <-ticker.C:
+			activatedHeight, err := cp.consumerCon.QueryActivatedHeight()
+			if err != nil {
+				cp.logger.Debug("BTC staking not yet activated", zap.Error(err))
+
+				continue
 			}
 
-			return
-		}
-		select {
-		case <-time.After(cp.cfg.PollInterval):
-			continue
-		case <-cp.quit:
-			return
+			cp.mu.Lock()
+			if cp.nextHeight < activatedHeight {
+				cp.logger.Info("adjusting start height to activation height",
+					zap.Uint64("old_height", cp.nextHeight),
+					zap.Uint64("activation_height", activatedHeight))
+				cp.nextHeight = activatedHeight
+			}
+			cp.mu.Unlock()
+
+			cp.logger.Info("BTC staking is activated", zap.Uint64("activation_height", activatedHeight))
+
+			return nil
 		}
 	}
 }
 
-func (cp *ChainPoller) pollChain() {
+// pollChain continuously polls the blockchain for new blocks and processes them until the context or quit signal is triggered.
+func (cp *ChainPoller) pollChain(ctx context.Context) {
 	defer cp.wg.Done()
 
-	cp.waitForActivation()
+	if err := cp.waitForActivation(ctx); err != nil {
+		cp.logger.Error("failed to wait for activation", zap.Error(err))
+
+		return
+	}
 
 	ticker := time.NewTicker(cp.cfg.PollInterval)
 	defer ticker.Stop()
@@ -202,108 +211,121 @@ func (cp *ChainPoller) pollChain() {
 	var failedCycles uint32
 
 	for {
-		latestBlockHeight, err := cp.latestBlockHeightWithRetry()
-		if err != nil {
-			failedCycles++
-			cp.logger.Debug(
-				"failed to query the consumer chain for the latest block",
-				zap.Uint32("current_failures", failedCycles),
-				zap.Error(err),
-			)
-		} else {
-			// start polling in the first iteration
-			blockToRetrieve := cp.NextHeight()
-			err := cp.tryPollChain(latestBlockHeight, blockToRetrieve)
-
-			// update the failed cycles
-			if err != nil {
+		select {
+		case <-cp.quit:
+			return
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := cp.pollCycle(ctx); err != nil {
 				failedCycles++
-				cp.logger.Debug(
-					"failed to query the consumer chain for the block range",
+				cp.logger.Debug("poll cycle failed",
 					zap.Uint32("current_failures", failedCycles),
-					zap.Uint64("start_height", blockToRetrieve),
-					zap.Uint64("end_height", latestBlockHeight),
-					zap.Error(err),
-				)
+					zap.Error(err))
+
+				if failedCycles > maxFailedCycles {
+					cp.logger.Fatal("the poller has reached the max failed cycles, exiting")
+
+					return
+				}
 			} else {
-				// no error and we got the header we wanted to get, bump the state and push
-				// notification about data
 				if failedCycles > 0 {
-					cp.logger.Debug(
-						"query the consumer chain for the block range success from an error",
-						zap.Uint32("current_failures", failedCycles),
-						zap.Uint64("start_height", blockToRetrieve),
-						zap.Uint64("end_height", latestBlockHeight),
-					)
+					cp.logger.Debug("poll cycle recovered from errors",
+						zap.Uint32("recovered_from_failures", failedCycles))
 				}
 				failedCycles = 0
 			}
 		}
-
-		if failedCycles > maxFailedCycles {
-			cp.logger.Fatal("the poller has reached the max failed cycles, exiting")
-		}
-		select {
-		case <-ticker.C:
-			continue
-		case <-cp.quit:
-			return
-		}
 	}
 }
 
-func (cp *ChainPoller) tryPollChain(latestBlockHeight, blockToRetrieve uint64) error {
+func (cp *ChainPoller) pollCycle(ctx context.Context) error {
+	latestBlockHeight, err := cp.latestBlockHeightWithRetry()
+	if err != nil {
+		return fmt.Errorf("failed to get latest block height: %w", err)
+	}
+
+	blockToRetrieve := cp.getNextHeight()
+
+	return cp.tryPollChain(ctx, latestBlockHeight, blockToRetrieve)
+}
+
+// tryPollChain attempts to fetch a range of blocks from the chain and sends them to a processing channel with backpressure handling.
+// It handles cases where the block range starts beyond the latest height, matches the latest height, or spans multiple heights.
+// If the poller or context is terminated, it ensures proper cleanup and error handling.
+func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, blockToRetrieve uint64) error {
 	var blocks []*types.BlockInfo
 	var err error
 
 	switch {
 	case blockToRetrieve > latestBlockHeight:
-		cp.logger.Debug(
-			"skipping block query as there is no new block",
+		cp.logger.Debug("no new blocks available",
 			zap.Uint64("next_height", blockToRetrieve),
-			zap.Uint64("latest_height", latestBlockHeight),
-		)
+			zap.Uint64("latest_height", latestBlockHeight))
+
+		return nil
+
 	case blockToRetrieve == latestBlockHeight:
 		var latestBlock *types.BlockInfo
 		latestBlock, err = cp.consumerCon.QueryBlock(latestBlockHeight)
+		if err != nil {
+			return fmt.Errorf("failed to query latest block: %w", err)
+		}
 		blocks = []*types.BlockInfo{latestBlock}
+
 	default:
 		blocks, err = cp.blocksWithRetry(blockToRetrieve, latestBlockHeight, cp.cfg.PollSize)
+		if err != nil {
+			return fmt.Errorf("failed to query block range: %w", err)
+		}
 	}
 
-	// find error need return
-	if err != nil {
-		return err
-	}
-
-	// no error and we got the header we wanted to get, bump the state and push
-	// notification about data
 	if len(blocks) == 0 {
-		// NOTE: when no found blocks, we need to wait PollInterval to
-		// await too much requests.
 		return nil
 	}
 
-	lb := blocks[len(blocks)-1]
-	cp.setNextHeight(lb.Height + 1)
-
-	cp.metrics.RecordLastPolledHeight(lb.Height)
-
-	cp.logger.Info("the poller retrieved the blocks from the consumer chain",
-		zap.Uint64("start_height", blockToRetrieve),
-		zap.Uint64("end_height", lb.Height))
-
-	// push the data to the channel
-	// Note: if the consumer is too slow -- the buffer is full
-	// the channel will block, and we will stop retrieving data from the node
+	// Send blocks to channel with backpressure handling
 	for _, block := range blocks {
-		cp.blockInfoChan <- block
+		select {
+		case <-cp.quit:
+			return fmt.Errorf("poller shutting down")
+		case cp.blockChan <- block:
+			// Block sent successfully
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			cp.logger.Warn("block channel is full, consumer may be slow",
+				zap.Int("buffer_used", len(cp.blockChan)),
+				zap.Int("buffer_capacity", cp.blockChanSize),
+				zap.Uint64("block_height", block.GetHeight()))
+
+			select {
+			case cp.blockChan <- block:
+				cp.logger.Debug("block sent after backpressure delay",
+					zap.Uint64("block_height", block.GetHeight()))
+			case <-time.After(time.Second * 30):
+				return fmt.Errorf("failed to send block %d: channel full for too long", block.GetHeight())
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-cp.quit:
+				return fmt.Errorf("poller shutting down")
+			}
+		}
 	}
+
+	lastBlock := blocks[len(blocks)-1]
+	cp.setNextHeight(lastBlock.GetHeight() + 1)
+	cp.metrics.RecordLastPolledHeight(lastBlock.GetHeight())
+
+	cp.logger.Debug("sent blocks to channel",
+		zap.Uint64("start_height", blockToRetrieve),
+		zap.Uint64("end_height", lastBlock.GetHeight()),
+		zap.Int("block_count", len(blocks)))
 
 	return nil
 }
 
-func (cp *ChainPoller) NextHeight() uint64 {
+func (cp *ChainPoller) getNextHeight() uint64 {
 	cp.mu.RLock()
 	defer cp.mu.RUnlock()
 
@@ -313,6 +335,57 @@ func (cp *ChainPoller) NextHeight() uint64 {
 func (cp *ChainPoller) setNextHeight(height uint64) {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
-
 	cp.nextHeight = height
+}
+
+// Retry helper methods remain the same
+func (cp *ChainPoller) blocksWithRetry(start, end uint64, limit uint32) ([]*types.BlockInfo, error) {
+	var blocks []*types.BlockInfo
+	var err error
+
+	retryErr := retry.Do(func() error {
+		blocks, err = cp.consumerCon.QueryBlocks(start, end, limit)
+		if err != nil {
+			return err
+		}
+
+		if len(blocks) == 0 {
+			cp.logger.Debug("no blocks found for range",
+				zap.Uint64("start_height", start),
+				zap.Uint64("end_height", end))
+		}
+
+		return nil
+	}, RtyAtt, RtyDel, RtyErr,
+		retry.OnRetry(func(n uint, err error) {
+			cp.logger.Debug("retrying block query",
+				zap.Uint("attempt", n+1),
+				zap.Uint64("start_height", start),
+				zap.Uint64("end_height", end),
+				zap.Error(err))
+		}))
+
+	return blocks, retryErr
+}
+
+func (cp *ChainPoller) latestBlockHeightWithRetry() (uint64, error) {
+	var latestBlockHeight uint64
+	var err error
+
+	retryErr := retry.Do(func() error {
+		latestBlockHeight, err = cp.consumerCon.QueryLatestBlockHeight()
+
+		return err
+	}, RtyAtt, RtyDel, RtyErr,
+		retry.OnRetry(func(n uint, err error) {
+			cp.logger.Debug("retrying latest block height query",
+				zap.Uint("attempt", n+1),
+				zap.Error(err))
+		}))
+
+	return latestBlockHeight, retryErr
+}
+
+func (cp *ChainPoller) NextHeight() uint64 {
+	return cp.getNextHeight()
 }

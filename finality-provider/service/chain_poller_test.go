@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"context"
 	"math/rand"
 	"testing"
 	"time"
@@ -28,9 +29,7 @@ func FuzzChainPoller_Start(f *testing.F) {
 		startHeight := currentHeight + 1
 		endHeight := startHeight + uint64(r.Int63n(10)+1)
 
-		currentBlockRes := &types.BlockInfo{
-			Height: endHeight,
-		}
+		currentBlockRes := types.NewBlockInfo(endHeight, nil, false)
 		ctl := gomock.NewController(t)
 		mockConsumerController := mocks.NewMockConsumerController(ctl)
 		mockConsumerController.EXPECT().Close().Return(nil).AnyTimes()
@@ -40,9 +39,9 @@ func FuzzChainPoller_Start(f *testing.F) {
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
 
 		for i := startHeight; i <= endHeight; i++ {
-			resBlocks := []*types.BlockInfo{{
-				Height: i,
-			}}
+			resBlocks := []*types.BlockInfo{
+				types.NewBlockInfo(i, nil, false),
+			}
 
 			mockConsumerController.EXPECT().QueryBlocks(i, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
 		}
@@ -50,7 +49,7 @@ func FuzzChainPoller_Start(f *testing.F) {
 		m := metrics.NewFpMetrics()
 		pollerCfg.PollInterval = 10 * time.Millisecond
 		poller := service.NewChainPoller(testutil.GetTestLogger(t), &pollerCfg, mockConsumerController, m)
-		err := poller.Start(startHeight)
+		err := poller.SetStartHeight(context.Background(), startHeight)
 		require.NoError(t, err)
 		defer func() {
 			err := poller.Stop()
@@ -58,12 +57,9 @@ func FuzzChainPoller_Start(f *testing.F) {
 		}()
 
 		for i := startHeight; i <= endHeight; i++ {
-			select {
-			case info := <-poller.GetBlockInfoChan():
-				require.Equal(t, i, info.Height)
-			case <-time.After(10 * time.Second):
-				t.Fatalf("Failed to get block info")
-			}
+			time.Sleep(50 * time.Millisecond)
+			info, _ := poller.TryNextBlock()
+			require.Equal(t, i, info.GetHeight())
 		}
 	})
 }

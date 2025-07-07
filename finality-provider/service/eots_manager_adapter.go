@@ -65,7 +65,6 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 	)
 
 	if fp.cfg.ContextSigningHeight > startHeight {
-		// todo(lazar): call signing context fcn
 		signCtx := signingcontext.FpRandCommitContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
 		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
 		if err != nil {
@@ -82,26 +81,17 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 	return fp.em.SignSchnorrSig(fp.btcPk.MustMarshal(), hash)
 }
 
-func getMsgToSignForVote(signingContext string, blockHeight uint64, blockHash []byte) []byte {
-	if len(signingContext) == 0 {
-		return append(sdk.Uint64ToBigEndian(blockHeight), blockHash...)
-	}
-
-	return append([]byte(signingContext), append(sdk.Uint64ToBigEndian(blockHeight), blockHash...)...)
-}
-
-func (fp *FinalityProviderInstance) SignFinalitySig(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
+func (fp *FinalityProviderInstance) SignFinalitySig(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
 	// build proper finality signature request
 	var msgToSign []byte
-	if fp.cfg.ContextSigningHeight > b.Height {
-		// todo(lazar): call signing context fcn
+	if fp.cfg.ContextSigningHeight > b.GetHeight() {
 		signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
-		msgToSign = getMsgToSignForVote(signCtx, b.Height, b.Hash)
+		msgToSign = b.MsgToSign(signCtx)
 	} else {
-		msgToSign = getMsgToSignForVote("", b.Height, b.Hash)
+		msgToSign = b.MsgToSign("")
 	}
 
-	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
+	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.GetHeight())
 	if err != nil {
 		if strings.Contains(err.Error(), failedPreconditionErrStr) {
 			return nil, ErrFailedPrecondition

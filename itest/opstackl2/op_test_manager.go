@@ -434,9 +434,12 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	pubRandStore := ctm.ConsumerFpApp.GetPubRandProofStore()
 	bc := ctm.BabylonFpApp.GetBabylonController()
 
+	fpMetrics := metrics.NewFpMetrics()
+	poller := service.NewChainPoller(ctm.logger, fpCfg.PollerConfig, ctm.OpConsumerController, fpMetrics)
+
 	fpInstance, err := service.NewFinalityProviderInstance(
-		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.OpConsumerController, ctm.ConsumerEOTSClient,
-		metrics.NewFpMetrics(), make(chan<- *service.CriticalError), ctm.logger)
+		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.OpConsumerController, ctm.ConsumerEOTSClient, poller,
+		fpMetrics, make(chan<- *service.CriticalError), ctm.logger)
 	require.NoError(t, err)
 	return fpInstance
 }
