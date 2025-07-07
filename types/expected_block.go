@@ -21,6 +21,9 @@ type BlockPoller[T BlockDescription] interface {
 	// SetStartHeight configures where to begin polling
 	SetStartHeight(ctx context.Context, height uint64) error
 
+	// NextHeight returns the next height to poll for
+	NextHeight() uint64
+
 	// Stop stops the poller
 	Stop() error
 }

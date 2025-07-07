@@ -385,3 +385,7 @@ func (cp *ChainPoller) latestBlockHeightWithRetry() (uint64, error) {
 
 	return latestBlockHeight, retryErr
 }
+
+func (cp *ChainPoller) NextHeight() uint64 {
+	return cp.getNextHeight()
+}
