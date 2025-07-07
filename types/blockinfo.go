@@ -30,6 +30,10 @@ func (b BlockInfo) IsFinalized() bool {
 	return b.Finalized
 }
 
-func (b BlockInfo) MsgToSign() []byte {
-	return append(sdk.Uint64ToBigEndian(b.height), b.Hash...)
+func (b BlockInfo) MsgToSign(signCtx string) []byte {
+	if len(signCtx) == 0 {
+		return append(sdk.Uint64ToBigEndian(b.height), b.Hash...)
+	}
+
+	return append([]byte(signCtx), append(sdk.Uint64ToBigEndian(b.height), b.Hash...)...)
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"strings"
 
 	bbntypes "github.com/babylonlabs-io/babylon/types"
@@ -36,8 +37,14 @@ func (fp *FinalityProviderInstance) GetPubRandList(startHeight uint64, numPubRan
 	return pubRandList, nil
 }
 
-func getHashToSignForCommitPubRand(startHeight uint64, numPubRand uint64, commitment []byte) ([]byte, error) {
+func getHashToSignForCommitPubRandWithContext(signingContext string, startHeight, numPubRand uint64, commitment []byte) ([]byte, error) {
 	hasher := tmhash.New()
+	if len(signingContext) > 0 {
+		if _, err := hasher.Write([]byte(signingContext)); err != nil {
+			return nil, err
+		}
+	}
+
 	if _, err := hasher.Write(sdk.Uint64ToBigEndian(startHeight)); err != nil {
 		return nil, err
 	}
@@ -52,9 +59,22 @@ func getHashToSignForCommitPubRand(startHeight uint64, numPubRand uint64, commit
 }
 
 func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
-	hash, err := getHashToSignForCommitPubRand(startHeight, numPubRand, commitment)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
+	var (
+		hash []byte
+		err  error
+	)
+
+	if fp.cfg.ContextSigningHeight > startHeight {
+		signCtx := signingcontext.FpRandCommitContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
+		}
+	} else {
+		hash, err = getHashToSignForCommitPubRandWithContext("", startHeight, numPubRand, commitment)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
+		}
 	}
 
 	// sign the message hash using the finality-provider's BTC private key
@@ -63,7 +83,15 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 
 func (fp *FinalityProviderInstance) SignFinalitySig(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
 	// build proper finality signature request
-	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), b.MsgToSign(), b.GetHeight())
+	var msgToSign []byte
+	if fp.cfg.ContextSigningHeight > b.GetHeight() {
+		signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+		msgToSign = b.MsgToSign(signCtx)
+	} else {
+		msgToSign = b.MsgToSign("")
+	}
+
+	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.GetHeight())
 	if err != nil {
 		if strings.Contains(err.Error(), failedPreconditionErrStr) {
 			return nil, ErrFailedPrecondition

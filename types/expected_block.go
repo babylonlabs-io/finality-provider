@@ -8,7 +8,7 @@ type BlockDescription interface {
 	GetHeight() uint64
 	GetHash() []byte
 	IsFinalized() bool
-	MsgToSign() []byte // this is the message that will be signed by the eots signer
+	MsgToSign(signCtx string) []byte // this is the message that will be signed by the eots signer
 }
 
 type BlockPoller[T BlockDescription] interface {

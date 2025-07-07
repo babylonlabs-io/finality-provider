@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"math"
 	"strings"
 	"sync"
@@ -791,7 +792,15 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 	}
 
 	eotsSignerFunc := func(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
-		sig, err := fp.em.UnsafeSignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), b.MsgToSign(), b.GetHeight())
+		var msgToSign []byte
+		if fp.cfg.ContextSigningHeight > b.GetHeight() {
+			signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+			msgToSign = b.MsgToSign(signCtx)
+		} else {
+			msgToSign = b.MsgToSign("")
+		}
+
+		sig, err := fp.em.UnsafeSignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.GetHeight())
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign EOTS: %w", err)
 		}
