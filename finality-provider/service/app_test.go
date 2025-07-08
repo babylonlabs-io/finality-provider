@@ -3,6 +3,7 @@ package service_test
 import (
 	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -85,7 +86,9 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		fpCfg.PollerConfig.StaticChainScanningStartHeight = randomStartingHeight
 		fpdb, err := fpCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, fpdb, logger)
+		fpMetrics := metrics.NewFpMetrics()
+		poller := service.NewChainPoller(logger, fpCfg.PollerConfig, mockConsumerController, fpMetrics)
+		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, poller, fpMetrics, fpdb, logger)
 		require.NoError(t, err)
 		defer func() {
 			err = fpdb.Close()
@@ -304,8 +307,9 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 		fpCfg.PollerConfig.StaticChainScanningStartHeight = randomStartingHeight
 		fpdb, err := fpCfg.DatabaseConfig.GetDBBackend()
 		require.NoError(t, err)
-
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, fpdb, logger)
+		fpMetrics := metrics.NewFpMetrics()
+		poller := service.NewChainPoller(logger, fpCfg.PollerConfig, mockConsumerController, fpMetrics)
+		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, poller, fpMetrics, fpdb, logger)
 		require.NoError(t, err)
 
 		defer func() {
@@ -394,7 +398,9 @@ func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg
 	require.NoError(t, err)
 	fpStore, err := fpstore.NewFinalityProviderStore(db)
 	require.NoError(t, err)
-	app, err := service.NewFinalityProviderApp(cfg, cc, consumerCon, em, db, logger)
+	fpMetrics := metrics.NewFpMetrics()
+	poller := service.NewChainPoller(logger, cfg.PollerConfig, consumerCon, fpMetrics)
+	app, err := service.NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, fpMetrics, db, logger)
 	require.NoError(t, err)
 
 	// create registered finality-provider

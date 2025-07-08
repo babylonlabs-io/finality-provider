@@ -114,10 +114,7 @@ func TestSkippingDoubleSignError(t *testing.T) {
 	require.NoError(t, err)
 	currentHeight := tm.WaitForNBlocks(t, 1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := &types.BlockInfo{
-		Height: currentHeight,
-		Hash:   datagen.GenRandomByteArray(r, 32),
-	}
+	b := types.NewBlockInfo(currentHeight, datagen.GenRandomByteArray(r, 32), false)
 	t.Logf("manually sending a vote for height %d", currentHeight)
 	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b, true)
 	require.NoError(t, err)
@@ -170,15 +167,12 @@ func TestDoubleSigning(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, extractedKey)
 	require.Empty(t, res)
-	t.Logf("duplicate vote for %d is sent", finalizedBlock.Height)
+	t.Logf("duplicate vote for %d is sent", finalizedBlock.GetHeight())
 
 	// attack: manually submit a finality vote over a conflicting block
 	// to trigger the extraction of finality-provider's private key
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := &types.BlockInfo{
-		Height: finalizedBlock.Height,
-		Hash:   datagen.GenRandomByteArray(r, 32),
-	}
+	b := types.NewBlockInfo(finalizedBlock.GetHeight(), datagen.GenRandomByteArray(r, 32), false)
 
 	// confirm we have double sign protection
 	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(b, true)
@@ -233,13 +227,13 @@ func TestCatchingUp(t *testing.T) {
 
 	// check there are n+1 blocks finalized
 	finalizedBlock := tm.WaitForNFinalizedBlocks(t, n+1)
-	t.Logf("the latest finalized block is at %v", finalizedBlock.Height)
+	t.Logf("the latest finalized block is at %v", finalizedBlock.GetHeight())
 
 	// check if the fast sync works by checking if the gap is not more than 1
 	currentHeight, err := tm.BBNConsumerClient.QueryLatestBlockHeight()
 	t.Logf("the current block is at %v", currentHeight)
 	require.NoError(t, err)
-	require.True(t, currentHeight < finalizedBlock.Height+uint64(n))
+	require.True(t, currentHeight < finalizedBlock.GetHeight()+uint64(n))
 }
 
 func TestFinalityProviderEditCmd(t *testing.T) {
@@ -528,7 +522,7 @@ func TestRecoverRandProofCmd(t *testing.T) {
 
 	pubRandStore, err := store.NewPubRandProofStore(fpdb)
 	require.NoError(t, err)
-	_, err = pubRandStore.GetPubRandProof([]byte(testChainID), fpIns.GetBtcPkBIP340().MustMarshal(), finalizedBlock.Height)
+	_, err = pubRandStore.GetPubRandProof([]byte(testChainID), fpIns.GetBtcPkBIP340().MustMarshal(), finalizedBlock.GetHeight())
 	require.NoError(t, err)
 }
 
@@ -564,7 +558,7 @@ func TestSigHeightOutdated(t *testing.T) {
 	require.Nil(t, extractedKey)
 	require.Empty(t, res)
 
-	t.Logf("Finality signature for already finalized block at height %d was properly handled", finalizedBlock.Height)
+	t.Logf("Finality signature for already finalized block at height %d was properly handled", finalizedBlock.GetHeight())
 }
 
 func TestEotsdRollbackCmd(t *testing.T) {

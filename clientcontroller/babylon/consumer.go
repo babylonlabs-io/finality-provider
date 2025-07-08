@@ -147,7 +147,7 @@ func (bc *BabylonConsumerController) SubmitFinalitySig(
 	msg := &finalitytypes.MsgAddFinalitySig{
 		Signer:       bc.MustGetTxSigner(),
 		FpBtcPk:      bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
-		BlockHeight:  block.Height,
+		BlockHeight:  block.GetHeight(),
 		PubRand:      bbntypes.NewSchnorrPubRandFromFieldVal(pubRand),
 		Proof:        &cmtProof,
 		BlockAppHash: block.Hash,
@@ -199,7 +199,7 @@ func (bc *BabylonConsumerController) SubmitBatchFinalitySigs(
 		msg := &finalitytypes.MsgAddFinalitySig{
 			Signer:       bc.MustGetTxSigner(),
 			FpBtcPk:      bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
-			BlockHeight:  b.Height,
+			BlockHeight:  b.GetHeight(),
 			PubRand:      bbntypes.NewSchnorrPubRandFromFieldVal(pubRandList[i]),
 			Proof:        &cmtProof,
 			BlockAppHash: b.Hash,
@@ -290,11 +290,7 @@ func (bc *BabylonConsumerController) queryLatestBlocks(startKey []byte, count ui
 	}
 
 	for _, b := range res.Blocks {
-		ib := &types.BlockInfo{
-			Height: b.Height,
-			Hash:   b.AppHash,
-		}
-		blocks = append(blocks, ib)
+		blocks = append(blocks, types.NewBlockInfo(b.Height, b.AppHash, b.Finalized))
 	}
 
 	return blocks, nil
@@ -306,10 +302,7 @@ func (bc *BabylonConsumerController) QueryBlock(height uint64) (*types.BlockInfo
 		return nil, fmt.Errorf("failed to query indexed block at height %v: %w", height, err)
 	}
 
-	return &types.BlockInfo{
-		Height: height,
-		Hash:   res.Block.AppHash,
-	}, nil
+	return types.NewBlockInfo(height, res.Block.AppHash, res.Block.Finalized), nil
 }
 
 // QueryLastPublicRandCommit returns the last public randomness commitments
@@ -398,10 +391,10 @@ func (bc *BabylonConsumerController) QueryLatestBlockHeight() (uint64, error) {
 			return 0, err
 		}
 
-		return block.Height, nil
+		return block.GetHeight(), nil
 	}
 
-	return blocks[0].Height, nil
+	return blocks[0].GetHeight(), nil
 }
 
 func (bc *BabylonConsumerController) queryCometBestBlock() (*types.BlockInfo, error) {
@@ -416,10 +409,12 @@ func (bc *BabylonConsumerController) queryCometBestBlock() (*types.BlockInfo, er
 
 	// Returning response directly, if header with specified number did not exist
 	// at request will contain nil header
-	return &types.BlockInfo{
-		Height: uint64(chainInfo.BlockMetas[0].Header.Height), // #nosec G115
-		Hash:   chainInfo.BlockMetas[0].Header.AppHash,
-	}, nil
+	// #nosec G115
+	return types.NewBlockInfo(
+		uint64(chainInfo.BlockMetas[0].Header.Height),
+		chainInfo.BlockMetas[0].Header.AppHash,
+		false,
+	), nil
 }
 
 // QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err

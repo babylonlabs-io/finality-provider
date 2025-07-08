@@ -609,7 +609,10 @@ func CreateAndStartFpApp(
 	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
 
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, fpdb, logger)
+	fpMetrics := metrics.NewFpMetrics()
+	poller := service.NewChainPoller(logger, cfg.PollerConfig, cc, fpMetrics)
+
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, poller, fpMetrics, fpdb, logger)
 	require.NoError(t, err)
 
 	err = fpApp.Start()
