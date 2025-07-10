@@ -40,13 +40,13 @@ import (
 )
 
 const (
-	opConsumerChainId            = "op-stack-l2-706114"
-	bbnAddrTopUpAmount           = 100000000
-	eventuallyWaitTimeOut        = 5 * time.Minute
-	eventuallyPollTime           = 500 * time.Millisecond
-	passphrase                   = "testpass"
-	hdPath                       = ""
-	opFinalityGadgetContractPath = "../bytecode/op_finality_gadget_16f6154.wasm"
+	opConsumerChainId          = "op-stack-l2-706114"
+	bbnAddrTopUpAmount         = 100000000
+	eventuallyWaitTimeOut      = 5 * time.Minute
+	eventuallyPollTime         = 500 * time.Millisecond
+	passphrase                 = "testpass"
+	hdPath                     = ""
+	rollupFinalityContractPath = "../bytecode/rollup/finality.wasm"
 )
 
 type BaseTestManager = base_test_manager.BaseTestManager
@@ -331,7 +331,7 @@ func createConsumerFpConfig(
 
 func deployCwContract(t *testing.T, cwClient *cwclient.Client, ctx context.Context) string {
 	// store op-finality-gadget contract
-	err := cwClient.StoreWasmCode(ctx, opFinalityGadgetContractPath)
+	err := cwClient.StoreWasmCode(ctx, rollupFinalityContractPath)
 	require.NoError(t, err)
 
 	var codeId uint64
