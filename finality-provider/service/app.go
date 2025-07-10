@@ -373,7 +373,10 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 	}
 
 	var signCtx string
-	if app.fpIns != nil && app.config.ContextSigningHeight > app.fpIns.poller.NextHeight()-1 {
+	nextHeight := app.poller.NextHeight()
+	//  nextHeight-1 might underflow if the nextHeight is 0
+	if (nextHeight == 0 && app.config.ContextSigningHeight > 0) ||
+		(nextHeight > 0 && app.config.ContextSigningHeight > nextHeight-1) {
 		signCtx = signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String())
 	}
 
