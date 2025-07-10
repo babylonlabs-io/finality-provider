@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -114,8 +115,12 @@ func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.Publ
 		headers = append(headers, *headerInfo.Header)
 		parentBlockHeaderInfo = headerInfo
 	}
-	_, err = tm.BBNClient.InsertBtcBlockHeaders(headers)
-	require.NoError(t, err)
+	// fixes flaky out-of-gas error
+	for headersSlice := range slices.Chunk(headers, 50) {
+		_, err = tm.BBNClient.InsertBtcBlockHeaders(headersSlice)
+		require.NoError(t, err)
+	}
+
 	btcHeader := blockWithStakingTx.HeaderBytes
 	serializedStakingTx, err := bbntypes.SerializeBTCTx(testStakingInfo.StakingTx)
 	require.NoError(t, err)

@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug Fixes
+
+* [#508](https://github.com/babylonlabs-io/finality-provider/pull/508) fix: fixes registration with sign ctx
+
 ### Improvements
 
 * [#493](https://github.com/babylonlabs-io/finality-provider/pull/493) chore: key migration for test keyring
