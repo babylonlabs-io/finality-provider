@@ -416,12 +416,13 @@ func (fp *FinalityProviderInstance) processRandomnessCommitment() {
 // estimated delay.
 // If randomness should be committed, start height of the commit will be returned
 func (fp *FinalityProviderInstance) ShouldCommitRandomness() (bool, uint64, error) {
+	ctx := context.Background()
 	lastCommittedHeight, err := fp.GetLastCommittedHeight()
 	if err != nil {
 		return false, 0, fmt.Errorf("failed to get last committed height: %w", err)
 	}
 
-	tipHeight, err := fp.consumerCon.QueryLatestBlockHeight()
+	tipHeight, err := fp.consumerCon.QueryLatestBlockHeight(ctx)
 	if err != nil {
 		return false, 0, fmt.Errorf("failed to get the last block: %w", err)
 	}
@@ -455,7 +456,7 @@ func (fp *FinalityProviderInstance) ShouldCommitRandomness() (bool, uint64, erro
 		zap.Uint64("last_committed_height", lastCommittedHeight),
 	)
 
-	activationBlkHeight, err := fp.consumerCon.QueryFinalityActivationBlockHeight()
+	activationBlkHeight, err := fp.consumerCon.QueryFinalityActivationBlockHeight(ctx)
 	if err != nil {
 		return false, 0, err
 	}
@@ -550,13 +551,13 @@ func (fp *FinalityProviderInstance) retrySubmitSigsUntilFinalized(targetBlocks [
 	}
 }
 
-func (fp *FinalityProviderInstance) checkBlockFinalization(height uint64) (bool, error) {
-	b, err := fp.consumerCon.QueryBlock(height)
+func (fp *FinalityProviderInstance) checkBlockFinalization(ctx context.Context, height uint64) (bool, error) {
+	b, err := fp.consumerCon.QueryBlock(ctx, height)
 	if err != nil {
 		return false, err
 	}
 
-	return b.Finalized, nil
+	return b.IsFinalized(), nil
 }
 
 // CommitPubRand commits a list of randomness from given start height

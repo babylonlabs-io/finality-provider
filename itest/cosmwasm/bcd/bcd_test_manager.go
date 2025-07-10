@@ -252,7 +252,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	fpMsg := e2eutils.GenBtcStakingFpExecMsg(eotsPubKey.MarshalHex())
 	fpMsgBytes, err := json.Marshal(fpMsg)
 	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(fpMsgBytes)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(context.Background(), fpMsgBytes)
 	require.NoError(t, err)
 
 	// register fp in Babylon

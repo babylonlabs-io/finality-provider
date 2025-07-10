@@ -134,7 +134,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	bbnappparams.SetAddressPrefixes()
 	delMsgBytes, err := json.Marshal(delMsg)
 	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(delMsgBytes)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(context.Background(), delMsgBytes)
 	require.NoError(t, err)
 
 	// query delegations in smart contract

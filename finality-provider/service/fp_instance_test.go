@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -55,7 +56,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		startingBlock := types.NewBlockInfo(randomStartingHeight, testutil.GenRandomByteArray(r, 32), false)
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
-		mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(uint64(0), nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlockHeight(context.Background()).Return(uint64(0), nil).AnyTimes()
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
 
@@ -70,7 +71,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 			NumPubRand:  1000,
 			Commitment:  datagen.GenRandomByteArray(r, 32),
 		}
-		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any()).Return(lastCommittedPubRand, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLastPublicRandCommit(context.Background(), gomock.Any()).Return(lastCommittedPubRand, nil).AnyTimes()
 		// mock voting power and commit pub rand
 		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(fpIns.GetBtcPk(), gomock.Any()).
 			Return(true, nil).AnyTimes()
@@ -78,8 +79,15 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		// submit finality sig
 		nextBlock := types.NewBlockInfo(startingBlock.GetHeight()+1, testutil.GenRandomByteArray(r, 32), false)
 		expectedTxHash := testutil.GenRandomHexStr(r, 32)
+		req := api.SubmitBatchFinalitySigsRequest{
+			FpPk:        fpIns.GetBtcPk(),
+			Blocks:      []*types.BlockInfo{nextBlock},
+			PubRandList: nil,
+			ProofList:   nil,
+			Sigs:        nil,
+		}
 		mockConsumerController.EXPECT().
-			SubmitBatchFinalitySigs(fpIns.GetBtcPk(), []*types.BlockInfo{nextBlock}, gomock.Any(), gomock.Any(), gomock.Any()).
+			SubmitBatchFinalitySigs(context.Background(), req).
 			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
 		providerRes, err := fpIns.SubmitBatchFinalitySignatures([]types.BlockDescription{nextBlock})
 		require.NoError(t, err)
@@ -107,9 +115,9 @@ func FuzzDetermineStartHeight(f *testing.F) {
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
 
 		// setup mocks
-		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight().Return(finalityActivationHeight, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(context.Background()).Return(finalityActivationHeight, nil).AnyTimes()
 		mockConsumerController.EXPECT().
-			QueryFinalityProviderHighestVotedHeight(gomock.Any()).
+			QueryFinalityProviderHighestVotedHeight(context.Background(), gomock.Any()).
 			Return(highestVotedHeight, nil).
 			AnyTimes()
 
@@ -248,7 +256,7 @@ func BenchmarkCommitPubRand(b *testing.B) {
 
 			var totalTiming service.CommitPubRandTiming
 			for i := 0; i < b.N; i++ {
-				res, timing, err := fpIns.HelperCommitPubRand(startingBlock.GetHeight())
+				res, timing, err := fpIns.HelperCommitPubRand(context.Background(), startingBlock.GetHeight())
 				if err != nil {
 					b.Fatalf("unexpected error: %v", err)
 				}

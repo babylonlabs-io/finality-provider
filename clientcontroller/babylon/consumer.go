@@ -22,7 +22,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
-var _ api.ConsumerControllerExplicit[types.BlockDescription] = &BabylonConsumerController{}
+var _ api.ConsumerController = &BabylonConsumerController{}
 
 //nolint:revive
 type BabylonConsumerController struct {
