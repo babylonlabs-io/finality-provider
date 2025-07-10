@@ -82,7 +82,7 @@ func TestPoPValidate(t *testing.T) {
 		require.NoError(t, err)
 
 		writer := bytes.NewBuffer([]byte{})
-		validateCmd.SetOutput(writer)
+		validateCmd.SetOut(writer)
 
 		fileName := filepath.Join(tmp, fmt.Sprintf("%d-pop-out.json", i))
 		err = os.WriteFile(fileName, jsonString, 0644)

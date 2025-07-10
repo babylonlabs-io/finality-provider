@@ -120,8 +120,7 @@ func (kc *ChainKeyringController) CreateChainKey(passphrase, hdPath, mnemonic st
 // this requires both keys created beforehand
 func (kc *ChainKeyringController) CreatePop(chainID string, fpAddr sdk.AccAddress, btcPrivKey *btcec.PrivateKey) (*bstypes.ProofOfPossessionBTC, error) {
 	// Use FpPopContextV0 with the provided chain ID
-	fpPopContext := signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String())
-	return datagen.NewPoPBTC(fpPopContext, fpAddr, btcPrivKey)
+	return datagen.NewPoPBTC(signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String()), fpAddr, btcPrivKey)
 }
 
 // Address returns the address from the keyring

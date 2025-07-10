@@ -374,10 +374,9 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 
 	var signCtx string
 	signCtx = signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String())
-	// TODO: check with Konrad/Lazar
-	// if app.fpIns != nil && app.config.ContextSigningHeight > app.fpIns.poller.NextHeight()-1 {
-	// 	signCtx = signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String())
-	// }
+	if app.fpIns != nil && app.config.ContextSigningHeight > app.fpIns.poller.NextHeight()-1 {
+		signCtx = signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String())
+	}
 
 	pop, err := app.CreatePop(fpAddr, eotsPk, signCtx)
 	if err != nil {
