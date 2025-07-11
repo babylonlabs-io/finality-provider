@@ -89,12 +89,10 @@ func (wc *CosmwasmConsumerController) GetClient() *cwcclient.Client {
 	return wc.cwClient
 }
 
-// TODO: what should be the signing context?
 func (wc *CosmwasmConsumerController) GetFpRandCommitContext() string {
 	return signingcontext.FpRandCommitContextV0(wc.cfg.ChainID, wc.cfg.BtcFinalityContractAddress)
 }
 
-// TODO: what should be the signing context?
 func (wc *CosmwasmConsumerController) GetFpFinVoteContext() string {
 	return signingcontext.FpFinVoteContextV0(wc.cfg.ChainID, wc.cfg.BtcFinalityContractAddress)
 }
