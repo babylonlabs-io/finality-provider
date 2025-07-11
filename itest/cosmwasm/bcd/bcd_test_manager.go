@@ -102,6 +102,8 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("localhost:%s", babylond.GetPort("9090/tcp"))
 
+	cfg.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
+
 	var bc ccapi.ClientController
 	require.Eventually(t, func() bool {
 		bbnCfg := fpcfg.BBNConfigToBabylonConfig(cfg.BabylonConfig)

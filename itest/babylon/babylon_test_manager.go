@@ -196,6 +196,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	cfg.BabylonConfig.Key = fpKeyName
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", tm.babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", tm.babylond.GetPort("9090/tcp"))
+	cfg.ContextSigningHeight = ^uint64(0) // max uint64 to enable context signing
 
 	// Set HMAC key if provided
 	if len(hmacKey) > 0 && hmacKey[0] != "" {
