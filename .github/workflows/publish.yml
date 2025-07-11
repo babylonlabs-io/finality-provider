@@ -5,6 +5,7 @@ on:
     branches:
       - 'main'
       - 'base/consumer-chain-support'
+      - 'aleksa/temp-disable-finality-gadget-ref'
     tags:
       - '*'
 
