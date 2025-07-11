@@ -127,52 +127,6 @@ func (bc *BabylonConsumerController) CommitPubRandList(
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-// SubmitFinalitySig submits the finality signature via a MsgAddVote to Babylon
-func (bc *BabylonConsumerController) SubmitFinalitySig(
-	fpPk *btcec.PublicKey,
-	block *types.BlockInfo,
-	pubRand *btcec.FieldVal,
-	proof []byte, // TODO: have a type for proof
-	sig *btcec.ModNScalar,
-) (*types.TxResponse, error) {
-	cmtProof := cmtcrypto.Proof{}
-	if err := cmtProof.Unmarshal(proof); err != nil {
-		return nil, err
-	}
-
-	msg := &finalitytypes.MsgAddFinalitySig{
-		Signer:       bc.MustGetTxSigner(),
-		FpBtcPk:      bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
-		BlockHeight:  block.GetHeight(),
-		PubRand:      bbntypes.NewSchnorrPubRandFromFieldVal(pubRand),
-		Proof:        &cmtProof,
-		BlockAppHash: block.Hash,
-		FinalitySig:  bbntypes.NewSchnorrEOTSSigFromModNScalar(sig),
-	}
-
-	unrecoverableErrs := []*sdkErr.Error{
-		finalitytypes.ErrInvalidFinalitySig,
-		finalitytypes.ErrPubRandNotFound,
-		btcstakingtypes.ErrFpAlreadySlashed,
-	}
-
-	expectedErrs := []*sdkErr.Error{
-		finalitytypes.ErrDuplicatedFinalitySig,
-		finalitytypes.ErrSigHeightOutdated,
-	}
-
-	res, err := bc.reliablySendMsg(context.Background(), msg, expectedErrs, unrecoverableErrs)
-	if err != nil {
-		return nil, err
-	}
-
-	if res == nil {
-		return &types.TxResponse{}, nil
-	}
-
-	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
-}
-
 // SubmitBatchFinalitySigs submits a batch of finality signatures to Babylon
 func (bc *BabylonConsumerController) SubmitBatchFinalitySigs(
 	ctx context.Context,

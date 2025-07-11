@@ -120,43 +120,6 @@ func (wc *CosmwasmConsumerController) CommitPubRandList(
 	return &fptypes.TxResponse{TxHash: res.TxHash}, nil
 }
 
-// SubmitFinalitySig submits the finality signature via a MsgAddVote to Babylon
-func (wc *CosmwasmConsumerController) SubmitFinalitySig(
-	fpPk *btcec.PublicKey,
-	block *fptypes.BlockInfo,
-	pubRand *btcec.FieldVal,
-	proof []byte, // TODO: have a type for proof
-	sig *btcec.ModNScalar,
-) (*fptypes.TxResponse, error) {
-	cmtProof := cmtcrypto.Proof{}
-	if err := cmtProof.Unmarshal(proof); err != nil {
-		return nil, err
-	}
-
-	msg := ExecMsg{
-		SubmitFinalitySignature: &SubmitFinalitySignature{
-			FpPubkeyHex: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex(),
-			Height:      block.GetHeight(),
-			PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(pubRand).MustMarshal(),
-			Proof:       cmtProof,
-			BlockHash:   block.GetHash(),
-			Signature:   bbntypes.NewSchnorrEOTSSigFromModNScalar(sig).MustMarshal(),
-		},
-	}
-
-	msgBytes, err := json.Marshal(msg)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := wc.ExecuteBTCFinalityContract(context.Background(), msgBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return &fptypes.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
-}
-
 // SubmitBatchFinalitySigs submits a batch of finality signatures to Babylon
 func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 	ctx context.Context,

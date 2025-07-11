@@ -180,26 +180,6 @@ func (cc *OPStackL2ConsumerController) CommitPubRandList(
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-// SubmitFinalitySig submits the finality signature to Babylon CosmWasm contract
-// it returns tx hash and error
-func (cc *OPStackL2ConsumerController) SubmitFinalitySig(
-	fpPk *btcec.PublicKey,
-	block *types.BlockInfo,
-	pubRand *btcec.FieldVal,
-	proof []byte,
-	sig *btcec.ModNScalar,
-) (*types.TxResponse, error) {
-	req := &api.SubmitBatchFinalitySigsRequest{
-		FpPk:        fpPk,
-		Blocks:      []*types.BlockInfo{block},
-		PubRandList: []*btcec.FieldVal{pubRand},
-		ProofList:   [][]byte{proof},
-		Sigs:        []*btcec.ModNScalar{sig},
-	}
-
-	return cc.SubmitBatchFinalitySigs(context.Background(), req)
-}
-
 // SubmitBatchFinalitySigs submits a batch of finality signatures
 func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 	ctx context.Context,
