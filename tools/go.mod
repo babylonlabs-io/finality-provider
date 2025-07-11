@@ -4,7 +4,7 @@ go 1.23.8
 
 toolchain go1.23.10
 
-require github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250710070516-a8ad676746c1
+require github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250710084140-c57b172c1049
 
 require (
 	cel.dev/expr v0.20.0 // indirect

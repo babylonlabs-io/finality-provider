@@ -713,6 +713,10 @@ github.com/aws/aws-sdk-go v1.44.312/go.mod h1:aVsgQcEevwlmQ7qHE9I3h+dtQgpqhFB+i8
 github.com/aws/aws-sdk-go-v2 v0.18.0/go.mod h1:JWVYvqSMppoMJC0x5wdwiImzgXTI9FuZwxzkQq9wy+g=
 github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250710070516-a8ad676746c1 h1:JHrMOKPyuK+ty0Gp6JQXAogDfmZ21/gr1JtEPcjIcDA=
 github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250710070516-a8ad676746c1/go.mod h1:SCCDHsvc3aDnUwm+8EAjd/ZlR8WmicoG0B51YaABi3E=
+github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250710084140-c57b172c1049 h1:BzBPtBwIyPx8bd2FWlaU4CpVodrWUgvSVAfzl0nqoy4=
+github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250710084140-c57b172c1049/go.mod h1:geoi2XSmafoktELui0G9X+Z0jzJlNO3I0anBv2Yz7h8=
+github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250711044347-3472d89e4a06 h1:U71h/vrvmRLqrvOesRpD7odCSuMo43Qa6smI6yHEatU=
+github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250711044347-3472d89e4a06/go.mod h1:geoi2XSmafoktELui0G9X+Z0jzJlNO3I0anBv2Yz7h8=
 github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250407051200-a5d652116d6d h1:9zDJCLFvtKP3hPueFDERuedikSL6Aw1pG7CMF8Q7h5Y=
 github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250407051200-a5d652116d6d/go.mod h1:ks4/p72aNJTIN8+CnCFxNX0HqfgHdClEwU4LxAxryJQ=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=

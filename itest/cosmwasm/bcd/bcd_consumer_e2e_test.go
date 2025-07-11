@@ -20,6 +20,12 @@ import (
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 )
 
+const (
+	babylonContractPath     = "../../bytecode/babylon_contract.wasm"
+	btcStakingContractPath  = "../../bytecode/btc_staking.wasm"
+	btcFinalityContractPath = "../../bytecode/btc_finality.wasm"
+)
+
 // TestConsumerFpLifecycle tests the consumer finality provider lifecycle
 // 1. Upload Babylon and BTC staking contracts to bcd chain
 // 2. Instantiate Babylon contract with admin
@@ -39,7 +45,6 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	defer ctm.Stop(t)
 
 	// store babylon contract
-	babylonContractPath := "../../bytecode/babylon_contract.wasm"
 	err := ctm.BcdConsumerClient.StoreWasmCode(babylonContractPath)
 	require.NoError(t, err)
 	babylonContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
@@ -47,7 +52,6 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.Equal(t, uint64(1), babylonContractWasmId)
 
 	// store btc staking contract
-	btcStakingContractPath := "../../bytecode/btc_staking.wasm"
 	err = ctm.BcdConsumerClient.StoreWasmCode(btcStakingContractPath)
 	require.NoError(t, err)
 	btcStakingContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
@@ -55,7 +59,6 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.Equal(t, uint64(2), btcStakingContractWasmId)
 
 	// store btc finality contract
-	btcFinalityContractPath := "../../bytecode/btc_finality.wasm"
 	err = ctm.BcdConsumerClient.StoreWasmCode(btcFinalityContractPath)
 	require.NoError(t, err)
 	btcFinalityContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
