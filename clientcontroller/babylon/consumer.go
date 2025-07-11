@@ -221,7 +221,7 @@ func (bc *BabylonConsumerController) SubmitBatchFinalitySigs(
 		return &types.TxResponse{}, nil
 	}
 
-	return &types.TxResponse{TxHash: res.TxHash}, nil
+	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }
 
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
