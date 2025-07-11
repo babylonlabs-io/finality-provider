@@ -6,24 +6,13 @@ package e2etest_bcd
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"testing"
 
-	"cosmossdk.io/errors"
 	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
-	"github.com/babylonlabs-io/babylon-sdk/x/babylon/client/cli"
 	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
 
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
-)
-
-const (
-	babylonContractPath     = "../../bytecode/babylon_contract.wasm"
-	btcStakingContractPath  = "../../bytecode/btc_staking.wasm"
-	btcFinalityContractPath = "../../bytecode/btc_finality.wasm"
 )
 
 // TestConsumerFpLifecycle tests the consumer finality provider lifecycle
@@ -44,71 +33,11 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	ctm := StartBcdTestManager(t, ctx)
 	defer ctm.Stop(t)
 
-	// store babylon contract
-	err := ctm.BcdConsumerClient.StoreWasmCode(babylonContractPath)
-	require.NoError(t, err)
-	babylonContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
-	require.NoError(t, err)
-	require.Equal(t, uint64(1), babylonContractWasmId)
-
-	// store btc staking contract
-	err = ctm.BcdConsumerClient.StoreWasmCode(btcStakingContractPath)
-	require.NoError(t, err)
-	btcStakingContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
-	require.NoError(t, err)
-	require.Equal(t, uint64(2), btcStakingContractWasmId)
-
-	// store btc finality contract
-	err = ctm.BcdConsumerClient.StoreWasmCode(btcFinalityContractPath)
-	require.NoError(t, err)
-	btcFinalityContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
-	require.NoError(t, err)
-	require.Equal(t, uint64(3), btcFinalityContractWasmId)
-
-	initMsg, err := cli.ParseInstantiateArgs(
-		[]string{
-			fmt.Sprintf("%d", babylonContractWasmId),
-			fmt.Sprintf("%d", btcStakingContractWasmId),
-			fmt.Sprintf("%d", btcFinalityContractWasmId),
-			"regtest",
-			"01020304",
-			"1",
-			"2",
-			"false",
-			fmt.Sprintf(`{"admin":"%s"}`, ctm.BcdConsumerClient.MustGetValidatorAddress()),
-			fmt.Sprintf(`{"admin":"%s"}`, ctm.BcdConsumerClient.MustGetValidatorAddress()),
-			"test-consumer",
-			"test-consumer-description",
-		},
-		"",
-		ctm.BcdConsumerClient.MustGetValidatorAddress(),
-		ctm.BcdConsumerClient.MustGetValidatorAddress(),
-	)
-	require.NoError(t, err)
-	emptyErrs := []*errors.Error{}
-	_, err = ctm.BcdConsumerClient.GetClient().ReliablySendMsg(ctx, initMsg, emptyErrs, emptyErrs)
-	require.NoError(t, err)
-
-	// get btc staking contract address
-	resp, err := ctm.BcdConsumerClient.ListContractsByCode(btcStakingContractWasmId, &sdkquerytypes.PageRequest{})
-	require.NoError(t, err)
-	require.Len(t, resp.Contracts, 1)
-	btcStakingContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
-	// update the contract address
-	btcStakingContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcStakingContractAddr)
-	ctm.BcdConsumerClient.SetBtcStakingContractAddress(btcStakingContractAddrStr)
-
-	// get btc finality contract address
-	resp, err = ctm.BcdConsumerClient.ListContractsByCode(btcFinalityContractWasmId, &sdkquerytypes.PageRequest{})
-	require.NoError(t, err)
-	require.Len(t, resp.Contracts, 1)
-	btcFinalityContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
-	// update the contract address
-	btcFinalityContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcFinalityContractAddr)
-	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddrStr)
+	// store and instantiate Cosmos BSN contracts
+	ctm.DeployContracts(t, ctx)
 
 	// register consumer to babylon
-	_, err = ctm.BBNClient.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
+	_, err := ctm.BBNClient.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
 	require.NoError(t, err)
 
 	// register consumer fps to babylon

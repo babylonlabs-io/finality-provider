@@ -13,14 +13,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/babylonlabs-io/finality-provider/metrics"
-
+	"cosmossdk.io/errors"
 	wasmparams "github.com/CosmWasm/wasmd/app/params"
 	_ "github.com/babylonlabs-io/babylon-sdk/demo/app"
+	"github.com/babylonlabs-io/babylon-sdk/x/babylon/client/cli"
 	bbnsdktypes "github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	"github.com/babylonlabs-io/finality-provider/metrics"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -38,6 +41,12 @@ import (
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
+)
+
+const (
+	babylonContractPath     = "../../bytecode/babylon_contract.wasm"
+	btcStakingContractPath  = "../../bytecode/btc_staking.wasm"
+	btcFinalityContractPath = "../../bytecode/btc_finality.wasm"
 )
 
 type BcdTestManager struct {
@@ -222,6 +231,73 @@ func (ctm *BcdTestManager) Stop(t *testing.T) {
 	require.NoError(t, err)
 	err = os.RemoveAll(ctm.baseDir)
 	require.NoError(t, err)
+}
+
+func (ctm *BcdTestManager) DeployContracts(t *testing.T, ctx context.Context) {
+
+	// store babylon contract
+	err := ctm.BcdConsumerClient.StoreWasmCode(babylonContractPath)
+	require.NoError(t, err)
+	babylonContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), babylonContractWasmId)
+
+	// store btc staking contract
+	err = ctm.BcdConsumerClient.StoreWasmCode(btcStakingContractPath)
+	require.NoError(t, err)
+	btcStakingContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), btcStakingContractWasmId)
+
+	// store btc finality contract
+	err = ctm.BcdConsumerClient.StoreWasmCode(btcFinalityContractPath)
+	require.NoError(t, err)
+	btcFinalityContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), btcFinalityContractWasmId)
+
+	initMsg, err := cli.ParseInstantiateArgs(
+		[]string{
+			fmt.Sprintf("%d", babylonContractWasmId),
+			fmt.Sprintf("%d", btcStakingContractWasmId),
+			fmt.Sprintf("%d", btcFinalityContractWasmId),
+			"regtest",
+			"01020304",
+			"1",
+			"2",
+			"false",
+			fmt.Sprintf(`{"admin":"%s"}`, ctm.BcdConsumerClient.MustGetValidatorAddress()),
+			fmt.Sprintf(`{"admin":"%s"}`, ctm.BcdConsumerClient.MustGetValidatorAddress()),
+			"test-consumer",
+			"test-consumer-description",
+		},
+		"",
+		ctm.BcdConsumerClient.MustGetValidatorAddress(),
+		ctm.BcdConsumerClient.MustGetValidatorAddress(),
+	)
+	require.NoError(t, err)
+	emptyErrs := []*errors.Error{}
+	_, err = ctm.BcdConsumerClient.GetClient().ReliablySendMsg(ctx, initMsg, emptyErrs, emptyErrs)
+	require.NoError(t, err)
+
+	// get btc staking contract address
+	resp, err := ctm.BcdConsumerClient.ListContractsByCode(btcStakingContractWasmId, &sdkquerytypes.PageRequest{})
+	require.NoError(t, err)
+	require.Len(t, resp.Contracts, 1)
+	btcStakingContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+	// update the contract address
+	btcStakingContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcStakingContractAddr)
+	ctm.BcdConsumerClient.SetBtcStakingContractAddress(btcStakingContractAddrStr)
+
+	// get btc finality contract address
+	resp, err = ctm.BcdConsumerClient.ListContractsByCode(btcFinalityContractWasmId, &sdkquerytypes.PageRequest{})
+	require.NoError(t, err)
+	require.Len(t, resp.Contracts, 1)
+	btcFinalityContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+	// update the contract address
+	btcFinalityContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcFinalityContractAddr)
+	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddrStr)
+
 }
 
 // CreateConsumerFinalityProviders creates finality providers for a consumer chain
