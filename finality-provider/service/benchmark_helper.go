@@ -20,7 +20,7 @@ type CommitPubRandTiming struct {
 
 // HelperCommitPubRand used for benchmark
 func (fp *FinalityProviderInstance) HelperCommitPubRand(ctx context.Context, tipHeight uint64) (*types.TxResponse, *CommitPubRandTiming, error) {
-	lastCommittedHeight, err := fp.GetLastCommittedHeight()
+	lastCommittedHeight, err := fp.GetLastCommittedHeight(ctx)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -226,7 +226,7 @@ func (bc *BabylonConsumerController) SubmitBatchFinalitySigs(
 
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
 func (bc *BabylonConsumerController) QueryFinalityProviderHasPower(
-	ctx context.Context,
+	_ context.Context,
 	req *api.QueryFinalityProviderHasPowerRequest,
 ) (bool, error) {
 	res, err := bc.bbnClient.QueryClient.FinalityProviderPowerAtHeight(
@@ -248,7 +248,7 @@ func (bc *BabylonConsumerController) QueryFinalityProviderHasPower(
 	return res.VotingPower > 0, nil
 }
 
-func (bc *BabylonConsumerController) QueryLatestFinalizedBlock(ctx context.Context) (types.BlockDescription, error) {
+func (bc *BabylonConsumerController) QueryLatestFinalizedBlock(_ context.Context) (types.BlockDescription, error) {
 	blocks, err := bc.queryLatestBlocks(nil, 1, finalitytypes.QueriedBlockStatus_FINALIZED, true)
 	if blocks == nil {
 		return nil, err
@@ -257,7 +257,7 @@ func (bc *BabylonConsumerController) QueryLatestFinalizedBlock(ctx context.Conte
 	return blocks[0], nil
 }
 
-func (bc *BabylonConsumerController) QueryBlocks(ctx context.Context, req *api.QueryBlocksRequest) ([]types.BlockDescription, error) {
+func (bc *BabylonConsumerController) QueryBlocks(_ context.Context, req *api.QueryBlocksRequest) ([]types.BlockDescription, error) {
 	if req.EndHeight < req.StartHeight {
 		return nil, fmt.Errorf("the startHeight %v should not be higher than the endHeight %v", req.StartHeight, req.EndHeight)
 	}
@@ -289,7 +289,7 @@ func (bc *BabylonConsumerController) queryLatestBlocks(startKey []byte, count ui
 	return blocks, nil
 }
 
-func (bc *BabylonConsumerController) QueryBlock(ctx context.Context, height uint64) (types.BlockDescription, error) {
+func (bc *BabylonConsumerController) QueryBlock(_ context.Context, height uint64) (types.BlockDescription, error) {
 	res, err := bc.bbnClient.QueryClient.Block(height)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query indexed block at height %v: %w", height, err)
@@ -299,7 +299,7 @@ func (bc *BabylonConsumerController) QueryBlock(ctx context.Context, height uint
 }
 
 // QueryLastPublicRandCommit returns the last public randomness commitments
-func (bc *BabylonConsumerController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
+func (bc *BabylonConsumerController) QueryLastPublicRandCommit(_ context.Context, fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
 	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	pagination := &sdkquery.PageRequest{
@@ -341,7 +341,7 @@ func (bc *BabylonConsumerController) QueryLastPublicRandCommit(ctx context.Conte
 	return commit, nil
 }
 
-func (bc *BabylonConsumerController) QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error) {
+func (bc *BabylonConsumerController) QueryIsBlockFinalized(_ context.Context, height uint64) (bool, error) {
 	res, err := bc.bbnClient.QueryClient.Block(height)
 	if err != nil {
 		return false, fmt.Errorf("failed to query indexed block at height %v: %w", height, err)
@@ -350,7 +350,7 @@ func (bc *BabylonConsumerController) QueryIsBlockFinalized(ctx context.Context, 
 	return res.Block.Finalized, nil
 }
 
-func (bc *BabylonConsumerController) QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error) {
+func (bc *BabylonConsumerController) QueryFinalityActivationBlockHeight(_ context.Context) (uint64, error) {
 	res, err := bc.bbnClient.QueryClient.FinalityParams()
 	if err != nil {
 		return 0, fmt.Errorf("failed to query finality params to get finality activation block height: %w", err)
@@ -359,7 +359,7 @@ func (bc *BabylonConsumerController) QueryFinalityActivationBlockHeight(ctx cont
 	return res.Params.FinalityActivationHeight, nil
 }
 
-func (bc *BabylonConsumerController) QueryActivatedHeight(ctx context.Context) (uint64, error) {
+func (bc *BabylonConsumerController) QueryActivatedHeight(_ context.Context) (uint64, error) {
 	res, err := bc.bbnClient.QueryClient.ActivatedHeight()
 	if err != nil {
 		return 0, fmt.Errorf("failed to query activated height: %w", err)
@@ -369,7 +369,7 @@ func (bc *BabylonConsumerController) QueryActivatedHeight(ctx context.Context) (
 }
 
 // QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
-func (bc *BabylonConsumerController) QueryFinalityProviderHighestVotedHeight(ctx context.Context, fpPk *btcec.PublicKey) (uint64, error) {
+func (bc *BabylonConsumerController) QueryFinalityProviderHighestVotedHeight(_ context.Context, fpPk *btcec.PublicKey) (uint64, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
@@ -415,12 +415,13 @@ func (bc *BabylonConsumerController) queryCometBestBlock(ctx context.Context) (*
 }
 
 // QueryFinalityProviderStatus - returns if the fp has been slashed, jailed, err
-func (bc *BabylonConsumerController) QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
+func (bc *BabylonConsumerController) QueryFinalityProviderStatus(_ context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
 	}
+
 	return &api.FinalityProviderStatusResponse{
 		Slashed: res.FinalityProvider.SlashedBtcHeight > 0,
 		Jailed:  res.FinalityProvider.Jailed,

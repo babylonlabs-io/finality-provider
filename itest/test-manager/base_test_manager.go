@@ -249,7 +249,7 @@ func (tm *BaseTestManager) WaitForFpPubRandTimestamped(t *testing.T, fpIns *serv
 	var err error
 
 	require.Eventually(t, func() bool {
-		lastCommittedHeight, err = fpIns.GetLastCommittedHeight()
+		lastCommittedHeight, err = fpIns.GetLastCommittedHeight(context.Background())
 		if err != nil {
 			return false
 		}
@@ -632,6 +632,7 @@ func CreateAndRegisterFinalityProvider(t *testing.T, fpApp *service.FinalityProv
 	desc := e2eutils.NewDescription(moniker)
 
 	_, err := fpApp.CreateFinalityProvider(
+		context.Background(),
 		keyName,
 		chainId,
 		eotsPk,

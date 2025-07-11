@@ -1,6 +1,7 @@
 package e2e_utils
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -87,7 +88,7 @@ func WaitForFpPubRandCommittedReachTargetHeight(t *testing.T, fpIns *service.Fin
 	var lastCommittedHeight uint64
 	var err error
 	require.Eventually(t, func() bool {
-		lastCommittedHeight, err = fpIns.GetLastCommittedHeight()
+		lastCommittedHeight, err = fpIns.GetLastCommittedHeight(context.Background())
 		if err != nil {
 			return false
 		}

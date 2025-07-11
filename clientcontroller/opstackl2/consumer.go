@@ -123,13 +123,13 @@ func NewCwClient(cwConfig *cwconfig.CosmwasmConfig, logger *zap.Logger) (*cwclie
 	return cwClient, nil
 }
 
-func (cc *OPStackL2ConsumerController) ReliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
-	return cc.reliablySendMsgs([]sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
+func (cc *OPStackL2ConsumerController) ReliablySendMsg(ctx context.Context, msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+	return cc.reliablySendMsgs(ctx, []sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
-func (cc *OPStackL2ConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+func (cc *OPStackL2ConsumerController) reliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	resp, err := cc.CwClient.ReliablySendMsgs(
-		context.Background(),
+		ctx,
 		msgs,
 		expectedErrs,
 		unrecoverableErrs,
@@ -167,7 +167,7 @@ func (cc *OPStackL2ConsumerController) CommitPubRandList(
 		Msg:      payload,
 	}
 
-	res, err := cc.ReliablySendMsg(execMsg, nil, nil)
+	res, err := cc.ReliablySendMsg(ctx, execMsg, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -196,6 +196,7 @@ func (cc *OPStackL2ConsumerController) SubmitFinalitySig(
 		ProofList:   [][]byte{proof},
 		Sigs:        []*btcec.ModNScalar{sig},
 	}
+
 	return cc.SubmitBatchFinalitySigs(context.Background(), req)
 }
 
@@ -242,7 +243,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 		finalitytypes.ErrSigHeightOutdated,
 	}
 
-	res, err := cc.reliablySendMsgs(msgs, expectedErrs, nil)
+	res, err := cc.reliablySendMsgs(ctx, msgs, expectedErrs, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -507,17 +508,17 @@ func (cc *OPStackL2ConsumerController) QueryLastPublicRandCommit(ctx context.Con
 	return resp, nil
 }
 
-func (cc *OPStackL2ConsumerController) QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error) {
+func (cc *OPStackL2ConsumerController) QueryFinalityActivationBlockHeight(_ context.Context) (uint64, error) {
 	// TODO: implement finality activation feature in OP stack L2
 	return 0, nil
 }
 
-func (cc *OPStackL2ConsumerController) QueryFinalityProviderHighestVotedHeight(ctx context.Context, fpPk *btcec.PublicKey) (uint64, error) {
+func (cc *OPStackL2ConsumerController) QueryFinalityProviderHighestVotedHeight(_ context.Context, _ *btcec.PublicKey) (uint64, error) {
 	// TODO: implement highest voted height feature in OP stack L2
 	return 0, nil
 }
 
-func (cc *OPStackL2ConsumerController) QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
+func (cc *OPStackL2ConsumerController) QueryFinalityProviderStatus(_ context.Context, _ *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
 	// TODO: implement slashed or jailed feature in OP stack L2
 	return &api.FinalityProviderStatusResponse{
 		Slashed: false,
@@ -525,7 +526,7 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderStatus(ctx context.C
 	}, nil
 }
 
-func (cc *OPStackL2ConsumerController) UnjailFinalityProvider(ctx context.Context, fpPk *btcec.PublicKey) (*types.TxResponse, error) {
+func (cc *OPStackL2ConsumerController) UnjailFinalityProvider(_ context.Context, _ *btcec.PublicKey) (*types.TxResponse, error) {
 	// TODO: implement unjail feature in OP stack L2
 	return nil, nil
 }

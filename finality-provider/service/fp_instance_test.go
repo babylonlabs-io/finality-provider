@@ -27,6 +27,7 @@ import (
 func FuzzCommitPubRandList(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
@@ -40,7 +41,7 @@ func FuzzCommitPubRandList(f *testing.F) {
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
 
-		res, err := fpIns.CommitPubRand(startingBlock.GetHeight())
+		res, err := fpIns.CommitPubRand(context.Background(), startingBlock.GetHeight())
 		require.NoError(t, err)
 		require.Equal(t, expectedTxHash, res.TxHash)
 	})
@@ -49,6 +50,7 @@ func FuzzCommitPubRandList(f *testing.F) {
 func FuzzSubmitFinalitySigs(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
@@ -61,7 +63,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		defer cleanUp()
 
 		// commit pub rand
-		_, err := fpIns.CommitPubRand(startingBlock.GetHeight())
+		_, err := fpIns.CommitPubRand(context.Background(), startingBlock.GetHeight())
 		require.NoError(t, err)
 
 		// mock committed pub rand
@@ -79,15 +81,8 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		// submit finality sig
 		nextBlock := types.NewBlockInfo(startingBlock.GetHeight()+1, testutil.GenRandomByteArray(r, 32), false)
 		expectedTxHash := testutil.GenRandomHexStr(r, 32)
-		req := api.SubmitBatchFinalitySigsRequest{
-			FpPk:        fpIns.GetBtcPk(),
-			Blocks:      []*types.BlockInfo{nextBlock},
-			PubRandList: nil,
-			ProofList:   nil,
-			Sigs:        nil,
-		}
 		mockConsumerController.EXPECT().
-			SubmitBatchFinalitySigs(context.Background(), req).
+			SubmitBatchFinalitySigs(context.Background(), gomock.Any()).
 			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
 		providerRes, err := fpIns.SubmitBatchFinalitySignatures([]types.BlockDescription{nextBlock})
 		require.NoError(t, err)
@@ -101,6 +96,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 func FuzzDetermineStartHeight(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		// generate random heights
@@ -122,7 +118,7 @@ func FuzzDetermineStartHeight(f *testing.F) {
 			AnyTimes()
 
 		finalizedBlock := types.NewBlockInfo(lastFinalizedHeight, testutil.GenRandomByteArray(r, 32), false)
-		mockConsumerController.EXPECT().QueryLatestFinalizedBlock().Return(finalizedBlock, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestFinalizedBlock(context.Background()).Return(finalizedBlock, nil).AnyTimes()
 
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, false, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
@@ -236,10 +232,17 @@ func setupBenchmarkEnvironment(t *testing.T, seed int64, numPubRand uint32) (*ty
 
 	// Configure additional mocks
 	expectedTxHash := testutil.GenRandomHexStr(r, 32)
+	req := &api.CommitPubRandListRequest{
+		FpPk:        fpIns.GetBtcPk(),
+		StartHeight: startingBlock.GetHeight() + 1,
+		NumPubRand:  0,
+		Commitment:  nil,
+		Sig:         nil,
+	}
 	mockConsumerController.EXPECT().
-		CommitPubRandList(fpIns.GetBtcPk(), startingBlock.GetHeight()+1, gomock.Any(), gomock.Any(), gomock.Any()).
+		CommitPubRandList(context.Background(), req).
 		Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
-	mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any()).Return(nil, nil).AnyTimes()
+	mockConsumerController.EXPECT().QueryLastPublicRandCommit(context.Background(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	return startingBlock, fpIns, cleanUp
 }

@@ -373,7 +373,7 @@ func (wc *CosmwasmConsumerController) QueryActivatedHeight(ctx context.Context) 
 }
 
 func (wc *CosmwasmConsumerController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
-	block, err := wc.queryCometBestBlock()
+	block, err := wc.queryCometBestBlock(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -381,17 +381,17 @@ func (wc *CosmwasmConsumerController) QueryLatestBlockHeight(ctx context.Context
 	return block.GetHeight(), nil
 }
 
-func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error) {
+func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight(_ context.Context) (uint64, error) {
 	// TODO: implement finality activation feature in OP stack L2
 	return 0, nil
 }
 
-func (wc *CosmwasmConsumerController) QueryFinalityProviderHighestVotedHeight(ctx context.Context, fpPk *btcec.PublicKey) (uint64, error) {
+func (wc *CosmwasmConsumerController) QueryFinalityProviderHighestVotedHeight(_ context.Context, _ *btcec.PublicKey) (uint64, error) {
 	// TODO: implement highest voted height feature in OP stack L2
 	return 0, nil
 }
 
-func (wc *CosmwasmConsumerController) QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
+func (wc *CosmwasmConsumerController) QueryFinalityProviderStatus(_ context.Context, _ *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
 	// TODO: implement slashed or jailed feature in OP stack L2
 	return &api.FinalityProviderStatusResponse{
 		Slashed: false,
@@ -399,7 +399,7 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderStatus(ctx context.Co
 	}, nil
 }
 
-func (wc *CosmwasmConsumerController) UnjailFinalityProvider(ctx context.Context, fpPk *btcec.PublicKey) (*fptypes.TxResponse, error) {
+func (wc *CosmwasmConsumerController) UnjailFinalityProvider(_ context.Context, _ *btcec.PublicKey) (*fptypes.TxResponse, error) {
 	// TODO: implement unjail feature in OP stack L2
 	return nil, nil
 }
@@ -517,8 +517,8 @@ func (wc *CosmwasmConsumerController) queryLatestBlocks(ctx context.Context, sta
 	return blocks, nil
 }
 
-func (wc *CosmwasmConsumerController) queryCometBestBlock() (*fptypes.BlockInfo, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), wc.cfg.Timeout)
+func (wc *CosmwasmConsumerController) queryCometBestBlock(ctx context.Context) (*fptypes.BlockInfo, error) {
+	ctx, cancel := context.WithTimeout(ctx, wc.cfg.Timeout)
 	defer cancel()
 
 	// this will return 20 items at max in the descending order (highest first)

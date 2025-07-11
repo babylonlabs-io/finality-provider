@@ -355,6 +355,7 @@ func (app *FinalityProviderApp) Stop() error {
 }
 
 func (app *FinalityProviderApp) CreateFinalityProvider(
+	ctx context.Context,
 	keyName, chainID string,
 	eotsPk *bbntypes.BIP340PubKey,
 	description *stakingtypes.Description,
@@ -405,7 +406,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 			zap.String("addr", resp.FinalityProvider.Addr),
 		)
 
-		if err := app.putFpFromResponse(resp.FinalityProvider, chainID); err != nil {
+		if err := app.putFpFromResponse(ctx, resp.FinalityProvider, chainID); err != nil {
 			return nil, err
 		}
 
@@ -600,7 +601,7 @@ func (app *FinalityProviderApp) setFinalityProviderSlashed(fpi *FinalityProvider
 }
 
 // putFpFromResponse creates or updates finality-provider in the local store
-func (app *FinalityProviderApp) putFpFromResponse(fp *bstypes.FinalityProviderResponse, chainID string) error {
+func (app *FinalityProviderApp) putFpFromResponse(ctx context.Context, fp *bstypes.FinalityProviderResponse, chainID string) error {
 	btcPk := fp.BtcPk.MustToBTCPK()
 	_, err := app.fps.GetFinalityProvider(btcPk)
 	if err != nil {
@@ -643,7 +644,7 @@ func (app *FinalityProviderApp) putFpFromResponse(fp *bstypes.FinalityProviderRe
 		return err
 	}
 
-	hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(context.Background(), &ccapi.QueryFinalityProviderHasPowerRequest{
+	hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(ctx, &ccapi.QueryFinalityProviderHasPowerRequest{
 		FpPk:        btcPk,
 		BlockHeight: fp.Height,
 	})
