@@ -86,8 +86,8 @@ func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTe
 	babylonController, _ := waitForBabylonNodeStart(t, keyDir, testDir, logger, manager, babylond)
 
 	// create cosmwasm client
-	consumerFpCfg, opConsumerCfg := createConsumerFpConfig(t, testDir, manager, babylond)
-	cwConfig := opConsumerCfg.ToCosmwasmConfig()
+	bsnFpCfg := createConsumerFpConfig(t, testDir, manager, babylond)
+	cwConfig := fpcfg.BBNConfigToCosmwasmConfig(bsnFpCfg.BabylonConfig)
 	cwClient, err := opcc.NewCwClient(&cwConfig, logger)
 	require.NoError(t, err)
 
@@ -106,18 +106,14 @@ func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTe
 	t.Logf(log.Prefix("Register consumer %s to Babylon"), rollupBSNID)
 
 	// update opConsumerCfg with opFinalityGadgetAddress
-	opConsumerCfg.OPFinalityGadgetAddress = opFinalityGadgetAddress
-
-	// update consumer FP config with opConsumerCfg
-	consumerFpCfg.OPStackL2Config = opConsumerCfg
-	consumerFpCfg.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
+	bsnFpCfg.OPStackL2Config.OPFinalityGadgetAddress = opFinalityGadgetAddress
 
 	// create Babylon FP config
 	babylonFpCfg := createBabylonFpConfig(t, keyDir, testDir, manager, babylond)
 	babylonFpCfg.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
 
 	// create EOTS handler and EOTS gRPC clients for Babylon and consumer
-	eotsHandler, EOTSClients := base_test_manager.StartEotsManagers(t, ctx, logger, testDir, babylonFpCfg, consumerFpCfg)
+	eotsHandler, EOTSClients := base_test_manager.StartEotsManagers(t, ctx, logger, testDir, babylonFpCfg, bsnFpCfg)
 
 	// create Babylon consumer controller
 	babylonConsumerController, err := bbncc.NewBabylonConsumerController(babylonFpCfg.BabylonConfig, logger)
@@ -128,11 +124,11 @@ func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTe
 	t.Log(log.Prefix("Started Babylon FP App"))
 
 	// create op consumer controller
-	opConsumerController, err := opcc.NewOPStackL2ConsumerController(opConsumerCfg, logger)
+	opConsumerController, err := opcc.NewOPStackL2ConsumerController(bsnFpCfg.BabylonConfig, bsnFpCfg.OPStackL2Config, logger)
 	require.NoError(t, err)
 
 	// create and start consumer FP app
-	consumerFpApp := base_test_manager.CreateAndStartFpApp(t, logger, consumerFpCfg, opConsumerController, EOTSClients[1])
+	consumerFpApp := base_test_manager.CreateAndStartFpApp(t, logger, bsnFpCfg, opConsumerController, EOTSClients[1])
 	t.Log(log.Prefix("Started Consumer FP App"))
 
 	ctm := &OpL2ConsumerTestManager{
@@ -247,7 +243,7 @@ func createConsumerFpConfig(
 	testDir string,
 	manager *container.Manager,
 	babylond *dockertest.Resource,
-) (*fpcfg.Config, *fpcfg.OPStackL2Config) {
+) *fpcfg.Config {
 	fpHomeDir := filepath.Join(testDir, "consumer-fp-home")
 	t.Logf(log.Prefix("Consumer FP home dir: %s"), fpHomeDir)
 
@@ -311,24 +307,10 @@ func createConsumerFpConfig(
 		OPStackL2RPCAddress: "https://optimism-sepolia.drpc.org",
 		// the value does not matter for the test
 		BabylonFinalityGadgetRpc: "127.0.0.1:50051",
-		Key:                      cfg.BabylonConfig.Key,
-		ChainID:                  cfg.BabylonConfig.ChainID,
-		RPCAddr:                  cfg.BabylonConfig.RPCAddr,
-		GRPCAddr:                 cfg.BabylonConfig.GRPCAddr,
-		AccountPrefix:            cfg.BabylonConfig.AccountPrefix,
-		KeyringBackend:           cfg.BabylonConfig.KeyringBackend,
-		KeyDirectory:             cfg.BabylonConfig.KeyDirectory,
-		GasAdjustment:            1.5,
-		GasPrices:                "0.002ubbn",
-		Debug:                    cfg.BabylonConfig.Debug,
-		Timeout:                  cfg.BabylonConfig.Timeout,
-		BlockTimeout:             1 * time.Minute,
-		OutputFormat:             cfg.BabylonConfig.OutputFormat,
-		SignModeStr:              cfg.BabylonConfig.SignModeStr,
 	}
 	cfg.OPStackL2Config = opConsumerCfg
 
-	return cfg, opConsumerCfg
+	return cfg
 }
 
 func deployCwContract(t *testing.T, cwClient *cwclient.Client, ctx context.Context) string {
@@ -387,7 +369,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime, "Failed to wait for Babylon FP registration")
 
 	consumerCfg := ctm.ConsumerFpApp.GetConfig()
-	consumerKeyName := consumerCfg.OPStackL2Config.Key + "2"
+	consumerKeyName := consumerCfg.BabylonConfig.Key + "2"
 
 	// create and register consumer FP
 	consumerEotsPk, err := ctm.EOTSServerHandler.CreateKey(consumerKeyName, "")
@@ -470,7 +452,7 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 	ctx context.Context,
 ) *wasmtypes.QuerySmartContractStateResponse {
 	// create cosmwasm client
-	cwConfig := ctm.OpConsumerController.Cfg.ToCosmwasmConfig()
+	cwConfig := fpcfg.BBNConfigToCosmwasmConfig(ctm.BabylonFpApp.GetConfig().BabylonConfig)
 	cwClient, err := opcc.NewCwClient(&cwConfig, ctm.logger)
 	require.NoError(t, err)
 

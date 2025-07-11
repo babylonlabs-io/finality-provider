@@ -54,6 +54,7 @@ type OPStackL2ConsumerController struct {
 }
 
 func NewOPStackL2ConsumerController(
+	bbnCfg *fpcfg.BBNConfig,
 	opl2Cfg *fpcfg.OPStackL2Config,
 	logger *zap.Logger,
 ) (*OPStackL2ConsumerController, error) {
@@ -63,25 +64,22 @@ func NewOPStackL2ConsumerController(
 	if err := opl2Cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
-	cwConfig := opl2Cfg.ToCosmwasmConfig()
-
-	cwClient, err := NewCwClient(&cwConfig, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create CW client: %w", err)
-	}
 
 	opl2Client, err := ethclient.Dial(opl2Cfg.OPStackL2RPCAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OPStack L2 client: %w", err)
 	}
 
-	bbnConfig := opl2Cfg.ToBBNConfig()
-	babylonConfig := fpcfg.BBNConfigToBabylonConfig(&bbnConfig)
-
+	babylonConfig := fpcfg.BBNConfigToBabylonConfig(bbnCfg)
 	if err := babylonConfig.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config for Babylon client: %w", err)
 	}
 
+	cwConfig := fpcfg.BBNConfigToCosmwasmConfig(bbnCfg)
+	cwClient, err := NewCwClient(&cwConfig, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create CW client: %w", err)
+	}
 	bc, err := bbnclient.New(
 		&babylonConfig,
 		logger,
