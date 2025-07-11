@@ -150,6 +150,7 @@ func (cc *OPStackL2ConsumerController) QueryContractConfig() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config response: %w", err)
 	}
+
 	return resp, nil
 }
 
