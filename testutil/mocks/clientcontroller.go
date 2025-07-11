@@ -67,6 +67,20 @@ func (mr *MockClientControllerMockRecorder) EditFinalityProvider(fpPk, commissio
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditFinalityProvider", reflect.TypeOf((*MockClientController)(nil).EditFinalityProvider), fpPk, commission, description)
 }
 
+// GetFpPopContextV0 mocks base method.
+func (m *MockClientController) GetFpPopContextV0() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFpPopContextV0")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetFpPopContextV0 indicates an expected call of GetFpPopContextV0.
+func (mr *MockClientControllerMockRecorder) GetFpPopContextV0() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFpPopContextV0", reflect.TypeOf((*MockClientController)(nil).GetFpPopContextV0))
+}
+
 // QueryFinalityProvider mocks base method.
 func (m *MockClientController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*types.QueryFinalityProviderResponse, error) {
 	m.ctrl.T.Helper()
@@ -161,6 +175,34 @@ func (m *MockConsumerController) CommitPubRandList(fpPk *btcec.PublicKey, startH
 func (mr *MockConsumerControllerMockRecorder) CommitPubRandList(fpPk, startHeight, numPubRand, commitment, sig interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitPubRandList", reflect.TypeOf((*MockConsumerController)(nil).CommitPubRandList), fpPk, startHeight, numPubRand, commitment, sig)
+}
+
+// GetFpFinVoteContext mocks base method.
+func (m *MockConsumerController) GetFpFinVoteContext() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFpFinVoteContext")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetFpFinVoteContext indicates an expected call of GetFpFinVoteContext.
+func (mr *MockConsumerControllerMockRecorder) GetFpFinVoteContext() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFpFinVoteContext", reflect.TypeOf((*MockConsumerController)(nil).GetFpFinVoteContext))
+}
+
+// GetFpRandCommitContext mocks base method.
+func (m *MockConsumerController) GetFpRandCommitContext() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFpRandCommitContext")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetFpRandCommitContext indicates an expected call of GetFpRandCommitContext.
+func (mr *MockConsumerControllerMockRecorder) GetFpRandCommitContext() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFpRandCommitContext", reflect.TypeOf((*MockConsumerController)(nil).GetFpRandCommitContext))
 }
 
 // QueryActivatedHeight mocks base method.

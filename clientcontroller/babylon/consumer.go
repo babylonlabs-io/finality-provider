@@ -20,6 +20,7 @@ import (
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
@@ -96,6 +97,14 @@ func (bc *BabylonConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedEr
 		expectedErrs,
 		unrecoverableErrs,
 	)
+}
+
+func (bc *BabylonConsumerController) GetFpRandCommitContext() string {
+	return signingcontext.FpRandCommitContextV0(bc.cfg.ChainID, signingcontext.AccFinality.String())
+}
+
+func (bc *BabylonConsumerController) GetFpFinVoteContext() string {
+	return signingcontext.FpFinVoteContextV0(bc.cfg.ChainID, signingcontext.AccFinality.String())
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness via a MsgCommitPubRand to Babylon

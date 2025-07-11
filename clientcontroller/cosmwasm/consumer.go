@@ -17,6 +17,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cwcclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	fptypes "github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -86,6 +87,16 @@ func (wc *CosmwasmConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedE
 
 func (wc *CosmwasmConsumerController) GetClient() *cwcclient.Client {
 	return wc.cwClient
+}
+
+// TODO: what should be the signing context?
+func (wc *CosmwasmConsumerController) GetFpRandCommitContext() string {
+	return signingcontext.FpRandCommitContextV0(wc.cfg.ChainID, wc.cfg.BtcFinalityContractAddress)
+}
+
+// TODO: what should be the signing context?
+func (wc *CosmwasmConsumerController) GetFpFinVoteContext() string {
+	return signingcontext.FpFinVoteContextV0(wc.cfg.ChainID, wc.cfg.BtcFinalityContractAddress)
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness via a MsgCommitPubRand to Babylon

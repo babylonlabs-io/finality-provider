@@ -40,13 +40,13 @@ import (
 )
 
 const (
-	opConsumerChainId            = "op-stack-l2-706114"
-	bbnAddrTopUpAmount           = 100000000
-	eventuallyWaitTimeOut        = 5 * time.Minute
-	eventuallyPollTime           = 500 * time.Millisecond
-	passphrase                   = "testpass"
-	hdPath                       = ""
-	opFinalityGadgetContractPath = "../bytecode/op_finality_gadget_16f6154.wasm"
+	rollupBSNID                = "op-stack-l2-706114"
+	bbnAddrTopUpAmount         = 100000000
+	eventuallyWaitTimeOut      = 5 * time.Minute
+	eventuallyPollTime         = 500 * time.Millisecond
+	passphrase                 = "testpass"
+	hdPath                     = ""
+	rollupFinalityContractPath = "../bytecode/rollup/finality.wasm"
 )
 
 type BaseTestManager = base_test_manager.BaseTestManager
@@ -93,17 +93,17 @@ func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTe
 
 	// deploy finality gadget cw contract
 	opFinalityGadgetAddress := deployCwContract(t, cwClient, ctx)
-	t.Logf(log.Prefix("op-finality-gadget contract address: %s"), opFinalityGadgetAddress)
+	t.Logf(log.Prefix("rollup BSN finality contract address: %s"), opFinalityGadgetAddress)
 
 	// register consumer chain to Babylon
 	_, err = babylonController.RegisterConsumerChain(
-		opConsumerChainId,
-		"OP consumer chain",
+		rollupBSNID,
+		"OP stack rollup BSN",
 		"Some description about the chain",
 		opFinalityGadgetAddress,
 	)
 	require.NoError(t, err)
-	t.Logf(log.Prefix("Register consumer %s to Babylon"), opConsumerChainId)
+	t.Logf(log.Prefix("Register consumer %s to Babylon"), rollupBSNID)
 
 	// update opConsumerCfg with opFinalityGadgetAddress
 	opConsumerCfg.OPFinalityGadgetAddress = opFinalityGadgetAddress
@@ -333,7 +333,7 @@ func createConsumerFpConfig(
 
 func deployCwContract(t *testing.T, cwClient *cwclient.Client, ctx context.Context) string {
 	// store op-finality-gadget contract
-	err := cwClient.StoreWasmCode(ctx, opFinalityGadgetContractPath)
+	err := cwClient.StoreWasmCode(ctx, rollupFinalityContractPath)
 	require.NoError(t, err)
 
 	var codeId uint64
@@ -345,9 +345,9 @@ func deployCwContract(t *testing.T, cwClient *cwclient.Client, ctx context.Conte
 
 	// instantiate op contract with FG disabled
 	opFinalityGadgetInitMsg := map[string]interface{}{
-		"admin":       cwClient.MustGetAddr(),
-		"consumer_id": opConsumerChainId,
-		"is_enabled":  false,
+		"admin":        cwClient.MustGetAddr(),
+		"bsn_id":       rollupBSNID,
+		"min_pub_rand": 100,
 	}
 	opFinalityGadgetInitMsgBytes, err := json.Marshal(opFinalityGadgetInitMsg)
 	require.NoError(t, err)
@@ -372,12 +372,13 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	babylonKeyName := babylonCfg.BabylonConfig.Key
 
 	// create and register Babylon FP
+	babylonChainID := babylonCfg.BabylonConfig.ChainID
 	eotsPk, err := ctm.EOTSServerHandler.CreateKey(babylonKeyName, "")
 	require.NoError(t, err)
 	babylonFpPk, err := bbntypes.NewBIP340PubKey(eotsPk)
 	require.NoError(t, err)
-	base_test_manager.CreateAndRegisterFinalityProvider(t, ctm.BabylonFpApp, e2eutils.ChainID, babylonFpPk)
-	t.Logf(log.Prefix("Registered Finality Provider %s for %s"), babylonFpPk.MarshalHex(), e2eutils.ChainID)
+	base_test_manager.CreateAndRegisterFinalityProvider(t, ctm.BabylonFpApp, babylonChainID, babylonFpPk)
+	t.Logf(log.Prefix("Registered Finality Provider %s for %s"), babylonFpPk.MarshalHex(), babylonChainID)
 
 	// wait for Babylon FP registration
 	require.Eventually(t, func() bool {
@@ -393,8 +394,8 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	require.NoError(t, err)
 	consumerFpPk, err := bbntypes.NewBIP340PubKey(consumerEotsPk)
 	require.NoError(t, err)
-	base_test_manager.CreateAndRegisterFinalityProvider(t, ctm.ConsumerFpApp, opConsumerChainId, consumerFpPk)
-	t.Logf(log.Prefix("Registered Finality Provider %s for %s"), consumerFpPk.MarshalHex(), opConsumerChainId)
+	base_test_manager.CreateAndRegisterFinalityProvider(t, ctm.ConsumerFpApp, rollupBSNID, consumerFpPk)
+	t.Logf(log.Prefix("Registered Finality Provider %s for %s"), consumerFpPk.MarshalHex(), rollupBSNID)
 
 	// wait for Babylon FP registration
 	require.Eventually(t, func() bool {
@@ -412,7 +413,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 
 	// wait for consumer FP registration
 	require.Eventually(t, func() bool {
-		fps, err := ctm.BBNClient.QueryConsumerFinalityProviders(opConsumerChainId)
+		fps, err := ctm.BBNClient.QueryConsumerFinalityProviders(rollupBSNID)
 		if err != nil {
 			t.Logf("Failed to query finality providers: %v", err)
 			return false

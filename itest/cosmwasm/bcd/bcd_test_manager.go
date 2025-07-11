@@ -7,12 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/metrics"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/metrics"
 
 	sdklogs "cosmossdk.io/log"
 	wasmapp "github.com/CosmWasm/wasmd/app"
