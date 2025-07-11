@@ -48,7 +48,6 @@ var _ api.ConsumerController = &OPStackL2ConsumerController{}
 type OPStackL2ConsumerController struct {
 	Cfg        *fpcfg.OPStackL2Config
 	CwClient   *cwclient.Client
-	BsnID      string
 	opl2Client *ethclient.Client
 	bbnClient  *bbnclient.Client
 	logger     *zap.Logger
@@ -94,17 +93,10 @@ func NewOPStackL2ConsumerController(
 	cc := &OPStackL2ConsumerController{
 		Cfg:        opl2Cfg,
 		CwClient:   cwClient,
-		BsnID:      "", // will be set later
 		opl2Client: opl2Client,
 		bbnClient:  bc,
 		logger:     logger,
 	}
-
-	cfg, err := cc.QueryContractConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to query contract config: %w", err)
-	}
-	cc.BsnID = cfg.BsnID
 
 	return cc, nil
 }
@@ -180,11 +172,11 @@ func (cc *OPStackL2ConsumerController) reliablySendMsgs(msgs []sdk.Msg, expected
 }
 
 func (cc *OPStackL2ConsumerController) GetFpRandCommitContext() string {
-	return signingcontext.FpRandCommitContextV0(cc.BsnID, cc.Cfg.OPFinalityGadgetAddress)
+	return signingcontext.FpRandCommitContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.OPFinalityGadgetAddress)
 }
 
 func (cc *OPStackL2ConsumerController) GetFpFinVoteContext() string {
-	return signingcontext.FpFinVoteContextV0(cc.BsnID, cc.Cfg.OPFinalityGadgetAddress)
+	return signingcontext.FpFinVoteContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.OPFinalityGadgetAddress)
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness to Babylon CosmWasm contract
