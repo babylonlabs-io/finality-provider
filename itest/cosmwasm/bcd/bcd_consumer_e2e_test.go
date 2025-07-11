@@ -33,6 +33,7 @@ import (
 // NOTE: the delegation is injected after ensuring pub randomness loop in fp daemon has started
 // this order is necessary otherwise pub randomness loop takes time to start and due to this blocks won't get finalized.
 func TestConsumerFpLifecycle(t *testing.T) {
+	t.Skipf("Skipping until we upgrade wasmd to v0.60")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ctm := StartBcdTestManager(t, ctx)
