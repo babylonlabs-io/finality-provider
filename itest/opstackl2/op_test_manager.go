@@ -370,12 +370,13 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	babylonKeyName := babylonCfg.BabylonConfig.Key
 
 	// create and register Babylon FP
+	babylonChainID := babylonCfg.BabylonConfig.ChainID
 	eotsPk, err := ctm.EOTSServerHandler.CreateKey(babylonKeyName, "")
 	require.NoError(t, err)
 	babylonFpPk, err := bbntypes.NewBIP340PubKey(eotsPk)
 	require.NoError(t, err)
-	base_test_manager.CreateAndRegisterFinalityProvider(t, ctm.BabylonFpApp, e2eutils.ChainID, babylonFpPk)
-	t.Logf(log.Prefix("Registered Finality Provider %s for %s"), babylonFpPk.MarshalHex(), e2eutils.ChainID)
+	base_test_manager.CreateAndRegisterFinalityProvider(t, ctm.BabylonFpApp, babylonChainID, babylonFpPk)
+	t.Logf(log.Prefix("Registered Finality Provider %s for %s"), babylonFpPk.MarshalHex(), babylonChainID)
 
 	// wait for Babylon FP registration
 	require.Eventually(t, func() bool {

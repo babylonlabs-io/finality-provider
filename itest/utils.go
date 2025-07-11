@@ -25,7 +25,6 @@ var (
 	EventuallyPollTime    = 500 * time.Millisecond
 	FpNamePrefix          = "test-fp-"
 	MonikerPrefix         = "moniker-"
-	ChainID               = "chain-test"
 	WasmStake             = "ustake"  // Default staking token
 	WasmFee               = "ucosm"   // Default fee token
 	WasmMoniker           = "node001" // Default moniker

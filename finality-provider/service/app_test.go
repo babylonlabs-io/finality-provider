@@ -3,12 +3,13 @@ package service_test
 import (
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/metrics"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/metrics"
 
 	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 

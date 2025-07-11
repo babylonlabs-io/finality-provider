@@ -63,6 +63,13 @@ type TestDelegationData struct {
 	StakingAmount    int64
 }
 
+func (tm *BaseTestManager) GetBabylonChainID(t *testing.T) string {
+	res, err := tm.BBNClient.GetBBNClient().RPCClient.Genesis(context.Background())
+	require.NoError(t, err)
+
+	return res.Genesis.ChainID
+}
+
 func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.PublicKey, stakingTime uint16, stakingAmount int64) *TestDelegationData {
 	params, err := tm.BBNClient.QueryStakingParams()
 	require.NoError(t, err)
@@ -90,7 +97,8 @@ func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.Publ
 	stakerAddr := tm.BBNClient.GetKeyAddress()
 
 	// proof-of-possession
-	stakerPopContext := signingcontext.StakerPopContextV0(e2eutils.ChainID, signingcontext.AccBTCStaking.String())
+	babylonChainID := tm.GetBabylonChainID(t)
+	stakerPopContext := signingcontext.StakerPopContextV0(babylonChainID, signingcontext.AccBTCStaking.String())
 	pop, err := datagen.NewPoPBTC(stakerPopContext, stakerAddr, delBtcPrivKey)
 	require.NoError(t, err)
 

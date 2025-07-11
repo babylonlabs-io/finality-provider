@@ -3,11 +3,10 @@ package service
 import (
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/types"
 	"strings"
 	"sync"
 
-	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
+	"github.com/babylonlabs-io/finality-provider/types"
 
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
@@ -23,6 +22,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 	"github.com/babylonlabs-io/finality-provider/metrics"
@@ -372,15 +372,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 		return nil, fmt.Errorf("eots pk cannot be nil")
 	}
 
-	var signCtx string
-	nextHeight := app.poller.NextHeight()
-	//  nextHeight-1 might underflow if the nextHeight is 0
-	if (nextHeight == 0 && app.config.ContextSigningHeight > 0) ||
-		(nextHeight > 0 && app.config.ContextSigningHeight > nextHeight-1) {
-		signCtx = signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String())
-	}
-
-	pop, err := app.CreatePop(fpAddr, eotsPk, signCtx)
+	pop, err := app.CreatePop(fpAddr, eotsPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proof-of-possession of the finality-provider: %w", err)
 	}
@@ -500,7 +492,7 @@ func (app *FinalityProviderApp) UnjailFinalityProvider(fpPk *bbntypes.BIP340PubK
 	}
 }
 
-func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntypes.BIP340PubKey, signCtx string) (*bstypes.ProofOfPossessionBTC, error) {
+func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntypes.BIP340PubKey) (*bstypes.ProofOfPossessionBTC, error) {
 	pop := &bstypes.ProofOfPossessionBTC{
 		BtcSigType: bstypes.BTCSigType_BIP340, // by default, we use BIP-340 encoding for BTC signature
 	}
@@ -508,7 +500,12 @@ func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntyp
 	// NOTE: *schnorr.Sign has to take the hash of the message.
 	// So we have to hash the address before signing
 	hasher := tmhash.New()
-	if len(signCtx) > 0 {
+	nextHeight := app.poller.NextHeight()
+	//  nextHeight-1 might underflow if the nextHeight is 0
+	if (nextHeight == 0 && app.config.ContextSigningHeight > 0) ||
+		(nextHeight > 0 && app.config.ContextSigningHeight > nextHeight-1) {
+		// NOTE: PoP is always using Babylon chain ID for signing context
+		signCtx := signingcontext.FpPopContextV0(app.config.BabylonConfig.ChainID, signingcontext.AccBTCStaking.String())
 		if _, err := hasher.Write([]byte(signCtx)); err != nil {
 			return nil, fmt.Errorf("failed to write signing context to the hash: %w", err)
 		}
