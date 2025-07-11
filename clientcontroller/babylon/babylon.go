@@ -309,6 +309,7 @@ func (bc *BabylonController) QueryFinalityProviders() ([]*btcstakingtypes.Finali
 	}
 
 	for {
+		// NOTE: empty BSN ID means querying all Babylon finality providers
 		res, err := bc.bbnClient.QueryClient.FinalityProviders("", pagination)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query finality providers: %w", err)
