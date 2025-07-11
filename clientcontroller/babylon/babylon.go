@@ -8,6 +8,7 @@ import (
 	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 
 	sdkErr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
@@ -112,6 +113,10 @@ func (bc *BabylonController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sd
 	)
 }
 
+func (bc *BabylonController) GetFpPopContextV0() string {
+	return signingcontext.FpPopContextV0(bc.cfg.ChainID, signingcontext.AccBTCStaking.String())
+}
+
 // RegisterFinalityProvider registers a finality provider via a MsgCreateFinalityProvider to Babylon
 // it returns tx hash and error
 // If chainID is empty, then it means the FP is a Babylon FP
@@ -139,7 +144,7 @@ func (bc *BabylonController) RegisterFinalityProvider(
 		Pop:         &bbnPop,
 		Commission:  commission,
 		Description: &sdkDescription,
-		ConsumerId:  chainID,
+		BsnId:       chainID,
 	}
 
 	res, err := bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
@@ -304,7 +309,7 @@ func (bc *BabylonController) QueryFinalityProviders() ([]*btcstakingtypes.Finali
 	}
 
 	for {
-		res, err := bc.bbnClient.QueryClient.FinalityProviders(pagination)
+		res, err := bc.bbnClient.QueryClient.FinalityProviders("", pagination)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query finality providers: %w", err)
 		}
@@ -319,14 +324,14 @@ func (bc *BabylonController) QueryFinalityProviders() ([]*btcstakingtypes.Finali
 	return fps, nil
 }
 
-func (bc *BabylonController) QueryConsumerFinalityProviders(consumerID string) ([]*bsctypes.FinalityProviderResponse, error) {
-	var fps []*bsctypes.FinalityProviderResponse
+func (bc *BabylonController) QueryConsumerFinalityProviders(bsnID string) ([]*btcstakingtypes.FinalityProviderResponse, error) {
+	var fps []*btcstakingtypes.FinalityProviderResponse
 	pagination := &sdkquery.PageRequest{
 		Limit: 100,
 	}
 
 	for {
-		res, err := bc.bbnClient.QueryClient.QueryConsumerFinalityProviders(consumerID, pagination)
+		res, err := bc.bbnClient.QueryClient.FinalityProviders(bsnID, pagination)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query finality providers: %w", err)
 		}

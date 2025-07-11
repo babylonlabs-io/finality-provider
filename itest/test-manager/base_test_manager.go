@@ -307,13 +307,13 @@ func (tm *BaseTestManager) InsertWBTCHeaders(t *testing.T, r *rand.Rand) {
 	require.NoError(t, err)
 	tipHeader, err := bbntypes.NewBTCHeaderBytesFromHex(btcTipResp.HeaderHex)
 	require.NoError(t, err)
-	kHeaders := datagen.NewBTCHeaderChainFromParentInfo(r, &btclctypes.BTCHeaderInfo{
+	wHeaders := datagen.NewBTCHeaderChainFromParentInfo(r, &btclctypes.BTCHeaderInfo{
 		Header: &tipHeader,
 		Hash:   tipHeader.Hash(),
 		Height: btcTipResp.Height,
 		Work:   &btcTipResp.Work,
 	}, uint32(params.FinalizationTimeoutBlocks))
-	_, err = tm.BBNClient.InsertBtcBlockHeaders(kHeaders.ChainToBytes())
+	_, err = tm.BBNClient.InsertBtcBlockHeaders(wHeaders.ChainToBytes())
 	require.NoError(t, err)
 }
 
@@ -464,6 +464,13 @@ func (tm *BaseTestManager) InsertCovenantSigForDelegation(t *testing.T, btcDel *
 		covenantAdaptorUnbondingSlashing2List,
 	)
 	require.NoError(t, err)
+}
+
+func (tm *BaseTestManager) GetCurrentEpoch(t *testing.T) uint64 {
+	bbnClient := tm.BBNClient.GetBBNClient()
+	epoch, err := bbnClient.CurrentEpoch()
+	require.NoError(t, err)
+	return epoch.CurrentEpoch
 }
 
 func (tm *BaseTestManager) FinalizeUntilEpoch(t *testing.T, epoch uint64) {

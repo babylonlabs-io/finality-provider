@@ -298,7 +298,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
-		rndFp, err := datagen.GenRandomFinalityProvider(r, "")
+		rndFp, err := datagen.GenRandomFinalityProvider(r, "", "")
 		require.NoError(t, err)
 
 		// Create randomized config

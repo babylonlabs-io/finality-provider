@@ -22,7 +22,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 	"github.com/babylonlabs-io/finality-provider/metrics"
@@ -504,8 +503,7 @@ func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntyp
 	//  nextHeight-1 might underflow if the nextHeight is 0
 	if (nextHeight == 0 && app.config.ContextSigningHeight > 0) ||
 		(nextHeight > 0 && app.config.ContextSigningHeight > nextHeight-1) {
-		// NOTE: PoP is always using Babylon chain ID for signing context
-		signCtx := signingcontext.FpPopContextV0(app.config.BabylonConfig.ChainID, signingcontext.AccBTCStaking.String())
+		signCtx := app.cc.GetFpPopContextV0()
 		if _, err := hasher.Write([]byte(signCtx)); err != nil {
 			return nil, fmt.Errorf("failed to write signing context to the hash: %w", err)
 		}

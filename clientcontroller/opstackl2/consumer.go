@@ -23,6 +23,7 @@ import (
 	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
 	cwconfig "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -140,6 +141,14 @@ func (cc *OPStackL2ConsumerController) reliablySendMsgs(msgs []sdk.Msg, expected
 	}
 
 	return types.NewBabylonTxResponse(resp), nil
+}
+
+func (cc *OPStackL2ConsumerController) GetFpRandCommitContext() string {
+	return signingcontext.FpRandCommitContextV0(cc.Cfg.BsnID, cc.Cfg.OPFinalityGadgetAddress)
+}
+
+func (cc *OPStackL2ConsumerController) GetFpFinVoteContext() string {
+	return signingcontext.FpFinVoteContextV0(cc.Cfg.BsnID, cc.Cfg.OPFinalityGadgetAddress)
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness to Babylon CosmWasm contract
