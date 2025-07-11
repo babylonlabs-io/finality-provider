@@ -305,7 +305,6 @@ func createConsumerFpConfig(
 
 	// set consumer FP config
 	opConsumerCfg := &fpcfg.OPStackL2Config{
-		BsnID: rollupBSNID,
 		// it will be updated later
 		OPFinalityGadgetAddress: "",
 		// it must be a dialable RPC address checked by NewOPStackL2ConsumerController

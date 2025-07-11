@@ -48,6 +48,7 @@ var _ api.ConsumerController = &OPStackL2ConsumerController{}
 type OPStackL2ConsumerController struct {
 	Cfg        *fpcfg.OPStackL2Config
 	CwClient   *cwclient.Client
+	BsnID      string
 	opl2Client *ethclient.Client
 	bbnClient  *bbnclient.Client
 	logger     *zap.Logger
@@ -90,13 +91,22 @@ func NewOPStackL2ConsumerController(
 		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
 	}
 
-	return &OPStackL2ConsumerController{
-		opl2Cfg,
-		cwClient,
-		opl2Client,
-		bc,
-		logger,
-	}, nil
+	cc := &OPStackL2ConsumerController{
+		Cfg:        opl2Cfg,
+		CwClient:   cwClient,
+		BsnID:      "", // will be set later
+		opl2Client: opl2Client,
+		bbnClient:  bc,
+		logger:     logger,
+	}
+
+	cfg, err := cc.QueryContractConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to query contract config: %w", err)
+	}
+	cc.BsnID = cfg.BsnID
+
+	return cc, nil
 }
 
 func NewCwClient(cwConfig *cwconfig.CosmwasmConfig, logger *zap.Logger) (*cwclient.Client, error) {
@@ -125,6 +135,32 @@ func NewCwClient(cwConfig *cwconfig.CosmwasmConfig, logger *zap.Logger) (*cwclie
 	return cwClient, nil
 }
 
+// QueryContractConfig queries the finality contract for its config
+func (cc *OPStackL2ConsumerController) QueryContractConfig() (*Config, error) {
+	query := QueryMsg{
+		Config: &Config{},
+	}
+	jsonData, err := json.Marshal(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal config query: %w", err)
+	}
+
+	stateResp, err := cc.CwClient.QuerySmartContractState(context.Background(), cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+	if len(stateResp.Data) == 0 {
+		return nil, fmt.Errorf("no config found")
+	}
+
+	var resp *Config
+	err = json.Unmarshal(stateResp.Data, &resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config response: %w", err)
+	}
+	return resp, nil
+}
+
 func (cc *OPStackL2ConsumerController) ReliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	return cc.reliablySendMsgs([]sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
@@ -144,11 +180,11 @@ func (cc *OPStackL2ConsumerController) reliablySendMsgs(msgs []sdk.Msg, expected
 }
 
 func (cc *OPStackL2ConsumerController) GetFpRandCommitContext() string {
-	return signingcontext.FpRandCommitContextV0(cc.Cfg.BsnID, cc.Cfg.OPFinalityGadgetAddress)
+	return signingcontext.FpRandCommitContextV0(cc.BsnID, cc.Cfg.OPFinalityGadgetAddress)
 }
 
 func (cc *OPStackL2ConsumerController) GetFpFinVoteContext() string {
-	return signingcontext.FpFinVoteContextV0(cc.Cfg.BsnID, cc.Cfg.OPFinalityGadgetAddress)
+	return signingcontext.FpFinVoteContextV0(cc.BsnID, cc.Cfg.OPFinalityGadgetAddress)
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness to Babylon CosmWasm contract
