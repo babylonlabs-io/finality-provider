@@ -41,7 +41,10 @@ type QueryMsg struct {
 	LastPubRandCommit  *PubRandCommit `json:"last_pub_rand_commit,omitempty"`
 }
 
-type Config struct{}
+type Config struct {
+	BsnID      string `json:"bsn_id"`
+	MinPubRand uint64 `json:"min_pub_rand"`
+}
 
 type PubRandCommit struct {
 	BtcPkHex string `json:"btc_pk_hex"`

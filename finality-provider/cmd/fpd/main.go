@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	incentivecli "github.com/babylonlabs-io/babylon/x/incentive/client/cli"
+	incentivecli "github.com/babylonlabs-io/babylon/v3/x/incentive/client/cli"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"

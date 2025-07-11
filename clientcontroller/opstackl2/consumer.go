@@ -8,21 +8,22 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/babylonlabs-io/babylon/client/babylonclient"
-	bbnclient "github.com/babylonlabs-io/babylon/client/client"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
+	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	bbnapp "github.com/babylonlabs-io/babylon/app"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
+	bbnapp "github.com/babylonlabs-io/babylon/v3/app"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	fgclient "github.com/babylonlabs-io/finality-gadget/client"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
 	cwconfig "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
@@ -33,7 +34,7 @@ import (
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"go.uber.org/zap"
 
-	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 )
 
 const (
@@ -88,13 +89,15 @@ func NewOPStackL2ConsumerController(
 		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
 	}
 
-	return &OPStackL2ConsumerController{
-		opl2Cfg,
-		cwClient,
-		opl2Client,
-		bc,
-		logger,
-	}, nil
+	cc := &OPStackL2ConsumerController{
+		Cfg:        opl2Cfg,
+		CwClient:   cwClient,
+		opl2Client: opl2Client,
+		bbnClient:  bc,
+		logger:     logger,
+	}
+
+	return cc, nil
 }
 
 func NewCwClient(cwConfig *cwconfig.CosmwasmConfig, logger *zap.Logger) (*cwclient.Client, error) {
@@ -127,6 +130,33 @@ func (cc *OPStackL2ConsumerController) ReliablySendMsg(ctx context.Context, msg 
 	return cc.reliablySendMsgs(ctx, []sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
+// QueryContractConfig queries the finality contract for its config
+func (cc *OPStackL2ConsumerController) QueryContractConfig() (*Config, error) {
+	query := QueryMsg{
+		Config: &Config{},
+	}
+	jsonData, err := json.Marshal(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal config query: %w", err)
+	}
+
+	stateResp, err := cc.CwClient.QuerySmartContractState(context.Background(), cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+	if len(stateResp.Data) == 0 {
+		return nil, fmt.Errorf("no config found")
+	}
+
+	var resp *Config
+	err = json.Unmarshal(stateResp.Data, &resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config response: %w", err)
+	}
+
+	return resp, nil
+}
+
 func (cc *OPStackL2ConsumerController) reliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	resp, err := cc.CwClient.ReliablySendMsgs(
 		ctx,
@@ -139,6 +169,14 @@ func (cc *OPStackL2ConsumerController) reliablySendMsgs(ctx context.Context, msg
 	}
 
 	return types.NewBabylonTxResponse(resp), nil
+}
+
+func (cc *OPStackL2ConsumerController) GetFpRandCommitContext() string {
+	return signingcontext.FpRandCommitContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.OPFinalityGadgetAddress)
+}
+
+func (cc *OPStackL2ConsumerController) GetFpFinVoteContext() string {
+	return signingcontext.FpFinVoteContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.OPFinalityGadgetAddress)
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness to Babylon CosmWasm contract

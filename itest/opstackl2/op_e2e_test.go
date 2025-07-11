@@ -64,9 +64,9 @@ func TestFinalitySigSubmission(t *testing.T) {
 
 	// create and register Babylon FP and OP consumer FP
 	fps := ctm.setupBabylonAndConsumerFp(t)
+	consumerFpPk := fps[1]
 
 	// send a BTC delegation and wait for activation
-	consumerFpPk := fps[1]
 	ctm.delegateBTCAndWaitForActivation(t, fps[0], consumerFpPk)
 
 	// get the consumer FP instance
@@ -76,6 +76,9 @@ func TestFinalitySigSubmission(t *testing.T) {
 	// this will call consumer controller's CommitPubRandList function
 	_, err := consumerFpInstance.CommitPubRand(ctx, 1)
 	require.NoError(t, err)
+
+	// finalise this pub rand commit
+	ctm.FinalizeUntilEpoch(t, ctm.GetCurrentEpoch(t))
 
 	// mock batch of blocks with start height 1 and end height 3
 	blocks := testutil.GenBlocksDesc(
@@ -94,19 +97,26 @@ func TestFinalitySigSubmission(t *testing.T) {
 		"block_voters": map[string]interface{}{
 			"height": blocks[2].GetHeight(),
 			// it requires the block hash without the 0x prefix
-			"hash": strings.TrimPrefix(hex.EncodeToString(blocks[2].GetHash()), "0x"),
+			"hash_hex": strings.TrimPrefix(hex.EncodeToString(blocks[2].GetHash()), "0x"),
 		},
 	}
 
 	// query block_voters from finality gadget CW contract
 	queryResponse := ctm.queryCwContract(t, queryMsg, ctx)
-	var voters []string
+	// Define a struct matching the returned BlockVoterInfo
+	type BlockVoterInfo struct {
+		FpBtcPkHex        string          `json:"fp_btc_pk_hex"`
+		PubRand           []byte          `json:"pub_rand"`
+		FinalitySignature json.RawMessage `json:"finality_signature"`
+	}
+
+	var voters []BlockVoterInfo
 	err = json.Unmarshal(queryResponse.Data, &voters)
 	require.NoError(t, err)
 
 	// check the voter, it should be the consumer FP public key
 	require.Equal(t, 1, len(voters))
-	require.Equal(t, consumerFpPk.MarshalHex(), voters[0])
+	require.Equal(t, consumerFpPk.MarshalHex(), voters[0].FpBtcPkHex)
 }
 
 // TestFinalityProviderHasPower tests the consumer controller's function:

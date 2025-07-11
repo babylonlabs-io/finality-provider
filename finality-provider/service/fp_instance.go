@@ -5,15 +5,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"math"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
-	ftypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	ftypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/gogo/protobuf/jsonpb"
 	"go.uber.org/atomic"
@@ -809,7 +808,7 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 	eotsSignerFunc := func(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
 		var msgToSign []byte
 		if fp.cfg.ContextSigningHeight > b.GetHeight() {
-			signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+			signCtx := fp.consumerCon.GetFpFinVoteContext()
 			msgToSign = b.MsgToSign(signCtx)
 		} else {
 			msgToSign = b.MsgToSign("")

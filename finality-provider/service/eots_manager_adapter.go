@@ -2,10 +2,9 @@ package service
 
 import (
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"strings"
 
-	bbntypes "github.com/babylonlabs-io/babylon/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/cometbft/cometbft/crypto/tmhash"
@@ -65,7 +64,7 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 	)
 
 	if fp.cfg.ContextSigningHeight > startHeight {
-		signCtx := signingcontext.FpRandCommitContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+		signCtx := fp.consumerCon.GetFpRandCommitContext()
 		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
@@ -85,7 +84,7 @@ func (fp *FinalityProviderInstance) SignFinalitySig(b types.BlockDescription) (*
 	// build proper finality signature request
 	var msgToSign []byte
 	if fp.cfg.ContextSigningHeight > b.GetHeight() {
-		signCtx := signingcontext.FpFinVoteContextV0(fp.fpState.sfp.ChainID, signingcontext.AccFinality.String())
+		signCtx := fp.consumerCon.GetFpFinVoteContext()
 		msgToSign = b.MsgToSign(signCtx)
 	} else {
 		msgToSign = b.MsgToSign("")

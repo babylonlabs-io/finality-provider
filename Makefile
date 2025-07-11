@@ -133,12 +133,6 @@ mock-gen:
 
 .PHONY: mock-gen
 
-update-changelog:
-	@echo ./scripts/update_changelog.sh $(sinceTag) $(upcomingTag)
-	./scripts/update_changelog.sh $(sinceTag) $(upcomingTag)
-
-.PHONY: update-changelog
-
 ###############################################################################
 ###                                Release                                  ###
 ###############################################################################

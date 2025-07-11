@@ -11,15 +11,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/babylonlabs-io/babylon/btcstaking"
-	txformat "github.com/babylonlabs-io/babylon/btctxformatter"
-	asig "github.com/babylonlabs-io/babylon/crypto/schnorr-adaptor-signature"
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
-	btcctypes "github.com/babylonlabs-io/babylon/x/btccheckpoint/types"
-	btclctypes "github.com/babylonlabs-io/babylon/x/btclightclient/types"
-	bstypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	ckpttypes "github.com/babylonlabs-io/babylon/x/checkpointing/types"
+	"github.com/babylonlabs-io/babylon/v3/btcstaking"
+	txformat "github.com/babylonlabs-io/babylon/v3/btctxformatter"
+	asig "github.com/babylonlabs-io/babylon/v3/crypto/schnorr-adaptor-signature"
+	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	btcctypes "github.com/babylonlabs-io/babylon/v3/x/btccheckpoint/types"
+	btclctypes "github.com/babylonlabs-io/babylon/v3/x/btclightclient/types"
+	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	ckpttypes "github.com/babylonlabs-io/babylon/v3/x/checkpointing/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/wire"
@@ -36,6 +36,7 @@ import (
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/testutil"
@@ -60,6 +61,13 @@ type TestDelegationData struct {
 	ChangeAddr       string
 	StakingTime      uint16
 	StakingAmount    int64
+}
+
+func (tm *BaseTestManager) GetBabylonChainID(t *testing.T) string {
+	res, err := tm.BBNClient.GetBBNClient().RPCClient.Genesis(context.Background())
+	require.NoError(t, err)
+
+	return res.Genesis.ChainID
 }
 
 func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.PublicKey, stakingTime uint16, stakingAmount int64) *TestDelegationData {
@@ -89,7 +97,9 @@ func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.Publ
 	stakerAddr := tm.BBNClient.GetKeyAddress()
 
 	// proof-of-possession
-	pop, err := datagen.NewPoPBTC(stakerAddr, delBtcPrivKey)
+	babylonChainID := tm.GetBabylonChainID(t)
+	stakerPopContext := signingcontext.StakerPopContextV0(babylonChainID, signingcontext.AccBTCStaking.String())
+	pop, err := datagen.NewPoPBTC(stakerPopContext, stakerAddr, delBtcPrivKey)
 	require.NoError(t, err)
 
 	// create and insert BTC headers which include the staking tx to get staking tx info
@@ -297,13 +307,13 @@ func (tm *BaseTestManager) InsertWBTCHeaders(t *testing.T, r *rand.Rand) {
 	require.NoError(t, err)
 	tipHeader, err := bbntypes.NewBTCHeaderBytesFromHex(btcTipResp.HeaderHex)
 	require.NoError(t, err)
-	kHeaders := datagen.NewBTCHeaderChainFromParentInfo(r, &btclctypes.BTCHeaderInfo{
+	wHeaders := datagen.NewBTCHeaderChainFromParentInfo(r, &btclctypes.BTCHeaderInfo{
 		Header: &tipHeader,
 		Hash:   tipHeader.Hash(),
 		Height: btcTipResp.Height,
 		Work:   &btcTipResp.Work,
 	}, uint32(params.FinalizationTimeoutBlocks))
-	_, err = tm.BBNClient.InsertBtcBlockHeaders(kHeaders.ChainToBytes())
+	_, err = tm.BBNClient.InsertBtcBlockHeaders(wHeaders.ChainToBytes())
 	require.NoError(t, err)
 }
 
@@ -454,6 +464,13 @@ func (tm *BaseTestManager) InsertCovenantSigForDelegation(t *testing.T, btcDel *
 		covenantAdaptorUnbondingSlashing2List,
 	)
 	require.NoError(t, err)
+}
+
+func (tm *BaseTestManager) GetCurrentEpoch(t *testing.T) uint64 {
+	bbnClient := tm.BBNClient.GetBBNClient()
+	epoch, err := bbnClient.CurrentEpoch()
+	require.NoError(t, err)
+	return epoch.CurrentEpoch
 }
 
 func (tm *BaseTestManager) FinalizeUntilEpoch(t *testing.T, epoch uint64) {

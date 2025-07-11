@@ -7,12 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/metrics"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/metrics"
 
 	sdklogs "cosmossdk.io/log"
 	wasmapp "github.com/CosmWasm/wasmd/app"
@@ -20,9 +21,9 @@ import (
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	_ "github.com/babylonlabs-io/babylon-sdk/demo/app"
 	bbnsdktypes "github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
-	bbnclient "github.com/babylonlabs-io/babylon/client/client"
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
+	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
+	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	dbm "github.com/cosmos/cosmos-db"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	"github.com/stretchr/testify/require"
@@ -101,6 +102,8 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	// Update ports with dynamically allocated ones from docker
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("localhost:%s", babylond.GetPort("9090/tcp"))
+
+	cfg.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
 
 	var bc ccapi.ClientController
 	require.Eventually(t, func() bool {

@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bbn "github.com/babylonlabs-io/babylon/types"
+	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
+	bbn "github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
@@ -79,6 +79,7 @@ func (m *Manager) RunBabylondResource(
 				"--keyring-backend=test --chain-id=chain-test "+
 				"--additional-sender-account "+
 				"--epoch-interval=%d --slashing-pk-script=%s "+
+				"--btc-finalization-timeout 2 --btc-confirmation-depth 1 "+
 				"--covenant-quorum=%d --covenant-pks=%s && "+
 				"chmod -R 777 /home && "+
 				"babylond start --home=/home/node0/babylond",
@@ -97,6 +98,9 @@ func (m *Manager) RunBabylondResource(
 				"e2e": "babylond",
 			},
 			User: "root:root",
+			Env: []string{
+				"BABYLON_BLS_PASSWORD=password",
+			},
 			Mounts: []string{
 				fmt.Sprintf("%s/:/home/", mounthPath),
 			},
