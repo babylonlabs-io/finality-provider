@@ -46,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#493](https://github.com/babylonlabs-io/finality-provider/pull/493) chore: key migration for test keyring
 * [#501](https://github.com/babylonlabs-io/finality-provider/pull/501) chore: signing context
 * [#500](https://github.com/babylonlabs-io/finality-provider/pull/500) feat: fpd abstract poller implementation
+* [502](https://github.com/babylonlabs-io/finality-provider/pull/502) chore: bump babylon to v3
 
 ## v1.1.0-rc.1
 

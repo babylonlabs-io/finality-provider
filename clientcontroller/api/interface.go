@@ -2,7 +2,7 @@ package api
 
 import (
 	"cosmossdk.io/math"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
@@ -15,6 +15,10 @@ const babylonConsumerChainType = "babylon"
 type ClientController interface {
 	// Start - starts the client controller
 	Start() error
+
+	// GetFpPopContextV0 returns the signing context for proof-of-possession
+	GetFpPopContextV0() string
+
 	// RegisterFinalityProvider registers a finality provider to the consumer chain
 	// it returns tx hash and error. The address of the finality provider will be
 	// the signer of the msg.
@@ -38,6 +42,12 @@ type ClientController interface {
 }
 
 type ConsumerController interface {
+	// GetFpRandCommitContext returns the signing context for public randomness commitment
+	GetFpRandCommitContext() string
+
+	// GetFpFinVoteContext returns the signing context for finality vote
+	GetFpFinVoteContext() string
+
 	// CommitPubRandList commits a list of EOTS public randomness the consumer chain
 	// it returns tx hash and error
 	CommitPubRandList(fpPk *btcec.PublicKey, startHeight uint64, numPubRand uint64, commitment []byte, sig *schnorr.Signature) (*types.TxResponse, error)

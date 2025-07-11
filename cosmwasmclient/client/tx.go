@@ -7,7 +7,7 @@ import (
 
 	"cosmossdk.io/errors"
 	"github.com/avast/retry-go/v4"
-	"github.com/babylonlabs-io/babylon/client/babylonclient"
+	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"go.uber.org/zap"
 )

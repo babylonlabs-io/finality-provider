@@ -11,12 +11,13 @@ import (
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
 	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	"github.com/babylonlabs-io/babylon/client/babylonclient"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
-	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cwcclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	fptypes "github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -86,6 +87,14 @@ func (wc *CosmwasmConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedE
 
 func (wc *CosmwasmConsumerController) GetClient() *cwcclient.Client {
 	return wc.cwClient
+}
+
+func (wc *CosmwasmConsumerController) GetFpRandCommitContext() string {
+	return signingcontext.FpRandCommitContextV0(wc.cfg.ChainID, wc.cfg.BtcFinalityContractAddress)
+}
+
+func (wc *CosmwasmConsumerController) GetFpFinVoteContext() string {
+	return signingcontext.FpFinVoteContextV0(wc.cfg.ChainID, wc.cfg.BtcFinalityContractAddress)
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness via a MsgCommitPubRand to Babylon

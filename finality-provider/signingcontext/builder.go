@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	stakingtypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
-	finalitytypes "github.com/babylonlabs-io/babylon/x/finality/types"
+	stakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 )
 
@@ -16,6 +16,7 @@ const (
 	fpPop        = "fp_pop"
 	fpRandCommit = "fp_rand_commit"
 	fpFinVote    = "fp_fin_vote"
+	stakerPop    = "staker_pop"
 )
 
 var (
@@ -51,4 +52,10 @@ func FpRandCommitContextV0(chainID string, address string) string {
 // btcstaking/0/fp_fin_vote/{chainID}/{address}
 func FpFinVoteContextV0(chainID string, address string) string {
 	return HashedHexContext(btcStakingV0Context(fpFinVote, chainID, address))
+}
+
+// StakerPopContextV0 returns context string in format:
+// btcstaking/0/staker_pop/{chainID}/{address}
+func StakerPopContextV0(chainID string, address string) string {
+	return HashedHexContext(btcStakingV0Context(stakerPop, chainID, address))
 }

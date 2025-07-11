@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/babylonlabs-io/babylon/crypto/eots"
-	"github.com/babylonlabs-io/babylon/testutil/datagen"
-	bbntypes "github.com/babylonlabs-io/babylon/types"
+	"github.com/babylonlabs-io/babylon/v3/crypto/eots"
+	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 

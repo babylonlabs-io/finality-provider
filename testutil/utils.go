@@ -7,7 +7,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"github.com/golang/mock/gomock"
 
-	btcstktypes "github.com/babylonlabs-io/babylon/x/btcstaking/types"
+	btcstktypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	"github.com/babylonlabs-io/finality-provider/testutil/mocks"
 	"github.com/babylonlabs-io/finality-provider/types"
 )

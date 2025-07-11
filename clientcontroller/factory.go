@@ -3,7 +3,7 @@ package clientcontroller
 import (
 	"fmt"
 
-	bbnclient "github.com/babylonlabs-io/babylon/client/client"
+	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	"go.uber.org/zap"
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
