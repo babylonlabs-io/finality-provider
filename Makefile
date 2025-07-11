@@ -9,7 +9,6 @@ BTCD_BIN := $(GO_BIN)/btcd
 DOCKER := $(shell which docker)
 CUR_DIR := $(shell pwd)
 MOCKS_DIR=$(CUR_DIR)/testutil/mocks
-# Updated to use the newer mockgen that supports generics
 MOCKGEN_REPO=go.uber.org/mock/mockgen
 MOCKGEN_VERSION=v0.5.2
 MOCKGEN_CMD=go run ${MOCKGEN_REPO}@${MOCKGEN_VERSION}
