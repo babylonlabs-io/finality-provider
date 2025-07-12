@@ -2,12 +2,13 @@ package service_test
 
 import (
 	"context"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"math/rand"
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
@@ -25,6 +26,8 @@ func FuzzChainPoller_Start(f *testing.F) {
 		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
+		ctx := context.Background()
+
 		currentHeight := uint64(r.Int63n(100) + 1)
 		startHeight := currentHeight + 1
 		endHeight := startHeight + uint64(r.Int63n(10)+1)
@@ -33,17 +36,16 @@ func FuzzChainPoller_Start(f *testing.F) {
 		ctl := gomock.NewController(t)
 		mockConsumerController := mocks.NewMockConsumerController(ctl)
 		mockConsumerController.EXPECT().Close().Return(nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(endHeight, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryBlock(endHeight).Return(currentBlockRes, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryActivatedHeight(ctx).Return(uint64(1), nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlockHeight(ctx).Return(endHeight, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryBlock(ctx, endHeight).Return(currentBlockRes, nil).AnyTimes()
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
 
 		for i := startHeight; i <= endHeight; i++ {
-			resBlocks := []*types.BlockInfo{
+			resBlocks := []types.BlockDescription{
 				types.NewBlockInfo(i, nil, false),
 			}
-
-			mockConsumerController.EXPECT().QueryBlocks(i, endHeight, pollerCfg.PollSize).Return(resBlocks, nil).AnyTimes()
+			mockConsumerController.EXPECT().QueryBlocks(ctx, api.NewQueryBlocksRequest(i, endHeight, pollerCfg.PollSize)).Return(resBlocks, nil).AnyTimes()
 		}
 
 		m := metrics.NewFpMetrics()
@@ -57,8 +59,8 @@ func FuzzChainPoller_Start(f *testing.F) {
 		}()
 
 		for i := startHeight; i <= endHeight; i++ {
-			time.Sleep(50 * time.Millisecond)
-			info, _ := poller.TryNextBlock()
+			info, errNxt := poller.NextBlock(ctx)
+			require.NoError(t, errNxt)
 			require.Equal(t, i, info.GetHeight())
 		}
 	})

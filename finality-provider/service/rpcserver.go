@@ -83,7 +83,7 @@ func (r *rpcServer) GetInfo(context.Context, *proto.GetInfoRequest) (*proto.GetI
 
 // CreateFinalityProvider generates a finality-provider object and saves it in the database
 func (r *rpcServer) CreateFinalityProvider(
-	_ context.Context,
+	ctx context.Context,
 	req *proto.CreateFinalityProviderRequest,
 ) (*proto.CreateFinalityProviderResponse, error) {
 	commissionRates, err := req.GetCommissionRates()
@@ -102,6 +102,7 @@ func (r *rpcServer) CreateFinalityProvider(
 	}
 
 	result, err := r.app.CreateFinalityProvider(
+		ctx,
 		req.KeyName,
 		req.ChainId,
 		eotsPk,
@@ -121,7 +122,7 @@ func (r *rpcServer) CreateFinalityProvider(
 
 // AddFinalitySignature adds a manually constructed finality signature to Babylon
 // NOTE: this is only used for presentation/testing purposes
-func (r *rpcServer) AddFinalitySignature(_ context.Context, req *proto.AddFinalitySignatureRequest) (
+func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFinalitySignatureRequest) (
 	*proto.AddFinalitySignatureResponse,
 	error,
 ) {
@@ -150,7 +151,7 @@ func (r *rpcServer) AddFinalitySignature(_ context.Context, req *proto.AddFinali
 
 		b := types.NewBlockInfo(req.GetHeight(), req.GetAppHash(), false)
 
-		txRes, privKey, err := fpi.TestSubmitFinalitySignatureAndExtractPrivKey(b, req.CheckDoubleSign)
+		txRes, privKey, err := fpi.TestSubmitFinalitySignatureAndExtractPrivKey(ctx, b, req.CheckDoubleSign)
 		if err != nil {
 			return nil, err
 		}

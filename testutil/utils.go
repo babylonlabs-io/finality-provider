@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	btcstktypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	"github.com/babylonlabs-io/finality-provider/testutil/mocks"
@@ -28,16 +28,16 @@ func PrepareMockedConsumerControllerWithTxHash(t *testing.T, r *rand.Rand, start
 
 	for i := startHeight; i <= currentHeight; i++ {
 		resBlock := types.NewBlockInfo(i, GenRandomByteArray(r, 32), true)
-		mockConsumerController.EXPECT().QueryBlock(i).Return(resBlock, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryBlock(gomock.Any(), i).Return(resBlock, nil).AnyTimes()
 	}
 
 	mockConsumerController.EXPECT().Close().Return(nil).AnyTimes()
-	mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(currentHeight, nil).AnyTimes()
-	mockConsumerController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
+	mockConsumerController.EXPECT().QueryLatestBlockHeight(gomock.Any()).Return(currentHeight, nil).AnyTimes()
+	mockConsumerController.EXPECT().QueryActivatedHeight(gomock.Any()).Return(uint64(1), nil).AnyTimes()
 
 	// can't return (nil, nil) or `randomnessCommitmentLoop` will fatal (logic added in #454)
 	mockConsumerController.EXPECT().
-		CommitPubRandList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		CommitPubRandList(gomock.Any(), gomock.Any()).
 		Return(&types.TxResponse{TxHash: txHash}, nil).
 		AnyTimes()
 

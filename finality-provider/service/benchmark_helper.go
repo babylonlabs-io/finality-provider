@@ -1,7 +1,9 @@
 package service
 
 import (
+	"context"
 	"fmt"
+	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"time"
 
 	"go.uber.org/zap"
@@ -17,8 +19,8 @@ type CommitPubRandTiming struct {
 }
 
 // HelperCommitPubRand used for benchmark
-func (fp *FinalityProviderInstance) HelperCommitPubRand(tipHeight uint64) (*types.TxResponse, *CommitPubRandTiming, error) {
-	lastCommittedHeight, err := fp.GetLastCommittedHeight()
+func (fp *FinalityProviderInstance) HelperCommitPubRand(ctx context.Context, tipHeight uint64) (*types.TxResponse, *CommitPubRandTiming, error) {
+	lastCommittedHeight, err := fp.GetLastCommittedHeight(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -43,13 +45,13 @@ func (fp *FinalityProviderInstance) HelperCommitPubRand(tipHeight uint64) (*type
 		return nil, nil, nil
 	}
 
-	return fp.commitPubRandPairsWithTiming(startHeight)
+	return fp.commitPubRandPairsWithTiming(ctx, startHeight)
 }
 
-func (fp *FinalityProviderInstance) commitPubRandPairsWithTiming(startHeight uint64) (*types.TxResponse, *CommitPubRandTiming, error) {
+func (fp *FinalityProviderInstance) commitPubRandPairsWithTiming(ctx context.Context, startHeight uint64) (*types.TxResponse, *CommitPubRandTiming, error) {
 	timing := &CommitPubRandTiming{}
 
-	activationBlkHeight, err := fp.consumerCon.QueryFinalityActivationBlockHeight()
+	activationBlkHeight, err := fp.consumerCon.QueryFinalityActivationBlockHeight(ctx)
 	if err != nil {
 		return nil, timing, err
 	}
@@ -81,7 +83,13 @@ func (fp *FinalityProviderInstance) commitPubRandPairsWithTiming(startHeight uin
 		return nil, timing, fmt.Errorf("failed to sign the Schnorr signature: %w", err)
 	}
 
-	res, err := fp.consumerCon.CommitPubRandList(fp.GetBtcPk(), startHeight, numPubRand, commitment, schnorrSig)
+	res, err := fp.consumerCon.CommitPubRandList(ctx, ccapi.NewCommitPubRandListRequest(
+		fp.GetBtcPk(),
+		startHeight,
+		numPubRand,
+		commitment,
+		schnorrSig,
+	))
 	if err != nil {
 		return nil, timing, fmt.Errorf("failed to commit public randomness to the consumer chain: %w", err)
 	}
