@@ -95,6 +95,11 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 		return false, 0, fmt.Errorf("failed to get the last block: %w", err)
 	}
 
+	if rc.cfg.TimestampingDelayBlocks < 0 {
+		return false, 0, fmt.Errorf("TimestampingDelayBlocks cannot be negative: %d", rc.cfg.TimestampingDelayBlocks)
+	}
+
+	// #nosec G115
 	tipHeightWithDelay := tipHeight + uint64(rc.cfg.TimestampingDelayBlocks)
 
 	var startHeight uint64
