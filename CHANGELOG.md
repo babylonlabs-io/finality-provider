@@ -48,6 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#500](https://github.com/babylonlabs-io/finality-provider/pull/500) feat: fpd abstract poller implementation
 * [502](https://github.com/babylonlabs-io/finality-provider/pull/502) chore: bump babylon to v3
 * [512](https://github.com/babylonlabs-io/finality-provider/pull/512) chore: consumer interface refactor
+* [515](https://github.com/babylonlabs-io/finality-provider/pull/515) chore: abstract randomness committer
 
 ## v1.1.0-rc.1
 
