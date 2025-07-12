@@ -385,10 +385,10 @@ func (bc *BabylonConsumerController) QueryFinalityProviderStatus(_ context.Conte
 		return nil, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
 	}
 
-	return &api.FinalityProviderStatusResponse{
-		Slashed: res.FinalityProvider.SlashedBtcHeight > 0,
-		Jailed:  res.FinalityProvider.Jailed,
-	}, nil
+	return api.NewFinalityProviderStatusResponse(
+		res.FinalityProvider.SlashedBtcHeight > 0,
+		res.FinalityProvider.Jailed,
+	), nil
 }
 
 func (bc *BabylonConsumerController) Close() error {

@@ -235,10 +235,10 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 		}
 
 		pkHex := fp.GetBIP340BTCPK().MarshalHex()
-		hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(ctx, &ccapi.QueryFinalityProviderHasPowerRequest{
-			FpPk:        fp.BtcPk,
-			BlockHeight: latestBlockHeight,
-		})
+		hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(ctx, ccapi.NewQueryFinalityProviderHasPowerRequest(
+			fp.BtcPk,
+			latestBlockHeight,
+		))
 		if err != nil {
 			return fmt.Errorf("failed to query voting power for finality provider %s at height %d: %w",
 				fp.GetBIP340BTCPK().MarshalHex(), latestBlockHeight, err)
@@ -639,10 +639,10 @@ func (app *FinalityProviderApp) putFpFromResponse(ctx context.Context, fp *bstyp
 		return err
 	}
 
-	hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(ctx, &ccapi.QueryFinalityProviderHasPowerRequest{
-		FpPk:        btcPk,
-		BlockHeight: fp.Height,
-	})
+	hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(ctx, ccapi.NewQueryFinalityProviderHasPowerRequest(
+		btcPk,
+		fp.Height,
+	))
 	if err != nil {
 		return fmt.Errorf("failed to query voting power for finality provider %s: %w",
 			fp.BtcPk.MarshalHex(), err)

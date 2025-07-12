@@ -344,11 +344,7 @@ func (cp *ChainPoller) blocksWithRetry(ctx context.Context, start, end uint64, l
 	var err error
 
 	retryErr := retry.Do(func() error {
-		blocks, err = cp.consumerCon.QueryBlocks(ctx, &ccapi.QueryBlocksRequest{
-			StartHeight: start,
-			EndHeight:   end,
-			Limit:       limit,
-		})
+		blocks, err = cp.consumerCon.QueryBlocks(ctx, ccapi.NewQueryBlocksRequest(start, end, limit))
 		if err != nil {
 			return err
 		}

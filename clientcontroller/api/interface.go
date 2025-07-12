@@ -137,3 +137,67 @@ type QueryFinalityProviderHasPowerRequest struct {
 	FpPk        *btcec.PublicKey
 	BlockHeight uint64
 }
+
+func NewSubmitBatchFinalitySigsRequest(
+	fpPk *btcec.PublicKey,
+	blocks []*types.BlockInfo,
+	pubRandList []*btcec.FieldVal,
+	proofList [][]byte,
+	sigs []*btcec.ModNScalar,
+) *SubmitBatchFinalitySigsRequest {
+	return &SubmitBatchFinalitySigsRequest{
+		FpPk:        fpPk,
+		Blocks:      blocks,
+		PubRandList: pubRandList,
+		ProofList:   proofList,
+		Sigs:        sigs,
+	}
+}
+
+func NewQueryBlocksRequest(
+	startHeight uint64,
+	endHeight uint64,
+	limit uint32,
+) *QueryBlocksRequest {
+	return &QueryBlocksRequest{
+		StartHeight: startHeight,
+		EndHeight:   endHeight,
+		Limit:       limit,
+	}
+}
+
+func NewCommitPubRandListRequest(
+	fpPk *btcec.PublicKey,
+	startHeight uint64,
+	numPubRand uint64,
+	commitment []byte,
+	sig *schnorr.Signature,
+) *CommitPubRandListRequest {
+	return &CommitPubRandListRequest{
+		FpPk:        fpPk,
+		StartHeight: startHeight,
+		NumPubRand:  numPubRand,
+		Commitment:  commitment,
+		Sig:         sig,
+	}
+}
+
+func NewFinalityProviderStatusResponse(
+	slashed bool,
+	jailed bool,
+) *FinalityProviderStatusResponse {
+	return &FinalityProviderStatusResponse{
+		Slashed: slashed,
+		Jailed:  jailed,
+	}
+}
+
+func NewQueryFinalityProviderHasPowerRequest(
+	fpPk *btcec.PublicKey,
+	blockHeight uint64,
+) *QueryFinalityProviderHasPowerRequest {
+	return &QueryFinalityProviderHasPowerRequest{
+		FpPk:        fpPk,
+		BlockHeight: blockHeight,
+	}
+}

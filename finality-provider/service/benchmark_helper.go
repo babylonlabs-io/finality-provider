@@ -83,13 +83,13 @@ func (fp *FinalityProviderInstance) commitPubRandPairsWithTiming(ctx context.Con
 		return nil, timing, fmt.Errorf("failed to sign the Schnorr signature: %w", err)
 	}
 
-	res, err := fp.consumerCon.CommitPubRandList(ctx, &ccapi.CommitPubRandListRequest{
-		FpPk:        fp.GetBtcPk(),
-		StartHeight: startHeight,
-		NumPubRand:  numPubRand,
-		Commitment:  commitment,
-		Sig:         schnorrSig,
-	})
+	res, err := fp.consumerCon.CommitPubRandList(ctx, ccapi.NewCommitPubRandListRequest(
+		fp.GetBtcPk(),
+		startHeight,
+		numPubRand,
+		commitment,
+		schnorrSig,
+	))
 	if err != nil {
 		return nil, timing, fmt.Errorf("failed to commit public randomness to the consumer chain: %w", err)
 	}

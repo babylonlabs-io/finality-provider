@@ -232,13 +232,13 @@ func setupBenchmarkEnvironment(t *testing.T, seed int64, numPubRand uint32) (*ty
 
 	// Configure additional mocks
 	expectedTxHash := testutil.GenRandomHexStr(r, 32)
-	req := &api.CommitPubRandListRequest{
-		FpPk:        fpIns.GetBtcPk(),
-		StartHeight: startingBlock.GetHeight() + 1,
-		NumPubRand:  0,
-		Commitment:  nil,
-		Sig:         nil,
-	}
+	req := api.NewCommitPubRandListRequest(
+		fpIns.GetBtcPk(),
+		startingBlock.GetHeight()+1,
+		0,
+		nil,
+		nil,
+	)
 	mockConsumerController.EXPECT().
 		CommitPubRandList(context.Background(), req).
 		Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()

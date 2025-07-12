@@ -45,11 +45,7 @@ func FuzzChainPoller_Start(f *testing.F) {
 			resBlocks := []types.BlockDescription{
 				types.NewBlockInfo(i, nil, false),
 			}
-			mockConsumerController.EXPECT().QueryBlocks(ctx, &api.QueryBlocksRequest{
-				StartHeight: i,
-				EndHeight:   endHeight,
-				Limit:       pollerCfg.PollSize,
-			}).Return(resBlocks, nil).AnyTimes()
+			mockConsumerController.EXPECT().QueryBlocks(ctx, api.NewQueryBlocksRequest(i, endHeight, pollerCfg.PollSize)).Return(resBlocks, nil).AnyTimes()
 		}
 
 		m := metrics.NewFpMetrics()

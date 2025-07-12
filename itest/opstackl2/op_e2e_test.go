@@ -132,10 +132,10 @@ func TestFinalityProviderHasPower(t *testing.T) {
 	consumerFpPk := fps[1]
 
 	// query the finality provider has power
-	hasPower, err := ctm.OpConsumerController.QueryFinalityProviderHasPower(ctx, &api.QueryFinalityProviderHasPowerRequest{
-		FpPk:        consumerFpPk.MustToBTCPK(),
-		BlockHeight: 1,
-	})
+	hasPower, err := ctm.OpConsumerController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
+		consumerFpPk.MustToBTCPK(),
+		1,
+	))
 	require.NoError(t, err)
 	require.False(t, hasPower)
 
@@ -144,10 +144,10 @@ func TestFinalityProviderHasPower(t *testing.T) {
 
 	// query the finality provider has power again
 	// fp has 0 voting power b/c there is no public randomness at this height
-	hasPower, err = ctm.OpConsumerController.QueryFinalityProviderHasPower(ctx, &api.QueryFinalityProviderHasPowerRequest{
-		FpPk:        consumerFpPk.MustToBTCPK(),
-		BlockHeight: 1,
-	})
+	hasPower, err = ctm.OpConsumerController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
+		consumerFpPk.MustToBTCPK(),
+		1,
+	))
 	require.NoError(t, err)
 	require.False(t, hasPower)
 
@@ -158,10 +158,10 @@ func TestFinalityProviderHasPower(t *testing.T) {
 
 	// query the finality provider has power again
 	// fp has voting power now
-	hasPower, err = ctm.OpConsumerController.QueryFinalityProviderHasPower(ctx, &api.QueryFinalityProviderHasPowerRequest{
-		FpPk:        consumerFpPk.MustToBTCPK(),
-		BlockHeight: 1,
-	})
+	hasPower, err = ctm.OpConsumerController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
+		consumerFpPk.MustToBTCPK(),
+		1,
+	))
 	require.NoError(t, err)
 	require.True(t, hasPower)
 }

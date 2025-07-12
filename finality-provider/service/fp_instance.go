@@ -753,13 +753,13 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []types
 	}
 
 	// send finality signature to the consumer chain with only valid items
-	res, err := fp.consumerCon.SubmitBatchFinalitySigs(context.Background(), &ccapi.SubmitBatchFinalitySigsRequest{
-		FpPk:        fp.GetBtcPk(),
-		Blocks:      validBlocks,
-		PubRandList: validPrList,
-		ProofList:   validProofList,
-		Sigs:        validSigList,
-	})
+	res, err := fp.consumerCon.SubmitBatchFinalitySigs(context.Background(), ccapi.NewSubmitBatchFinalitySigsRequest(
+		fp.GetBtcPk(),
+		validBlocks,
+		validPrList,
+		validProofList,
+		validSigList,
+	))
 
 	if err != nil {
 		if strings.Contains(err.Error(), "jailed") {
@@ -1093,10 +1093,10 @@ func (fp *FinalityProviderInstance) GetVotingPowerWithRetry(height uint64) (bool
 	)
 
 	if err := retry.Do(func() error {
-		hasPower, err = fp.consumerCon.QueryFinalityProviderHasPower(context.Background(), &ccapi.QueryFinalityProviderHasPowerRequest{
-			FpPk:        fp.GetBtcPk(),
-			BlockHeight: height,
-		})
+		hasPower, err = fp.consumerCon.QueryFinalityProviderHasPower(context.Background(), ccapi.NewQueryFinalityProviderHasPowerRequest(
+			fp.GetBtcPk(),
+			height,
+		))
 		if err != nil {
 			return err
 		}

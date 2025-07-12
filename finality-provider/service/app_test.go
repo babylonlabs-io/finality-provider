@@ -179,20 +179,20 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 			isSlashedOrJailed = r.Intn(3)
 			switch isSlashedOrJailed {
 			case 0:
-				mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(&api.FinalityProviderStatusResponse{
-					Slashed: true,
-					Jailed:  false,
-				}, nil).AnyTimes()
+				mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(api.NewFinalityProviderStatusResponse(
+					true,
+					false,
+				), nil).AnyTimes()
 			case 1:
-				mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(&api.FinalityProviderStatusResponse{
-					Slashed: false,
-					Jailed:  true,
-				}, nil).AnyTimes()
+				mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(api.NewFinalityProviderStatusResponse(
+					false,
+					true,
+				), nil).AnyTimes()
 			case 2:
-				mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(&api.FinalityProviderStatusResponse{
-					Slashed: false,
-					Jailed:  false,
-				}, nil).AnyTimes()
+				mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(api.NewFinalityProviderStatusResponse(
+					false,
+					false,
+				), nil).AnyTimes()
 			}
 		}
 
