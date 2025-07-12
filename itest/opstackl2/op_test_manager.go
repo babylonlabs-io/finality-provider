@@ -440,8 +440,12 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	fpMetrics := metrics.NewFpMetrics()
 	poller := service.NewChainPoller(ctm.logger, fpCfg.PollerConfig, ctm.OpConsumerController, fpMetrics)
 
+	rndCommitter := service.NewDefaultRandomnessCommitter(
+		service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
+		service.NewPubRandState(pubRandStore), ctm.OpConsumerController, ctm.ConsumerEOTSClient, ctm.logger, fpMetrics)
+
 	fpInstance, err := service.NewFinalityProviderInstance(
-		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.OpConsumerController, ctm.ConsumerEOTSClient, poller,
+		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.OpConsumerController, ctm.ConsumerEOTSClient, poller, rndCommitter,
 		fpMetrics, make(chan<- *service.CriticalError), ctm.logger)
 	require.NoError(t, err)
 	return fpInstance

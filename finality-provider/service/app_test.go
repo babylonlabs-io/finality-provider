@@ -90,7 +90,13 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		require.NoError(t, err)
 		fpMetrics := metrics.NewFpMetrics()
 		poller := service.NewChainPoller(logger, fpCfg.PollerConfig, mockConsumerController, fpMetrics)
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, poller, fpMetrics, fpdb, logger)
+		pubRandStore, err := fpstore.NewPubRandProofStore(fpdb)
+		require.NoError(t, err)
+		rndCommitter := service.NewDefaultRandomnessCommitter(
+			service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
+			service.NewPubRandState(pubRandStore), mockConsumerController, em, logger, fpMetrics)
+
+		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, poller, rndCommitter, fpMetrics, fpdb, logger)
 		require.NoError(t, err)
 		defer func() {
 			err = fpdb.Close()
@@ -324,7 +330,13 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 		require.NoError(t, err)
 		fpMetrics := metrics.NewFpMetrics()
 		poller := service.NewChainPoller(logger, fpCfg.PollerConfig, mockConsumerController, fpMetrics)
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, poller, fpMetrics, fpdb, logger)
+		pubRandStore, err := fpstore.NewPubRandProofStore(fpdb)
+		require.NoError(t, err)
+		rndCommitter := service.NewDefaultRandomnessCommitter(
+			service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
+			service.NewPubRandState(pubRandStore), mockConsumerController, em, logger, fpMetrics)
+
+		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, poller, rndCommitter, fpMetrics, fpdb, logger)
 		require.NoError(t, err)
 
 		defer func() {
@@ -415,7 +427,13 @@ func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg
 	require.NoError(t, err)
 	fpMetrics := metrics.NewFpMetrics()
 	poller := service.NewChainPoller(logger, cfg.PollerConfig, consumerCon, fpMetrics)
-	app, err := service.NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, fpMetrics, db, logger)
+	pubRandStore, err := fpstore.NewPubRandProofStore(db)
+	require.NoError(t, err)
+	rndCommitter := service.NewDefaultRandomnessCommitter(
+		service.NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
+		service.NewPubRandState(pubRandStore), consumerCon, em, logger, fpMetrics)
+
+	app, err := service.NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, rndCommitter, fpMetrics, db, logger)
 	require.NoError(t, err)
 
 	// create registered finality-provider

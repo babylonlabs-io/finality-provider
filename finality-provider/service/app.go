@@ -42,10 +42,10 @@ type FinalityProviderApp struct {
 	config       *fpcfg.Config
 	logger       *zap.Logger
 	poller       types.BlockPoller[types.BlockDescription]
-
-	fpInsMu     sync.RWMutex // Protects fpIns
-	fpIns       *FinalityProviderInstance
-	eotsManager eotsmanager.EOTSManager
+	rndCommitter types.RandomnessCommitter
+	fpInsMu      sync.RWMutex // Protects fpIns
+	fpIns        *FinalityProviderInstance
+	eotsManager  eotsmanager.EOTSManager
 
 	metrics *metrics.FpMetrics
 
@@ -85,7 +85,21 @@ func NewFinalityProviderAppFromConfig(
 	fpMetrics := metrics.NewFpMetrics()
 	poller := NewChainPoller(logger, cfg.PollerConfig, consumerCon, fpMetrics)
 
-	return NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, fpMetrics, db, logger)
+	pubRandStore, err := store.NewPubRandProofStore(db)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initiate public randomness store: %w", err)
+	}
+
+	rndCommiter := NewDefaultRandomnessCommitter(
+		NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
+		NewPubRandState(pubRandStore),
+		consumerCon,
+		em,
+		logger,
+		fpMetrics,
+	)
+
+	return NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, rndCommiter, fpMetrics, db, logger)
 }
 
 func NewFinalityProviderApp(
@@ -94,6 +108,7 @@ func NewFinalityProviderApp(
 	consumerCon ccapi.ConsumerController,
 	em eotsmanager.EOTSManager,
 	poller types.BlockPoller[types.BlockDescription],
+	rndCommitter types.RandomnessCommitter,
 	metrics *metrics.FpMetrics,
 	db kvdb.Backend,
 	logger *zap.Logger,
@@ -126,6 +141,7 @@ func NewFinalityProviderApp(
 		logger:                            logger,
 		eotsManager:                       em,
 		poller:                            poller,
+		rndCommitter:                      rndCommitter,
 		metrics:                           metrics,
 		quit:                              make(chan struct{}),
 		unjailFinalityProviderRequestChan: make(chan *UnjailFinalityProviderRequest),
@@ -538,7 +554,7 @@ func (app *FinalityProviderApp) startFinalityProviderInstance(
 
 	if app.fpIns == nil {
 		fpIns, err := NewFinalityProviderInstance(
-			pk, app.config, app.fps, app.pubRandStore, app.cc, app.consumerCon, app.eotsManager, app.poller,
+			pk, app.config, app.fps, app.pubRandStore, app.cc, app.consumerCon, app.eotsManager, app.poller, app.rndCommitter,
 			app.metrics, app.criticalErrChan, app.logger,
 		)
 		if err != nil {
