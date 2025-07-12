@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -157,9 +158,16 @@ func startFinalityProviderAppWithRegisteredFp(
 	fpCfg.PollerConfig.StaticChainScanningStartHeight = startingHeight
 	db, err := fpCfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
+	pubRandStore, err := store.NewPubRandProofStore(db)
+	require.NoError(t, err)
+
 	fpMetrics := metrics.NewFpMetrics()
 	poller := service.NewChainPoller(logger, fpCfg.PollerConfig, consumerCon, fpMetrics)
-	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, fpMetrics, db, logger)
+	rndCommitter := service.NewDefaultRandomnessCommitter(
+		service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
+		service.NewPubRandState(pubRandStore), consumerCon, em, logger, fpMetrics)
+
+	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, rndCommitter, fpMetrics, db, logger)
 	require.NoError(t, err)
 	err = app.Start()
 	require.NoError(t, err)
@@ -195,7 +203,7 @@ func startFinalityProviderAppWithRegisteredFp(
 	)
 	require.NoError(t, err)
 	m := metrics.NewFpMetrics()
-	fpIns, err := service.NewFinalityProviderInstance(eotsPk, &fpCfg, fpStore, pubRandProofStore, cc, consumerCon, em, poller, m, make(chan *service.CriticalError), logger)
+	fpIns, err := service.NewFinalityProviderInstance(eotsPk, &fpCfg, fpStore, pubRandProofStore, cc, consumerCon, em, poller, rndCommitter, m, make(chan *service.CriticalError), logger)
 	require.NoError(t, err)
 
 	cleanUp := func() {
