@@ -182,8 +182,9 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	rndCommitter := service.NewDefaultRandomnessCommitter(
 		service.NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore), wcc, eotsCli, logger, fpMetrics)
+	heightDeterminer := service.NewStartHeightDeterminer(wcc, cfg.PollerConfig, logger)
 
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, wcc, eotsCli, poller, rndCommitter, fpMetrics, fpdb, logger)
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, wcc, eotsCli, poller, rndCommitter, heightDeterminer, fpMetrics, fpdb, logger)
 	require.NoError(t, err)
 	err = fpApp.Start()
 	require.NoError(t, err)

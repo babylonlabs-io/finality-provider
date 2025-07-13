@@ -106,9 +106,10 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 	rndCommitter := service.NewDefaultRandomnessCommitter(
 		service.NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore), consumerCon, em, logger, fpMetrics)
+	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, cfg.PollerConfig, logger)
 
 	fp, err := service.NewFinalityProviderInstance(
-		fpPk, cfg, fpStore, pubRandStore, cc, consumerCon, em, poller, rndCommitter, fpMetrics,
+		fpPk, cfg, fpStore, pubRandStore, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, fpMetrics,
 		make(chan<- *service.CriticalError), logger)
 	if err != nil {
 		return fmt.Errorf("failed to create finality-provider %s instance: %w", fpPk.MarshalHex(), err)

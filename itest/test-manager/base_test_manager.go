@@ -638,8 +638,9 @@ func CreateAndStartFpApp(
 	rndCommitter := service.NewDefaultRandomnessCommitter(
 		service.NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore), cc, eotsCli, logger, fpMetrics)
+	heightDeterminer := service.NewStartHeightDeterminer(cc, cfg.PollerConfig, logger)
 
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, poller, rndCommitter, fpMetrics, fpdb, logger)
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, poller, rndCommitter, heightDeterminer, fpMetrics, fpdb, logger)
 	require.NoError(t, err)
 
 	err = fpApp.Start()
