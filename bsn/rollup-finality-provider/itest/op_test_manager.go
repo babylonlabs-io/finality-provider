@@ -131,8 +131,8 @@ func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTe
 
 	ctm := &OpL2ConsumerTestManager{
 		BaseTestManager: BaseTestManager{
-			BBNClient:        babylonController,
-			CovenantPrivKeys: covenantPrivKeys,
+			BabylonController: babylonController,
+			CovenantPrivKeys:  covenantPrivKeys,
 		},
 		BaseDir:              testDir,
 		manager:              manager,
@@ -363,7 +363,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 
 	// wait for Babylon FP registration
 	require.Eventually(t, func() bool {
-		fps, err := ctm.BBNClient.QueryFinalityProviders()
+		fps, err := ctm.BabylonController.QueryFinalityProviders()
 		return err == nil && len(fps) > 0
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime, "Failed to wait for Babylon FP registration")
 
@@ -380,7 +380,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 
 	// wait for Babylon FP registration
 	require.Eventually(t, func() bool {
-		fps, err := ctm.BBNClient.QueryFinalityProviders()
+		fps, err := ctm.BabylonController.QueryFinalityProviders()
 		if err != nil {
 			t.Logf("Failed to query finality providers: %v", err)
 			return false
@@ -394,7 +394,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 
 	// wait for consumer FP registration
 	require.Eventually(t, func() bool {
-		fps, err := ctm.BBNClient.QueryConsumerFinalityProviders(rollupBSNID)
+		fps, err := ctm.BabylonController.QueryConsumerFinalityProviders(rollupBSNID)
 		if err != nil {
 			t.Logf("Failed to query finality providers: %v", err)
 			return false

@@ -183,8 +183,8 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	ctm := &BcdTestManager{
 		BaseTestManager: &base_test_manager.BaseTestManager{
-			BBNClient:        bc.(*bbncc.BabylonController),
-			CovenantPrivKeys: covenantPrivKeys,
+			BabylonController: bc.(*bbncc.BabylonController),
+			CovenantPrivKeys:  covenantPrivKeys,
 		},
 		manager:           manager,
 		FpConfig:          cfg,
@@ -204,7 +204,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 func (ctm *BcdTestManager) WaitForServicesStart(t *testing.T) {
 	require.Eventually(t, func() bool {
-		params, err := ctm.BBNClient.QueryStakingParams()
+		params, err := ctm.BabylonController.QueryStakingParams()
 		if err != nil {
 			return false
 		}
