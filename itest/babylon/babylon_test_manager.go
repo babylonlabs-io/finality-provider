@@ -159,8 +159,8 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 
 	tm := &TestManager{
 		BaseTestManager: &base_test_manager.BaseTestManager{
-			BBNClient:        bc.(*bbncc.BabylonController),
-			CovenantPrivKeys: covenantPrivKeys,
+			BabylonController: bc.(*bbncc.BabylonController),
+			CovenantPrivKeys:  covenantPrivKeys,
 		},
 		EOTSServerHandler: eh,
 		EOTSHomeDir:       eotsHomeDir,
@@ -264,7 +264,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 
 func (tm *TestManager) WaitForServicesStart(t *testing.T) {
 	require.Eventually(t, func() bool {
-		_, err := tm.BBNClient.QueryBtcLightClientTip()
+		_, err := tm.BabylonController.QueryBtcLightClientTip()
 
 		return err == nil
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
@@ -296,7 +296,7 @@ func StartManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context, 
 
 	// Check finality providers on Babylon side
 	require.Eventually(t, func() bool {
-		fps, err := tm.BBNClient.QueryFinalityProviders()
+		fps, err := tm.BabylonController.QueryFinalityProviders()
 		if err != nil {
 			t.Logf("failed to query finality providers from Babylon %s", err.Error())
 			return false
@@ -331,7 +331,7 @@ func (tm *TestManager) Stop(t *testing.T) {
 func (tm *TestManager) CheckBlockFinalization(t *testing.T, height uint64, num int) {
 	// We need to ensure votes are collected at the given height
 	require.Eventually(t, func() bool {
-		votes, err := tm.BBNClient.QueryVotesAtHeight(height)
+		votes, err := tm.BabylonController.QueryVotesAtHeight(height)
 		if err != nil {
 			t.Logf("failed to get the votes at height %v: %s", height, err.Error())
 			return false

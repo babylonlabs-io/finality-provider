@@ -38,33 +38,33 @@ const (
 	BabylonChainName = "Babylon"
 )
 
-var _ api.ConsumerController = &OPStackL2ConsumerController{}
+var _ api.ConsumerController = &RollupBSNController{}
 
 // nolint:revive // Ignore stutter warning - full name provides clarity
-type OPStackL2ConsumerController struct {
-	Cfg        *config.OPStackL2Config
-	opl2Client *ethclient.Client
-	bbnClient  *bbnclient.Client
-	logger     *zap.Logger
+type RollupBSNController struct {
+	Cfg       *config.RollupFPConig
+	ethClient *ethclient.Client
+	bbnClient *bbnclient.Client
+	logger    *zap.Logger
 }
 
-func NewOPStackL2ConsumerController(
-	opl2Cfg *rollupfpconfig.OPStackL2Config,
+func NewRollupBSNController(
+	rollupFPCfg *rollupfpconfig.RollupFPConig,
 	logger *zap.Logger,
-) (*OPStackL2ConsumerController, error) {
-	if opl2Cfg == nil {
-		return nil, fmt.Errorf("nil config for OP consumer controller")
+) (*RollupBSNController, error) {
+	if rollupFPCfg == nil {
+		return nil, fmt.Errorf("nil config for rollup BSN controller")
 	}
-	if err := opl2Cfg.Validate(); err != nil {
+	if err := rollupFPCfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
-	opl2Client, err := ethclient.Dial(opl2Cfg.OPStackL2RPCAddress)
+	ethClient, err := ethclient.Dial(rollupFPCfg.RollupNodeRPCAddress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create OPStack L2 client: %w", err)
+		return nil, fmt.Errorf("failed to create rollup node client: %w", err)
 	}
 
-	babylonConfig := opl2Cfg.GetBabylonConfig()
+	babylonConfig := rollupFPCfg.GetBabylonConfig()
 	if err := babylonConfig.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config for Babylon client: %w", err)
 	}
@@ -77,17 +77,17 @@ func NewOPStackL2ConsumerController(
 		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
 	}
 
-	cc := &OPStackL2ConsumerController{
-		Cfg:        opl2Cfg,
-		opl2Client: opl2Client,
-		bbnClient:  bc,
-		logger:     logger,
+	cc := &RollupBSNController{
+		Cfg:       rollupFPCfg,
+		ethClient: ethClient,
+		bbnClient: bc,
+		logger:    logger,
 	}
 
 	return cc, nil
 }
 
-func (cc *OPStackL2ConsumerController) QuerySmartContractState(ctx context.Context, contractAddress string, queryData string) (*wasmtypes.QuerySmartContractStateResponse, error) {
+func (cc *RollupBSNController) QuerySmartContractState(ctx context.Context, contractAddress string, queryData string) (*wasmtypes.QuerySmartContractStateResponse, error) {
 	clientCtx := client.Context{Client: cc.bbnClient.RPCClient}
 	queryClient := wasmtypes.NewQueryClient(clientCtx)
 
@@ -98,7 +98,7 @@ func (cc *OPStackL2ConsumerController) QuerySmartContractState(ctx context.Conte
 }
 
 // QueryContractConfig queries the finality contract for its config
-func (cc *OPStackL2ConsumerController) QueryContractConfig() (*Config, error) {
+func (cc *RollupBSNController) QueryContractConfig() (*Config, error) {
 	query := QueryMsg{
 		Config: &Config{},
 	}
@@ -124,11 +124,11 @@ func (cc *OPStackL2ConsumerController) QueryContractConfig() (*Config, error) {
 	return resp, nil
 }
 
-func (cc *OPStackL2ConsumerController) ReliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+func (cc *RollupBSNController) ReliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	return cc.reliablySendMsgs([]sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
-func (cc *OPStackL2ConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+func (cc *RollupBSNController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	resp, err := cc.bbnClient.ReliablySendMsgs(
 		context.Background(),
 		msgs,
@@ -142,17 +142,17 @@ func (cc *OPStackL2ConsumerController) reliablySendMsgs(msgs []sdk.Msg, expected
 	return types.NewBabylonTxResponse(resp), nil
 }
 
-func (cc *OPStackL2ConsumerController) GetFpRandCommitContext() string {
+func (cc *RollupBSNController) GetFpRandCommitContext() string {
 	return signingcontext.FpRandCommitContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.FinalityContractAddress)
 }
 
-func (cc *OPStackL2ConsumerController) GetFpFinVoteContext() string {
+func (cc *RollupBSNController) GetFpFinVoteContext() string {
 	return signingcontext.FpFinVoteContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.FinalityContractAddress)
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness to Babylon CosmWasm contract
 // it returns tx hash and error
-func (cc *OPStackL2ConsumerController) CommitPubRandList(
+func (cc *RollupBSNController) CommitPubRandList(
 	fpPk *btcec.PublicKey,
 	startHeight uint64,
 	numPubRand uint64,
@@ -194,7 +194,7 @@ func (cc *OPStackL2ConsumerController) CommitPubRandList(
 
 // SubmitFinalitySig submits the finality signature to Babylon CosmWasm contract
 // it returns tx hash and error
-func (cc *OPStackL2ConsumerController) SubmitFinalitySig(
+func (cc *RollupBSNController) SubmitFinalitySig(
 	fpPk *btcec.PublicKey,
 	block *types.BlockInfo,
 	pubRand *btcec.FieldVal,
@@ -211,7 +211,7 @@ func (cc *OPStackL2ConsumerController) SubmitFinalitySig(
 }
 
 // SubmitBatchFinalitySigs submits a batch of finality signatures
-func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
+func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 	fpPk *btcec.PublicKey,
 	blocks []*types.BlockInfo,
 	pubRandList []*btcec.FieldVal,
@@ -271,7 +271,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 }
 
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
-func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
+func (cc *RollupBSNController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
 	pubRand, err := cc.QueryLastPublicRandCommit(fpPk)
 	if err != nil {
 		return false, err
@@ -341,8 +341,8 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(fpPk *btcec
 // QueryLatestFinalizedBlock returns the finalized L2 block from a RPC call
 // TODO: return the BTC finalized L2 block, it is tricky b/c it's not recorded anywhere so we can
 // use some exponential strategy to search
-func (cc *OPStackL2ConsumerController) QueryLatestFinalizedBlock() (*types.BlockInfo, error) {
-	l2Block, err := cc.opl2Client.HeaderByNumber(context.Background(), big.NewInt(ethrpc.FinalizedBlockNumber.Int64()))
+func (cc *RollupBSNController) QueryLatestFinalizedBlock() (*types.BlockInfo, error) {
+	l2Block, err := cc.ethClient.HeaderByNumber(context.Background(), big.NewInt(ethrpc.FinalizedBlockNumber.Int64()))
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +354,7 @@ func (cc *OPStackL2ConsumerController) QueryLatestFinalizedBlock() (*types.Block
 	return types.NewBlockInfo(l2Block.Number.Uint64(), l2Block.Hash().Bytes(), false), nil
 }
 
-func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types.BlockInfo, error) {
+func (cc *RollupBSNController) QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types.BlockInfo, error) {
 	if startHeight > endHeight {
 		return nil, fmt.Errorf("the start height %v should not be higher than the end height %v", startHeight, endHeight)
 	}
@@ -376,7 +376,7 @@ func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight uint64
 	}
 
 	// batch call
-	if err := cc.opl2Client.Client().BatchCallContext(context.Background(), batchElemList); err != nil {
+	if err := cc.ethClient.Client().BatchCallContext(context.Background(), batchElemList); err != nil {
 		return nil, err
 	}
 	for i := range batchElemList {
@@ -405,8 +405,8 @@ func (cc *OPStackL2ConsumerController) QueryBlocks(startHeight, endHeight uint64
 }
 
 // QueryBlock returns the L2 block number and block hash with the given block number from a RPC call
-func (cc *OPStackL2ConsumerController) QueryBlock(height uint64) (*types.BlockInfo, error) {
-	l2Block, err := cc.opl2Client.HeaderByNumber(context.Background(), new(big.Int).SetUint64(height))
+func (cc *RollupBSNController) QueryBlock(height uint64) (*types.BlockInfo, error) {
+	l2Block, err := cc.ethClient.HeaderByNumber(context.Background(), new(big.Int).SetUint64(height))
 	if err != nil {
 		return nil, err
 	}
@@ -421,14 +421,14 @@ func (cc *OPStackL2ConsumerController) QueryBlock(height uint64) (*types.BlockIn
 	return types.NewBlockInfo(height, blockHashBytes, false), nil
 }
 
-// Note: this is specific to the OPStackL2ConsumerController and only used for testing
+// Note: this is specific to the RollupBSNController and only used for testing
 // QueryBlock returns the Ethereum block from a RPC call
-func (cc *OPStackL2ConsumerController) QueryEthBlock(height uint64) (*ethtypes.Header, error) {
-	return cc.opl2Client.HeaderByNumber(context.Background(), new(big.Int).SetUint64(height))
+func (cc *RollupBSNController) QueryEthBlock(height uint64) (*ethtypes.Header, error) {
+	return cc.ethClient.HeaderByNumber(context.Background(), new(big.Int).SetUint64(height))
 }
 
 // QueryIsBlockFinalized returns whether the given the L2 block number has been finalized
-func (cc *OPStackL2ConsumerController) QueryIsBlockFinalized(height uint64) (bool, error) {
+func (cc *RollupBSNController) QueryIsBlockFinalized(height uint64) (bool, error) {
 	l2Block, err := cc.QueryLatestFinalizedBlock()
 	if err != nil {
 		return false, err
@@ -445,7 +445,7 @@ func (cc *OPStackL2ConsumerController) QueryIsBlockFinalized(height uint64) (boo
 }
 
 // QueryActivatedHeight returns the L2 block number at which the finality gadget is activated.
-func (cc *OPStackL2ConsumerController) QueryActivatedHeight() (uint64, error) {
+func (cc *RollupBSNController) QueryActivatedHeight() (uint64, error) {
 	finalityGadgetClient, err := fgclient.NewFinalityGadgetGrpcClient(cc.Cfg.BabylonFinalityGadgetRpc)
 	if err != nil {
 		cc.logger.Error("failed to initialize Babylon Finality Gadget Grpc client", zap.Error(err))
@@ -471,8 +471,8 @@ func (cc *OPStackL2ConsumerController) QueryActivatedHeight() (uint64, error) {
 }
 
 // QueryLatestBlockHeight gets the latest L2 block number from a RPC call
-func (cc *OPStackL2ConsumerController) QueryLatestBlockHeight() (uint64, error) {
-	l2LatestBlock, err := cc.opl2Client.HeaderByNumber(context.Background(), big.NewInt(ethrpc.LatestBlockNumber.Int64()))
+func (cc *RollupBSNController) QueryLatestBlockHeight() (uint64, error) {
+	l2LatestBlock, err := cc.ethClient.HeaderByNumber(context.Background(), big.NewInt(ethrpc.LatestBlockNumber.Int64()))
 	if err != nil {
 		return 0, err
 	}
@@ -481,8 +481,8 @@ func (cc *OPStackL2ConsumerController) QueryLatestBlockHeight() (uint64, error) 
 }
 
 // QueryLastPublicRandCommit returns the last public randomness commitments
-// It is fetched from the state of a CosmWasm contract OP finality gadget.
-func (cc *OPStackL2ConsumerController) QueryLastPublicRandCommit(fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
+// It is fetched from the state of a CosmWasm contract finality .
+func (cc *RollupBSNController) QueryLastPublicRandCommit(fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	queryMsg := &QueryMsg{
 		LastPubRandCommit: &PubRandCommit{
@@ -529,9 +529,9 @@ func ConvertProof(cmtProof cmtcrypto.Proof) Proof {
 
 // GetBlockNumberByTimestamp returns the L2 block number for the given BTC staking activation timestamp.
 // It uses a binary search to find the block number.
-func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Context, targetTimestamp uint64) (uint64, error) {
+func (cc *RollupBSNController) GetBlockNumberByTimestamp(ctx context.Context, targetTimestamp uint64) (uint64, error) {
 	// Check if the target timestamp is after the latest block
-	latestBlock, err := cc.opl2Client.HeaderByNumber(ctx, nil)
+	latestBlock, err := cc.ethClient.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return math.MaxUint64, err
 	}
@@ -540,7 +540,7 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 	}
 
 	// Check if the target timestamp is before the first block
-	firstBlock, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(1))
+	firstBlock, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(1))
 	if err != nil {
 		return math.MaxUint64, err
 	}
@@ -558,7 +558,7 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 
 	for lowerBound <= upperBound {
 		midBlockNumber := (lowerBound + upperBound) / 2
-		block, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(int64(midBlockNumber))) // #nosec G115
+		block, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(int64(midBlockNumber))) // #nosec G115
 		if err != nil {
 			return math.MaxUint64, err
 		}
@@ -578,36 +578,36 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 
 // QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
 // nolint:revive // Ignore stutter warning - full name provides clarity
-func (cc *OPStackL2ConsumerController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
-	// TODO: implement slashed or jailed feature in OP stack L2
+func (cc *RollupBSNController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
+	// TODO: implement slashed or jailed feature in rollup BSN
 	return false, false, nil
 }
 
-func (cc *OPStackL2ConsumerController) QueryFinalityActivationBlockHeight() (uint64, error) {
-	// TODO: implement finality activation feature in OP stack L2
+func (cc *RollupBSNController) QueryFinalityActivationBlockHeight() (uint64, error) {
+	// TODO: implement finality activation feature in rollup BSN
 	return 0, nil
 }
 
 // nolint:revive // Ignore stutter warning - full name provides clarity
-func (cc *OPStackL2ConsumerController) QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error) {
-	// TODO: implement highest voted height feature in OP stack L2
+func (cc *RollupBSNController) QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error) {
+	// TODO: implement highest voted height feature in rollup BSN
 	return 0, nil
 }
 
 // nolint:revive // Ignore stutter warning - full name provides clarity
-func (cc *OPStackL2ConsumerController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error) {
-	// TODO: implement unjail feature in OP stack L2
+func (cc *RollupBSNController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error) {
+	// TODO: implement unjail feature in rollup BSN
 	return nil, nil
 }
 
-func (cc *OPStackL2ConsumerController) Close() error {
-	cc.opl2Client.Close()
+func (cc *RollupBSNController) Close() error {
+	cc.ethClient.Close()
 
 	return cc.bbnClient.Stop()
 }
 
 // nolint:unparam
-func (cc *OPStackL2ConsumerController) isDelegationActive(
+func (cc *RollupBSNController) isDelegationActive(
 	btcStakingParams *btcstakingtypes.QueryParamsResponse,
 	btcDel *btcstakingtypes.BTCDelegationResponse,
 ) (bool, error) {

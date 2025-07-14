@@ -8,22 +8,22 @@ import (
 	"github.com/cosmos/btcutil/bech32"
 )
 
-type OPStackL2Config struct {
-	OPStackL2RPCAddress      string `long:"opstackl2-rpc-address" description:"the rpc address of the op-stack-l2 node to connect to"`
-	BabylonFinalityGadgetRpc string `long:"babylon-finality-gadget-rpc" description:"the rpc address of babylon op finality gadget"` //nolint:stylecheck,revive
+type RollupFPConig struct {
+	RollupNodeRPCAddress     string `long:"rollup-node-rpc-address" description:"the rpc address of the rollup node to connect to"`
+	BabylonFinalityGadgetRpc string `long:"babylon-finality-gadget-rpc" description:"the rpc address of rollup finality gadget"` //nolint:stylecheck,revive
 	FinalityContractAddress  string `long:"finality-contract-address" description:"the contract address of the rollup finality contract"`
 
 	// Below configurations are needed for the Babylon client
 	Common *fpcfg.Config
 }
 
-func (cfg *OPStackL2Config) Validate() error {
-	if cfg.OPStackL2RPCAddress == "" {
-		return fmt.Errorf("opstackl2-rpc-address is required")
+func (cfg *RollupFPConig) Validate() error {
+	if cfg.RollupNodeRPCAddress == "" {
+		return fmt.Errorf("rollup-node-rpc-address is required")
 	}
 	_, _, err := bech32.Decode(cfg.FinalityContractAddress, len(cfg.FinalityContractAddress))
 	if err != nil {
-		return fmt.Errorf("op-finality-gadget: invalid bech32 address: %w", err)
+		return fmt.Errorf("finality-contract-address: invalid bech32 address: %w", err)
 	}
 	if cfg.Common == nil {
 		return fmt.Errorf("babylon config is required")
@@ -35,6 +35,6 @@ func (cfg *OPStackL2Config) Validate() error {
 	return nil
 }
 
-func (cfg *OPStackL2Config) GetBabylonConfig() config.BabylonConfig {
+func (cfg *RollupFPConig) GetBabylonConfig() config.BabylonConfig {
 	return cfg.Common.BabylonConfig.ToBabylonConfig()
 }

@@ -106,7 +106,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddrStr)
 
 	// register consumer to babylon
-	_, err = ctm.BBNClient.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
+	_, err = ctm.BabylonController.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
 	require.NoError(t, err)
 
 	// register consumer fps to babylon
