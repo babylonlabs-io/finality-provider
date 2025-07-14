@@ -214,7 +214,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	require.NoError(t, err)
 
 	// create new clients
-	bc, err := fpcc.NewBabylonController(cfg, tm.logger)
+	bc, err := fpcc.NewBabylonController(cfg.BabylonConfig, tm.logger)
 	require.NoError(t, err)
 	err = bc.Start()
 	require.NoError(t, err)

@@ -623,7 +623,7 @@ func CreateAndStartFpApp(
 	cc api.ConsumerController,
 	eotsCli *client.EOTSManagerGRpcClient,
 ) *service.FinalityProviderApp {
-	bc, err := fpcc.NewBabylonController(cfg, logger)
+	bc, err := fpcc.NewBabylonController(cfg.BabylonConfig, logger)
 	require.NoError(t, err)
 
 	fpdb, err := cfg.DatabaseConfig.GetDBBackend()

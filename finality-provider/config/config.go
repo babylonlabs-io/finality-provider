@@ -48,8 +48,11 @@ var (
 
 // Config is the main config for the fpd cli command
 type Config struct {
-	LogLevel                    string        `long:"loglevel" description:"Logging level for all subsystems" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal"`
-	ChainType                   string        `long:"chaintype" description:"the type of the consumer chain" choice:"babylon" choice:"wasm"`
+	LogLevel string `long:"loglevel" description:"Logging level for all subsystems" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal"`
+
+	// TODO: move to the BSN FP config
+	ChainType string `long:"chaintype" description:"the type of the consumer chain" choice:"babylon" choice:"wasm"`
+
 	NumPubRand                  uint32        `long:"numPubRand" description:"The number of Schnorr public randomness for each commitment"`
 	NumPubRandMax               uint32        `long:"numpubrandmax" description:"The upper bound of the number of Schnorr public randomness for each commitment"`
 	TimestampingDelayBlocks     uint32        `long:"timestampingdelayblocks" description:"The delay, measured in blocks, between a randomness commit submission and the randomness is BTC-timestamped"`
@@ -67,6 +70,7 @@ type Config struct {
 
 	BabylonConfig *BBNConfig `group:"babylon" namespace:"babylon"`
 
+	// TODO: move to the Cosmos BSN FP config
 	CosmwasmConfig *CosmwasmConfig `group:"wasm" namespace:"wasm"`
 
 	RPCListener string `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
@@ -176,13 +180,22 @@ func (cfg *Config) Validate() error {
 	if cfg.Metrics == nil {
 		return fmt.Errorf("empty metrics config")
 	}
-
 	if err := cfg.Metrics.Validate(); err != nil {
 		return fmt.Errorf("invalid metrics config: %w", err)
 	}
 
+	if cfg.PollerConfig == nil {
+		return fmt.Errorf("empty poller config")
+	}
 	if err := cfg.PollerConfig.Validate(); err != nil {
 		return fmt.Errorf("invalid poller config: %w", err)
+	}
+
+	if cfg.BabylonConfig == nil {
+		return fmt.Errorf("empty babylon config")
+	}
+	if err := cfg.BabylonConfig.Validate(); err != nil {
+		return fmt.Errorf("invalid babylon config: %w", err)
 	}
 
 	// All good, return the sanitized result.

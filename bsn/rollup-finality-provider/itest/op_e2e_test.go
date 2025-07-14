@@ -1,7 +1,7 @@
 //go:build e2e_op
 // +build e2e_op
 
-package e2etest_op
+package itest
 
 import (
 	"context"
@@ -12,9 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/babylonlabs-io/finality-provider/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 // TestPubRandCommitment tests the consumer controller's functions:

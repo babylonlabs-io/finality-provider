@@ -63,7 +63,7 @@ func NewOPStackL2ConsumerController(
 		return nil, fmt.Errorf("failed to create OPStack L2 client: %w", err)
 	}
 
-	babylonConfig := opl2Cfg.ToBabylonConfig()
+	babylonConfig := opl2Cfg.GetBabylonConfig()
 	if err := babylonConfig.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config for Babylon client: %w", err)
 	}

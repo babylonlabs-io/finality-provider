@@ -14,7 +14,7 @@ type OPStackL2Config struct {
 	BabylonFinalityGadgetRpc string `long:"babylon-finality-gadget-rpc" description:"the rpc address of babylon op finality gadget"` //nolint:stylecheck,revive
 
 	// Below configurations are needed for the Babylon client
-	Babylon *fpcfg.BBNConfig
+	Common *fpcfg.Config
 }
 
 func (cfg *OPStackL2Config) Validate() error {
@@ -25,16 +25,16 @@ func (cfg *OPStackL2Config) Validate() error {
 	if err != nil {
 		return fmt.Errorf("op-finality-gadget: invalid bech32 address: %w", err)
 	}
-	if cfg.Babylon == nil {
+	if cfg.Common == nil {
 		return fmt.Errorf("babylon config is required")
 	}
-	if err := cfg.Babylon.Validate(); err != nil {
+	if err := cfg.Common.Validate(); err != nil {
 		return fmt.Errorf("babylon config is invalid: %w", err)
 	}
 
 	return nil
 }
 
-func (cfg *OPStackL2Config) ToBabylonConfig() config.BabylonConfig {
-	return cfg.Babylon.ToBabylonConfig()
+func (cfg *OPStackL2Config) GetBabylonConfig() config.BabylonConfig {
+	return cfg.Common.BabylonConfig.ToBabylonConfig()
 }
