@@ -1,4 +1,4 @@
-package daemon
+package babylon
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	common "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/util"
 )
@@ -23,7 +24,7 @@ func CommandInit() *cobra.Command {
 		Args:    cobra.NoArgs,
 		RunE:    fpcmd.RunEWithClientCtx(runInitCmd),
 	}
-	cmd.Flags().Bool(forceFlag, false, "Override existing configuration")
+	cmd.Flags().Bool(common.ForceFlag, false, "Override existing configuration")
 
 	return cmd
 }
@@ -33,13 +34,17 @@ func runInitCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-
 	homePath = util.CleanAndExpandPath(homePath)
-	force, err := cmd.Flags().GetBool(forceFlag)
+
+	force, err := cmd.Flags().GetBool(common.ForceFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", forceFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", common.ForceFlag, err)
 	}
 
+	return RunCommandInitWithHomePath(homePath, force)
+}
+
+func RunCommandInitWithHomePath(homePath string, force bool) error {
 	if util.FileExists(homePath) && !force {
 		return fmt.Errorf("home path %s already exists", homePath)
 	}

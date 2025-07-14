@@ -1,4 +1,4 @@
-package daemon
+package rollup
 
 import (
 	"fmt"
@@ -6,12 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/cosmos/cosmos-sdk/client/flags"
-
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/spf13/cobra"
-
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
@@ -22,6 +17,9 @@ import (
 	"github.com/babylonlabs-io/finality-provider/log"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/util"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/spf13/cobra"
 )
 
 // CommandCommitPubRand returns the commit-pubrand command by connecting to the fpd daemon.
@@ -43,6 +41,20 @@ WARNING: this can drain the finality provider's balance if the target height is 
 }
 
 func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []string) error {
+	homePath, err := filepath.Abs(ctx.HomeDir)
+	if err != nil {
+		return err
+	}
+	homePath = util.CleanAndExpandPath(homePath)
+	cfg, err := fpcfg.LoadConfig(homePath)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	return RunCommandCommitPubRandWithCfg(ctx, cmd, cfg, args)
+}
+
+func RunCommandCommitPubRandWithCfg(ctx client.Context, cmd *cobra.Command, cfg *fpcfg.Config, args []string) error {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
 		return err
@@ -62,11 +74,6 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return err
 	}
 	homePath = util.CleanAndExpandPath(homePath)
-
-	cfg, err := fpcfg.LoadConfig(homePath)
-	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
-	}
 
 	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.LogLevel)
 	if err != nil {

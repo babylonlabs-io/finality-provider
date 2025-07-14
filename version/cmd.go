@@ -2,9 +2,14 @@ package version
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
+
+func AddVersionCommand(rootCmd *cobra.Command, binaryName string) {
+	rootCmd.AddCommand(CommandVersion(binaryName))
+}
 
 // CommandVersion prints cmd version
 func CommandVersion(binaryName string) *cobra.Command {

@@ -1,4 +1,4 @@
-package daemon
+package rollup
 
 import (
 	"bytes"
@@ -48,10 +48,6 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("please specify chain-id")
 	}
 
-	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
-	if err != nil {
-		return err
-	}
 	startHeight, err := cmd.Flags().GetUint64("start-height")
 	if err != nil {
 		return err
@@ -67,6 +63,15 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	cfg, err := fpcfg.LoadConfig(homePath)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	return RunCommandRecoverProofWithCfg(cfg, args[0], chainID, startHeight, homePath)
+}
+
+func RunCommandRecoverProofWithCfg(cfg *fpcfg.Config, fpPkHex, chainID string, startHeight uint64, homePath string) error {
+	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(fpPkHex)
+	if err != nil {
+		return err
 	}
 
 	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.LogLevel)

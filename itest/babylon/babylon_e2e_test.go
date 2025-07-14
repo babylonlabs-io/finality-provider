@@ -18,26 +18,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/spf13/cobra"
-
-	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
-	"github.com/babylonlabs-io/finality-provider/testutil"
-
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
-	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-	goflags "github.com/jessevdk/go-flags"
-	"github.com/stretchr/testify/require"
-
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
+	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	babyloncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/babylon"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcec/v2/schnorr"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	goflags "github.com/jessevdk/go-flags"
+	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/require"
 )
 
 // TestFinalityProviderLifeCycle tests the whole life cycle of a finality-provider
@@ -325,7 +323,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 
 	fpIns := fps[0]
 
-	cmd := daemon.CommandCreateFP()
+	cmd := babyloncmd.CommandCreateFP()
 
 	eotsKeyName := "eots-key-2"
 	eotsPkBz, err := tm.EOTSServerHandler.CreateKey(eotsKeyName, "")
@@ -505,7 +503,7 @@ func TestRecoverRandProofCmd(t *testing.T) {
 	require.NoError(t, err)
 
 	// run the cmd
-	cmd := daemon.CommandRecoverProof()
+	cmd := babyloncmd.CommandRecoverProof()
 	cmd.SetArgs([]string{
 		fpIns.GetBtcPkHex(),
 		"--home=" + fpHomePath,
@@ -852,7 +850,7 @@ func TestUnsafeCommitPubRandCmd(t *testing.T) {
 	require.NoError(t, err)
 
 	// run the cmd
-	cmd := daemon.CommandCommitPubRand()
+	cmd := babyloncmd.CommandCommitPubRand()
 	cmd.SetArgs([]string{
 		fpIns.GetBtcPkBIP340().MarshalHex(),
 		"30000",

@@ -7,9 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	incentivecli "github.com/babylonlabs-io/babylon/v3/x/incentive/client/cli"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/babylon"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/incentive"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/version"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -17,12 +18,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const BINARY_NAME = "rollup-fpd"
+
 // NewRootCmd creates a new root command for fpd. It is called once in the main function.
 func NewRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:               "rollup-fpd",
-		Short:             "rollup-fpd - Finality Provider Daemon for rollup BSNs.",
-		Long:              `rollup-fpd is the daemon to create and manage finality providers for rollup BSNs.`,
+		Use:               BINARY_NAME,
+		Short:             fmt.Sprintf("%s - Finality Provider Daemon for rollup BSNs.", BINARY_NAME),
+		Long:              fmt.Sprintf(`%s is the daemon to create and manage finality providers for rollup BSNs.`, BINARY_NAME),
 		SilenceErrors:     false,
 		PersistentPreRunE: fpcmd.PersistClientCtx(client.Context{}),
 	}
@@ -33,14 +36,21 @@ func NewRootCmd() *cobra.Command {
 
 func main() {
 	cmd := NewRootCmd()
+
+	// add daemon commands
+	daemon.AddDaemonCommands(cmd)
+	// add incentive commands
+	incentive.AddIncentiveCommands(cmd)
+	// add version command
+	version.AddVersionCommand(cmd, BINARY_NAME)
+
+	// other Babylon-specific commands
 	cmd.AddCommand(
-		daemon.CommandInit(), daemon.CommandStart(), daemon.CommandKeys(),
-		daemon.CommandGetDaemonInfo(), daemon.CommandCreateFP(), daemon.CommandLsFP(),
-		daemon.CommandInfoFP(), daemon.CommandAddFinalitySig(), daemon.CommandUnjailFP(),
-		daemon.CommandEditFinalityDescription(), daemon.CommandCommitPubRand(), daemon.CommandRecoverProof(),
-		incentivecli.NewWithdrawRewardCmd(), incentivecli.NewSetWithdrawAddressCmd(),
-		incentivecli.CmdQueryRewardGauges(),
-		version.CommandVersion("fpd"), daemon.CommandUnsafePruneMerkleProof(),
+		babylon.CommandInit(),
+		babylon.CommandStart(),
+		babylon.CommandCreateFP(),
+		babylon.CommandCommitPubRand(),
+		babylon.CommandRecoverProof(),
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

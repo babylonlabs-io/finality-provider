@@ -1,18 +1,18 @@
-package daemon
+package rollup
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"path/filepath"
 
 	"github.com/babylonlabs-io/babylon/v3/types"
-	"github.com/btcsuite/btcwallet/walletdb"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	common "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/log"
@@ -29,8 +29,8 @@ func CommandStart() *cobra.Command {
 		Args:    cobra.NoArgs,
 		RunE:    fpcmd.RunEWithClientCtx(runStartCmd),
 	}
-	cmd.Flags().String(fpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
-	cmd.Flags().String(rpcListenerFlag, "", "The address that the RPC server listens to")
+	cmd.Flags().String(common.FpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
+	cmd.Flags().String(common.RpcListenerFlag, "", "The address that the RPC server listens to")
 	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 
 	return cmd
@@ -44,14 +44,14 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	homePath = util.CleanAndExpandPath(homePath)
 	flags := cmd.Flags()
 
-	fpStr, err := flags.GetString(fpEotsPkFlag)
+	fpStr, err := flags.GetString(common.FpEotsPkFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpEotsPkFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", common.FpEotsPkFlag, err)
 	}
 
-	rpcListener, err := flags.GetString(rpcListenerFlag)
+	rpcListener, err := flags.GetString(common.RpcListenerFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", rpcListenerFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", common.RpcListenerFlag, err)
 	}
 
 	cfg, err := fpcfg.LoadConfig(homePath)
@@ -59,6 +59,10 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
+	return RunCommandStartWithCfg(cmd.Context(), cfg, fpStr, rpcListener, homePath)
+}
+
+func RunCommandStartWithCfg(ctx context.Context, cfg *fpcfg.Config, fpStr, rpcListener, homePath string) error {
 	if cfg.BabylonConfig.KeyringBackend != "test" {
 		return fmt.Errorf("the keyring backend in config must be `test` for automatic signing, got %s", cfg.BabylonConfig.KeyringBackend)
 	}
@@ -81,9 +85,9 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to create db backend: %w", err)
 	}
 
-	fpApp, err := loadApp(logger, cfg, dbBackend)
+	fpApp, err := service.NewFinalityProviderAppFromConfig(cfg, dbBackend, logger)
 	if err != nil {
-		return fmt.Errorf("failed to load app: %w", err)
+		return fmt.Errorf("failed to create finality-provider app: %w", err)
 	}
 
 	if err := startApp(fpApp, fpStr); err != nil {
@@ -92,21 +96,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 
 	fpServer := service.NewFinalityProviderServer(cfg, logger, fpApp, dbBackend)
 
-	return fpServer.RunUntilShutdown(cmd.Context())
-}
-
-// loadApp initializes a finality provider app based on config and flags set.
-func loadApp(
-	logger *zap.Logger,
-	cfg *fpcfg.Config,
-	dbBackend walletdb.DB,
-) (*service.FinalityProviderApp, error) {
-	fpApp, err := service.NewFinalityProviderAppFromConfig(cfg, dbBackend, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create finality-provider app: %w", err)
-	}
-
-	return fpApp, nil
+	return fpServer.RunUntilShutdown(ctx)
 }
 
 // startApp starts the app and the handle of finality providers if needed based on flags.
