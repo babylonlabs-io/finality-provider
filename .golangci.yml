@@ -71,6 +71,7 @@ issues:
   exclude-dirs:
     - e2etest
     - itest
+    - e2e
   exclude-rules:
     # Exclude some linters from running on tests files.
     - path: _test\.go
