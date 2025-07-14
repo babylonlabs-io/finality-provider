@@ -8,7 +8,7 @@ import (
 	"github.com/cosmos/btcutil/bech32"
 )
 
-type RollupFPConig struct {
+type RollupFPConfig struct {
 	RollupNodeRPCAddress     string `long:"rollup-node-rpc-address" description:"the rpc address of the rollup node to connect to"`
 	BabylonFinalityGadgetRpc string `long:"babylon-finality-gadget-rpc" description:"the rpc address of rollup finality gadget"` //nolint:stylecheck,revive
 	FinalityContractAddress  string `long:"finality-contract-address" description:"the contract address of the rollup finality contract"`
@@ -17,7 +17,7 @@ type RollupFPConig struct {
 	Common *fpcfg.Config
 }
 
-func (cfg *RollupFPConig) Validate() error {
+func (cfg *RollupFPConfig) Validate() error {
 	if cfg.RollupNodeRPCAddress == "" {
 		return fmt.Errorf("rollup-node-rpc-address is required")
 	}
@@ -35,6 +35,6 @@ func (cfg *RollupFPConig) Validate() error {
 	return nil
 }
 
-func (cfg *RollupFPConig) GetBabylonConfig() config.BabylonConfig {
+func (cfg *RollupFPConfig) GetBabylonConfig() config.BabylonConfig {
 	return cfg.Common.BabylonConfig.ToBabylonConfig()
 }

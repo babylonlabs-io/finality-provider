@@ -40,14 +40,14 @@ var _ api.ConsumerController = &RollupBSNController{}
 
 // nolint:revive // Ignore stutter warning - full name provides clarity
 type RollupBSNController struct {
-	Cfg       *rollupfpconfig.RollupFPConig
+	Cfg       *rollupfpconfig.RollupFPConfig
 	ethClient *ethclient.Client
 	bbnClient *bbnclient.Client
 	logger    *zap.Logger
 }
 
 func NewRollupBSNController(
-	rollupFPCfg *rollupfpconfig.RollupFPConig,
+	rollupFPCfg *rollupfpconfig.RollupFPConfig,
 	logger *zap.Logger,
 ) (*RollupBSNController, error) {
 	if rollupFPCfg == nil {

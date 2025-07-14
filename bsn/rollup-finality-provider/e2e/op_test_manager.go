@@ -241,7 +241,7 @@ func createRollupFpConfig(
 	testDir string,
 	manager *container.Manager,
 	babylond *dockertest.Resource,
-) *rollupfpconfig.RollupFPConig {
+) *rollupfpconfig.RollupFPConfig {
 	fpHomeDir := filepath.Join(testDir, "consumer-fp-home")
 	t.Logf(log.Prefix("Consumer FP home dir: %s"), fpHomeDir)
 
@@ -298,7 +298,7 @@ func createRollupFpConfig(
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	// set consumer FP config
-	opConsumerCfg := &rollupfpconfig.RollupFPConig{
+	opConsumerCfg := &rollupfpconfig.RollupFPConfig{
 		// it will be updated later
 		FinalityContractAddress: "",
 		// it must be a dialable RPC address checked by NewRollupBSNController
