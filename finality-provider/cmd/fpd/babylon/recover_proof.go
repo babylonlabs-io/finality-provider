@@ -117,7 +117,7 @@ func RunCommandRecoverProofWithCfg(ctx context.Context, cfg *fpcfg.Config, fpPkH
 			return fmt.Errorf("NumPubRand %d exceeds maximum uint32 value", commit.NumPubRand)
 		}
 
-		pubRandList, err := em.CreateRandomnessPairList(fpPk.MustMarshal(), []byte(chainID), commit.StartHeight, uint32(commit.NumPubRand))
+		pubRandList, err := em.CreateRandomnessPairList(fpPk.MustMarshal(), []byte(chainID), commit.StartHeight, uint32(commit.NumPubRand)) //nolint:contextcheck
 		if err != nil {
 			return fmt.Errorf("failed to get randomness from height %d to height %d: %w", commit.StartHeight, commit.EndHeight(), err)
 		}
