@@ -1,16 +1,15 @@
 package rollup
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
+	rollupcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	babyloncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/babylon"
 	common "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
@@ -108,76 +107,10 @@ Where finality-provider.json contains:
 }
 
 func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) error {
-	cfg, err := fpcfg.LoadConfig(ctx.HomeDir)
+	cfg, err := rollupcfg.LoadConfig(ctx.HomeDir)
 	if err != nil {
 		return fmt.Errorf("failed to load config from %s: %w", fpcfg.CfgFile(ctx.HomeDir), err)
 	}
 
-	return RunCommandCreateFPWithCfg(ctx, cmd, cfg)
-}
-
-func RunCommandCreateFPWithCfg(ctx client.Context, cmd *cobra.Command, cfg *fpcfg.Config) error {
-	flags := cmd.Flags()
-
-	fpJSONPath, err := flags.GetString(common.FromFileFlag)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", common.FromFileFlag, err)
-	}
-
-	var fp *common.ParsedFinalityProvider
-	if fpJSONPath != "" {
-		fp, err = common.ParseFinalityProviderJSON(fpJSONPath, cfg)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		fp, err = common.ParseFinalityProviderFlags(cmd, cfg)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	daemonAddress, err := flags.GetString(common.FpdDaemonAddressFlag)
-	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", common.FpdDaemonAddressFlag, err)
-	}
-
-	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := cleanUp(); err != nil {
-			fmt.Printf("Failed to clean up grpc client: %v\n", err)
-		}
-	}()
-
-	res, err := client.CreateFinalityProvider(
-		context.Background(),
-		fp.KeyName,
-		fp.ChainID,
-		fp.EotsPK,
-		fp.Description,
-		fp.CommissionRates,
-	)
-	if err != nil {
-		return err
-	}
-
-	printRespJSON(res)
-
-	cmd.Println("Your finality provider is successfully created. Please restart your fpd.")
-
-	return nil
-}
-
-func printRespJSON(resp interface{}) {
-	jsonBytes, err := json.MarshalIndent(resp, "", "    ")
-	if err != nil {
-		fmt.Println("unable to decode response: ", err)
-
-		return
-	}
-
-	fmt.Printf("%s\n", jsonBytes)
+	return babyloncmd.RunCommandCreateFPWithCfg(ctx, cmd, cfg.Common)
 }

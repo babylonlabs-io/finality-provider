@@ -18,14 +18,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const BINARY_NAME = "fpd"
+const BinaryName = "fpd"
 
 // NewRootCmd creates a new root command for fpd. It is called once in the main function.
 func NewRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:               BINARY_NAME,
-		Short:             fmt.Sprintf("%s - Finality Provider Daemon.", BINARY_NAME),
-		Long:              fmt.Sprintf(`%s is the daemon to create and manage finality providers.`, BINARY_NAME),
+		Use:               BinaryName,
+		Short:             fmt.Sprintf("%s - Finality Provider Daemon.", BinaryName),
+		Long:              fmt.Sprintf(`%s is the daemon to create and manage finality providers.`, BinaryName),
 		SilenceErrors:     false,
 		PersistentPreRunE: fpcmd.PersistClientCtx(client.Context{}),
 	}
@@ -42,7 +42,7 @@ func main() {
 	// add incentive commands
 	incentive.AddIncentiveCommands(cmd)
 	// add version command
-	version.AddVersionCommand(cmd, BINARY_NAME)
+	version.AddVersionCommand(cmd, BinaryName)
 	// Babylon-specific commands
 	babylon.AddBabylonCommands(cmd)
 

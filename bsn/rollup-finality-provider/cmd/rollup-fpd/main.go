@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/cmd/rollup-fpd/rollup"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/babylon"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/incentive"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -18,14 +18,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const BINARY_NAME = "rollup-fpd"
+const BinaryName = "rollup-fpd"
 
 // NewRootCmd creates a new root command for fpd. It is called once in the main function.
 func NewRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:               BINARY_NAME,
-		Short:             fmt.Sprintf("%s - Finality Provider Daemon for rollup BSNs.", BINARY_NAME),
-		Long:              fmt.Sprintf(`%s is the daemon to create and manage finality providers for rollup BSNs.`, BINARY_NAME),
+		Use:               BinaryName,
+		Short:             fmt.Sprintf("%s - Finality Provider Daemon for rollup BSNs.", BinaryName),
+		Long:              fmt.Sprintf(`%s is the daemon to create and manage finality providers for rollup BSNs.`, BinaryName),
 		SilenceErrors:     false,
 		PersistentPreRunE: fpcmd.PersistClientCtx(client.Context{}),
 	}
@@ -42,16 +42,9 @@ func main() {
 	// add incentive commands
 	incentive.AddIncentiveCommands(cmd)
 	// add version command
-	version.AddVersionCommand(cmd, BINARY_NAME)
-
-	// other Babylon-specific commands
-	cmd.AddCommand(
-		babylon.CommandInit(),
-		babylon.CommandStart(),
-		babylon.CommandCreateFP(),
-		babylon.CommandCommitPubRand(),
-		babylon.CommandRecoverProof(),
-	)
+	version.AddVersionCommand(cmd, BinaryName)
+	// other rollup BSN-specific commands
+	rollup.AddRollupBSNCommands(cmd)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()

@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/jessevdk/go-flags"
-	"github.com/spf13/cobra"
-
+	rollupcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
 	common "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/util"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/jessevdk/go-flags"
+	"github.com/spf13/cobra"
 )
 
 // CommandInit returns the init command of fpd daemon that starts the config dir.
@@ -58,7 +58,7 @@ func RunCommandInitWithHomePath(homePath string, force bool) error {
 		return err
 	}
 
-	defaultConfig := fpcfg.DefaultConfigWithHome(homePath)
+	defaultConfig := rollupcfg.DefaultConfigWithHome(homePath)
 	fileParser := flags.NewParser(&defaultConfig, flags.Default)
 
 	return flags.NewIniParser(fileParser).WriteFile(fpcfg.CfgFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
