@@ -42,6 +42,7 @@ func (cfg *RollupFPConig) GetBabylonConfig() config.BabylonConfig {
 
 func DefaultConfigWithHome(homePath string) RollupFPConig {
 	commonCfg := fpcfg.DefaultConfigWithHome(homePath)
+
 	return RollupFPConig{
 		Common: &commonCfg,
 

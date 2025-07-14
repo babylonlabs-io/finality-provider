@@ -2,7 +2,6 @@ package babylon
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -116,7 +115,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 	return RunCommandCreateFPWithCfg(ctx, cmd, cfg)
 }
 
-func RunCommandCreateFPWithCfg(ctx client.Context, cmd *cobra.Command, cfg *fpcfg.Config) error {
+func RunCommandCreateFPWithCfg(_ client.Context, cmd *cobra.Command, cfg *fpcfg.Config) error {
 	flags := cmd.Flags()
 
 	fpJSONPath, err := flags.GetString(common.FromFileFlag)
@@ -164,20 +163,9 @@ func RunCommandCreateFPWithCfg(ctx client.Context, cmd *cobra.Command, cfg *fpcf
 		return err
 	}
 
-	printRespJSON(res)
+	common.PrintRespJSON(res)
 
 	cmd.Println("Your finality provider is successfully created. Please restart your fpd.")
 
 	return nil
-}
-
-func printRespJSON(resp interface{}) {
-	jsonBytes, err := json.MarshalIndent(resp, "", "    ")
-	if err != nil {
-		fmt.Println("unable to decode response: ", err)
-
-		return
-	}
-
-	fmt.Printf("%s\n", jsonBytes)
 }

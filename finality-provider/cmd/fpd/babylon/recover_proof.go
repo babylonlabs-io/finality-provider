@@ -2,6 +2,7 @@ package babylon
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -65,10 +66,10 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	return RunCommandRecoverProofWithCfg(cfg, args[0], chainID, startHeight, homePath)
+	return RunCommandRecoverProofWithCfg(ctx.CmdContext, cfg, args[0], chainID, startHeight, homePath)
 }
 
-func RunCommandRecoverProofWithCfg(cfg *fpcfg.Config, fpPkHex, chainID string, startHeight uint64, homePath string) error {
+func RunCommandRecoverProofWithCfg(ctx context.Context, cfg *fpcfg.Config, fpPkHex, chainID string, startHeight uint64, homePath string) error {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(fpPkHex)
 	if err != nil {
 		return err
@@ -95,7 +96,7 @@ func RunCommandRecoverProofWithCfg(cfg *fpcfg.Config, fpPkHex, chainID string, s
 		return fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
 
-	em, err := eotsclient.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress, cfg.HMACKey)
+	em, err := eotsclient.NewEOTSManagerGRpcClient(ctx, cfg.EOTSManagerAddress, cfg.HMACKey)
 	if err != nil {
 		return fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}

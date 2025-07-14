@@ -3,13 +3,13 @@ package daemon
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/babylonlabs-io/babylon/v3/types"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
@@ -71,7 +71,7 @@ func runCommandGetDaemonInfo(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	printRespJSON(info)
+	common.PrintRespJSON(info)
 
 	return nil
 }
@@ -153,7 +153,7 @@ func runCommandLsFP(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	printRespJSON(resp)
+	common.PrintRespJSON(resp)
 
 	return nil
 }
@@ -198,7 +198,7 @@ func runCommandInfoFP(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	printRespJSON(resp)
+	common.PrintRespJSON(resp)
 
 	return nil
 }
@@ -282,7 +282,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	printRespJSON(res)
+	common.PrintRespJSON(res)
 
 	return nil
 }
@@ -414,33 +414,4 @@ func runCommandUnsafePruneMerkleProof(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-func printRespJSON(resp interface{}) {
-	jsonBytes, err := json.MarshalIndent(resp, "", "    ")
-	if err != nil {
-		fmt.Println("unable to decode response: ", err)
-
-		return
-	}
-
-	fmt.Printf("%s\n", jsonBytes)
-}
-
-func loadKeyName(cfg *fpcfg.Config, cmd *cobra.Command) (string, error) {
-	keyName, err := cmd.Flags().GetString(keyNameFlag)
-	if err != nil {
-		return "", fmt.Errorf("failed to read flag %s: %w", keyNameFlag, err)
-	}
-	// if key name is not specified, we use the key of the config
-	if keyName != "" {
-		return keyName, nil
-	}
-
-	keyName = cfg.BabylonConfig.Key
-	if keyName == "" {
-		return "", fmt.Errorf("the key in config is empty")
-	}
-
-	return keyName, nil
 }

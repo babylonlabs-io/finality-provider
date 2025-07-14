@@ -3,7 +3,7 @@ package common
 const (
 	ForceFlag            = "force"
 	FpEotsPkFlag         = "eots-pk"
-	RpcListenerFlag      = "rpc-listener"
+	RPCListenerFlag      = "rpc-listener"
 	FpdDaemonAddressFlag = "daemon-address"
 	KeyNameFlag          = "key-name"
 	AppHashFlag          = "app-hash"

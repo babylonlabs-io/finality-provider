@@ -106,7 +106,7 @@ func RunCommandCommitPubRandWithCfg(ctx client.Context, cmd *cobra.Command, cfg 
 	if err != nil {
 		return fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
 	}
-	em, err := eotsclient.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress, cfg.HMACKey)
+	em, err := eotsclient.NewEOTSManagerGRpcClient(ctx.CmdContext, cfg.EOTSManagerAddress, cfg.HMACKey)
 	if err != nil {
 		return fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}

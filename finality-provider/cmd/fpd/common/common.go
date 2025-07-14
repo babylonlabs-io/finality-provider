@@ -227,3 +227,14 @@ func GetDescriptionFromFlags(f *pflag.FlagSet) (stakingtypes.Description, error)
 
 	return description.EnsureLength()
 }
+
+func PrintRespJSON(resp interface{}) {
+	jsonBytes, err := json.MarshalIndent(resp, "", "    ")
+	if err != nil {
+		fmt.Println("unable to decode response: ", err)
+
+		return
+	}
+
+	fmt.Printf("%s\n", jsonBytes)
+}

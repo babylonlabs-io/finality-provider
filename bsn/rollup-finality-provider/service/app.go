@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 
 	rollupcc "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/clientcontroller"
@@ -14,6 +15,7 @@ import (
 
 // NewRollupFinalityProviderAppFromConfig creates a new rollup FinalityProviderApp instance from the given configuration.
 func NewRollupFinalityProviderAppFromConfig(
+	ctx context.Context,
 	cfg *rollupcfg.RollupFPConig,
 	db kvdb.Backend,
 	logger *zap.Logger,
@@ -33,7 +35,7 @@ func NewRollupFinalityProviderAppFromConfig(
 
 	// if the EOTSManagerAddress is empty, run a local EOTS manager;
 	// otherwise connect a remote one with a gRPC client
-	em, err := service.InitEOTSManagerClient(cfg.Common.EOTSManagerAddress, cfg.Common.HMACKey)
+	em, err := service.InitEOTSManagerClient(ctx, cfg.Common.EOTSManagerAddress, cfg.Common.HMACKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}

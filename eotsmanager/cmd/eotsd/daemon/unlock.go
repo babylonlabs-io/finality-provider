@@ -3,13 +3,14 @@ package daemon
 import (
 	"encoding/hex"
 	"fmt"
+	"io"
+	"os"
+
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
-	"io"
-	"os"
 )
 
 var UnlockCmdPasswordReader = passwordReader
@@ -104,7 +105,7 @@ func unlockKeyring(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	eotsdClient, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, hmac)
+	eotsdClient, err := eotsclient.NewEOTSManagerGRpcClient(cmd.Context(), rpcListener, hmac)
 	if err != nil {
 		return fmt.Errorf("failed to create eotsd client: %w", err)
 	}

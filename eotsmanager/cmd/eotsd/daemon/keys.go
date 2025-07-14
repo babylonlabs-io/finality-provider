@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
 	"io"
 	"strings"
+
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
 
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
@@ -141,7 +142,7 @@ func saveKeyNameMapping(cmd *cobra.Command, clientCtx client.Context, keyName st
 	}
 
 	if len(rpcListener) > 0 {
-		eotsClient, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, "")
+		eotsClient, err := eotsclient.NewEOTSManagerGRpcClient(clientCtx.CmdContext, rpcListener, "")
 		if err != nil {
 			return nil, err
 		}

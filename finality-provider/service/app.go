@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -55,6 +56,7 @@ type FinalityProviderApp struct {
 
 // NewFinalityProviderAppFromConfig creates a new FinalityProviderApp instance from the given configuration.
 func NewFinalityProviderAppFromConfig(
+	ctx context.Context,
 	cfg *fpcfg.Config,
 	db kvdb.Backend,
 	logger *zap.Logger,
@@ -74,7 +76,7 @@ func NewFinalityProviderAppFromConfig(
 
 	// if the EOTSManagerAddress is empty, run a local EOTS manager;
 	// otherwise connect a remote one with a gRPC client
-	em, err := InitEOTSManagerClient(cfg.EOTSManagerAddress, cfg.HMACKey)
+	em, err := InitEOTSManagerClient(ctx, cfg.EOTSManagerAddress, cfg.HMACKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}

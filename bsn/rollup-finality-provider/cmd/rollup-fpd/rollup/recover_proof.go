@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/spf13/cobra"
+
 	rollupcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
 	babyloncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/babylon"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/util"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/spf13/cobra"
 )
 
 func CommandRecoverProof() *cobra.Command {
@@ -58,5 +59,5 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	return babyloncmd.RunCommandRecoverProofWithCfg(cfg.Common, args[0], chainID, startHeight, homePath)
+	return babyloncmd.RunCommandRecoverProofWithCfg(cmd.Context(), cfg.Common, args[0], chainID, startHeight, homePath)
 }

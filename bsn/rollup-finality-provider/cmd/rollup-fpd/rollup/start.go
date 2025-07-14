@@ -30,7 +30,7 @@ func CommandStart() *cobra.Command {
 		RunE:    fpcmd.RunEWithClientCtx(runStartCmd),
 	}
 	cmd.Flags().String(common.FpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
-	cmd.Flags().String(common.RpcListenerFlag, "", "The address that the RPC server listens to")
+	cmd.Flags().String(common.RPCListenerFlag, "", "The address that the RPC server listens to")
 	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 
 	return cmd
@@ -49,9 +49,9 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", common.FpEotsPkFlag, err)
 	}
 
-	rpcListener, err := flags.GetString(common.RpcListenerFlag)
+	rpcListener, err := flags.GetString(common.RPCListenerFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", common.RpcListenerFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", common.RPCListenerFlag, err)
 	}
 
 	cfg, err := rollupcfg.LoadRollupFPConfig(homePath)
@@ -85,7 +85,7 @@ func RunCommandStartWithCfg(ctx context.Context, cfg *rollupcfg.RollupFPConig, f
 		return fmt.Errorf("failed to create db backend: %w", err)
 	}
 
-	fpApp, err := rollupservice.NewRollupFinalityProviderAppFromConfig(cfg, dbBackend, logger)
+	fpApp, err := rollupservice.NewRollupFinalityProviderAppFromConfig(ctx, cfg, dbBackend, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create finality-provider app: %w", err)
 	}

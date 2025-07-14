@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"fmt"
+
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/spf13/cobra"
 )
@@ -50,7 +51,7 @@ func backup(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to get %s flag: %w", rpcClientFlag, err)
 	}
 
-	eotsdClient, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, "")
+	eotsdClient, err := eotsclient.NewEOTSManagerGRpcClient(cmd.Context(), rpcListener, "")
 	if err != nil {
 		return err
 	}

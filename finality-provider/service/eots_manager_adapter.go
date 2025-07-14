@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -18,8 +19,8 @@ import (
 const failedPreconditionErrStr = "FailedPrecondition"
 
 // InitEOTSManagerClient initializes an EOTS manager client with HMAC authentication
-func InitEOTSManagerClient(address string, hmacKey string) (eotsmanager.EOTSManager, error) {
-	return client.NewEOTSManagerGRpcClient(address, hmacKey)
+func InitEOTSManagerClient(ctx context.Context, address string, hmacKey string) (eotsmanager.EOTSManager, error) {
+	return client.NewEOTSManagerGRpcClient(ctx, address, hmacKey)
 }
 
 func (fp *FinalityProviderInstance) GetPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {

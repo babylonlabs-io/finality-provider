@@ -579,7 +579,7 @@ func TestEotsdRollbackCmd(t *testing.T) {
 	key, err := eh.CreateKey("eots-key-1", "")
 	require.NoError(t, err)
 
-	err = eotsCli.Ping()
+	err = eotsCli.Ping(ctx)
 	require.NoError(t, err)
 
 	const numRecords = 100
@@ -651,7 +651,7 @@ func TestEotsdBackupCmd(t *testing.T) {
 	key, err := eh.CreateKey("eots-key-1", "")
 	require.NoError(t, err)
 
-	err = eotsCli.Ping()
+	err = eotsCli.Ping(ctx)
 	require.NoError(t, err)
 
 	cmd := eotscmd.NewBackupCmd()
@@ -747,7 +747,7 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	key, err := eh.CreateKey("eots-key-1", passphrase)
 	require.NoError(t, err)
 
-	err = eotsCli.Ping()
+	err = eotsCli.Ping(ctx)
 	require.NoError(t, err)
 
 	// stop the eotsd to simulate a restart otherwise keyring password will already be set in the file keyring

@@ -222,7 +222,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	require.NoError(t, err)
 
 	// Create and start finality provider app
-	eotsCli, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.Config().RPCListener, tm.EOTSServerHandler.Config().HMACKey)
+	eotsCli, err := client.NewEOTSManagerGRpcClient(context.Background(), tm.EOTSServerHandler.Config().RPCListener, tm.EOTSServerHandler.Config().HMACKey)
 	require.NoError(t, err)
 	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
@@ -456,7 +456,7 @@ func NewEOTSManagerGrpcClientWithRetry(t *testing.T, cfg *eotsconfig.Config) *cl
 	var err error
 	var eotsCli *client.EOTSManagerGRpcClient
 	err = retry.Do(func() error {
-		eotsCli, err = client.NewEOTSManagerGRpcClient(cfg.RPCListener, cfg.HMACKey)
+		eotsCli, err = client.NewEOTSManagerGRpcClient(context.Background(), cfg.RPCListener, cfg.HMACKey)
 		return err
 	}, retry.Attempts(5))
 	require.NoError(t, err)

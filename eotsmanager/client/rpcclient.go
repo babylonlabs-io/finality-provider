@@ -22,7 +22,7 @@ type EOTSManagerGRpcClient struct {
 
 // NewEOTSManagerGRpcClient creates a new EOTS manager gRPC client
 // The hmacKey parameter is used for authentication with the EOTS manager server
-func NewEOTSManagerGRpcClient(remoteAddr string, hmacKey string) (*EOTSManagerGRpcClient, error) {
+func NewEOTSManagerGRpcClient(ctx context.Context, remoteAddr string, hmacKey string) (*EOTSManagerGRpcClient, error) {
 	processedHmacKey, err := ProcessHMACKey(hmacKey)
 	if err != nil {
 		// Log warning and continue without HMAC authentication
@@ -50,17 +50,17 @@ func NewEOTSManagerGRpcClient(remoteAddr string, hmacKey string) (*EOTSManagerGR
 		conn:   conn,
 	}
 
-	if err := gClient.Ping(); err != nil {
+	if err := gClient.Ping(ctx); err != nil {
 		return nil, fmt.Errorf("the EOTS manager server is not responding: %w", err)
 	}
 
 	return gClient, nil
 }
 
-func (c *EOTSManagerGRpcClient) Ping() error {
+func (c *EOTSManagerGRpcClient) Ping(ctx context.Context) error {
 	req := &proto.PingRequest{}
 
-	_, err := c.client.Ping(context.Background(), req)
+	_, err := c.client.Ping(ctx, req)
 	if err != nil {
 		return err
 	}
