@@ -16,7 +16,6 @@ import (
 	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	fgclient "github.com/babylonlabs-io/finality-gadget/client"
-	"github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
@@ -42,7 +41,7 @@ var _ api.ConsumerController = &RollupBSNController{}
 
 // nolint:revive // Ignore stutter warning - full name provides clarity
 type RollupBSNController struct {
-	Cfg       *config.RollupFPConig
+	Cfg       *rollupfpconfig.RollupFPConig
 	ethClient *ethclient.Client
 	bbnClient *bbnclient.Client
 	logger    *zap.Logger

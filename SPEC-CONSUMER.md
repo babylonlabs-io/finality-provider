@@ -8,7 +8,7 @@
 - [Keywords](#keywords)
 - [Types of Integration](#types-of-integration)
 - [Specification](#specification)
-- [Expected behavior of the Finality Provider Adapter](#expected-behavior-of-the-finality-provider-adapter)
+  - [**Expected behavior of the Finality Provider Adapter:**](#expected-behavior-of-the-finality-provider-adapter)
 - [Implementation status](#implementation-status)
 
 ## Changelog
@@ -79,7 +79,7 @@ provider program:
    can implement the finality provider program to generate public randomness
    commitments and submit finality signatures for blocks in their respective
    rollups. These commitments and signatures will be stored in the Babylon chain
-   (i.e. using a variant of [`rollup-bsn-contracts`](https://github.com/babylonlabs-io/rollup-bsn-contracts).
+   through rollup finality contracts (implemented using variants of [`rollup-bsn-contracts`](https://github.com/babylonlabs-io/rollup-bsn-contracts).
    See `SPEC.md` in that repository for details), and used to provide finality
    for the rollup blocks.
 
@@ -216,19 +216,10 @@ As of this writing, there are three finality provider adapter implementations:
     chain through CosmWasm smart contracts (the [`cosmos-bsn-contracts`](https://github.com/babylonlabs-io/cosmos-bsn-contracts)
     repository) and a thin integration layer (the [`babylon-sdk`](https://github.com/babylonlabs-io/babylon-sdk)
     repository).
-3. **OP Stack L2 Finality Provider Adapter** - Under [clientcontroller/opstackl2](https://github.com/babylonlabs-io/finality-provider/tree/main/clientcontroller/opstackl2)
+3. **Rollup BSN Finality Provider Adapter** - Under [bsn/rollup-finality-provider/clientcontroller](https://github.com/babylonlabs-io/finality-provider/tree/main/bsn/rollup-finality-provider/clientcontroller)
     This implementation is tailored for OP Stack rollups, specifically designed
-    to work with the OP Finality Gadget, which is a finality provider contract
-    that runs on Babylon (based on the [`rollup-bsn-contracts`](https://github.com/babylonlabs-io/rollup-bsn-contracts)
+    to work with rollup finality contracts, which are finality provider contracts
+    that run on Babylon (based on the [`rollup-bsn-contracts`](https://github.com/babylonlabs-io/rollup-bsn-contracts)
     repository), and complements the OP Stack architecture.
-
-**Comparison**: While all of these implementations follow the general principles
-outlined in this document, they target different architectures.
-The OP Stack L2 is specifically designed for OP Stack chains, and leverages
-CosmWasm for deployment in Babylon, whereas the CosmWasm Adapter is more
-general-purpose, and can be used by any Cosmos-based chain that supports
-CosmWasm smart contracts. In this case, the CosmWasm smart contracts run in
-the respective Cosmos Consumer chain, and interact with Babylon through IBC
-messages.
 
 <!-- TODO: add other potential or existing finality provider adapters -->

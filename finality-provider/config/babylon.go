@@ -63,21 +63,21 @@ func (cfg *BBNConfig) Validate() error {
 	return nil
 }
 
-func (bc *BBNConfig) ToBabylonConfig() bbncfg.BabylonConfig {
+func (cfg *BBNConfig) ToBabylonConfig() bbncfg.BabylonConfig {
 	return bbncfg.BabylonConfig{
-		Key:              bc.Key,
-		ChainID:          bc.ChainID,
-		RPCAddr:          bc.RPCAddr,
-		AccountPrefix:    bc.AccountPrefix,
-		KeyringBackend:   bc.KeyringBackend,
-		GasAdjustment:    bc.GasAdjustment,
-		GasPrices:        bc.GasPrices,
-		KeyDirectory:     bc.KeyDirectory,
-		Debug:            bc.Debug,
-		Timeout:          bc.Timeout,
-		BlockTimeout:     bc.BlockTimeout,
-		OutputFormat:     bc.OutputFormat,
-		SignModeStr:      bc.SignModeStr,
+		Key:              cfg.Key,
+		ChainID:          cfg.ChainID,
+		RPCAddr:          cfg.RPCAddr,
+		AccountPrefix:    cfg.AccountPrefix,
+		KeyringBackend:   cfg.KeyringBackend,
+		GasAdjustment:    cfg.GasAdjustment,
+		GasPrices:        cfg.GasPrices,
+		KeyDirectory:     cfg.KeyDirectory,
+		Debug:            cfg.Debug,
+		Timeout:          cfg.Timeout,
+		BlockTimeout:     cfg.BlockTimeout,
+		OutputFormat:     cfg.OutputFormat,
+		SignModeStr:      cfg.SignModeStr,
 		SubmitterAddress: "",
 	}
 }
