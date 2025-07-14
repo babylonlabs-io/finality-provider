@@ -6,10 +6,10 @@ import (
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	"go.uber.org/zap"
 
+	rollupfpcontroller "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/cosmwasm"
-	"github.com/babylonlabs-io/finality-provider/clientcontroller/opstackl2"
 	cosmwasmcfg "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 )
@@ -50,7 +50,7 @@ func NewConsumerController(config *fpcfg.Config, logger *zap.Logger) (api.Consum
 			return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
 		}
 	case OPStackL2ConsumerChainType:
-		ccc, err = opstackl2.NewOPStackL2ConsumerController(config.OPStackL2Config, logger)
+		ccc, err = rollupfpcontroller.NewOPStackL2ConsumerController(config.OPStackL2Config, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create OPStack L2 consumer client: %w", err)
 		}

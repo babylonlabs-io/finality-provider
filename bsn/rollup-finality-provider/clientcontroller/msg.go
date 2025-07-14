@@ -1,4 +1,4 @@
-package opstackl2
+package clientcontroller
 
 type CommitPublicRandomnessMsg struct {
 	CommitPublicRandomness CommitPublicRandomnessMsgParams `json:"commit_public_randomness"`
