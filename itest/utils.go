@@ -115,8 +115,9 @@ func DefaultFpConfig(keyringDir, homeDir string) *config.Config {
 	// need to use this one to send otherwise we will have account sequence mismatch
 	// errors
 	cfg.BabylonConfig.Key = "test-spending-key"
-	// Big adjustment to make sure we have enough gas in our transactions
-	cfg.BabylonConfig.GasAdjustment = 20
+	// increase gas for large BTC delegation transactions
+	cfg.BabylonConfig.GasAdjustment = 2.0
+	cfg.BabylonConfig.GasPrices = "0.01ubbn"
 
 	return &cfg
 }

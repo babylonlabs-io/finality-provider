@@ -2,16 +2,18 @@ package daemon
 
 import (
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"math"
 	"path/filepath"
 	"strconv"
+
+	"github.com/cosmos/cosmos-sdk/client/flags"
 
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -84,14 +86,14 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 	if err != nil {
 		return fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
-	cc, err := fpcc.NewBabylonController(cfg, logger)
+	cc, err := fpcc.NewBabylonController(cfg.BabylonConfig, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create rpc client for the Babylon chain: %w", err)
 	}
 	if err := cc.Start(); err != nil {
 		return fmt.Errorf("failed to start client controller: %w", err)
 	}
-	consumerCon, err := fpcc.NewConsumerController(cfg, logger)
+	consumerCon, err := babylon.NewBabylonConsumerController(cfg.BabylonConfig, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
 	}

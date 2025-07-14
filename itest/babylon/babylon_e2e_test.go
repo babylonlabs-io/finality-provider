@@ -9,8 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/spf13/cobra"
 	"log"
 	"math/rand"
 	"os"
@@ -19,6 +17,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/spf13/cobra"
 
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/testutil"
@@ -280,7 +281,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
-	gotFp, err := tm.BBNClient.QueryFinalityProvider(fpIns.GetBtcPk())
+	gotFp, err := tm.BabylonController.QueryFinalityProvider(fpIns.GetBtcPk())
 	require.NoError(t, err)
 
 	require.Equal(t, gotFp.FinalityProvider.Description.Moniker, moniker)
@@ -302,7 +303,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	err = cmd.Execute()
 	require.NoError(t, err)
 
-	updatedFp, err := tm.BBNClient.QueryFinalityProvider(fpIns.GetBtcPk())
+	updatedFp, err := tm.BabylonController.QueryFinalityProvider(fpIns.GetBtcPk())
 	require.NoError(t, err)
 
 	updateFpDesc := updatedFp.FinalityProvider.Description
@@ -381,7 +382,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 	err = cmd.Execute()
 	require.NoError(t, err)
 
-	fp, err := tm.BBNClient.QueryFinalityProvider(eotsPk.MustToBTCPK())
+	fp, err := tm.BabylonController.QueryFinalityProvider(eotsPk.MustToBTCPK())
 	require.NoError(t, err)
 	require.NotNil(t, fp)
 }

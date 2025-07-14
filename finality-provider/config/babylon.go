@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"net/url"
 	"time"
 
 	bbncfg "github.com/babylonlabs-io/babylon/v3/client/config"
@@ -45,21 +47,37 @@ func DefaultBBNConfig() BBNConfig {
 	}
 }
 
-func BBNConfigToBabylonConfig(bc *BBNConfig) bbncfg.BabylonConfig {
+func (cfg *BBNConfig) Validate() error {
+	if _, err := url.Parse(cfg.RPCAddr); err != nil {
+		return fmt.Errorf("rpc-addr is not correctly formatted: %w", err)
+	}
+
+	if cfg.Timeout <= 0 {
+		return fmt.Errorf("timeout must be positive")
+	}
+
+	if cfg.BlockTimeout < 0 {
+		return fmt.Errorf("block-timeout can't be negative")
+	}
+
+	return nil
+}
+
+func (cfg *BBNConfig) ToBabylonConfig() bbncfg.BabylonConfig {
 	return bbncfg.BabylonConfig{
-		Key:              bc.Key,
-		ChainID:          bc.ChainID,
-		RPCAddr:          bc.RPCAddr,
-		AccountPrefix:    bc.AccountPrefix,
-		KeyringBackend:   bc.KeyringBackend,
-		GasAdjustment:    bc.GasAdjustment,
-		GasPrices:        bc.GasPrices,
-		KeyDirectory:     bc.KeyDirectory,
-		Debug:            bc.Debug,
-		Timeout:          bc.Timeout,
-		BlockTimeout:     bc.BlockTimeout,
-		OutputFormat:     bc.OutputFormat,
-		SignModeStr:      bc.SignModeStr,
+		Key:              cfg.Key,
+		ChainID:          cfg.ChainID,
+		RPCAddr:          cfg.RPCAddr,
+		AccountPrefix:    cfg.AccountPrefix,
+		KeyringBackend:   cfg.KeyringBackend,
+		GasAdjustment:    cfg.GasAdjustment,
+		GasPrices:        cfg.GasPrices,
+		KeyDirectory:     cfg.KeyDirectory,
+		Debug:            cfg.Debug,
+		Timeout:          cfg.Timeout,
+		BlockTimeout:     cfg.BlockTimeout,
+		OutputFormat:     cfg.OutputFormat,
+		SignModeStr:      cfg.SignModeStr,
 		SubmitterAddress: "",
 	}
 }

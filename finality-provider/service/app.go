@@ -60,7 +60,7 @@ func NewFinalityProviderAppFromConfig(
 	db kvdb.Backend,
 	logger *zap.Logger,
 ) (*FinalityProviderApp, error) {
-	cc, err := fpcc.NewBabylonController(cfg, logger)
+	cc, err := fpcc.NewBabylonController(cfg.BabylonConfig, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create rpc client for the Babylon chain: %w", err)
 	}
