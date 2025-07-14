@@ -24,6 +24,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
+	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -86,8 +87,14 @@ func NewOPStackL2ConsumerController(
 	return cc, nil
 }
 
-func (cc *OPStackL2ConsumerController) MustGetBabylonAddr() string {
-	return cc.bbnClient.MustGetAddr()
+func (cc *OPStackL2ConsumerController) QuerySmartContractState(ctx context.Context, contractAddress string, queryData string) (*wasmtypes.QuerySmartContractStateResponse, error) {
+	clientCtx := client.Context{Client: cc.bbnClient.RPCClient}
+	queryClient := wasmtypes.NewQueryClient(clientCtx)
+
+	return queryClient.SmartContractState(ctx, &wasmtypes.QuerySmartContractStateRequest{
+		Address:   contractAddress,
+		QueryData: wasmtypes.RawContractMessage(queryData),
+	})
 }
 
 // QueryContractConfig queries the finality contract for its config
@@ -100,7 +107,7 @@ func (cc *OPStackL2ConsumerController) QueryContractConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to marshal config query: %w", err)
 	}
 
-	stateResp, err := cc.QuerySmartContractState(context.Background(), cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
+	stateResp, err := cc.QuerySmartContractState(context.Background(), cc.Cfg.FinalityContractAddress, string(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
@@ -136,11 +143,11 @@ func (cc *OPStackL2ConsumerController) reliablySendMsgs(msgs []sdk.Msg, expected
 }
 
 func (cc *OPStackL2ConsumerController) GetFpRandCommitContext() string {
-	return signingcontext.FpRandCommitContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.OPFinalityGadgetAddress)
+	return signingcontext.FpRandCommitContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.FinalityContractAddress)
 }
 
 func (cc *OPStackL2ConsumerController) GetFpFinVoteContext() string {
-	return signingcontext.FpFinVoteContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.OPFinalityGadgetAddress)
+	return signingcontext.FpFinVoteContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.FinalityContractAddress)
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness to Babylon CosmWasm contract
@@ -168,7 +175,7 @@ func (cc *OPStackL2ConsumerController) CommitPubRandList(
 	}
 	execMsg := &wasmtypes.MsgExecuteContract{
 		Sender:   cc.bbnClient.MustGetAddr(),
-		Contract: cc.Cfg.OPFinalityGadgetAddress,
+		Contract: cc.Cfg.FinalityContractAddress,
 		Msg:      payload,
 	}
 
@@ -238,7 +245,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 		}
 		execMsg := &wasmtypes.MsgExecuteContract{
 			Sender:   cc.bbnClient.MustGetAddr(),
-			Contract: cc.Cfg.OPFinalityGadgetAddress,
+			Contract: cc.Cfg.FinalityContractAddress,
 			Msg:      payload,
 		}
 		msgs = append(msgs, execMsg)
@@ -488,7 +495,7 @@ func (cc *OPStackL2ConsumerController) QueryLastPublicRandCommit(fpPk *btcec.Pub
 		return nil, fmt.Errorf("failed marshaling to JSON: %w", err)
 	}
 
-	stateResp, err := cc.QuerySmartContractState(context.Background(), cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
+	stateResp, err := cc.QuerySmartContractState(context.Background(), cc.Cfg.FinalityContractAddress, string(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
