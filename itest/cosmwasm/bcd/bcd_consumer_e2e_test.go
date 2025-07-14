@@ -116,7 +116,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 
 	// ensure pub rand is submitted to smart contract
 	require.Eventually(t, func() bool {
-		fpPubRandResp, err := ctm.BcdConsumerClient.QueryLastPublicRandCommit(fpPk.MustToBTCPK())
+		fpPubRandResp, err := ctm.BcdConsumerClient.QueryLastPublicRandCommit(ctx, fpPk.MustToBTCPK())
 		if err != nil {
 			t.Logf("failed to query last committed public rand: %s", err.Error())
 			return false
@@ -135,11 +135,11 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	bbnappparams.SetAddressPrefixes()
 	delMsgBytes, err := json.Marshal(delMsg)
 	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(delMsgBytes)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, delMsgBytes)
 	require.NoError(t, err)
 
 	// query delegations in smart contract
-	consumerDelsResp, err := ctm.BcdConsumerClient.QueryDelegations()
+	consumerDelsResp, err := ctm.BcdConsumerClient.QueryDelegations(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, consumerDelsResp)
 	require.Len(t, consumerDelsResp.Delegations, 1)
@@ -152,7 +152,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].SlashingTx, consumerDelsResp.Delegations[0].SlashingTx)
 
 	// ensure fp has voting power in smart contract
-	consumerFpsByPowerResp, err := ctm.BcdConsumerClient.QueryFinalityProvidersByPower()
+	consumerFpsByPowerResp, err := ctm.BcdConsumerClient.QueryFinalityProvidersByPower(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, consumerFpsByPowerResp)
 	require.Len(t, consumerFpsByPowerResp.Fps, 1)
@@ -168,7 +168,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 
 	// ensure finality signature is submitted to smart contract
 	require.Eventually(t, func() bool {
-		fpSigsResponse, err := ctm.BcdConsumerClient.QueryFinalitySignature(fpPk.MarshalHex(), uint64(lookupHeight))
+		fpSigsResponse, err := ctm.BcdConsumerClient.QueryFinalitySignature(ctx, fpPk.MarshalHex(), uint64(lookupHeight))
 		if err != nil {
 			t.Logf("failed to query finality signature: %s", err.Error())
 			return false
@@ -181,7 +181,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 
 	// ensure latest comet block is finalized
 	require.Eventually(t, func() bool {
-		idxBlockedResponse, err := ctm.BcdConsumerClient.QueryIndexedBlock(uint64(lookupHeight))
+		idxBlockedResponse, err := ctm.BcdConsumerClient.QueryIndexedBlock(context.Background(), uint64(lookupHeight))
 		if err != nil {
 			t.Logf("failed to query indexed block: %s", err.Error())
 			return false

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -145,24 +146,25 @@ func (app *FinalityProviderApp) unjailFpLoop() {
 		select {
 		case req := <-app.unjailFinalityProviderRequestChan:
 			pkHex := req.btcPubKey.MarshalHex()
-			isSlashed, isJailed, err := app.consumerCon.QueryFinalityProviderSlashedOrJailed(req.btcPubKey.MustToBTCPK())
+			status, err := app.consumerCon.QueryFinalityProviderStatus(context.Background(), req.btcPubKey.MustToBTCPK())
 			if err != nil {
 				req.errResponse <- fmt.Errorf("failed to query jailing status of the finality provider %s: %w", pkHex, err)
 
 				continue
 			}
-			if isSlashed {
+			if status.Slashed {
 				req.errResponse <- fmt.Errorf("the finality provider %s is already slashed", pkHex)
 
 				continue
 			}
-			if !isJailed {
+			if !status.Jailed {
 				req.errResponse <- fmt.Errorf("the finality provider %s is not jailed", pkHex)
 
 				continue
 			}
 
 			res, err := app.consumerCon.UnjailFinalityProvider(
+				context.Background(),
 				req.btcPubKey.MustToBTCPK(),
 			)
 

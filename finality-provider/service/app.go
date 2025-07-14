@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -221,19 +222,23 @@ func (app *FinalityProviderApp) StartFinalityProvider(fpPk *bbntypes.BIP340PubKe
 // SyncAllFinalityProvidersStatus syncs the status of all the stored finality providers with the chain.
 // it should be called before a fp instance is started
 func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
+	ctx := context.Background()
 	fps, err := app.fps.GetAllStoredFinalityProviders()
 	if err != nil {
 		return err
 	}
 
 	for _, fp := range fps {
-		latestBlockHeight, err := app.consumerCon.QueryLatestBlockHeight()
+		latestBlockHeight, err := app.consumerCon.QueryLatestBlockHeight(ctx)
 		if err != nil {
 			return err
 		}
 
 		pkHex := fp.GetBIP340BTCPK().MarshalHex()
-		hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(fp.BtcPk, latestBlockHeight)
+		hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(ctx, ccapi.NewQueryFinalityProviderHasPowerRequest(
+			fp.BtcPk,
+			latestBlockHeight,
+		))
 		if err != nil {
 			return fmt.Errorf("failed to query voting power for finality provider %s at height %d: %w",
 				fp.GetBIP340BTCPK().MarshalHex(), latestBlockHeight, err)
@@ -254,11 +259,11 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 
 			continue
 		}
-		slashed, jailed, err := app.consumerCon.QueryFinalityProviderSlashedOrJailed(fp.BtcPk)
+		status, err := app.consumerCon.QueryFinalityProviderStatus(ctx, fp.BtcPk)
 		if err != nil {
 			return err
 		}
-		if slashed {
+		if status.Slashed {
 			app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_SLASHED)
 
 			app.logger.Debug(
@@ -269,7 +274,7 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 
 			continue
 		}
-		if jailed {
+		if status.Jailed {
 			app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_JAILED)
 
 			app.logger.Debug(
@@ -349,6 +354,7 @@ func (app *FinalityProviderApp) Stop() error {
 }
 
 func (app *FinalityProviderApp) CreateFinalityProvider(
+	ctx context.Context,
 	keyName, chainID string,
 	eotsPk *bbntypes.BIP340PubKey,
 	description *stakingtypes.Description,
@@ -391,7 +397,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 			zap.String("addr", resp.FinalityProvider.Addr),
 		)
 
-		if err := app.putFpFromResponse(resp.FinalityProvider, chainID); err != nil {
+		if err := app.putFpFromResponse(ctx, resp.FinalityProvider, chainID); err != nil {
 			return nil, err
 		}
 
@@ -590,7 +596,7 @@ func (app *FinalityProviderApp) setFinalityProviderSlashed(fpi *FinalityProvider
 }
 
 // putFpFromResponse creates or updates finality-provider in the local store
-func (app *FinalityProviderApp) putFpFromResponse(fp *bstypes.FinalityProviderResponse, chainID string) error {
+func (app *FinalityProviderApp) putFpFromResponse(ctx context.Context, fp *bstypes.FinalityProviderResponse, chainID string) error {
 	btcPk := fp.BtcPk.MustToBTCPK()
 	_, err := app.fps.GetFinalityProvider(btcPk)
 	if err != nil {
@@ -633,7 +639,10 @@ func (app *FinalityProviderApp) putFpFromResponse(fp *bstypes.FinalityProviderRe
 		return err
 	}
 
-	hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(btcPk, fp.Height)
+	hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(ctx, ccapi.NewQueryFinalityProviderHasPowerRequest(
+		btcPk,
+		fp.Height,
+	))
 	if err != nil {
 		return fmt.Errorf("failed to query voting power for finality provider %s: %w",
 			fp.BtcPk.MarshalHex(), err)

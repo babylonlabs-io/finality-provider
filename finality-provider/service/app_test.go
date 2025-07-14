@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -72,11 +73,11 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
-		mockConsumerController.EXPECT().QueryLatestFinalizedBlock().Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestFinalizedBlock(gomock.Any()).Return(nil, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(),
 			gomock.Any()).Return(false, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any()).Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 
 		// Create randomized config
@@ -135,7 +136,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 				gomock.Any(),
 			).Return(&types.TxResponse{TxHash: txHash}, nil).AnyTimes()
 		mockBabylonController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(nil, nil).AnyTimes()
-		res, err := app.CreateFinalityProvider(keyName, chainID, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
+		res, err := app.CreateFinalityProvider(context.Background(), keyName, chainID, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
 		require.NoError(t, err)
 		require.Equal(t, txHash, res.TxHash)
 
@@ -148,6 +149,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 func FuzzSyncFinalityProviderStatus(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
@@ -155,33 +157,42 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
 
-		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any()).Return(nil, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryLatestFinalizedBlock().Return(nil, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(currentHeight, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryBlock(gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
+		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestFinalizedBlock(gomock.Any()).Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlockHeight(gomock.Any()).Return(currentHeight, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryBlock(gomock.Any(), gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
 
 		noVotingPowerTable := r.Int31n(10) > 5
 		if noVotingPowerTable {
 			allowedErr := fmt.Sprintf("failed to query Finality Voting Power at Height %d: rpc error: code = Unknown desc = %s: unknown request",
 				currentHeight, finalitytypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", currentHeight).Error())
 			mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-			mockConsumerController.EXPECT().QueryActivatedHeight().Return(uint64(0), errors.New(allowedErr)).AnyTimes()
+			mockConsumerController.EXPECT().QueryActivatedHeight(gomock.Any()).Return(uint64(0), errors.New(allowedErr)).AnyTimes()
 		} else {
 			mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
-			mockConsumerController.EXPECT().QueryActivatedHeight().Return(currentHeight, nil).AnyTimes()
+			mockConsumerController.EXPECT().QueryActivatedHeight(gomock.Any()).Return(currentHeight, nil).AnyTimes()
 		}
-		mockConsumerController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any(), gomock.Any()).Return(uint64(0), nil).AnyTimes()
 		var isSlashedOrJailed int
 		if noVotingPowerTable {
 			// 0 means is slashed, 1 means is jailed, 2 means neither slashed nor jailed
 			isSlashedOrJailed = r.Intn(3)
 			switch isSlashedOrJailed {
 			case 0:
-				mockConsumerController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(true, false, nil).AnyTimes()
+				mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(api.NewFinalityProviderStatusResponse(
+					true,
+					false,
+				), nil).AnyTimes()
 			case 1:
-				mockConsumerController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, true, nil).AnyTimes()
+				mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(api.NewFinalityProviderStatusResponse(
+					false,
+					true,
+				), nil).AnyTimes()
 			case 2:
-				mockConsumerController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, false, nil).AnyTimes()
+				mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(api.NewFinalityProviderStatusResponse(
+					false,
+					false,
+				), nil).AnyTimes()
 			}
 		}
 
@@ -234,24 +245,27 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		fpCfg.SubmissionRetryInterval = time.Millisecond * 10
 		fpCfg.SignatureSubmissionInterval = time.Millisecond * 10
 
-		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any()).Return(nil, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryLatestFinalizedBlock().Return(nil, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryLatestBlockHeight().Return(currentHeight, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
+		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestFinalizedBlock(gomock.Any()).Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlockHeight(gomock.Any()).Return(currentHeight, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
 
 		// set voting power to be positive so that the fp should eventually become ACTIVE
 		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight().Return(uint64(0), nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryActivatedHeight().Return(uint64(1), nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryFinalityProviderSlashedOrJailed(gomock.Any()).Return(false, true, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryActivatedHeight(gomock.Any()).Return(uint64(1), nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(&api.FinalityProviderStatusResponse{
+			Slashed: false,
+			Jailed:  true,
+		}, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any(), gomock.Any()).Return(uint64(0), nil).AnyTimes()
 
 		// Create fp app
 		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockBabylonController, mockConsumerController)
 		defer cleanup()
 
 		expectedTxHash := datagen.GenRandomHexStr(r, 32)
-		mockConsumerController.EXPECT().UnjailFinalityProvider(fpPk.MustToBTCPK()).Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
+		mockConsumerController.EXPECT().UnjailFinalityProvider(gomock.Any(), fpPk.MustToBTCPK()).Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
 		err := app.StartFinalityProvider(fpPk)
 		require.NoError(t, err)
 		fpIns, err := app.GetFinalityProviderInstance()
@@ -363,7 +377,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 
 		mockBabylonController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(fpRes, nil).AnyTimes()
 
-		res, err := app.CreateFinalityProvider(keyName, chainID, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
+		res, err := app.CreateFinalityProvider(context.Background(), keyName, chainID, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
 		require.NoError(t, err)
 		require.Equal(t, res.FpInfo.BtcPkHex, eotsPk.MarshalHex())
 
