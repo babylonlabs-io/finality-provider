@@ -8,34 +8,33 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
-	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
-	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
-
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	bbnapp "github.com/babylonlabs-io/babylon/v3/app"
+	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
+	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	fgclient "github.com/babylonlabs-io/finality-gadget/client"
+	"github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
+	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
 	cwconfig "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"go.uber.org/zap"
-
-	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 )
 
 const (
@@ -46,7 +45,7 @@ var _ api.ConsumerController = &OPStackL2ConsumerController{}
 
 // nolint:revive // Ignore stutter warning - full name provides clarity
 type OPStackL2ConsumerController struct {
-	Cfg        *fpcfg.OPStackL2Config
+	Cfg        *config.OPStackL2Config
 	CwClient   *cwclient.Client
 	opl2Client *ethclient.Client
 	bbnClient  *bbnclient.Client
@@ -54,7 +53,7 @@ type OPStackL2ConsumerController struct {
 }
 
 func NewOPStackL2ConsumerController(
-	opl2Cfg *fpcfg.OPStackL2Config,
+	opl2Cfg *rollupfpconfig.OPStackL2Config,
 	logger *zap.Logger,
 ) (*OPStackL2ConsumerController, error) {
 	if opl2Cfg == nil {
@@ -75,9 +74,7 @@ func NewOPStackL2ConsumerController(
 		return nil, fmt.Errorf("failed to create OPStack L2 client: %w", err)
 	}
 
-	bbnConfig := opl2Cfg.ToBBNConfig()
-	babylonConfig := fpcfg.BBNConfigToBabylonConfig(&bbnConfig)
-
+	babylonConfig := opl2Cfg.ToBabylonConfig()
 	if err := babylonConfig.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config for Babylon client: %w", err)
 	}

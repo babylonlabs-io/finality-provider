@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/babylonlabs-io/babylon/v3/client/config"
 	cwcfg "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
-
 	"github.com/cosmos/btcutil/bech32"
 )
 
@@ -17,6 +17,7 @@ type OPStackL2Config struct {
 	BabylonFinalityGadgetRpc string `long:"babylon-finality-gadget-rpc" description:"the rpc address of babylon op finality gadget"` //nolint:stylecheck,revive
 
 	// Below configurations are needed for the Babylon client
+	// TODO: reuse Babylon config struct
 	Key            string        `long:"key" description:"name of the babylon key to sign transactions with"`
 	ChainID        string        `long:"chain-id" description:"chain id of the babylon chain to connect to"`
 	RPCAddr        string        `long:"rpc-address" description:"address of the babylon rpc server to connect to"`
@@ -79,20 +80,21 @@ func (cfg *OPStackL2Config) ToCosmwasmConfig() cwcfg.CosmwasmConfig {
 	}
 }
 
-func (cfg *OPStackL2Config) ToBBNConfig() BBNConfig {
-	return BBNConfig{
-		Key:            cfg.Key,
-		ChainID:        cfg.ChainID,
-		RPCAddr:        cfg.RPCAddr,
-		AccountPrefix:  cfg.AccountPrefix,
-		KeyringBackend: cfg.KeyringBackend,
-		GasAdjustment:  cfg.GasAdjustment,
-		GasPrices:      cfg.GasPrices,
-		KeyDirectory:   cfg.KeyDirectory,
-		Debug:          cfg.Debug,
-		Timeout:        cfg.Timeout,
-		BlockTimeout:   cfg.BlockTimeout,
-		OutputFormat:   cfg.OutputFormat,
-		SignModeStr:    cfg.SignModeStr,
+func (cfg *OPStackL2Config) ToBabylonConfig() config.BabylonConfig {
+	return config.BabylonConfig{
+		Key:              cfg.Key,
+		ChainID:          cfg.ChainID,
+		RPCAddr:          cfg.RPCAddr,
+		AccountPrefix:    cfg.AccountPrefix,
+		KeyringBackend:   cfg.KeyringBackend,
+		GasAdjustment:    cfg.GasAdjustment,
+		GasPrices:        cfg.GasPrices,
+		KeyDirectory:     cfg.KeyDirectory,
+		Debug:            cfg.Debug,
+		Timeout:          cfg.Timeout,
+		BlockTimeout:     cfg.BlockTimeout,
+		OutputFormat:     cfg.OutputFormat,
+		SignModeStr:      cfg.SignModeStr,
+		SubmitterAddress: "",
 	}
 }

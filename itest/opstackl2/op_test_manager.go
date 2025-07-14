@@ -22,9 +22,10 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	rollupfpcontroller "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/clientcontroller"
+	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
-	opcc "github.com/babylonlabs-io/finality-provider/clientcontroller/opstackl2"
 	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
@@ -55,7 +56,7 @@ type OpL2ConsumerTestManager struct {
 	BaseTestManager
 	BaseDir              string
 	manager              *container.Manager
-	OpConsumerController *opcc.OPStackL2ConsumerController
+	OpConsumerController *rollupfpcontroller.OPStackL2ConsumerController
 	EOTSServerHandler    *e2eutils.EOTSServerHandler
 	BabylonFpApp         *service.FinalityProviderApp
 	ConsumerFpApp        *service.FinalityProviderApp
@@ -88,7 +89,7 @@ func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTe
 	// create cosmwasm client
 	consumerFpCfg, opConsumerCfg := createConsumerFpConfig(t, testDir, manager, babylond)
 	cwConfig := opConsumerCfg.ToCosmwasmConfig()
-	cwClient, err := opcc.NewCwClient(&cwConfig, logger)
+	cwClient, err := rollupfpcontroller.NewCwClient(&cwConfig, logger)
 	require.NoError(t, err)
 
 	// deploy finality gadget cw contract
@@ -109,7 +110,6 @@ func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTe
 	opConsumerCfg.OPFinalityGadgetAddress = opFinalityGadgetAddress
 
 	// update consumer FP config with opConsumerCfg
-	consumerFpCfg.OPStackL2Config = opConsumerCfg
 	consumerFpCfg.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
 
 	// create Babylon FP config
@@ -128,7 +128,7 @@ func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTe
 	t.Log(log.Prefix("Started Babylon FP App"))
 
 	// create op consumer controller
-	opConsumerController, err := opcc.NewOPStackL2ConsumerController(opConsumerCfg, logger)
+	opConsumerController, err := rollupfpcontroller.NewOPStackL2ConsumerController(opConsumerCfg, logger)
 	require.NoError(t, err)
 
 	// create and start consumer FP app
@@ -247,7 +247,7 @@ func createConsumerFpConfig(
 	testDir string,
 	manager *container.Manager,
 	babylond *dockertest.Resource,
-) (*fpcfg.Config, *fpcfg.OPStackL2Config) {
+) (*fpcfg.Config, *rollupfpconfig.OPStackL2Config) {
 	fpHomeDir := filepath.Join(testDir, "consumer-fp-home")
 	t.Logf(log.Prefix("Consumer FP home dir: %s"), fpHomeDir)
 
@@ -304,7 +304,7 @@ func createConsumerFpConfig(
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	// set consumer FP config
-	opConsumerCfg := &fpcfg.OPStackL2Config{
+	opConsumerCfg := &rollupfpconfig.OPStackL2Config{
 		// it will be updated later
 		OPFinalityGadgetAddress: "",
 		// it must be a dialable RPC address checked by NewOPStackL2ConsumerController
@@ -326,7 +326,6 @@ func createConsumerFpConfig(
 		OutputFormat:             cfg.BabylonConfig.OutputFormat,
 		SignModeStr:              cfg.BabylonConfig.SignModeStr,
 	}
-	cfg.OPStackL2Config = opConsumerCfg
 
 	return cfg, opConsumerCfg
 }
@@ -387,7 +386,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime, "Failed to wait for Babylon FP registration")
 
 	consumerCfg := ctm.ConsumerFpApp.GetConfig()
-	consumerKeyName := consumerCfg.OPStackL2Config.Key + "2"
+	consumerKeyName := consumerCfg.BabylonConfig.Key + "2"
 
 	// create and register consumer FP
 	consumerEotsPk, err := ctm.EOTSServerHandler.CreateKey(consumerKeyName, "")
@@ -471,7 +470,7 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 ) *wasmtypes.QuerySmartContractStateResponse {
 	// create cosmwasm client
 	cwConfig := ctm.OpConsumerController.Cfg.ToCosmwasmConfig()
-	cwClient, err := opcc.NewCwClient(&cwConfig, ctm.logger)
+	cwClient, err := rollupfpcontroller.NewCwClient(&cwConfig, ctm.logger)
 	require.NoError(t, err)
 
 	// marshal query message
