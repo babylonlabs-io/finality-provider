@@ -1,4 +1,4 @@
-package opstackl2
+package clientcontroller
 
 import (
 	"context"
@@ -8,75 +8,61 @@ import (
 	"math"
 	"math/big"
 
+	sdkErr "cosmossdk.io/errors"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
-	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
-
-	sdkErr "cosmossdk.io/errors"
-	wasmdparams "github.com/CosmWasm/wasmd/app/params"
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	bbnapp "github.com/babylonlabs-io/babylon/v3/app"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	fgclient "github.com/babylonlabs-io/finality-gadget/client"
+	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
-	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
-	cwconfig "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
+	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"go.uber.org/zap"
-
-	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 )
 
 const (
 	BabylonChainName = "Babylon"
 )
 
-var _ api.ConsumerController = &OPStackL2ConsumerController{}
+var _ api.ConsumerController = &RollupBSNController{}
 
 // nolint:revive // Ignore stutter warning - full name provides clarity
-type OPStackL2ConsumerController struct {
-	Cfg        *fpcfg.OPStackL2Config
-	CwClient   *cwclient.Client
-	opl2Client *ethclient.Client
-	bbnClient  *bbnclient.Client
-	logger     *zap.Logger
+type RollupBSNController struct {
+	Cfg       *rollupfpconfig.RollupFPConfig
+	ethClient *ethclient.Client
+	bbnClient *bbnclient.Client
+	logger    *zap.Logger
 }
 
-func NewOPStackL2ConsumerController(
-	opl2Cfg *fpcfg.OPStackL2Config,
+func NewRollupBSNController(
+	rollupFPCfg *rollupfpconfig.RollupFPConfig,
 	logger *zap.Logger,
-) (*OPStackL2ConsumerController, error) {
-	if opl2Cfg == nil {
-		return nil, fmt.Errorf("nil config for OP consumer controller")
+) (*RollupBSNController, error) {
+	if rollupFPCfg == nil {
+		return nil, fmt.Errorf("nil config for rollup BSN controller")
 	}
-	if err := opl2Cfg.Validate(); err != nil {
+	if err := rollupFPCfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
-	cwConfig := opl2Cfg.ToCosmwasmConfig()
 
-	cwClient, err := NewCwClient(&cwConfig, logger)
+	ethClient, err := ethclient.Dial(rollupFPCfg.RollupNodeRPCAddress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create CW client: %w", err)
+		return nil, fmt.Errorf("failed to create rollup node client: %w", err)
 	}
 
-	opl2Client, err := ethclient.Dial(opl2Cfg.OPStackL2RPCAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OPStack L2 client: %w", err)
-	}
-
-	bbnConfig := opl2Cfg.ToBBNConfig()
-	babylonConfig := fpcfg.BBNConfigToBabylonConfig(&bbnConfig)
-
+	babylonConfig := rollupFPCfg.GetBabylonConfig()
 	if err := babylonConfig.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config for Babylon client: %w", err)
 	}
@@ -89,49 +75,32 @@ func NewOPStackL2ConsumerController(
 		return nil, fmt.Errorf("failed to create Babylon client: %w", err)
 	}
 
-	cc := &OPStackL2ConsumerController{
-		Cfg:        opl2Cfg,
-		CwClient:   cwClient,
-		opl2Client: opl2Client,
-		bbnClient:  bc,
-		logger:     logger,
+	cc := &RollupBSNController{
+		Cfg:       rollupFPCfg,
+		ethClient: ethClient,
+		bbnClient: bc,
+		logger:    logger,
 	}
 
 	return cc, nil
 }
 
-func NewCwClient(cwConfig *cwconfig.CosmwasmConfig, logger *zap.Logger) (*cwclient.Client, error) {
-	if err := cwConfig.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid config for OP consumer controller: %w", err)
-	}
+func (cc *RollupBSNController) QuerySmartContractState(ctx context.Context, contractAddress string, queryData string) (*wasmtypes.QuerySmartContractStateResponse, error) {
+	clientCtx := client.Context{Client: cc.bbnClient.RPCClient}
+	queryClient := wasmtypes.NewQueryClient(clientCtx)
 
-	bbnEncodingCfg := bbnapp.GetEncodingConfig()
-	cwEncodingCfg := wasmdparams.EncodingConfig{
-		InterfaceRegistry: bbnEncodingCfg.InterfaceRegistry,
-		Codec:             bbnEncodingCfg.Codec,
-		TxConfig:          bbnEncodingCfg.TxConfig,
-		Amino:             bbnEncodingCfg.Amino,
-	}
-
-	cwClient, err := cwclient.New(
-		cwConfig,
-		BabylonChainName,
-		cwEncodingCfg,
-		logger,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create CW client: %w", err)
-	}
-
-	return cwClient, nil
+	return queryClient.SmartContractState(ctx, &wasmtypes.QuerySmartContractStateRequest{
+		Address:   contractAddress,
+		QueryData: wasmtypes.RawContractMessage(queryData),
+	})
 }
 
-func (cc *OPStackL2ConsumerController) ReliablySendMsg(ctx context.Context, msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+func (cc *RollupBSNController) ReliablySendMsg(ctx context.Context, msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	return cc.reliablySendMsgs(ctx, []sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
 // QueryContractConfig queries the finality contract for its config
-func (cc *OPStackL2ConsumerController) QueryContractConfig() (*Config, error) {
+func (cc *RollupBSNController) QueryContractConfig() (*Config, error) {
 	query := QueryMsg{
 		Config: &Config{},
 	}
@@ -140,7 +109,7 @@ func (cc *OPStackL2ConsumerController) QueryContractConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to marshal config query: %w", err)
 	}
 
-	stateResp, err := cc.CwClient.QuerySmartContractState(context.Background(), cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
+	stateResp, err := cc.QuerySmartContractState(context.Background(), cc.Cfg.FinalityContractAddress, string(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
@@ -157,8 +126,8 @@ func (cc *OPStackL2ConsumerController) QueryContractConfig() (*Config, error) {
 	return resp, nil
 }
 
-func (cc *OPStackL2ConsumerController) reliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
-	resp, err := cc.CwClient.ReliablySendMsgs(
+func (cc *RollupBSNController) reliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+	resp, err := cc.bbnClient.ReliablySendMsgs(
 		ctx,
 		msgs,
 		expectedErrs,
@@ -171,17 +140,17 @@ func (cc *OPStackL2ConsumerController) reliablySendMsgs(ctx context.Context, msg
 	return types.NewBabylonTxResponse(resp), nil
 }
 
-func (cc *OPStackL2ConsumerController) GetFpRandCommitContext() string {
-	return signingcontext.FpRandCommitContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.OPFinalityGadgetAddress)
+func (cc *RollupBSNController) GetFpRandCommitContext() string {
+	return signingcontext.FpRandCommitContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.FinalityContractAddress)
 }
 
-func (cc *OPStackL2ConsumerController) GetFpFinVoteContext() string {
-	return signingcontext.FpFinVoteContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.OPFinalityGadgetAddress)
+func (cc *RollupBSNController) GetFpFinVoteContext() string {
+	return signingcontext.FpFinVoteContextV0(cc.bbnClient.GetConfig().ChainID, cc.Cfg.FinalityContractAddress)
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness to Babylon CosmWasm contract
 // it returns tx hash and error
-func (cc *OPStackL2ConsumerController) CommitPubRandList(
+func (cc *RollupBSNController) CommitPubRandList(
 	ctx context.Context,
 	req *api.CommitPubRandListRequest,
 ) (*types.TxResponse, error) {
@@ -200,8 +169,8 @@ func (cc *OPStackL2ConsumerController) CommitPubRandList(
 		return nil, err
 	}
 	execMsg := &wasmtypes.MsgExecuteContract{
-		Sender:   cc.CwClient.MustGetAddr(),
-		Contract: cc.Cfg.OPFinalityGadgetAddress,
+		Sender:   cc.bbnClient.MustGetAddr(),
+		Contract: cc.Cfg.FinalityContractAddress,
 		Msg:      payload,
 	}
 
@@ -219,7 +188,7 @@ func (cc *OPStackL2ConsumerController) CommitPubRandList(
 }
 
 // SubmitBatchFinalitySigs submits a batch of finality signatures
-func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
+func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 	ctx context.Context,
 	req *api.SubmitBatchFinalitySigsRequest,
 ) (*types.TxResponse, error) {
@@ -249,8 +218,8 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 			return nil, err
 		}
 		execMsg := &wasmtypes.MsgExecuteContract{
-			Sender:   cc.CwClient.MustGetAddr(),
-			Contract: cc.Cfg.OPFinalityGadgetAddress,
+			Sender:   cc.bbnClient.MustGetAddr(),
+			Contract: cc.Cfg.FinalityContractAddress,
 			Msg:      payload,
 		}
 		msgs = append(msgs, execMsg)
@@ -276,7 +245,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 }
 
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
-func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(
+func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 	ctx context.Context,
 	req *api.QueryFinalityProviderHasPowerRequest,
 ) (bool, error) {
@@ -349,8 +318,8 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderHasPower(
 // QueryLatestFinalizedBlock returns the finalized L2 block from a RPC call
 // TODO: return the BTC finalized L2 block, it is tricky b/c it's not recorded anywhere so we can
 // use some exponential strategy to search
-func (cc *OPStackL2ConsumerController) QueryLatestFinalizedBlock(ctx context.Context) (types.BlockDescription, error) {
-	l2Block, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(ethrpc.FinalizedBlockNumber.Int64()))
+func (cc *RollupBSNController) QueryLatestFinalizedBlock(ctx context.Context) (types.BlockDescription, error) {
+	l2Block, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(ethrpc.FinalizedBlockNumber.Int64()))
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +331,7 @@ func (cc *OPStackL2ConsumerController) QueryLatestFinalizedBlock(ctx context.Con
 	return types.NewBlockInfo(l2Block.Number.Uint64(), l2Block.Hash().Bytes(), false), nil
 }
 
-func (cc *OPStackL2ConsumerController) QueryBlocks(ctx context.Context, req *api.QueryBlocksRequest) ([]types.BlockDescription, error) {
+func (cc *RollupBSNController) QueryBlocks(ctx context.Context, req *api.QueryBlocksRequest) ([]types.BlockDescription, error) {
 	if req.StartHeight > req.EndHeight {
 		return nil, fmt.Errorf("the start height %v should not be higher than the end height %v", req.StartHeight, req.EndHeight)
 	}
@@ -384,7 +353,7 @@ func (cc *OPStackL2ConsumerController) QueryBlocks(ctx context.Context, req *api
 	}
 
 	// batch call
-	if err := cc.opl2Client.Client().BatchCallContext(ctx, batchElemList); err != nil {
+	if err := cc.ethClient.Client().BatchCallContext(ctx, batchElemList); err != nil {
 		return nil, err
 	}
 	for i := range batchElemList {
@@ -413,8 +382,8 @@ func (cc *OPStackL2ConsumerController) QueryBlocks(ctx context.Context, req *api
 }
 
 // QueryBlock returns the L2 block number and block hash with the given block number from a RPC call
-func (cc *OPStackL2ConsumerController) QueryBlock(ctx context.Context, height uint64) (types.BlockDescription, error) {
-	l2Block, err := cc.opl2Client.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
+func (cc *RollupBSNController) QueryBlock(ctx context.Context, height uint64) (types.BlockDescription, error) {
+	l2Block, err := cc.ethClient.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
 	if err != nil {
 		return nil, err
 	}
@@ -429,14 +398,14 @@ func (cc *OPStackL2ConsumerController) QueryBlock(ctx context.Context, height ui
 	return types.NewBlockInfo(height, blockHashBytes, false), nil
 }
 
-// Note: this is specific to the OPStackL2ConsumerController and only used for testing
+// Note: this is specific to the RollupBSNController and only used for testing
 // QueryBlock returns the Ethereum block from a RPC call
-func (cc *OPStackL2ConsumerController) QueryEthBlock(height uint64) (*ethtypes.Header, error) {
-	return cc.opl2Client.HeaderByNumber(context.Background(), new(big.Int).SetUint64(height))
+func (cc *RollupBSNController) QueryEthBlock(height uint64) (*ethtypes.Header, error) {
+	return cc.ethClient.HeaderByNumber(context.Background(), new(big.Int).SetUint64(height))
 }
 
 // QueryIsBlockFinalized returns whether the given the L2 block number has been finalized
-func (cc *OPStackL2ConsumerController) QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error) {
+func (cc *RollupBSNController) QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error) {
 	l2Block, err := cc.QueryLatestFinalizedBlock(ctx)
 	if err != nil {
 		return false, err
@@ -453,7 +422,7 @@ func (cc *OPStackL2ConsumerController) QueryIsBlockFinalized(ctx context.Context
 }
 
 // QueryActivatedHeight returns the L2 block number at which the finality gadget is activated.
-func (cc *OPStackL2ConsumerController) QueryActivatedHeight(ctx context.Context) (uint64, error) {
+func (cc *RollupBSNController) QueryActivatedHeight(ctx context.Context) (uint64, error) {
 	finalityGadgetClient, err := fgclient.NewFinalityGadgetGrpcClient(cc.Cfg.BabylonFinalityGadgetRpc)
 	if err != nil {
 		cc.logger.Error("failed to initialize Babylon Finality Gadget Grpc client", zap.Error(err))
@@ -479,8 +448,8 @@ func (cc *OPStackL2ConsumerController) QueryActivatedHeight(ctx context.Context)
 }
 
 // QueryLatestBlockHeight gets the latest L2 block number from a RPC call
-func (cc *OPStackL2ConsumerController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
-	l2LatestBlock, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(ethrpc.LatestBlockNumber.Int64()))
+func (cc *RollupBSNController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
+	l2LatestBlock, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(ethrpc.LatestBlockNumber.Int64()))
 	if err != nil {
 		return 0, err
 	}
@@ -490,7 +459,7 @@ func (cc *OPStackL2ConsumerController) QueryLatestBlockHeight(ctx context.Contex
 
 // QueryLastPublicRandCommit returns the last public randomness commitments
 // It is fetched from the state of a CosmWasm contract OP finality gadget.
-func (cc *OPStackL2ConsumerController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
+func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	queryMsg := &QueryMsg{
 		LastPubRandCommit: &PubRandCommit{
@@ -503,7 +472,7 @@ func (cc *OPStackL2ConsumerController) QueryLastPublicRandCommit(ctx context.Con
 		return nil, fmt.Errorf("failed marshaling to JSON: %w", err)
 	}
 
-	stateResp, err := cc.CwClient.QuerySmartContractState(ctx, cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
+	stateResp, err := cc.QuerySmartContractState(ctx, cc.Cfg.FinalityContractAddress, string(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
@@ -526,17 +495,17 @@ func (cc *OPStackL2ConsumerController) QueryLastPublicRandCommit(ctx context.Con
 	return resp, nil
 }
 
-func (cc *OPStackL2ConsumerController) QueryFinalityActivationBlockHeight(_ context.Context) (uint64, error) {
+func (cc *RollupBSNController) QueryFinalityActivationBlockHeight(_ context.Context) (uint64, error) {
 	// TODO: implement finality activation feature in OP stack L2
 	return 0, nil
 }
 
-func (cc *OPStackL2ConsumerController) QueryFinalityProviderHighestVotedHeight(_ context.Context, _ *btcec.PublicKey) (uint64, error) {
+func (cc *RollupBSNController) QueryFinalityProviderHighestVotedHeight(_ context.Context, _ *btcec.PublicKey) (uint64, error) {
 	// TODO: implement highest voted height feature in OP stack L2
 	return 0, nil
 }
 
-func (cc *OPStackL2ConsumerController) QueryFinalityProviderStatus(_ context.Context, _ *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
+func (cc *RollupBSNController) QueryFinalityProviderStatus(_ context.Context, _ *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
 	// TODO: implement slashed or jailed feature in OP stack L2
 	return &api.FinalityProviderStatusResponse{
 		Slashed: false,
@@ -544,7 +513,7 @@ func (cc *OPStackL2ConsumerController) QueryFinalityProviderStatus(_ context.Con
 	}, nil
 }
 
-func (cc *OPStackL2ConsumerController) UnjailFinalityProvider(_ context.Context, _ *btcec.PublicKey) (*types.TxResponse, error) {
+func (cc *RollupBSNController) UnjailFinalityProvider(_ context.Context, _ *btcec.PublicKey) (*types.TxResponse, error) {
 	// TODO: implement unjail feature in OP stack L2
 	return nil, nil
 }
@@ -560,9 +529,9 @@ func ConvertProof(cmtProof cmtcrypto.Proof) Proof {
 
 // GetBlockNumberByTimestamp returns the L2 block number for the given BTC staking activation timestamp.
 // It uses a binary search to find the block number.
-func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Context, targetTimestamp uint64) (uint64, error) {
+func (cc *RollupBSNController) GetBlockNumberByTimestamp(ctx context.Context, targetTimestamp uint64) (uint64, error) {
 	// Check if the target timestamp is after the latest block
-	latestBlock, err := cc.opl2Client.HeaderByNumber(ctx, nil)
+	latestBlock, err := cc.ethClient.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return math.MaxUint64, err
 	}
@@ -571,7 +540,7 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 	}
 
 	// Check if the target timestamp is before the first block
-	firstBlock, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(1))
+	firstBlock, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(1))
 	if err != nil {
 		return math.MaxUint64, err
 	}
@@ -589,7 +558,7 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 
 	for lowerBound <= upperBound {
 		midBlockNumber := (lowerBound + upperBound) / 2
-		block, err := cc.opl2Client.HeaderByNumber(ctx, big.NewInt(int64(midBlockNumber))) // #nosec G115
+		block, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(int64(midBlockNumber))) // #nosec G115
 		if err != nil {
 			return math.MaxUint64, err
 		}
@@ -609,19 +578,20 @@ func (cc *OPStackL2ConsumerController) GetBlockNumberByTimestamp(ctx context.Con
 
 // QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
 // nolint:revive // Ignore stutter warning - full name provides clarity
-func (cc *OPStackL2ConsumerController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
-	// TODO: implement slashed or jailed feature in OP stack L2
+func (cc *RollupBSNController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
+	// TODO: implement slashed or jailed feature in rollup BSN
 	return false, false, nil
 }
 
-func (cc *OPStackL2ConsumerController) Close() error {
-	cc.opl2Client.Close()
 
-	return cc.CwClient.Stop()
+func (cc *RollupBSNController) Close() error {
+	cc.ethClient.Close()
+
+	return cc.bbnClient.Stop()
 }
 
 // nolint:unparam
-func (cc *OPStackL2ConsumerController) isDelegationActive(
+func (cc *RollupBSNController) isDelegationActive(
 	btcStakingParams *btcstakingtypes.QueryParamsResponse,
 	btcDel *btcstakingtypes.BTCDelegationResponse,
 ) (bool, error) {

@@ -108,7 +108,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	var bc ccapi.ClientController
 	require.Eventually(t, func() bool {
-		bbnCfg := fpcfg.BBNConfigToBabylonConfig(cfg.BabylonConfig)
+		bbnCfg := cfg.BabylonConfig.ToBabylonConfig()
 		bbnCl, err := bbnclient.New(&bbnCfg, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon client: %v", err)
@@ -190,8 +190,8 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	ctm := &BcdTestManager{
 		BaseTestManager: &base_test_manager.BaseTestManager{
-			BBNClient:        bc.(*bbncc.BabylonController),
-			CovenantPrivKeys: covenantPrivKeys,
+			BabylonController: bc.(*bbncc.BabylonController),
+			CovenantPrivKeys:  covenantPrivKeys,
 		},
 		manager:           manager,
 		FpConfig:          cfg,
@@ -211,7 +211,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 func (ctm *BcdTestManager) WaitForServicesStart(t *testing.T) {
 	require.Eventually(t, func() bool {
-		params, err := ctm.BBNClient.QueryStakingParams()
+		params, err := ctm.BabylonController.QueryStakingParams()
 		if err != nil {
 			return false
 		}

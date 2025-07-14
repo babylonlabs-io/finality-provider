@@ -1,7 +1,7 @@
-//go:build e2e_op
-// +build e2e_op
+//go:build e2e_rollup
+// +build e2e_rollup
 
-package e2etest_op
+package e2e
 
 import (
 	"context"
@@ -13,21 +13,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/babylonlabs-io/finality-provider/testutil"
+	"github.com/stretchr/testify/require"
 )
 
-// TestPubRandCommitment tests the consumer controller's functions:
-// - CommitPubRandList
-// - QueryLastPublicRandCommit
 func TestPubRandCommitment(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ctm := StartOpL2ConsumerManager(t, ctx)
+	ctm := StartRollupTestManager(t, ctx)
 	defer ctm.Stop(t)
 
-	// create and register Babylon FP and OP consumer FP
+	// create and register Babylon FP and rollup BSN FP
 	fps := ctm.setupBabylonAndConsumerFp(t)
 
 	// send a BTC delegation and wait for activation
@@ -43,7 +39,7 @@ func TestPubRandCommitment(t *testing.T) {
 	require.NoError(t, err)
 
 	// query the last pub rand
-	pubRand, err := ctm.OpConsumerController.QueryLastPublicRandCommit(context.Background(), consumerFpPk.MustToBTCPK())
+	pubRand, err := ctm.RollupBSNController.QueryLastPublicRandCommit(context.Background(), consumerFpPk.MustToBTCPK())
 	require.NoError(t, err)
 	require.NotNil(t, pubRand)
 
@@ -59,10 +55,10 @@ func TestPubRandCommitment(t *testing.T) {
 func TestFinalitySigSubmission(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ctm := StartOpL2ConsumerManager(t, ctx)
+	ctm := StartRollupTestManager(t, ctx)
 	defer ctm.Stop(t)
 
-	// create and register Babylon FP and OP consumer FP
+	// create and register Babylon FP and rollup BSN FP
 	fps := ctm.setupBabylonAndConsumerFp(t)
 	consumerFpPk := fps[1]
 
@@ -124,15 +120,15 @@ func TestFinalitySigSubmission(t *testing.T) {
 func TestFinalityProviderHasPower(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ctm := StartOpL2ConsumerManager(t, ctx)
+	ctm := StartRollupTestManager(t, ctx)
 	defer ctm.Stop(t)
 
-	// create and register Babylon FP and OP consumer FP
+	// create and register Babylon FP and rollup BSN FP
 	fps := ctm.setupBabylonAndConsumerFp(t)
 	consumerFpPk := fps[1]
 
 	// query the finality provider has power
-	hasPower, err := ctm.OpConsumerController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
+	hasPower, err := ctm.RollupBSNController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
 		consumerFpPk.MustToBTCPK(),
 		1,
 	))
@@ -144,7 +140,7 @@ func TestFinalityProviderHasPower(t *testing.T) {
 
 	// query the finality provider has power again
 	// fp has 0 voting power b/c there is no public randomness at this height
-	hasPower, err = ctm.OpConsumerController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
+	hasPower, err = ctm.RollupBSNController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
 		consumerFpPk.MustToBTCPK(),
 		1,
 	))
@@ -158,7 +154,7 @@ func TestFinalityProviderHasPower(t *testing.T) {
 
 	// query the finality provider has power again
 	// fp has voting power now
-	hasPower, err = ctm.OpConsumerController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
+	hasPower, err = ctm.RollupBSNController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
 		consumerFpPk.MustToBTCPK(),
 		1,
 	))

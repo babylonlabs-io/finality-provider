@@ -23,7 +23,7 @@ PACKAGES_E2E=$(shell go list ./... | grep '/itest')
 # need to specify the full path to fix issue where logs won't stream to stdout
 # due to multiple packages found
 # context: https://github.com/golang/go/issues/24929
-PACKAGES_E2E_OP=$(shell go list -tags=e2e_op ./... | grep '/itest/opstackl2')
+PACKAGES_E2E_ROLLUP=$(shell go list -tags=e2e_rollup ./... | grep '/bsn/rollup-finality-provider/e2e')
 PACKAGES_E2E_BCD=$(shell go list -tags=e2e_bcd ./... | grep '/itest/cosmwasm/bcd')
 
 ifeq ($(LINK_STATICALLY),true)
@@ -73,7 +73,7 @@ install-bcd:
 	cd $(TOOLS_DIR); \
 	go install -trimpath $(BCD_PKG)
 
-.PHONY: clean-e2e test-e2e test-e2e-babylon test-e2e-babylon-ci test-e2e-bcd test-e2e-op test-e2e-op-ci
+.PHONY: clean-e2e test-e2e test-e2e-babylon test-e2e-babylon-ci test-e2e-bcd test-e2e-rollup
 
 # Clean up environments by stopping processes and removing data directories
 clean-e2e:
@@ -87,7 +87,7 @@ clean-e2e:
 	rm -rf ~/.babylond ~/.bcd
 
 # Main test target that runs all e2e tests
-test-e2e: test-e2e-babylon test-e2e-bcd test-e2e-op
+test-e2e: test-e2e-babylon test-e2e-bcd test-e2e-rollup
 
 test-e2e-babylon: clean-e2e
 	@go test -mod=readonly -timeout=25m -v $(PACKAGES_E2E) -count=1 --tags=e2e_babylon
@@ -101,18 +101,8 @@ test-e2e-babylon-ci: clean-e2e
 test-e2e-bcd: clean-e2e install-bcd
 	@go test -race -mod=readonly -timeout=25m -v $(PACKAGES_E2E_BCD) -count=1 --tags=e2e_bcd
 
-test-e2e-op: clean-e2e
-	@go test -mod=readonly -timeout=25m -v $(PACKAGES_E2E_OP) -count=1 --tags=e2e_op
-
-FILTER ?= .
-test-e2e-op-filter: clean-e2e
-	@go test -mod=readonly -timeout=25m -v $(PACKAGES_E2E_OP) -count=1 --tags=e2e_op --run ^$(FILTER)$
-
-test-e2e-op-ci: clean-e2e
-	go test -list . ./itest/opstackl2 --tags=e2e_op | grep Test \
-	| circleci tests run --command \
-	"xargs go test -race -mod=readonly -timeout=25m -v $(PACKAGES_E2E_OP) -count=1 --tags=e2e_op --run" \
-	--split-by=name --timings-type=name
+test-e2e-rollup: clean-e2e
+	@go test -mod=readonly -timeout=25m -v $(PACKAGES_E2E_ROLLUP) -count=1 --tags=e2e_rollup
 
 ###############################################################################
 ###                                Protobuf                                 ###

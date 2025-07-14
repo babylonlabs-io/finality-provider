@@ -1,7 +1,7 @@
-//go:build e2e_op
-// +build e2e_op
+//go:build e2e_rollup
+// +build e2e_rollup
 
-package e2etest_op
+package e2e
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"time"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
@@ -22,10 +23,10 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	rollupfpcontroller "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/clientcontroller"
+	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
-	opcc "github.com/babylonlabs-io/finality-provider/clientcontroller/opstackl2"
-	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -46,29 +47,29 @@ const (
 	eventuallyPollTime         = 500 * time.Millisecond
 	passphrase                 = "testpass"
 	hdPath                     = ""
-	rollupFinalityContractPath = "../bytecode/rollup/finality.wasm"
+	rollupFinalityContractPath = "./bytecode/finality.wasm"
 )
 
 type BaseTestManager = base_test_manager.BaseTestManager
 
 type OpL2ConsumerTestManager struct {
 	BaseTestManager
-	BaseDir              string
-	manager              *container.Manager
-	OpConsumerController *opcc.OPStackL2ConsumerController
-	EOTSServerHandler    *e2eutils.EOTSServerHandler
-	BabylonFpApp         *service.FinalityProviderApp
-	ConsumerFpApp        *service.FinalityProviderApp
-	BabylonEOTSClient    *client.EOTSManagerGRpcClient
-	ConsumerEOTSClient   *client.EOTSManagerGRpcClient
-	logger               *zap.Logger
+	BaseDir             string
+	manager             *container.Manager
+	RollupBSNController *rollupfpcontroller.RollupBSNController
+	EOTSServerHandler   *e2eutils.EOTSServerHandler
+	BabylonFpApp        *service.FinalityProviderApp
+	ConsumerFpApp       *service.FinalityProviderApp
+	BabylonEOTSClient   *client.EOTSManagerGRpcClient
+	ConsumerEOTSClient  *client.EOTSManagerGRpcClient
+	logger              *zap.Logger
 }
 
-// StartOpL2ConsumerManager
+// StartRollupTestManager
 // - starts Babylon node and wait for it starts
 // - deploys finality gadget cw contract
 // - creates and starts Babylon and consumer FPs without any FP instances
-func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTestManager {
+func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTestManager {
 	// Setup base dir and logger
 	testDir, err := base_test_manager.TempDir(t, "op-fp-e2e-test-*")
 	require.NoError(t, err)
@@ -85,39 +86,32 @@ func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTe
 	// wait for Babylon node starts b/c we will fund the FP address with babylon node
 	babylonController, _ := waitForBabylonNodeStart(t, keyDir, testDir, logger, manager, babylond)
 
-	// create cosmwasm client
-	consumerFpCfg, opConsumerCfg := createConsumerFpConfig(t, testDir, manager, babylond)
-	cwConfig := opConsumerCfg.ToCosmwasmConfig()
-	cwClient, err := opcc.NewCwClient(&cwConfig, logger)
-	require.NoError(t, err)
-
 	// deploy finality gadget cw contract
-	opFinalityGadgetAddress := deployCwContract(t, cwClient, ctx)
-	t.Logf(log.Prefix("rollup BSN finality contract address: %s"), opFinalityGadgetAddress)
+	contractAddress := deployCwContract(t, babylonController.GetBBNClient(), ctx)
+	t.Logf(log.Prefix("rollup BSN finality contract address: %s"), contractAddress)
+
+	// create cosmwasm client
+	rollupFpCfg := createRollupFpConfig(t, testDir, manager, babylond)
+	rollupFpCfg.FinalityContractAddress = contractAddress
 
 	// register consumer chain to Babylon
 	_, err = babylonController.RegisterConsumerChain(
 		rollupBSNID,
-		"OP stack rollup BSN",
+		"rollup BSN",
 		"Some description about the chain",
-		opFinalityGadgetAddress,
+		contractAddress,
 	)
 	require.NoError(t, err)
 	t.Logf(log.Prefix("Register consumer %s to Babylon"), rollupBSNID)
 
-	// update opConsumerCfg with opFinalityGadgetAddress
-	opConsumerCfg.OPFinalityGadgetAddress = opFinalityGadgetAddress
-
-	// update consumer FP config with opConsumerCfg
-	consumerFpCfg.OPStackL2Config = opConsumerCfg
-	consumerFpCfg.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
+	rollupFpCfg.Common.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
 
 	// create Babylon FP config
 	babylonFpCfg := createBabylonFpConfig(t, keyDir, testDir, manager, babylond)
 	babylonFpCfg.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
 
 	// create EOTS handler and EOTS gRPC clients for Babylon and consumer
-	eotsHandler, EOTSClients := base_test_manager.StartEotsManagers(t, ctx, logger, testDir, babylonFpCfg, consumerFpCfg)
+	eotsHandler, EOTSClients := base_test_manager.StartEotsManagers(t, ctx, logger, testDir, babylonFpCfg, rollupFpCfg.Common)
 
 	// create Babylon consumer controller
 	babylonConsumerController, err := bbncc.NewBabylonConsumerController(babylonFpCfg.BabylonConfig, logger)
@@ -127,28 +121,28 @@ func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTe
 	babylonFpApp := base_test_manager.CreateAndStartFpApp(t, logger, babylonFpCfg, babylonConsumerController, EOTSClients[0])
 	t.Log(log.Prefix("Started Babylon FP App"))
 
-	// create op consumer controller
-	opConsumerController, err := opcc.NewOPStackL2ConsumerController(opConsumerCfg, logger)
+	// create rollup consumer controller
+	rollupBSNController, err := rollupfpcontroller.NewRollupBSNController(rollupFpCfg, logger)
 	require.NoError(t, err)
 
 	// create and start consumer FP app
-	consumerFpApp := base_test_manager.CreateAndStartFpApp(t, logger, consumerFpCfg, opConsumerController, EOTSClients[1])
+	consumerFpApp := base_test_manager.CreateAndStartFpApp(t, logger, rollupFpCfg.Common, rollupBSNController, EOTSClients[1])
 	t.Log(log.Prefix("Started Consumer FP App"))
 
 	ctm := &OpL2ConsumerTestManager{
 		BaseTestManager: BaseTestManager{
-			BBNClient:        babylonController,
-			CovenantPrivKeys: covenantPrivKeys,
+			BabylonController: babylonController,
+			CovenantPrivKeys:  covenantPrivKeys,
 		},
-		BaseDir:              testDir,
-		manager:              manager,
-		OpConsumerController: opConsumerController,
-		EOTSServerHandler:    eotsHandler,
-		BabylonFpApp:         babylonFpApp,
-		ConsumerFpApp:        consumerFpApp,
-		BabylonEOTSClient:    EOTSClients[0],
-		ConsumerEOTSClient:   EOTSClients[1],
-		logger:               logger,
+		BaseDir:             testDir,
+		manager:             manager,
+		RollupBSNController: rollupBSNController,
+		EOTSServerHandler:   eotsHandler,
+		BabylonFpApp:        babylonFpApp,
+		ConsumerFpApp:       consumerFpApp,
+		BabylonEOTSClient:   EOTSClients[0],
+		ConsumerEOTSClient:  EOTSClients[1],
+		logger:              logger,
 	}
 
 	return ctm
@@ -192,7 +186,7 @@ func waitForBabylonNodeStart(
 	var babylonController *bbncc.BabylonController
 	require.Eventually(t, func() bool {
 		var err error
-		bc, err := fpcc.NewBabylonController(babylonFpCfg, logger)
+		bc, err := fpcc.NewBabylonController(babylonFpCfg.BabylonConfig, logger)
 		if err != nil {
 			t.Logf("Failed to create Babylon controller: %v", err)
 			return false
@@ -242,12 +236,12 @@ func createBabylonFpConfig(
 	return cfg
 }
 
-func createConsumerFpConfig(
+func createRollupFpConfig(
 	t *testing.T,
 	testDir string,
 	manager *container.Manager,
 	babylond *dockertest.Resource,
-) (*fpcfg.Config, *fpcfg.OPStackL2Config) {
+) *rollupfpconfig.RollupFPConfig {
 	fpHomeDir := filepath.Join(testDir, "consumer-fp-home")
 	t.Logf(log.Prefix("Consumer FP home dir: %s"), fpHomeDir)
 
@@ -304,60 +298,47 @@ func createConsumerFpConfig(
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	// set consumer FP config
-	opConsumerCfg := &fpcfg.OPStackL2Config{
+	opConsumerCfg := &rollupfpconfig.RollupFPConfig{
 		// it will be updated later
-		OPFinalityGadgetAddress: "",
-		// it must be a dialable RPC address checked by NewOPStackL2ConsumerController
-		OPStackL2RPCAddress: "https://optimism-sepolia.drpc.org",
+		FinalityContractAddress: "",
+		// it must be a dialable RPC address checked by NewRollupBSNController
+		RollupNodeRPCAddress: "https://optimism-sepolia.drpc.org",
 		// the value does not matter for the test
 		BabylonFinalityGadgetRpc: "127.0.0.1:50051",
-		Key:                      cfg.BabylonConfig.Key,
-		ChainID:                  cfg.BabylonConfig.ChainID,
-		RPCAddr:                  cfg.BabylonConfig.RPCAddr,
-		GRPCAddr:                 cfg.BabylonConfig.GRPCAddr,
-		AccountPrefix:            cfg.BabylonConfig.AccountPrefix,
-		KeyringBackend:           cfg.BabylonConfig.KeyringBackend,
-		KeyDirectory:             cfg.BabylonConfig.KeyDirectory,
-		GasAdjustment:            1.5,
-		GasPrices:                "0.002ubbn",
-		Debug:                    cfg.BabylonConfig.Debug,
-		Timeout:                  cfg.BabylonConfig.Timeout,
-		BlockTimeout:             1 * time.Minute,
-		OutputFormat:             cfg.BabylonConfig.OutputFormat,
-		SignModeStr:              cfg.BabylonConfig.SignModeStr,
+		Common:                   cfg,
 	}
-	cfg.OPStackL2Config = opConsumerCfg
 
-	return cfg, opConsumerCfg
+	return opConsumerCfg
 }
 
-func deployCwContract(t *testing.T, cwClient *cwclient.Client, ctx context.Context) string {
-	// store op-finality-gadget contract
-	err := cwClient.StoreWasmCode(ctx, rollupFinalityContractPath)
+func deployCwContract(t *testing.T, bbnClient *bbnclient.Client, ctx context.Context) string {
+	// store rollup BSN finality contract
+	err := StoreWasmCode(ctx, bbnClient, rollupFinalityContractPath)
 	require.NoError(t, err)
 
 	var codeId uint64
 	require.Eventually(t, func() bool {
-		codeId, _ = cwClient.GetLatestCodeID(ctx)
+		codeId, _ = GetLatestCodeID(ctx, bbnClient)
 		return codeId > 0
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 	require.Equal(t, uint64(1), codeId, "first deployed contract code_id should be 1")
 
-	// instantiate op contract with FG disabled
+	// instantiate contract with FG disabled
 	opFinalityGadgetInitMsg := map[string]interface{}{
-		"admin":        cwClient.MustGetAddr(),
+		"admin":        bbnClient.MustGetAddr(),
 		"bsn_id":       rollupBSNID,
 		"min_pub_rand": 100,
 	}
 	opFinalityGadgetInitMsgBytes, err := json.Marshal(opFinalityGadgetInitMsg)
 	require.NoError(t, err)
-	err = cwClient.InstantiateContract(ctx, codeId, opFinalityGadgetInitMsgBytes)
+	err = InstantiateContract(bbnClient, ctx, codeId, opFinalityGadgetInitMsgBytes)
 	require.NoError(t, err)
 
 	var listContractsResponse *wasmtypes.QueryContractsByCodeResponse
 	require.Eventually(t, func() bool {
-		listContractsResponse, err = cwClient.ListContractsByCode(
+		listContractsResponse, err = ListContractsByCode(
 			ctx,
+			bbnClient,
 			codeId,
 			&sdkquerytypes.PageRequest{},
 		)
@@ -382,12 +363,12 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 
 	// wait for Babylon FP registration
 	require.Eventually(t, func() bool {
-		fps, err := ctm.BBNClient.QueryFinalityProviders()
+		fps, err := ctm.BabylonController.QueryFinalityProviders()
 		return err == nil && len(fps) > 0
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime, "Failed to wait for Babylon FP registration")
 
 	consumerCfg := ctm.ConsumerFpApp.GetConfig()
-	consumerKeyName := consumerCfg.OPStackL2Config.Key + "2"
+	consumerKeyName := consumerCfg.BabylonConfig.Key + "2"
 
 	// create and register consumer FP
 	consumerEotsPk, err := ctm.EOTSServerHandler.CreateKey(consumerKeyName, "")
@@ -399,7 +380,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 
 	// wait for Babylon FP registration
 	require.Eventually(t, func() bool {
-		fps, err := ctm.BBNClient.QueryFinalityProviders()
+		fps, err := ctm.BabylonController.QueryFinalityProviders()
 		if err != nil {
 			t.Logf("Failed to query finality providers: %v", err)
 			return false
@@ -413,7 +394,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 
 	// wait for consumer FP registration
 	require.Eventually(t, func() bool {
-		fps, err := ctm.BBNClient.QueryConsumerFinalityProviders(rollupBSNID)
+		fps, err := ctm.BabylonController.QueryConsumerFinalityProviders(rollupBSNID)
 		if err != nil {
 			t.Logf("Failed to query finality providers: %v", err)
 			return false
@@ -438,14 +419,14 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	bc := ctm.BabylonFpApp.GetBabylonController()
 
 	fpMetrics := metrics.NewFpMetrics()
-	poller := service.NewChainPoller(ctm.logger, fpCfg.PollerConfig, ctm.OpConsumerController, fpMetrics)
+	poller := service.NewChainPoller(ctm.logger, fpCfg.PollerConfig, ctm.RollupBSNController, fpMetrics)
 
 	rndCommitter := service.NewDefaultRandomnessCommitter(
 		service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
-		service.NewPubRandState(pubRandStore), ctm.OpConsumerController, ctm.ConsumerEOTSClient, ctm.logger, fpMetrics)
+		service.NewPubRandState(pubRandStore), ctm.RollupBSNController, ctm.ConsumerEOTSClient, ctm.logger, fpMetrics)
 
 	fpInstance, err := service.NewFinalityProviderInstance(
-		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.OpConsumerController, ctm.ConsumerEOTSClient, poller, rndCommitter,
+		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.RollupBSNController, ctm.ConsumerEOTSClient, poller, rndCommitter,
 		fpMetrics, make(chan<- *service.CriticalError), ctm.logger)
 	require.NoError(t, err)
 	return fpInstance
@@ -473,9 +454,8 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 	queryMsg map[string]interface{},
 	ctx context.Context,
 ) *wasmtypes.QuerySmartContractStateResponse {
-	// create cosmwasm client
-	cwConfig := ctm.OpConsumerController.Cfg.ToCosmwasmConfig()
-	cwClient, err := opcc.NewCwClient(&cwConfig, ctm.logger)
+	// create rollup controller
+	rollupController, err := rollupfpcontroller.NewRollupBSNController(ctm.RollupBSNController.Cfg, ctm.logger)
 	require.NoError(t, err)
 
 	// marshal query message
@@ -484,9 +464,9 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 
 	var queryResponse *wasmtypes.QuerySmartContractStateResponse
 	require.Eventually(t, func() bool {
-		queryResponse, err = cwClient.QuerySmartContractState(
+		queryResponse, err = rollupController.QuerySmartContractState(
 			ctx,
-			ctm.OpConsumerController.Cfg.OPFinalityGadgetAddress,
+			ctm.RollupBSNController.Cfg.FinalityContractAddress,
 			string(queryMsgBytes),
 		)
 		return err == nil
