@@ -39,7 +39,7 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return err
 	}
 	homePath = util.CleanAndExpandPath(homePath)
-	cfg, err := rollupcfg.LoadConfig(homePath)
+	cfg, err := rollupcfg.LoadRollupFPConfig(homePath)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}

@@ -53,7 +53,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	}
 	homePath = util.CleanAndExpandPath(homePath)
 
-	cfg, err := rollupcfg.LoadConfig(homePath)
+	cfg, err := rollupcfg.LoadRollupFPConfig(homePath)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}

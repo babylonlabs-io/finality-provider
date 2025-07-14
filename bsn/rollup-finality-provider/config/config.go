@@ -51,15 +51,15 @@ func DefaultConfigWithHome(homePath string) RollupFPConig {
 	}
 }
 
-// LoadConfig initializes and parses the config using a config file and command
-// line options.
+// LoadRollupFPConfig initializes and parses the rollup finality provider config
+// using a config file and command line options.
 //
 // The configuration proceeds as follows:
 //  1. Start with a default config with sane settings
 //  2. Pre-parse the command line to check for an alternative config file
 //  3. Load configuration file overwriting defaults with any specified options
 //  4. Parse CLI options and overwrite/add any specified options
-func LoadConfig(homePath string) (*RollupFPConig, error) {
+func LoadRollupFPConfig(homePath string) (*RollupFPConig, error) {
 	// The home directory is required to have a configuration file with a specific name
 	// under it.
 	cfgFile := fpcfg.CfgFile(homePath)

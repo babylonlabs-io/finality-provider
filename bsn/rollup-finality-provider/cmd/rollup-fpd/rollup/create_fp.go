@@ -107,7 +107,7 @@ Where finality-provider.json contains:
 }
 
 func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) error {
-	cfg, err := rollupcfg.LoadConfig(ctx.HomeDir)
+	cfg, err := rollupcfg.LoadRollupFPConfig(ctx.HomeDir)
 	if err != nil {
 		return fmt.Errorf("failed to load config from %s: %w", fpcfg.CfgFile(ctx.HomeDir), err)
 	}

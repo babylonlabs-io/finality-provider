@@ -54,7 +54,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", common.RpcListenerFlag, err)
 	}
 
-	cfg, err := rollupcfg.LoadConfig(homePath)
+	cfg, err := rollupcfg.LoadRollupFPConfig(homePath)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
