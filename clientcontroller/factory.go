@@ -20,7 +20,7 @@ const (
 )
 
 func NewBabylonController(config *fpcfg.Config, logger *zap.Logger) (api.ClientController, error) {
-	bbnConfig := fpcfg.BBNConfigToBabylonConfig(config.BabylonConfig)
+	bbnConfig := config.BabylonConfig.ToBabylonConfig()
 	bbnClient, err := bbnclient.New(
 		&bbnConfig,
 		logger,

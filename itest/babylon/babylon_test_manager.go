@@ -3,13 +3,14 @@ package e2etest_babylon
 import (
 	"context"
 	"fmt"
-	"github.com/avast/retry-go/v4"
-	"github.com/babylonlabs-io/finality-provider/metrics"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/avast/retry-go/v4"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 
@@ -102,7 +103,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 	startPollInterval := 1 * time.Second
 
 	require.Eventually(t, func() bool {
-		bbnCfg := fpcfg.BBNConfigToBabylonConfig(cfg.BabylonConfig)
+		bbnCfg := cfg.BabylonConfig.ToBabylonConfig()
 		bbnCl, err := bbnclient.New(&bbnCfg, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon client: %v", err)

@@ -26,7 +26,6 @@ import (
 	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
-	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -88,12 +87,11 @@ func StartOpL2ConsumerManager(t *testing.T, ctx context.Context) *OpL2ConsumerTe
 
 	// create cosmwasm client
 	consumerFpCfg, opConsumerCfg := createConsumerFpConfig(t, testDir, manager, babylond)
-	cwConfig := opConsumerCfg.ToCosmwasmConfig()
-	cwClient, err := rollupfpcontroller.NewCwClient(&cwConfig, logger)
+	rollupController, err := rollupfpcontroller.NewOPStackL2ConsumerController(opConsumerCfg, logger)
 	require.NoError(t, err)
 
 	// deploy finality gadget cw contract
-	opFinalityGadgetAddress := deployCwContract(t, cwClient, ctx)
+	opFinalityGadgetAddress := deployCwContract(t, rollupController, ctx)
 	t.Logf(log.Prefix("rollup BSN finality contract address: %s"), opFinalityGadgetAddress)
 
 	// register consumer chain to Babylon
@@ -311,51 +309,38 @@ func createConsumerFpConfig(
 		OPStackL2RPCAddress: "https://optimism-sepolia.drpc.org",
 		// the value does not matter for the test
 		BabylonFinalityGadgetRpc: "127.0.0.1:50051",
-		Key:                      cfg.BabylonConfig.Key,
-		ChainID:                  cfg.BabylonConfig.ChainID,
-		RPCAddr:                  cfg.BabylonConfig.RPCAddr,
-		GRPCAddr:                 cfg.BabylonConfig.GRPCAddr,
-		AccountPrefix:            cfg.BabylonConfig.AccountPrefix,
-		KeyringBackend:           cfg.BabylonConfig.KeyringBackend,
-		KeyDirectory:             cfg.BabylonConfig.KeyDirectory,
-		GasAdjustment:            1.5,
-		GasPrices:                "0.002ubbn",
-		Debug:                    cfg.BabylonConfig.Debug,
-		Timeout:                  cfg.BabylonConfig.Timeout,
-		BlockTimeout:             1 * time.Minute,
-		OutputFormat:             cfg.BabylonConfig.OutputFormat,
-		SignModeStr:              cfg.BabylonConfig.SignModeStr,
+		Babylon:                  cfg.BabylonConfig,
 	}
 
 	return cfg, opConsumerCfg
 }
 
-func deployCwContract(t *testing.T, cwClient *cwclient.Client, ctx context.Context) string {
+func deployCwContract(t *testing.T, cc *rollupfpcontroller.OPStackL2ConsumerController, ctx context.Context) string {
 	// store op-finality-gadget contract
-	err := cwClient.StoreWasmCode(ctx, rollupFinalityContractPath)
+	err := cc.StoreWasmCode(ctx, rollupFinalityContractPath)
 	require.NoError(t, err)
 
 	var codeId uint64
 	require.Eventually(t, func() bool {
-		codeId, _ = cwClient.GetLatestCodeID(ctx)
+		codeId, _ = cc.GetLatestCodeID(ctx)
 		return codeId > 0
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 	require.Equal(t, uint64(1), codeId, "first deployed contract code_id should be 1")
 
 	// instantiate op contract with FG disabled
 	opFinalityGadgetInitMsg := map[string]interface{}{
-		"admin":        cwClient.MustGetAddr(),
+		"admin":        cc.MustGetBabylonAddr(),
 		"bsn_id":       rollupBSNID,
 		"min_pub_rand": 100,
 	}
 	opFinalityGadgetInitMsgBytes, err := json.Marshal(opFinalityGadgetInitMsg)
 	require.NoError(t, err)
-	err = cwClient.InstantiateContract(ctx, codeId, opFinalityGadgetInitMsgBytes)
+	err = cc.InstantiateContract(ctx, codeId, opFinalityGadgetInitMsgBytes)
 	require.NoError(t, err)
 
 	var listContractsResponse *wasmtypes.QueryContractsByCodeResponse
 	require.Eventually(t, func() bool {
-		listContractsResponse, err = cwClient.ListContractsByCode(
+		listContractsResponse, err = cc.ListContractsByCode(
 			ctx,
 			codeId,
 			&sdkquerytypes.PageRequest{},
@@ -468,9 +453,8 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 	queryMsg map[string]interface{},
 	ctx context.Context,
 ) *wasmtypes.QuerySmartContractStateResponse {
-	// create cosmwasm client
-	cwConfig := ctm.OpConsumerController.Cfg.ToCosmwasmConfig()
-	cwClient, err := rollupfpcontroller.NewCwClient(&cwConfig, ctm.logger)
+	// create rollup controller
+	rollupController, err := rollupfpcontroller.NewOPStackL2ConsumerController(ctm.OpConsumerController.Cfg, ctm.logger)
 	require.NoError(t, err)
 
 	// marshal query message
@@ -479,7 +463,7 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 
 	var queryResponse *wasmtypes.QuerySmartContractStateResponse
 	require.Eventually(t, func() bool {
-		queryResponse, err = cwClient.QuerySmartContractState(
+		queryResponse, err = rollupController.QuerySmartContractState(
 			ctx,
 			ctm.OpConsumerController.Cfg.OPFinalityGadgetAddress,
 			string(queryMsgBytes),

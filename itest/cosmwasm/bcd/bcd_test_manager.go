@@ -107,7 +107,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	var bc ccapi.ClientController
 	require.Eventually(t, func() bool {
-		bbnCfg := fpcfg.BBNConfigToBabylonConfig(cfg.BabylonConfig)
+		bbnCfg := cfg.BabylonConfig.ToBabylonConfig()
 		bbnCl, err := bbnclient.New(&bbnCfg, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon client: %v", err)

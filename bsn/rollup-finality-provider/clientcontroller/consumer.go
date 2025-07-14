@@ -9,9 +9,7 @@ import (
 	"math/big"
 
 	sdkErr "cosmossdk.io/errors"
-	wasmdparams "github.com/CosmWasm/wasmd/app/params"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	bbnapp "github.com/babylonlabs-io/babylon/v3/app"
 	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -21,8 +19,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
-	cwclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
-	cwconfig "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -46,7 +42,6 @@ var _ api.ConsumerController = &OPStackL2ConsumerController{}
 // nolint:revive // Ignore stutter warning - full name provides clarity
 type OPStackL2ConsumerController struct {
 	Cfg        *config.OPStackL2Config
-	CwClient   *cwclient.Client
 	opl2Client *ethclient.Client
 	bbnClient  *bbnclient.Client
 	logger     *zap.Logger
@@ -61,12 +56,6 @@ func NewOPStackL2ConsumerController(
 	}
 	if err := opl2Cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
-	}
-	cwConfig := opl2Cfg.ToCosmwasmConfig()
-
-	cwClient, err := NewCwClient(&cwConfig, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create CW client: %w", err)
 	}
 
 	opl2Client, err := ethclient.Dial(opl2Cfg.OPStackL2RPCAddress)
@@ -89,7 +78,6 @@ func NewOPStackL2ConsumerController(
 
 	cc := &OPStackL2ConsumerController{
 		Cfg:        opl2Cfg,
-		CwClient:   cwClient,
 		opl2Client: opl2Client,
 		bbnClient:  bc,
 		logger:     logger,
@@ -98,30 +86,8 @@ func NewOPStackL2ConsumerController(
 	return cc, nil
 }
 
-func NewCwClient(cwConfig *cwconfig.CosmwasmConfig, logger *zap.Logger) (*cwclient.Client, error) {
-	if err := cwConfig.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid config for OP consumer controller: %w", err)
-	}
-
-	bbnEncodingCfg := bbnapp.GetEncodingConfig()
-	cwEncodingCfg := wasmdparams.EncodingConfig{
-		InterfaceRegistry: bbnEncodingCfg.InterfaceRegistry,
-		Codec:             bbnEncodingCfg.Codec,
-		TxConfig:          bbnEncodingCfg.TxConfig,
-		Amino:             bbnEncodingCfg.Amino,
-	}
-
-	cwClient, err := cwclient.New(
-		cwConfig,
-		BabylonChainName,
-		cwEncodingCfg,
-		logger,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create CW client: %w", err)
-	}
-
-	return cwClient, nil
+func (cc *OPStackL2ConsumerController) MustGetBabylonAddr() string {
+	return cc.bbnClient.MustGetAddr()
 }
 
 // QueryContractConfig queries the finality contract for its config
@@ -134,7 +100,7 @@ func (cc *OPStackL2ConsumerController) QueryContractConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to marshal config query: %w", err)
 	}
 
-	stateResp, err := cc.CwClient.QuerySmartContractState(context.Background(), cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
+	stateResp, err := cc.QuerySmartContractState(context.Background(), cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
@@ -156,7 +122,7 @@ func (cc *OPStackL2ConsumerController) ReliablySendMsg(msg sdk.Msg, expectedErrs
 }
 
 func (cc *OPStackL2ConsumerController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
-	resp, err := cc.CwClient.ReliablySendMsgs(
+	resp, err := cc.bbnClient.ReliablySendMsgs(
 		context.Background(),
 		msgs,
 		expectedErrs,
@@ -201,7 +167,7 @@ func (cc *OPStackL2ConsumerController) CommitPubRandList(
 		return nil, err
 	}
 	execMsg := &wasmtypes.MsgExecuteContract{
-		Sender:   cc.CwClient.MustGetAddr(),
+		Sender:   cc.bbnClient.MustGetAddr(),
 		Contract: cc.Cfg.OPFinalityGadgetAddress,
 		Msg:      payload,
 	}
@@ -271,7 +237,7 @@ func (cc *OPStackL2ConsumerController) SubmitBatchFinalitySigs(
 			return nil, err
 		}
 		execMsg := &wasmtypes.MsgExecuteContract{
-			Sender:   cc.CwClient.MustGetAddr(),
+			Sender:   cc.bbnClient.MustGetAddr(),
 			Contract: cc.Cfg.OPFinalityGadgetAddress,
 			Msg:      payload,
 		}
@@ -522,7 +488,7 @@ func (cc *OPStackL2ConsumerController) QueryLastPublicRandCommit(fpPk *btcec.Pub
 		return nil, fmt.Errorf("failed marshaling to JSON: %w", err)
 	}
 
-	stateResp, err := cc.CwClient.QuerySmartContractState(context.Background(), cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
+	stateResp, err := cc.QuerySmartContractState(context.Background(), cc.Cfg.OPFinalityGadgetAddress, string(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
@@ -630,7 +596,7 @@ func (cc *OPStackL2ConsumerController) UnjailFinalityProvider(fpPk *btcec.Public
 func (cc *OPStackL2ConsumerController) Close() error {
 	cc.opl2Client.Close()
 
-	return cc.CwClient.Stop()
+	return cc.bbnClient.Stop()
 }
 
 // nolint:unparam

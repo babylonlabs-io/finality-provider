@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"net/url"
 	"time"
 
 	bbncfg "github.com/babylonlabs-io/babylon/v3/client/config"
@@ -45,7 +47,23 @@ func DefaultBBNConfig() BBNConfig {
 	}
 }
 
-func BBNConfigToBabylonConfig(bc *BBNConfig) bbncfg.BabylonConfig {
+func (cfg *BBNConfig) Validate() error {
+	if _, err := url.Parse(cfg.RPCAddr); err != nil {
+		return fmt.Errorf("rpc-addr is not correctly formatted: %w", err)
+	}
+
+	if cfg.Timeout <= 0 {
+		return fmt.Errorf("timeout must be positive")
+	}
+
+	if cfg.BlockTimeout < 0 {
+		return fmt.Errorf("block-timeout can't be negative")
+	}
+
+	return nil
+}
+
+func (bc *BBNConfig) ToBabylonConfig() bbncfg.BabylonConfig {
 	return bbncfg.BabylonConfig{
 		Key:              bc.Key,
 		ChainID:          bc.ChainID,
