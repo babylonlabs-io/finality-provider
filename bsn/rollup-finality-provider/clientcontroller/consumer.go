@@ -21,7 +21,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -96,6 +95,10 @@ func (cc *RollupBSNController) QuerySmartContractState(ctx context.Context, cont
 	})
 }
 
+func (cc *RollupBSNController) ReliablySendMsg(ctx context.Context, msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+	return cc.reliablySendMsgs(ctx, []sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
+}
+
 // QueryContractConfig queries the finality contract for its config
 func (cc *RollupBSNController) QueryContractConfig() (*Config, error) {
 	query := QueryMsg{
@@ -123,13 +126,9 @@ func (cc *RollupBSNController) QueryContractConfig() (*Config, error) {
 	return resp, nil
 }
 
-func (cc *RollupBSNController) ReliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
-	return cc.reliablySendMsgs([]sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
-}
-
-func (cc *RollupBSNController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+func (cc *RollupBSNController) reliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	resp, err := cc.bbnClient.ReliablySendMsgs(
-		context.Background(),
+		ctx,
 		msgs,
 		expectedErrs,
 		unrecoverableErrs,
@@ -152,20 +151,17 @@ func (cc *RollupBSNController) GetFpFinVoteContext() string {
 // CommitPubRandList commits a list of Schnorr public randomness to Babylon CosmWasm contract
 // it returns tx hash and error
 func (cc *RollupBSNController) CommitPubRandList(
-	fpPk *btcec.PublicKey,
-	startHeight uint64,
-	numPubRand uint64,
-	commitment []byte,
-	sig *schnorr.Signature,
+	ctx context.Context,
+	req *api.CommitPubRandListRequest,
 ) (*types.TxResponse, error) {
-	fpPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
+	fpPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex()
 	msg := CommitPublicRandomnessMsg{
 		CommitPublicRandomness: CommitPublicRandomnessMsgParams{
 			FpPubkeyHex: fpPkHex,
-			StartHeight: startHeight,
-			NumPubRand:  numPubRand,
-			Commitment:  commitment,
-			Signature:   sig.Serialize(),
+			StartHeight: req.StartHeight,
+			NumPubRand:  req.NumPubRand,
+			Commitment:  req.Commitment,
+			Signature:   req.Sig.Serialize(),
 		},
 	}
 	payload, err := json.Marshal(msg)
@@ -178,53 +174,32 @@ func (cc *RollupBSNController) CommitPubRandList(
 		Msg:      payload,
 	}
 
-	res, err := cc.ReliablySendMsg(execMsg, nil, nil)
+	res, err := cc.ReliablySendMsg(ctx, execMsg, nil, nil)
 	if err != nil {
 		return nil, err
 	}
 	cc.logger.Debug("Successfully committed public randomness",
 		zap.String("fp_pk_hex", fpPkHex),
-		zap.Uint64("start_height", startHeight),
-		zap.Uint64("num_pub_rand", numPubRand),
+		zap.Uint64("start_height", req.StartHeight),
+		zap.Uint64("num_pub_rand", req.NumPubRand),
 	)
 
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-// SubmitFinalitySig submits the finality signature to Babylon CosmWasm contract
-// it returns tx hash and error
-func (cc *RollupBSNController) SubmitFinalitySig(
-	fpPk *btcec.PublicKey,
-	block *types.BlockInfo,
-	pubRand *btcec.FieldVal,
-	proof []byte,
-	sig *btcec.ModNScalar,
-) (*types.TxResponse, error) {
-	return cc.SubmitBatchFinalitySigs(
-		fpPk,
-		[]*types.BlockInfo{block},
-		[]*btcec.FieldVal{pubRand},
-		[][]byte{proof},
-		[]*btcec.ModNScalar{sig},
-	)
-}
-
 // SubmitBatchFinalitySigs submits a batch of finality signatures
 func (cc *RollupBSNController) SubmitBatchFinalitySigs(
-	fpPk *btcec.PublicKey,
-	blocks []*types.BlockInfo,
-	pubRandList []*btcec.FieldVal,
-	proofList [][]byte,
-	sigs []*btcec.ModNScalar,
+	ctx context.Context,
+	req *api.SubmitBatchFinalitySigsRequest,
 ) (*types.TxResponse, error) {
-	if len(blocks) != len(sigs) {
-		return nil, fmt.Errorf("the number of blocks %v should match the number of finality signatures %v", len(blocks), len(sigs))
+	if len(req.Blocks) != len(req.Sigs) {
+		return nil, fmt.Errorf("the number of blocks %v should match the number of finality signatures %v", len(req.Blocks), len(req.Sigs))
 	}
-	msgs := make([]sdk.Msg, 0, len(blocks))
-	fpPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
-	for i, block := range blocks {
+	msgs := make([]sdk.Msg, 0, len(req.Blocks))
+	fpPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex()
+	for i, block := range req.Blocks {
 		cmtProof := cmtcrypto.Proof{}
-		if err := cmtProof.Unmarshal(proofList[i]); err != nil {
+		if err := cmtProof.Unmarshal(req.ProofList[i]); err != nil {
 			return nil, err
 		}
 
@@ -232,10 +207,10 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 			SubmitFinalitySignature: SubmitFinalitySignatureMsgParams{
 				FpPubkeyHex: fpPkHex,
 				Height:      block.GetHeight(),
-				PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(pubRandList[i]).MustMarshal(),
+				PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(req.PubRandList[i]).MustMarshal(),
 				Proof:       ConvertProof(cmtProof),
 				BlockHash:   block.Hash,
-				Signature:   bbntypes.NewSchnorrEOTSSigFromModNScalar(sigs[i]).MustMarshal(),
+				Signature:   bbntypes.NewSchnorrEOTSSigFromModNScalar(req.Sigs[i]).MustMarshal(),
 			},
 		}
 		payload, err := json.Marshal(msg)
@@ -255,23 +230,26 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 		finalitytypes.ErrSigHeightOutdated,
 	}
 
-	res, err := cc.reliablySendMsgs(msgs, expectedErrs, nil)
+	res, err := cc.reliablySendMsgs(ctx, msgs, expectedErrs, nil)
 	if err != nil {
 		return nil, err
 	}
 	cc.logger.Debug(
 		"Successfully submitted finality signatures in a batch",
 		zap.String("fp_pk_hex", fpPkHex),
-		zap.Uint64("start_height", blocks[0].GetHeight()),
-		zap.Uint64("end_height", blocks[len(blocks)-1].GetHeight()),
+		zap.Uint64("start_height", req.Blocks[0].GetHeight()),
+		zap.Uint64("end_height", req.Blocks[len(req.Blocks)-1].GetHeight()),
 	)
 
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
-func (cc *RollupBSNController) QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
-	pubRand, err := cc.QueryLastPublicRandCommit(fpPk)
+func (cc *RollupBSNController) QueryFinalityProviderHasPower(
+	ctx context.Context,
+	req *api.QueryFinalityProviderHasPowerRequest,
+) (bool, error) {
+	pubRand, err := cc.QueryLastPublicRandCommit(ctx, req.FpPk)
 	if err != nil {
 		return false, err
 	}
@@ -290,16 +268,16 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(fpPk *btcec.PublicK
 	// Assume blocks 1-100 and 200-300 have public randomness, and lastCommittedPubRandHeight is 300.
 	// For blockHeight 101 to 199, even though blockHeight < lastCommittedPubRandHeight,
 	// the finality provider should have 0 voting power.
-	if blockHeight > lastCommittedPubRandHeight {
+	if req.BlockHeight > lastCommittedPubRandHeight {
 		cc.logger.Debug(
 			"FP has 0 voting power because there is no public randomness at this height",
-			zap.Uint64("height", blockHeight),
+			zap.Uint64("height", req.BlockHeight),
 		)
 
 		return false, nil
 	}
 
-	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
+	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex()
 	var nextKey []byte
 	btcStakingParams, err := cc.bbnClient.QueryClient.BTCStakingParams()
 	if err != nil {
@@ -331,7 +309,7 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(fpPk *btcec.PublicK
 	cc.logger.Debug(
 		"FP has 0 voting power because there is no BTC delegation",
 		zap.String("fp_btc_pk", fpBtcPkHex),
-		zap.Uint64("height", blockHeight),
+		zap.Uint64("height", req.BlockHeight),
 	)
 
 	return false, nil
@@ -340,8 +318,8 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(fpPk *btcec.PublicK
 // QueryLatestFinalizedBlock returns the finalized L2 block from a RPC call
 // TODO: return the BTC finalized L2 block, it is tricky b/c it's not recorded anywhere so we can
 // use some exponential strategy to search
-func (cc *RollupBSNController) QueryLatestFinalizedBlock() (*types.BlockInfo, error) {
-	l2Block, err := cc.ethClient.HeaderByNumber(context.Background(), big.NewInt(ethrpc.FinalizedBlockNumber.Int64()))
+func (cc *RollupBSNController) QueryLatestFinalizedBlock(ctx context.Context) (types.BlockDescription, error) {
+	l2Block, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(ethrpc.FinalizedBlockNumber.Int64()))
 	if err != nil {
 		return nil, err
 	}
@@ -353,14 +331,14 @@ func (cc *RollupBSNController) QueryLatestFinalizedBlock() (*types.BlockInfo, er
 	return types.NewBlockInfo(l2Block.Number.Uint64(), l2Block.Hash().Bytes(), false), nil
 }
 
-func (cc *RollupBSNController) QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types.BlockInfo, error) {
-	if startHeight > endHeight {
-		return nil, fmt.Errorf("the start height %v should not be higher than the end height %v", startHeight, endHeight)
+func (cc *RollupBSNController) QueryBlocks(ctx context.Context, req *api.QueryBlocksRequest) ([]types.BlockDescription, error) {
+	if req.StartHeight > req.EndHeight {
+		return nil, fmt.Errorf("the start height %v should not be higher than the end height %v", req.StartHeight, req.EndHeight)
 	}
 	// limit the number of blocks to query
-	count := endHeight - startHeight + 1
-	if limit > 0 && count >= uint64(limit) {
-		count = uint64(limit)
+	count := req.EndHeight - req.StartHeight + 1
+	if req.Limit > 0 && count >= uint64(req.Limit) {
+		count = uint64(req.Limit)
 	}
 
 	// create batch requests
@@ -369,13 +347,13 @@ func (cc *RollupBSNController) QueryBlocks(startHeight, endHeight uint64, limit 
 	for i := range batchElemList {
 		batchElemList[i] = ethrpc.BatchElem{
 			Method: "eth_getBlockByNumber",
-			Args:   []interface{}{hexutil.EncodeUint64(startHeight + uint64(i)), false}, // #nosec G115
+			Args:   []interface{}{hexutil.EncodeUint64(req.StartHeight + uint64(i)), false}, // #nosec G115
 			Result: &blockHeaders[i],
 		}
 	}
 
 	// batch call
-	if err := cc.ethClient.Client().BatchCallContext(context.Background(), batchElemList); err != nil {
+	if err := cc.ethClient.Client().BatchCallContext(ctx, batchElemList); err != nil {
 		return nil, err
 	}
 	for i := range batchElemList {
@@ -383,29 +361,29 @@ func (cc *RollupBSNController) QueryBlocks(startHeight, endHeight uint64, limit 
 			return nil, batchElemList[i].Error
 		}
 		if blockHeaders[i] == nil {
-			return nil, fmt.Errorf("got null header for block %d", startHeight+uint64(i)) // #nosec G115
+			return nil, fmt.Errorf("got null header for block %d", req.StartHeight+uint64(i)) // #nosec G115
 		}
 	}
 
 	// convert to types.BlockInfo
-	blocks := make([]*types.BlockInfo, len(blockHeaders))
-	for i, header := range blockHeaders {
-		blocks[i] = types.NewBlockInfo(header.Number.Uint64(), header.Hash().Bytes(), false)
+	var blocks []types.BlockDescription
+	for _, header := range blockHeaders {
+		blocks = append(blocks, types.NewBlockInfo(header.Number.Uint64(), header.Hash().Bytes(), false))
 	}
 	cc.logger.Debug(
 		"Successfully batch query blocks",
-		zap.Uint64("start_height", startHeight),
-		zap.Uint64("end_height", endHeight),
-		zap.Uint32("limit", limit),
-		zap.String("last_block_hash", hex.EncodeToString(blocks[len(blocks)-1].Hash)),
+		zap.Uint64("start_height", req.StartHeight),
+		zap.Uint64("end_height", req.EndHeight),
+		zap.Uint32("limit", req.Limit),
+		zap.String("last_block_hash", hex.EncodeToString(blocks[len(blocks)-1].GetHash())),
 	)
 
 	return blocks, nil
 }
 
 // QueryBlock returns the L2 block number and block hash with the given block number from a RPC call
-func (cc *RollupBSNController) QueryBlock(height uint64) (*types.BlockInfo, error) {
-	l2Block, err := cc.ethClient.HeaderByNumber(context.Background(), new(big.Int).SetUint64(height))
+func (cc *RollupBSNController) QueryBlock(ctx context.Context, height uint64) (types.BlockDescription, error) {
+	l2Block, err := cc.ethClient.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
 	if err != nil {
 		return nil, err
 	}
@@ -427,8 +405,8 @@ func (cc *RollupBSNController) QueryEthBlock(height uint64) (*ethtypes.Header, e
 }
 
 // QueryIsBlockFinalized returns whether the given the L2 block number has been finalized
-func (cc *RollupBSNController) QueryIsBlockFinalized(height uint64) (bool, error) {
-	l2Block, err := cc.QueryLatestFinalizedBlock()
+func (cc *RollupBSNController) QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error) {
+	l2Block, err := cc.QueryLatestFinalizedBlock(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -444,7 +422,7 @@ func (cc *RollupBSNController) QueryIsBlockFinalized(height uint64) (bool, error
 }
 
 // QueryActivatedHeight returns the L2 block number at which the finality gadget is activated.
-func (cc *RollupBSNController) QueryActivatedHeight() (uint64, error) {
+func (cc *RollupBSNController) QueryActivatedHeight(ctx context.Context) (uint64, error) {
 	finalityGadgetClient, err := fgclient.NewFinalityGadgetGrpcClient(cc.Cfg.BabylonFinalityGadgetRpc)
 	if err != nil {
 		cc.logger.Error("failed to initialize Babylon Finality Gadget Grpc client", zap.Error(err))
@@ -459,7 +437,7 @@ func (cc *RollupBSNController) QueryActivatedHeight() (uint64, error) {
 		return math.MaxUint64, err
 	}
 
-	l2BlockNumber, err := cc.GetBlockNumberByTimestamp(context.Background(), activatedTimestamp)
+	l2BlockNumber, err := cc.GetBlockNumberByTimestamp(ctx, activatedTimestamp)
 	if err != nil {
 		cc.logger.Error("failed to convert L2 block number from the given BTC staking activation timestamp", zap.Error(err))
 
@@ -470,8 +448,8 @@ func (cc *RollupBSNController) QueryActivatedHeight() (uint64, error) {
 }
 
 // QueryLatestBlockHeight gets the latest L2 block number from a RPC call
-func (cc *RollupBSNController) QueryLatestBlockHeight() (uint64, error) {
-	l2LatestBlock, err := cc.ethClient.HeaderByNumber(context.Background(), big.NewInt(ethrpc.LatestBlockNumber.Int64()))
+func (cc *RollupBSNController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
+	l2LatestBlock, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(ethrpc.LatestBlockNumber.Int64()))
 	if err != nil {
 		return 0, err
 	}
@@ -480,8 +458,8 @@ func (cc *RollupBSNController) QueryLatestBlockHeight() (uint64, error) {
 }
 
 // QueryLastPublicRandCommit returns the last public randomness commitments
-// It is fetched from the state of a CosmWasm contract finality .
-func (cc *RollupBSNController) QueryLastPublicRandCommit(fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
+// It is fetched from the state of a CosmWasm contract OP finality gadget.
+func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	queryMsg := &QueryMsg{
 		LastPubRandCommit: &PubRandCommit{
@@ -494,7 +472,7 @@ func (cc *RollupBSNController) QueryLastPublicRandCommit(fpPk *btcec.PublicKey) 
 		return nil, fmt.Errorf("failed marshaling to JSON: %w", err)
 	}
 
-	stateResp, err := cc.QuerySmartContractState(context.Background(), cc.Cfg.FinalityContractAddress, string(jsonData))
+	stateResp, err := cc.QuerySmartContractState(ctx, cc.Cfg.FinalityContractAddress, string(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
@@ -515,6 +493,29 @@ func (cc *RollupBSNController) QueryLastPublicRandCommit(fpPk *btcec.PublicKey) 
 	}
 
 	return resp, nil
+}
+
+func (cc *RollupBSNController) QueryFinalityActivationBlockHeight(_ context.Context) (uint64, error) {
+	// TODO: implement finality activation feature in OP stack L2
+	return 0, nil
+}
+
+func (cc *RollupBSNController) QueryFinalityProviderHighestVotedHeight(_ context.Context, _ *btcec.PublicKey) (uint64, error) {
+	// TODO: implement highest voted height feature in OP stack L2
+	return 0, nil
+}
+
+func (cc *RollupBSNController) QueryFinalityProviderStatus(_ context.Context, _ *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
+	// TODO: implement slashed or jailed feature in OP stack L2
+	return &api.FinalityProviderStatusResponse{
+		Slashed: false,
+		Jailed:  false,
+	}, nil
+}
+
+func (cc *RollupBSNController) UnjailFinalityProvider(_ context.Context, _ *btcec.PublicKey) (*types.TxResponse, error) {
+	// TODO: implement unjail feature in OP stack L2
+	return nil, nil
 }
 
 func ConvertProof(cmtProof cmtcrypto.Proof) Proof {
@@ -580,23 +581,6 @@ func (cc *RollupBSNController) GetBlockNumberByTimestamp(ctx context.Context, ta
 func (cc *RollupBSNController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
 	// TODO: implement slashed or jailed feature in rollup BSN
 	return false, false, nil
-}
-
-func (cc *RollupBSNController) QueryFinalityActivationBlockHeight() (uint64, error) {
-	// TODO: implement finality activation feature in rollup BSN
-	return 0, nil
-}
-
-// nolint:revive // Ignore stutter warning - full name provides clarity
-func (cc *RollupBSNController) QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error) {
-	// TODO: implement highest voted height feature in rollup BSN
-	return 0, nil
-}
-
-// nolint:revive // Ignore stutter warning - full name provides clarity
-func (cc *RollupBSNController) UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error) {
-	// TODO: implement unjail feature in rollup BSN
-	return nil, nil
 }
 
 func (cc *RollupBSNController) Close() error {

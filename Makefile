@@ -9,8 +9,8 @@ BTCD_BIN := $(GO_BIN)/btcd
 DOCKER := $(shell which docker)
 CUR_DIR := $(shell pwd)
 MOCKS_DIR=$(CUR_DIR)/testutil/mocks
-MOCKGEN_REPO=github.com/golang/mock/mockgen
-MOCKGEN_VERSION=v1.6.0
+MOCKGEN_REPO=go.uber.org/mock/mockgen
+MOCKGEN_VERSION=v0.5.2
 MOCKGEN_CMD=go run ${MOCKGEN_REPO}@${MOCKGEN_VERSION}
 
 VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')

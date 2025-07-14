@@ -116,5 +116,5 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return fp.TestCommitPubRand(targetHeight)
 	}
 
-	return fp.TestCommitPubRandWithStartHeight(startHeight, targetHeight)
+	return fp.TestCommitPubRandWithStartHeight(ctx.CmdContext, startHeight, targetHeight)
 }

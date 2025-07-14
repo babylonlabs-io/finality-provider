@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -34,11 +36,11 @@ func TestPubRandCommitment(t *testing.T) {
 
 	// commit pub rand with start height 1
 	// this will call consumer controller's CommitPubRandList function
-	_, err := consumerFpInstance.CommitPubRand(1)
+	_, err := consumerFpInstance.CommitPubRand(ctx, 1)
 	require.NoError(t, err)
 
 	// query the last pub rand
-	pubRand, err := ctm.RollupBSNController.QueryLastPublicRandCommit(consumerFpPk.MustToBTCPK())
+	pubRand, err := ctm.RollupBSNController.QueryLastPublicRandCommit(context.Background(), consumerFpPk.MustToBTCPK())
 	require.NoError(t, err)
 	require.NotNil(t, pubRand)
 
@@ -69,7 +71,7 @@ func TestFinalitySigSubmission(t *testing.T) {
 
 	// commit pub rand with start height 1
 	// this will call consumer controller's CommitPubRandList function
-	_, err := consumerFpInstance.CommitPubRand(1)
+	_, err := consumerFpInstance.CommitPubRand(ctx, 1)
 	require.NoError(t, err)
 
 	// finalise this pub rand commit
@@ -127,7 +129,10 @@ func TestFinalityProviderHasPower(t *testing.T) {
 	consumerFpPk := fps[1]
 
 	// query the finality provider has power
-	hasPower, err := ctm.RollupBSNController.QueryFinalityProviderHasPower(consumerFpPk.MustToBTCPK(), 1)
+	hasPower, err := ctm.RollupBSNController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
+		consumerFpPk.MustToBTCPK(),
+		1,
+	))
 	require.NoError(t, err)
 	require.False(t, hasPower)
 
@@ -136,18 +141,24 @@ func TestFinalityProviderHasPower(t *testing.T) {
 
 	// query the finality provider has power again
 	// fp has 0 voting power b/c there is no public randomness at this height
-	hasPower, err = ctm.RollupBSNController.QueryFinalityProviderHasPower(consumerFpPk.MustToBTCPK(), 1)
+	hasPower, err = ctm.RollupBSNController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
+		consumerFpPk.MustToBTCPK(),
+		1,
+	))
 	require.NoError(t, err)
 	require.False(t, hasPower)
 
 	// commit pub rand with start height 1
 	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
-	_, err = consumerFpInstance.CommitPubRand(1)
+	_, err = consumerFpInstance.CommitPubRand(ctx, 1)
 	require.NoError(t, err)
 
 	// query the finality provider has power again
 	// fp has voting power now
-	hasPower, err = ctm.RollupBSNController.QueryFinalityProviderHasPower(consumerFpPk.MustToBTCPK(), 1)
+	hasPower, err = ctm.RollupBSNController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
+		consumerFpPk.MustToBTCPK(),
+		1,
+	))
 	require.NoError(t, err)
 	require.True(t, hasPower)
 }

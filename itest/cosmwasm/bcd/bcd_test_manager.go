@@ -255,11 +255,11 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	fpMsg := e2eutils.GenBtcStakingFpExecMsg(eotsPubKey.MarshalHex())
 	fpMsgBytes, err := json.Marshal(fpMsg)
 	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(fpMsgBytes)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(context.Background(), fpMsgBytes)
 	require.NoError(t, err)
 
 	// register fp in Babylon
-	_, err = app.CreateFinalityProvider(keyName, consumerId, eotsPubKey, desc, commission)
+	_, err = app.CreateFinalityProvider(context.Background(), keyName, consumerId, eotsPubKey, desc, commission)
 	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
@@ -274,7 +274,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 
 	// ensure finality providers are registered in smart contract
 	require.Eventually(t, func() bool {
-		consumerFpsResp, err := ctm.BcdConsumerClient.QueryFinalityProviders()
+		consumerFpsResp, err := ctm.BcdConsumerClient.QueryFinalityProviders(context.Background())
 		if err != nil {
 			t.Logf("failed to query finality providers from consumer contract: %s", err.Error())
 			return false

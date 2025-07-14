@@ -239,7 +239,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	commission := testutil.ZeroCommissionRate()
 	desc := newDescription(testMoniker)
 
-	_, err = fpApp.CreateFinalityProvider(cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
+	_, err = fpApp.CreateFinalityProvider(context.Background(), cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
 	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
@@ -341,7 +341,7 @@ func (tm *TestManager) CheckBlockFinalization(t *testing.T, height uint64, num i
 
 	// As the votes have been collected, the block should be finalized
 	require.Eventually(t, func() bool {
-		finalized, err := tm.BBNConsumerClient.QueryIsBlockFinalized(height)
+		finalized, err := tm.BBNConsumerClient.QueryIsBlockFinalized(context.Background(), height)
 		if err != nil {
 			t.Logf("failed to query block at height %v: %s", height, err.Error())
 			return false
@@ -378,13 +378,13 @@ func (tm *TestManager) WaitForFpVoteCastAtHeight(t *testing.T, fpIns *service.Fi
 }
 
 func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
-	blockBeforeStop, err := tm.BBNConsumerClient.QueryLatestBlockHeight()
+	blockBeforeStop, err := tm.BBNConsumerClient.QueryLatestBlockHeight(context.Background())
 	require.NoError(t, err)
 	err = fpIns.Stop()
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		headerAfterStop, err := tm.BBNConsumerClient.QueryLatestBlockHeight()
+		headerAfterStop, err := tm.BBNConsumerClient.QueryLatestBlockHeight(context.Background())
 		if err != nil {
 			return false
 		}
@@ -399,12 +399,12 @@ func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *
 }
 
 func (tm *TestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
-	beforeHeight, err := tm.BBNConsumerClient.QueryLatestBlockHeight()
+	beforeHeight, err := tm.BBNConsumerClient.QueryLatestBlockHeight(context.Background())
 	require.NoError(t, err)
 
 	var afterHeight uint64
 	require.Eventually(t, func() bool {
-		height, err := tm.BBNConsumerClient.QueryLatestBlockHeight()
+		height, err := tm.BBNConsumerClient.QueryLatestBlockHeight(context.Background())
 		if err != nil {
 			return false
 		}
@@ -422,13 +422,13 @@ func (tm *TestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
 
 func (tm *TestManager) WaitForNFinalizedBlocks(t *testing.T, n uint) *types.BlockInfo {
 	var (
-		firstFinalizedBlock *types.BlockInfo
+		firstFinalizedBlock types.BlockDescription
 		err                 error
-		lastFinalizedBlock  *types.BlockInfo
+		lastFinalizedBlock  types.BlockDescription
 	)
 
 	require.Eventually(t, func() bool {
-		lastFinalizedBlock, err = tm.BBNConsumerClient.QueryLatestFinalizedBlock()
+		lastFinalizedBlock, err = tm.BBNConsumerClient.QueryLatestFinalizedBlock(context.Background())
 		if err != nil {
 			t.Logf("failed to get the latest finalized block: %s", err.Error())
 			return false
@@ -444,7 +444,7 @@ func (tm *TestManager) WaitForNFinalizedBlocks(t *testing.T, n uint) *types.Bloc
 
 	t.Logf("the block is finalized at %v", lastFinalizedBlock.GetHeight())
 
-	return lastFinalizedBlock
+	return types.NewBlockInfo(lastFinalizedBlock.GetHeight(), lastFinalizedBlock.GetHash(), lastFinalizedBlock.IsFinalized())
 }
 
 func newDescription(moniker string) *stakingtypes.Description {
