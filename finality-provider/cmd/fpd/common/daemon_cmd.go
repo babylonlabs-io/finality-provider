@@ -1,4 +1,4 @@
-package daemon
+package common
 
 import (
 	"context"
@@ -46,15 +46,15 @@ func CommandGetDaemonInfo() *cobra.Command {
 		Args:    cobra.NoArgs,
 		RunE:    runCommandGetDaemonInfo,
 	}
-	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+	cmd.Flags().String(FpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
 
 	return cmd
 }
 
 func runCommandGetDaemonInfo(cmd *cobra.Command, _ []string) error {
-	daemonAddress, err := cmd.Flags().GetString(fpdDaemonAddressFlag)
+	daemonAddress, err := cmd.Flags().GetString(FpdDaemonAddressFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", FpdDaemonAddressFlag, err)
 	}
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
@@ -89,16 +89,16 @@ func CommandUnjailFP() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+	f.String(FpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
 
 	return cmd
 }
 
 func runCommandUnjailFP(_ client.Context, cmd *cobra.Command, args []string) error {
 	flags := cmd.Flags()
-	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
+	daemonAddress, err := flags.GetString(FpdDaemonAddressFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", FpdDaemonAddressFlag, err)
 	}
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
@@ -129,15 +129,15 @@ func CommandLsFP() *cobra.Command {
 		Args:    cobra.NoArgs,
 		RunE:    runCommandLsFP,
 	}
-	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+	cmd.Flags().String(FpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
 
 	return cmd
 }
 
 func runCommandLsFP(cmd *cobra.Command, _ []string) error {
-	daemonAddress, err := cmd.Flags().GetString(fpdDaemonAddressFlag)
+	daemonAddress, err := cmd.Flags().GetString(FpdDaemonAddressFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", FpdDaemonAddressFlag, err)
 	}
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
@@ -169,7 +169,7 @@ func CommandInfoFP() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		RunE:    runCommandInfoFP,
 	}
-	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+	cmd.Flags().String(FpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
 
 	return cmd
 }
@@ -180,9 +180,9 @@ func runCommandInfoFP(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	daemonAddress, err := cmd.Flags().GetString(fpdDaemonAddressFlag)
+	daemonAddress, err := cmd.Flags().GetString(FpdDaemonAddressFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", FpdDaemonAddressFlag, err)
 	}
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
@@ -215,15 +215,15 @@ func CommandAddFinalitySig() *cobra.Command {
 		Args:    cobra.ExactArgs(2),
 		RunE:    runCommandAddFinalitySig,
 	}
-	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
-	cmd.Flags().String(appHashFlag, "", "The last commit hash of the chain block")
-	cmd.Flags().Bool(checkDoubleSignFlag, true, "If 'true', uses anti-slashing protection when doing EOTS sign")
+	cmd.Flags().String(FpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+	cmd.Flags().String(AppHashFlag, "", "The last commit hash of the chain block")
+	cmd.Flags().Bool(CheckDoubleSignFlag, true, "If 'true', uses anti-slashing protection when doing EOTS sign")
 
-	if err := cmd.MarkFlagRequired(fpdDaemonAddressFlag); err != nil {
+	if err := cmd.MarkFlagRequired(FpdDaemonAddressFlag); err != nil {
 		panic(err)
 	}
 
-	if err := cmd.MarkFlagRequired(appHashFlag); err != nil {
+	if err := cmd.MarkFlagRequired(AppHashFlag); err != nil {
 		panic(err)
 	}
 
@@ -241,14 +241,14 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 	}
 
 	flags := cmd.Flags()
-	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
+	daemonAddress, err := flags.GetString(FpdDaemonAddressFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", FpdDaemonAddressFlag, err)
 	}
 
-	appHashHex, err := flags.GetString(appHashFlag)
+	appHashHex, err := flags.GetString(AppHashFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", appHashFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", AppHashFlag, err)
 	}
 
 	if len(appHashHex) == 0 {
@@ -264,9 +264,9 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid app hash length: got %d bytes, expected 32 bytes", len(appHash))
 	}
 
-	checkDoubleSign, err := flags.GetBool(checkDoubleSignFlag)
+	checkDoubleSign, err := flags.GetBool(CheckDoubleSignFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", checkDoubleSignFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", CheckDoubleSignFlag, err)
 	}
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
@@ -302,13 +302,13 @@ func CommandEditFinalityDescription() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		RunE:    runCommandEditFinalityDescription,
 	}
-	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
-	cmd.Flags().String(monikerFlag, "", "The finality provider's (optional) moniker")
-	cmd.Flags().String(websiteFlag, "", "The finality provider's (optional) website")
-	cmd.Flags().String(securityContactFlag, "", "The finality provider's (optional) security contact email")
-	cmd.Flags().String(detailsFlag, "", "The finality provider's (optional) details")
-	cmd.Flags().String(identityFlag, "", "The (optional) identity signature (ex. UPort or Keybase)")
-	cmd.Flags().String(commissionRateFlag, "", "The (optional) commission rate percentage (ex. 0.2)")
+	cmd.Flags().String(FpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+	cmd.Flags().String(MonikerFlag, "", "The finality provider's (optional) moniker")
+	cmd.Flags().String(WebsiteFlag, "", "The finality provider's (optional) website")
+	cmd.Flags().String(SecurityContactFlag, "", "The finality provider's (optional) security contact email")
+	cmd.Flags().String(DetailsFlag, "", "The finality provider's (optional) details")
+	cmd.Flags().String(IdentityFlag, "", "The (optional) identity signature (ex. UPort or Keybase)")
+	cmd.Flags().String(CommissionRateFlag, "", "The (optional) commission rate percentage (ex. 0.2)")
 
 	return cmd
 }
@@ -320,9 +320,9 @@ func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error 
 	}
 
 	flags := cmd.Flags()
-	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
+	daemonAddress, err := flags.GetString(FpdDaemonAddressFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", FpdDaemonAddressFlag, err)
 	}
 
 	grpcClient, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
@@ -335,12 +335,12 @@ func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error 
 		}
 	}()
 
-	moniker, _ := cmd.Flags().GetString(monikerFlag)
-	website, _ := cmd.Flags().GetString(websiteFlag)
-	securityContact, _ := cmd.Flags().GetString(securityContactFlag)
-	details, _ := cmd.Flags().GetString(detailsFlag)
-	identity, _ := cmd.Flags().GetString(identityFlag)
-	rate, _ := cmd.Flags().GetString(commissionRateFlag)
+	moniker, _ := cmd.Flags().GetString(MonikerFlag)
+	website, _ := cmd.Flags().GetString(WebsiteFlag)
+	securityContact, _ := cmd.Flags().GetString(SecurityContactFlag)
+	details, _ := cmd.Flags().GetString(DetailsFlag)
+	identity, _ := cmd.Flags().GetString(IdentityFlag)
+	rate, _ := cmd.Flags().GetString(CommissionRateFlag)
 
 	desc := &proto.Description{
 		Moniker:         moniker,
@@ -370,15 +370,15 @@ operator of this command should ensure that finality provider has voted, or does
 		Args:    cobra.ExactArgs(1),
 		RunE:    runCommandUnsafePruneMerkleProof,
 	}
-	cmd.Flags().String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
-	cmd.Flags().String(chainIDFlag, "", "The identifier of the consumer chain")
-	cmd.Flags().Uint64(upToHeight, 0, "Target height to prune merkle proofs")
+	cmd.Flags().String(FpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+	cmd.Flags().String(ChainIDFlag, "", "The identifier of the consumer chain")
+	cmd.Flags().Uint64(UpToHeightFlag, 0, "Target height to prune merkle proofs")
 
-	if err := cmd.MarkFlagRequired(chainIDFlag); err != nil {
+	if err := cmd.MarkFlagRequired(ChainIDFlag); err != nil {
 		panic(err)
 	}
 
-	if err := cmd.MarkFlagRequired(upToHeight); err != nil {
+	if err := cmd.MarkFlagRequired(UpToHeightFlag); err != nil {
 		panic(err)
 	}
 
@@ -392,9 +392,9 @@ func runCommandUnsafePruneMerkleProof(cmd *cobra.Command, args []string) error {
 	}
 
 	flags := cmd.Flags()
-	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
+	daemonAddress, err := flags.GetString(FpdDaemonAddressFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", FpdDaemonAddressFlag, err)
 	}
 
 	grpcClient, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
@@ -407,8 +407,8 @@ func runCommandUnsafePruneMerkleProof(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	chainID, _ := cmd.Flags().GetString(chainIDFlag)
-	targetHeight, _ := cmd.Flags().GetUint64(upToHeight)
+	chainID, _ := cmd.Flags().GetString(ChainIDFlag)
+	targetHeight, _ := cmd.Flags().GetUint64(UpToHeightFlag)
 
 	if err := grpcClient.UnsafeRemoveMerkleProof(cmd.Context(), fpPk, chainID, targetHeight); err != nil {
 		return fmt.Errorf("failed to edit finality provider %v err %w", fpPk.MarshalHex(), err)

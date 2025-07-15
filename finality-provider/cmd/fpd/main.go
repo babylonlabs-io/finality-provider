@@ -37,7 +37,7 @@ func main() {
 	cmd := NewRootCmd()
 
 	// add all daemon commands
-	daemon.AddDaemonCommands(cmd)
+	commoncmd.AddDaemonCommands(cmd)
 	// add all keys commands
 	commoncmd.AddKeysCommands(cmd)
 	// add all incentive commands

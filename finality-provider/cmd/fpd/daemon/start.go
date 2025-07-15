@@ -6,17 +6,17 @@ import (
 	"path/filepath"
 
 	"github.com/babylonlabs-io/babylon/v3/types"
+	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
+	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/log"
+	"github.com/babylonlabs-io/finality-provider/util"
 	"github.com/btcsuite/btcwallet/walletdb"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
-
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
-	"github.com/babylonlabs-io/finality-provider/log"
-	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 // CommandStart returns the start command of fpd daemon.
@@ -29,8 +29,8 @@ func CommandStart() *cobra.Command {
 		Args:    cobra.NoArgs,
 		RunE:    fpcmd.RunEWithClientCtx(runStartCmd),
 	}
-	cmd.Flags().String(fpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
-	cmd.Flags().String(rpcListenerFlag, "", "The address that the RPC server listens to")
+	cmd.Flags().String(commoncmd.FpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
+	cmd.Flags().String(commoncmd.RPCListenerFlag, "", "The address that the RPC server listens to")
 	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 
 	return cmd
@@ -44,14 +44,14 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	homePath = util.CleanAndExpandPath(homePath)
 	flags := cmd.Flags()
 
-	fpStr, err := flags.GetString(fpEotsPkFlag)
+	fpStr, err := flags.GetString(commoncmd.FpEotsPkFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpEotsPkFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", commoncmd.FpEotsPkFlag, err)
 	}
 
-	rpcListener, err := flags.GetString(rpcListenerFlag)
+	rpcListener, err := flags.GetString(commoncmd.RPCListenerFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", rpcListenerFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", commoncmd.RPCListenerFlag, err)
 	}
 
 	cfg, err := fpcfg.LoadConfig(homePath)

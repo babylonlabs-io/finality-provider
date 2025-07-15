@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"cosmossdk.io/math"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
@@ -18,6 +20,10 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+)
+
+var (
+	defaultFpdDaemonAddress = "127.0.0.1:" + strconv.Itoa(fpcfg.DefaultRPCPort)
 )
 
 // CommandCreateFP returns the create-finality-provider command by connecting to the fpd daemon.
@@ -59,44 +65,44 @@ Where finality-provider.json contains:
 	}
 
 	f := cmd.Flags()
-	f.String(fpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
-	f.String(keyNameFlag, "", "The unique key name of the finality provider's Babylon account")
+	f.String(commoncmd.FpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
+	f.String(commoncmd.KeyNameFlag, "", "The unique key name of the finality provider's Babylon account")
 	f.String(sdkflags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
-	f.String(chainIDFlag, "", "The identifier of the consumer chain")
-	f.String(commissionRateFlag, "", "The initial commission rate for the finality provider, e.g., 0.05")
-	f.String(commissionMaxRateFlag, "", "The maximum commission rate percentage for the finality provider, e.g., 0.20")
-	f.String(commissionMaxChangeRateFlag, "", "The maximum commission change rate percentage (per day) for the finality provider, e.g., 0.01")
-	f.String(monikerFlag, "", "A human-readable name for the finality provider")
-	f.String(identityFlag, "", "An optional identity signature (ex. UPort or Keybase)")
-	f.String(websiteFlag, "", "An optional website link")
-	f.String(securityContactFlag, "", "An email for security contact")
-	f.String(detailsFlag, "", "Other optional details")
-	f.String(fpEotsPkFlag, "", "The hex string of the finality provider's EOTS public key")
-	f.String(fromFile, "", "Path to a json file containing finality provider data")
+	f.String(commoncmd.ChainIDFlag, "", "The identifier of the consumer chain")
+	f.String(commoncmd.CommissionRateFlag, "", "The initial commission rate for the finality provider, e.g., 0.05")
+	f.String(commoncmd.CommissionMaxRateFlag, "", "The maximum commission rate percentage for the finality provider, e.g., 0.20")
+	f.String(commoncmd.CommissionMaxChangeRateFlag, "", "The maximum commission change rate percentage (per day) for the finality provider, e.g., 0.01")
+	f.String(commoncmd.MonikerFlag, "", "A human-readable name for the finality provider")
+	f.String(commoncmd.IdentityFlag, "", "An optional identity signature (ex. UPort or Keybase)")
+	f.String(commoncmd.WebsiteFlag, "", "An optional website link")
+	f.String(commoncmd.SecurityContactFlag, "", "An email for security contact")
+	f.String(commoncmd.DetailsFlag, "", "Other optional details")
+	f.String(commoncmd.FpEotsPkFlag, "", "The hex string of the finality provider's EOTS public key")
+	f.String(commoncmd.FromFileFlag, "", "Path to a json file containing finality provider data")
 
 	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
-		fromFilePath, _ := cmd.Flags().GetString(fromFile)
+		fromFilePath, _ := cmd.Flags().GetString(commoncmd.FromFileFlag)
 		if fromFilePath == "" {
 			// Mark flags as required only if --from-file is not provided
-			if err := cmd.MarkFlagRequired(chainIDFlag); err != nil {
+			if err := cmd.MarkFlagRequired(commoncmd.ChainIDFlag); err != nil {
 				return err
 			}
-			if err := cmd.MarkFlagRequired(keyNameFlag); err != nil {
+			if err := cmd.MarkFlagRequired(commoncmd.KeyNameFlag); err != nil {
 				return err
 			}
-			if err := cmd.MarkFlagRequired(monikerFlag); err != nil {
+			if err := cmd.MarkFlagRequired(commoncmd.MonikerFlag); err != nil {
 				return err
 			}
-			if err := cmd.MarkFlagRequired(commissionRateFlag); err != nil {
+			if err := cmd.MarkFlagRequired(commoncmd.CommissionRateFlag); err != nil {
 				return err
 			}
-			if err := cmd.MarkFlagRequired(commissionMaxRateFlag); err != nil {
+			if err := cmd.MarkFlagRequired(commoncmd.CommissionMaxRateFlag); err != nil {
 				return err
 			}
-			if err := cmd.MarkFlagRequired(commissionMaxChangeRateFlag); err != nil {
+			if err := cmd.MarkFlagRequired(commoncmd.CommissionMaxChangeRateFlag); err != nil {
 				return err
 			}
-			if err := cmd.MarkFlagRequired(fpEotsPkFlag); err != nil {
+			if err := cmd.MarkFlagRequired(commoncmd.FpEotsPkFlag); err != nil {
 				return err
 			}
 		}
@@ -110,9 +116,9 @@ Where finality-provider.json contains:
 func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	flags := cmd.Flags()
 
-	fpJSONPath, err := flags.GetString(fromFile)
+	fpJSONPath, err := flags.GetString(commoncmd.FromFileFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fromFile, err)
+		return fmt.Errorf("failed to read flag %s: %w", commoncmd.FromFileFlag, err)
 	}
 
 	var fp *parsedFinalityProvider
@@ -128,9 +134,9 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		}
 	}
 
-	daemonAddress, err := flags.GetString(fpdDaemonAddressFlag)
+	daemonAddress, err := flags.GetString(commoncmd.FpdDaemonAddressFlag)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", fpdDaemonAddressFlag, err)
+		return fmt.Errorf("failed to read flag %s: %w", commoncmd.FpdDaemonAddressFlag, err)
 	}
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
@@ -165,25 +171,25 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 func getDescriptionFromFlags(f *pflag.FlagSet) (stakingtypes.Description, error) {
 	// get information for description
 	var desc stakingtypes.Description
-	monikerStr, err := f.GetString(monikerFlag)
+	monikerStr, err := f.GetString(commoncmd.MonikerFlag)
 	if err != nil {
-		return desc, fmt.Errorf("failed to read flag %s: %w", monikerFlag, err)
+		return desc, fmt.Errorf("failed to read flag %s: %w", commoncmd.MonikerFlag, err)
 	}
-	identityStr, err := f.GetString(identityFlag)
+	identityStr, err := f.GetString(commoncmd.IdentityFlag)
 	if err != nil {
-		return desc, fmt.Errorf("failed to read flag %s: %w", identityFlag, err)
+		return desc, fmt.Errorf("failed to read flag %s: %w", commoncmd.IdentityFlag, err)
 	}
-	websiteStr, err := f.GetString(websiteFlag)
+	websiteStr, err := f.GetString(commoncmd.WebsiteFlag)
 	if err != nil {
-		return desc, fmt.Errorf("failed to read flag %s: %w", websiteFlag, err)
+		return desc, fmt.Errorf("failed to read flag %s: %w", commoncmd.WebsiteFlag, err)
 	}
-	securityContactStr, err := f.GetString(securityContactFlag)
+	securityContactStr, err := f.GetString(commoncmd.SecurityContactFlag)
 	if err != nil {
-		return desc, fmt.Errorf("failed to read flag %s: %w", securityContactFlag, err)
+		return desc, fmt.Errorf("failed to read flag %s: %w", commoncmd.SecurityContactFlag, err)
 	}
-	detailsStr, err := f.GetString(detailsFlag)
+	detailsStr, err := f.GetString(commoncmd.DetailsFlag)
 	if err != nil {
-		return desc, fmt.Errorf("failed to read flag %s: %w", detailsFlag, err)
+		return desc, fmt.Errorf("failed to read flag %s: %w", commoncmd.DetailsFlag, err)
 	}
 
 	description := stakingtypes.NewDescription(monikerStr, identityStr, websiteStr, securityContactStr, detailsStr)
@@ -192,9 +198,9 @@ func getDescriptionFromFlags(f *pflag.FlagSet) (stakingtypes.Description, error)
 }
 
 func loadKeyName(homeDir string, cmd *cobra.Command) (string, error) {
-	keyName, err := cmd.Flags().GetString(keyNameFlag)
+	keyName, err := cmd.Flags().GetString(commoncmd.KeyNameFlag)
 	if err != nil {
-		return "", fmt.Errorf("failed to read flag %s: %w", keyNameFlag, err)
+		return "", fmt.Errorf("failed to read flag %s: %w", commoncmd.KeyNameFlag, err)
 	}
 	// if key name is not specified, we use the key of the config
 	if keyName != "" {
@@ -308,19 +314,19 @@ func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProv
 func parseFinalityProviderFlags(cmd *cobra.Command, homeDir string) (*parsedFinalityProvider, error) {
 	flags := cmd.Flags()
 
-	commissionRateStr, err := flags.GetString(commissionRateFlag)
+	commissionRateStr, err := flags.GetString(commoncmd.CommissionRateFlag)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read flag %s: %w", commissionRateFlag, err)
+		return nil, fmt.Errorf("failed to read flag %s: %w", commoncmd.CommissionRateFlag, err)
 	}
 
-	commissionMaxRateStr, err := flags.GetString(commissionMaxRateFlag)
+	commissionMaxRateStr, err := flags.GetString(commoncmd.CommissionMaxRateFlag)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read flag %s: %w", commissionMaxRateFlag, err)
+		return nil, fmt.Errorf("failed to read flag %s: %w", commoncmd.CommissionMaxRateFlag, err)
 	}
 
-	commissionMaxChangeRateStr, err := flags.GetString(commissionMaxChangeRateFlag)
+	commissionMaxChangeRateStr, err := flags.GetString(commoncmd.CommissionMaxChangeRateFlag)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read flag %s: %w", commissionMaxChangeRateFlag, err)
+		return nil, fmt.Errorf("failed to read flag %s: %w", commoncmd.CommissionMaxChangeRateFlag, err)
 	}
 
 	commRates, err := getCommissionRates(commissionRateStr, commissionMaxRateStr, commissionMaxChangeRateStr)
@@ -342,18 +348,18 @@ func parseFinalityProviderFlags(cmd *cobra.Command, homeDir string) (*parsedFina
 		return nil, fmt.Errorf("keyname cannot be empty")
 	}
 
-	chainID, err := flags.GetString(chainIDFlag)
+	chainID, err := flags.GetString(commoncmd.ChainIDFlag)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read flag %s: %w", chainIDFlag, err)
+		return nil, fmt.Errorf("failed to read flag %s: %w", commoncmd.ChainIDFlag, err)
 	}
 
 	if chainID == "" {
 		return nil, fmt.Errorf("chain-id cannot be empty")
 	}
 
-	eotsPkHex, err := flags.GetString(fpEotsPkFlag)
+	eotsPkHex, err := flags.GetString(commoncmd.FpEotsPkFlag)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read flag %s: %w", fpEotsPkFlag, err)
+		return nil, fmt.Errorf("failed to read flag %s: %w", commoncmd.FpEotsPkFlag, err)
 	}
 
 	if eotsPkHex == "" {
