@@ -129,23 +129,23 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return fmt.Errorf("failed to read flag %s: %w", commoncmd.FromFileFlag, err)
 	}
 
-	var fp *parsedFinalityProvider
+	var fp *ParsedFinalityProvider
 	if fpJSONPath != "" {
-		fp, err = parseFinalityProviderJSON(fpJSONPath)
+		fp, err = ParseFinalityProviderJSON(fpJSONPath)
 	} else {
-		fp, err = parseFinalityProviderFlags(cmd)
+		fp, err = ParseFinalityProviderFlags(cmd)
 	}
 	if err != nil {
 		panic(err)
 	}
 	// Handle key name loading if not provided
-	if fp.keyName == "" {
+	if fp.KeyName == "" {
 		cfg, err := fpcfg.LoadConfig(ctx.HomeDir)
 		if err != nil {
 			return fmt.Errorf("failed to load config from %s: %w", fpcfg.CfgFile(ctx.HomeDir), err)
 		}
-		fp.keyName = cfg.BabylonConfig.Key
-		if fp.keyName == "" {
+		fp.KeyName = cfg.BabylonConfig.Key
+		if fp.KeyName == "" {
 			return fmt.Errorf("the key is neither in config nor provided")
 		}
 	}
@@ -167,11 +167,11 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 
 	res, err := client.CreateFinalityProvider(
 		context.Background(),
-		fp.keyName,
-		fp.chainID,
-		fp.eotsPK,
-		fp.description,
-		fp.commissionRates,
+		fp.KeyName,
+		fp.ChainID,
+		fp.EotsPK,
+		fp.Description,
+		fp.CommissionRates,
 	)
 	if err != nil {
 		return err
@@ -213,15 +213,15 @@ func getDescriptionFromFlags(f *pflag.FlagSet) (stakingtypes.Description, error)
 	return description.EnsureLength()
 }
 
-type parsedFinalityProvider struct {
-	keyName         string
-	chainID         string
-	eotsPK          string
-	description     stakingtypes.Description
-	commissionRates *proto.CommissionRates
+type ParsedFinalityProvider struct {
+	KeyName         string
+	ChainID         string
+	EotsPK          string
+	Description     stakingtypes.Description
+	CommissionRates *proto.CommissionRates
 }
 
-func parseFinalityProviderJSON(path string) (*parsedFinalityProvider, error) {
+func ParseFinalityProviderJSON(path string) (*ParsedFinalityProvider, error) {
 	type internalFpJSON struct {
 		KeyName                 string `json:"keyName"`
 		ChainID                 string `json:"chainID"`
@@ -282,16 +282,16 @@ func parseFinalityProviderJSON(path string) (*parsedFinalityProvider, error) {
 		return nil, err
 	}
 
-	return &parsedFinalityProvider{
-		keyName:         fp.KeyName,
-		chainID:         fp.ChainID,
-		eotsPK:          fp.EotsPK,
-		description:     description,
-		commissionRates: commRates,
+	return &ParsedFinalityProvider{
+		KeyName:         fp.KeyName,
+		ChainID:         fp.ChainID,
+		EotsPK:          fp.EotsPK,
+		Description:     description,
+		CommissionRates: commRates,
 	}, nil
 }
 
-func parseFinalityProviderFlags(cmd *cobra.Command) (*parsedFinalityProvider, error) {
+func ParseFinalityProviderFlags(cmd *cobra.Command) (*ParsedFinalityProvider, error) {
 	flags := cmd.Flags()
 
 	commissionRateStr, err := flags.GetString(commoncmd.CommissionRateFlag)
@@ -342,12 +342,12 @@ func parseFinalityProviderFlags(cmd *cobra.Command) (*parsedFinalityProvider, er
 		return nil, fmt.Errorf("eots-pk cannot be empty")
 	}
 
-	return &parsedFinalityProvider{
-		keyName:         keyName,
-		chainID:         chainID,
-		eotsPK:          eotsPkHex,
-		description:     description,
-		commissionRates: commRates,
+	return &ParsedFinalityProvider{
+		KeyName:         keyName,
+		ChainID:         chainID,
+		EotsPK:          eotsPkHex,
+		Description:     description,
+		CommissionRates: commRates,
 	}, nil
 }
 

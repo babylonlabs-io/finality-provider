@@ -12,11 +12,9 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/log"
 	"github.com/babylonlabs-io/finality-provider/util"
-	"github.com/btcsuite/btcwallet/walletdb"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 // CommandStart returns the start command of fpd daemon.
@@ -87,12 +85,12 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to create db backend: %w", err)
 	}
 
-	fpApp, err := loadApp(logger, cfg, dbBackend)
+	fpApp, err := service.NewFinalityProviderAppFromConfig(cfg, dbBackend, logger)
 	if err != nil {
-		return fmt.Errorf("failed to load app: %w", err)
+		return fmt.Errorf("failed to create finality-provider app: %w", err)
 	}
 
-	if err := startApp(fpApp, fpStr); err != nil {
+	if err := StartApp(fpApp, fpStr); err != nil {
 		return fmt.Errorf("failed to start app: %w", err)
 	}
 
@@ -101,22 +99,8 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	return fpServer.RunUntilShutdown(cmd.Context())
 }
 
-// loadApp initializes a finality provider app based on config and flags set.
-func loadApp(
-	logger *zap.Logger,
-	cfg *fpcfg.Config,
-	dbBackend walletdb.DB,
-) (*service.FinalityProviderApp, error) {
-	fpApp, err := service.NewFinalityProviderAppFromConfig(cfg, dbBackend, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create finality-provider app: %w", err)
-	}
-
-	return fpApp, nil
-}
-
-// startApp starts the app and the handle of finality providers if needed based on flags.
-func startApp(
+// StartApp starts the app and the handle of finality providers if needed based on flags.
+func StartApp(
 	fpApp *service.FinalityProviderApp,
 	fpPkStr string,
 ) error {

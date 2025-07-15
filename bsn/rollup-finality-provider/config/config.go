@@ -76,6 +76,7 @@ func LoadConfig(homePath string) (*RollupFPConfig, error) {
 
 func DefaultConfigWithHome(homePath string) RollupFPConfig {
 	cfg := fpcfg.DefaultConfigWithHome(homePath)
+
 	return RollupFPConfig{
 		Common: &cfg,
 		// TODO: default values for the rollup-fpd config

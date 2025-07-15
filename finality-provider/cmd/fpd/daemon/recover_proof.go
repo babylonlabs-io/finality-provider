@@ -60,8 +60,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	return RunCommandRecoverProofWithConfig(ctx, cmd, homePath, cfg, args)
 }
 
-func RunCommandRecoverProofWithConfig(ctx client.Context, cmd *cobra.Command, homePath string, cfg *fpcfg.Config, args []string) error {
-
+func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, homePath string, cfg *fpcfg.Config, args []string) error {
 	chainID, err := cmd.Flags().GetString(flags.FlagChainID)
 	if err != nil {
 		return fmt.Errorf("failed to read chain id flag: %w", err)
