@@ -3,14 +3,14 @@ package service
 import (
 	"fmt"
 
-	"github.com/lightningnetwork/lnd/kvdb"
-	"go.uber.org/zap"
-
 	rollupfpcc "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/clientcontroller"
 	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/metrics"
+	"github.com/lightningnetwork/lnd/kvdb"
+	"go.uber.org/zap"
 )
 
 // NewRollupBSNFinalityProviderAppFromConfig creates a new FinalityProviderApp instance from the given configuration for rollup BSN.
@@ -42,7 +42,22 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 	logger.Info("successfully connected to a remote EOTS manager", zap.String("address", cfg.Common.EOTSManagerAddress))
 
 	fpMetrics := metrics.NewFpMetrics()
+
 	poller := service.NewChainPoller(logger, cfg.Common.PollerConfig, consumerCon, fpMetrics)
 
-	return service.NewFinalityProviderApp(cfg.Common, cc, consumerCon, em, poller, fpMetrics, db, logger)
+	pubRandStore, err := store.NewPubRandProofStore(db)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initiate public randomness store: %w", err)
+	}
+
+	rndCommiter := service.NewDefaultRandomnessCommitter(
+		service.NewRandomnessCommitterConfig(cfg.Common.NumPubRand, int64(cfg.Common.TimestampingDelayBlocks), cfg.Common.ContextSigningHeight),
+		service.NewPubRandState(pubRandStore),
+		consumerCon,
+		em,
+		logger,
+		fpMetrics,
+	)
+
+	return service.NewFinalityProviderApp(cfg.Common, cc, consumerCon, em, poller, rndCommiter, fpMetrics, db, logger)
 }
