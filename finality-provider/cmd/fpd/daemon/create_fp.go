@@ -123,14 +123,22 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 
 	var fp *parsedFinalityProvider
 	if fpJSONPath != "" {
-		fp, err = parseFinalityProviderJSON(fpJSONPath, ctx.HomeDir)
-		if err != nil {
-			panic(err)
-		}
+		fp, err = parseFinalityProviderJSON(fpJSONPath)
 	} else {
-		fp, err = parseFinalityProviderFlags(cmd, ctx.HomeDir)
+		fp, err = parseFinalityProviderFlags(cmd)
+	}
+	if err != nil {
+		panic(err)
+	}
+	// Handle key name loading if not provided
+	if fp.keyName == "" {
+		cfg, err := fpcfg.LoadConfig(ctx.HomeDir)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("failed to load config from %s: %w", fpcfg.CfgFile(ctx.HomeDir), err)
+		}
+		fp.keyName = cfg.BabylonConfig.Key
+		if fp.keyName == "" {
+			return fmt.Errorf("the key is neither in config nor provided")
 		}
 	}
 
@@ -197,7 +205,6 @@ func getDescriptionFromFlags(f *pflag.FlagSet) (stakingtypes.Description, error)
 	return description.EnsureLength()
 }
 
-
 type parsedFinalityProvider struct {
 	keyName         string
 	chainID         string
@@ -206,7 +213,7 @@ type parsedFinalityProvider struct {
 	commissionRates *proto.CommissionRates
 }
 
-func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProvider, error) {
+func parseFinalityProviderJSON(path string) (*parsedFinalityProvider, error) {
 	type internalFpJSON struct {
 		KeyName                 string `json:"keyName"`
 		ChainID                 string `json:"chainID"`
@@ -235,17 +242,6 @@ func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProv
 
 	if fp.ChainID == "" {
 		return nil, fmt.Errorf("chainID is required")
-	}
-
-	if fp.KeyName == "" {
-		cfg, err := fpcfg.LoadConfig(homeDir)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load config from %s: %w", fpcfg.CfgFile(homeDir), err)
-		}
-		fp.KeyName = cfg.BabylonConfig.Key
-		if fp.KeyName == "" {
-			return nil, fmt.Errorf("the key is neither in config nor provided in the json file")
-		}
 	}
 
 	if fp.Moniker == "" {
@@ -287,7 +283,7 @@ func parseFinalityProviderJSON(path string, homeDir string) (*parsedFinalityProv
 	}, nil
 }
 
-func parseFinalityProviderFlags(cmd *cobra.Command, homeDir string) (*parsedFinalityProvider, error) {
+func parseFinalityProviderFlags(cmd *cobra.Command) (*parsedFinalityProvider, error) {
 	flags := cmd.Flags()
 
 	commissionRateStr, err := flags.GetString(commoncmd.CommissionRateFlag)
@@ -318,20 +314,6 @@ func parseFinalityProviderFlags(cmd *cobra.Command, homeDir string) (*parsedFina
 	keyName, err := flags.GetString(commoncmd.KeyNameFlag)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read flag %s: %w", commoncmd.KeyNameFlag, err)
-	}
-	// if key name is not specified, we use the key of the config
-	if keyName == "" {
-		// we add the following check to ensure that the chain key is created
-		// beforehand
-		cfg, err := fpcfg.LoadConfig(homeDir)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load config from %s: %w", fpcfg.CfgFile(homeDir), err)
-		}
-
-		keyName = cfg.BabylonConfig.Key
-		if keyName == "" {
-			return nil, fmt.Errorf("the key in config is empty")
-		}
 	}
 
 	chainID, err := flags.GetString(commoncmd.ChainIDFlag)
