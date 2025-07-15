@@ -197,30 +197,6 @@ func getDescriptionFromFlags(f *pflag.FlagSet) (stakingtypes.Description, error)
 	return description.EnsureLength()
 }
 
-func loadKeyName(homeDir string, cmd *cobra.Command) (string, error) {
-	keyName, err := cmd.Flags().GetString(commoncmd.KeyNameFlag)
-	if err != nil {
-		return "", fmt.Errorf("failed to read flag %s: %w", commoncmd.KeyNameFlag, err)
-	}
-	// if key name is not specified, we use the key of the config
-	if keyName != "" {
-		return keyName, nil
-	}
-
-	// we add the following check to ensure that the chain key is created
-	// beforehand
-	cfg, err := fpcfg.LoadConfig(homeDir)
-	if err != nil {
-		return "", fmt.Errorf("failed to load config from %s: %w", fpcfg.CfgFile(homeDir), err)
-	}
-
-	keyName = cfg.BabylonConfig.Key
-	if keyName == "" {
-		return "", fmt.Errorf("the key in config is empty")
-	}
-
-	return keyName, nil
-}
 
 type parsedFinalityProvider struct {
 	keyName         string
@@ -339,13 +315,23 @@ func parseFinalityProviderFlags(cmd *cobra.Command, homeDir string) (*parsedFina
 		return nil, fmt.Errorf("invalid description: %w", err)
 	}
 
-	keyName, err := loadKeyName(homeDir, cmd)
+	keyName, err := flags.GetString(commoncmd.KeyNameFlag)
 	if err != nil {
-		return nil, fmt.Errorf("not able to load key name: %w", err)
+		return nil, fmt.Errorf("failed to read flag %s: %w", commoncmd.KeyNameFlag, err)
 	}
-
+	// if key name is not specified, we use the key of the config
 	if keyName == "" {
-		return nil, fmt.Errorf("keyname cannot be empty")
+		// we add the following check to ensure that the chain key is created
+		// beforehand
+		cfg, err := fpcfg.LoadConfig(homeDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load config from %s: %w", fpcfg.CfgFile(homeDir), err)
+		}
+
+		keyName = cfg.BabylonConfig.Key
+		if keyName == "" {
+			return nil, fmt.Errorf("the key in config is empty")
+		}
 	}
 
 	chainID, err := flags.GetString(commoncmd.ChainIDFlag)
