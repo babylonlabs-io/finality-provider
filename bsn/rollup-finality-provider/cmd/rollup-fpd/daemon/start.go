@@ -10,7 +10,6 @@ import (
 	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpdaemon "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/log"
 	"github.com/babylonlabs-io/finality-provider/util"
@@ -61,7 +60,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		cfg.Common.RPCListener = rpcListener
 	}
 
-	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.Common.LogLevel)
+	logger, err := log.NewRootLoggerWithFile(rollupfpcfg.LogFile(homePath), cfg.Common.LogLevel)
 	if err != nil {
 		return fmt.Errorf("failed to initialize the logger: %w", err)
 	}

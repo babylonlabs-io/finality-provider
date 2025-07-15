@@ -8,7 +8,6 @@ import (
 	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpdaemon "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -45,7 +44,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 	if fp.KeyName == "" {
 		cfg, err := rollupfpcfg.LoadConfig(ctx.HomeDir)
 		if err != nil {
-			return fmt.Errorf("failed to load config from %s: %w", fpcfg.CfgFile(ctx.HomeDir), err)
+			return fmt.Errorf("failed to load config from %s: %w", rollupfpcfg.CfgFile(ctx.HomeDir), err)
 		}
 		fp.KeyName = cfg.Common.BabylonConfig.Key
 		if fp.KeyName == "" {

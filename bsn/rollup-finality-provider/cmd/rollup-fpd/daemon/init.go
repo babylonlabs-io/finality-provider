@@ -8,7 +8,6 @@ import (
 	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpdaemon "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/util"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/jessevdk/go-flags"
@@ -43,7 +42,7 @@ func runInitCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	// Create log directory
-	logDir := fpcfg.LogDir(homePath)
+	logDir := rollupfpcfg.LogDir(homePath)
 	if err := util.MakeDirectory(logDir); err != nil {
 		return err
 	}
@@ -51,5 +50,5 @@ func runInitCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	defaultConfig := rollupfpcfg.DefaultConfigWithHome(homePath)
 	fileParser := flags.NewParser(&defaultConfig, flags.Default)
 
-	return flags.NewIniParser(fileParser).WriteFile(fpcfg.CfgFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
+	return flags.NewIniParser(fileParser).WriteFile(rollupfpcfg.CfgFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
 }

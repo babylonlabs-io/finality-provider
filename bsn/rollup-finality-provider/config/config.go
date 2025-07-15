@@ -2,12 +2,19 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/babylonlabs-io/babylon/v3/client/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/util"
 	"github.com/cosmos/btcutil/bech32"
 	"github.com/jessevdk/go-flags"
+)
+
+const (
+	defaultConfigFileName = "fpd.conf"
+	defaultLogDirname     = "logs"
+	defaultLogFilename    = "fpd.log"
 )
 
 type RollupFPConfig struct {
@@ -81,4 +88,15 @@ func DefaultConfigWithHome(homePath string) RollupFPConfig {
 		Common: &cfg,
 		// TODO: default values for the rollup-fpd config
 	}
+}
+
+func CfgFile(homePath string) string {
+	return filepath.Join(homePath, defaultConfigFileName)
+}
+
+func LogDir(homePath string) string {
+	return filepath.Join(homePath, defaultLogDirname)
+}
+func LogFile(homePath string) string {
+	return filepath.Join(LogDir(homePath), defaultLogFilename)
 }
