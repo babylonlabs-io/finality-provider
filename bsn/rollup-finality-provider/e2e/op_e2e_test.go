@@ -7,12 +7,11 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"math/rand"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/stretchr/testify/require"
