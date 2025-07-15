@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	rollupfpdaemon "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/cmd/rollup-fpd/daemon"
 	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/version"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -45,13 +45,13 @@ func main() {
 	// add version commands
 	version.AddVersionCommands(cmd, BinaryName)
 
-	// add the rest of commands that are specific to Babylon finality provider
+	// add the rest of commands that are specific to rollup finality provider
 	cmd.AddCommand(
-		daemon.CommandInit(),
-		daemon.CommandStart(),
-		daemon.CommandCreateFP(),
-		daemon.CommandCommitPubRand(),
-		daemon.CommandRecoverProof(),
+		rollupfpdaemon.CommandInit(),
+		rollupfpdaemon.CommandStart(),
+		rollupfpdaemon.CommandCreateFP(),
+		rollupfpdaemon.CommandCommitPubRand(),
+		rollupfpdaemon.CommandRecoverProof(),
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
