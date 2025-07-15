@@ -36,8 +36,8 @@ func NewRootCmd() *cobra.Command {
 func main() {
 	cmd := NewRootCmd()
 
-	// add all daemon commands
-	commoncmd.AddDaemonCommands(cmd)
+	// add all common commands
+	commoncmd.AddCommonCommands(cmd)
 	// add all keys commands
 	commoncmd.AddKeysCommands(cmd)
 	// add all incentive commands
