@@ -583,7 +583,6 @@ func (cc *RollupBSNController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.
 	return false, false, nil
 }
 
-
 func (cc *RollupBSNController) Close() error {
 	cc.ethClient.Close()
 
