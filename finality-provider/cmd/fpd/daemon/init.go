@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/util"
@@ -21,7 +21,7 @@ func CommandInit() *cobra.Command {
 		Long:    `Creates a new finality-provider home directory with default config`,
 		Example: `fpd init --home /home/user/.fpd --force`,
 		Args:    cobra.NoArgs,
-		RunE:    fpcmd.RunEWithClientCtx(runInitCmd),
+		RunE:    clientctx.RunEWithClientCtx(runInitCmd),
 	}
 	cmd.Flags().Bool(commoncmd.ForceFlag, false, "Override existing configuration")
 

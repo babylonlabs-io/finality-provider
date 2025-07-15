@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -26,7 +26,7 @@ func NewRootCmd() *cobra.Command {
 		Short:             fmt.Sprintf("%s - Finality Provider Daemon (%s).", BinaryName, BinaryName),
 		Long:              fmt.Sprintf(`%s is the daemon to create and manage finality providers.`, BinaryName),
 		SilenceErrors:     false,
-		PersistentPreRunE: fpcmd.PersistClientCtx(client.Context{}),
+		PersistentPreRunE: clientctx.PersistClientCtx(client.Context{}),
 	}
 	rootCmd.PersistentFlags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 

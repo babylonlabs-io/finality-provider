@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/babylonlabs-io/babylon/v3/types"
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
@@ -27,7 +27,7 @@ func CommandStart() *cobra.Command {
 		Long:    `Start the finality-provider app. Note that eotsd should be started beforehand`,
 		Example: `fpd start --home /home/user/.fpd`,
 		Args:    cobra.NoArgs,
-		RunE:    fpcmd.RunEWithClientCtx(runStartCmd),
+		RunE:    clientctx.RunEWithClientCtx(runStartCmd),
 	}
 	cmd.Flags().String(commoncmd.FpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
 	cmd.Flags().String(commoncmd.RPCListenerFlag, "", "The address that the RPC server listens to")

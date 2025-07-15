@@ -1,4 +1,4 @@
-package cmd_test
+package clientctx_test
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/util"
 )
@@ -30,7 +30,7 @@ func TestPersistClientCtx(t *testing.T) {
 	cmd.Flags().String(flags.FlagHome, defaultHome, "The application home directory")
 	cmd.Flags().String(flags.FlagChainID, "", "chain id")
 
-	err := fpcmd.PersistClientCtx(ctx)(cmd, []string{})
+	err := clientctx.PersistClientCtx(ctx)(cmd, []string{})
 	require.NoError(t, err)
 
 	// verify that has the defaults to ctx
@@ -42,7 +42,7 @@ func TestPersistClientCtx(t *testing.T) {
 	err = cmd.Flags().Set(flags.FlagHome, flagHomeValue)
 	require.NoError(t, err)
 
-	err = fpcmd.PersistClientCtx(ctx)(cmd, []string{})
+	err = clientctx.PersistClientCtx(ctx)(cmd, []string{})
 	require.NoError(t, err)
 
 	ctx = client.GetClientContextFromCmd(cmd)
@@ -63,7 +63,7 @@ func TestPersistClientCtx(t *testing.T) {
 	require.NoError(t, err)
 
 	// parses the ctx from cmd with config, should modify the chain ID
-	err = fpcmd.PersistClientCtx(ctx)(cmd, []string{})
+	err = clientctx.PersistClientCtx(ctx)(cmd, []string{})
 	require.NoError(t, err)
 
 	ctx = client.GetClientContextFromCmd(cmd)
@@ -76,7 +76,7 @@ func TestPersistClientCtx(t *testing.T) {
 
 	// parses the ctx from cmd with config, but it has set in flags which should give
 	// preference over the config set, so it should use from the flag value set.
-	err = fpcmd.PersistClientCtx(ctx)(cmd, []string{})
+	err = clientctx.PersistClientCtx(ctx)(cmd, []string{})
 	require.NoError(t, err)
 
 	ctx = client.GetClientContextFromCmd(cmd)

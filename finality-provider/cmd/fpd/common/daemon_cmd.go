@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/babylonlabs-io/babylon/v3/types"
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
@@ -85,7 +85,7 @@ func CommandUnjailFP() *cobra.Command {
 		Short:   "Unjail the given finality provider.",
 		Example: fmt.Sprintf(`fpd unjail-finality-provider [eots-pk] --daemon-address %s ...`, defaultFpdDaemonAddress),
 		Args:    cobra.ExactArgs(1),
-		RunE:    fpcmd.RunEWithClientCtx(runCommandUnjailFP),
+		RunE:    clientctx.RunEWithClientCtx(runCommandUnjailFP),
 	}
 
 	f := cmd.Flags()

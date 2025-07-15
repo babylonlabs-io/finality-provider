@@ -13,7 +13,7 @@ import (
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/log"
@@ -29,7 +29,7 @@ func CommandRecoverProof() *cobra.Command {
 		Long:    "Recover the public randomness' merkle proof for a finality provider. Currently only Babylon consumer chain is supported.",
 		Example: `fpd recover-rand-proof --home /home/user/.fpd [fp-eots-pk-hex]`,
 		Args:    cobra.ExactArgs(1),
-		RunE:    fpcmd.RunEWithClientCtx(runCommandRecoverProof),
+		RunE:    clientctx.RunEWithClientCtx(runCommandRecoverProof),
 	}
 	cmd.Flags().Uint64("start-height", 1, "The block height from which the proof is recovered from (optional)")
 	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")

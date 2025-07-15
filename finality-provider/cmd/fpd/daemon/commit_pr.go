@@ -15,7 +15,7 @@ import (
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
@@ -34,7 +34,7 @@ func CommandCommitPubRand() *cobra.Command {
 WARNING: this can drain the finality provider's balance if the target height is too high.`,
 		Example: `fpd unsafe-commit-pubrand --home /home/user/.fpd [fp-eots-pk-hex] [target-height]`,
 		Args:    cobra.ExactArgs(2),
-		RunE:    fpcmd.RunEWithClientCtx(runCommandCommitPubRand),
+		RunE:    clientctx.RunEWithClientCtx(runCommandCommitPubRand),
 	}
 	cmd.Flags().Uint64("start-height", math.MaxUint64, "The block height to start committing pubrand from (optional)")
 	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")

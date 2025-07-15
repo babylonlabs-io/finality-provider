@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"cosmossdk.io/math"
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
@@ -61,7 +61,7 @@ Where finality-provider.json contains:
 }
 `, defaultFpdDaemonAddress, defaultFpdDaemonAddress)),
 		Args: cobra.NoArgs,
-		RunE: fpcmd.RunEWithClientCtx(runCommandCreateFP),
+		RunE: clientctx.RunEWithClientCtx(runCommandCreateFP),
 	}
 
 	f := cmd.Flags()
