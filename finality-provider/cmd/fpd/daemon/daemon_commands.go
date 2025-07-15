@@ -19,10 +19,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
-
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	common "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 )
 
@@ -66,7 +66,7 @@ func runCommandGetDaemonInfo(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	printRespJSON(info)
+	common.PrintRespJSON(info)
 
 	return nil
 }
@@ -206,7 +206,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return err
 	}
 
-	printRespJSON(res)
+	common.PrintRespJSON(res)
 
 	cmd.Println("Your finality provider is successfully created. Please restart your fpd.")
 
@@ -319,7 +319,7 @@ func runCommandLsFP(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	printRespJSON(resp)
+	common.PrintRespJSON(resp)
 
 	return nil
 }
@@ -364,7 +364,7 @@ func runCommandInfoFP(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	printRespJSON(resp)
+	common.PrintRespJSON(resp)
 
 	return nil
 }
@@ -448,7 +448,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	printRespJSON(res)
+	common.PrintRespJSON(res)
 
 	return nil
 }
@@ -580,17 +580,6 @@ func runCommandUnsafePruneMerkleProof(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-func printRespJSON(resp interface{}) {
-	jsonBytes, err := json.MarshalIndent(resp, "", "    ")
-	if err != nil {
-		fmt.Println("unable to decode response: ", err)
-
-		return
-	}
-
-	fmt.Printf("%s\n", jsonBytes)
 }
 
 func loadKeyName(homeDir string, cmd *cobra.Command) (string, error) {
