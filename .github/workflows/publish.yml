@@ -42,7 +42,7 @@ jobs:
       - name: Run e2e BCD tests
         run: make test-e2e-bcd
 
-  e2e_op:
+  e2e_rollup:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
@@ -50,8 +50,8 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.23'
-      - name: Run e2e OP tests
-        run: make test-e2e-op
+      - name: Run rollup BSN e2e tests
+        run: make test-e2e-rollup
 
   docker_pipeline:
     needs: ["lint_test"]

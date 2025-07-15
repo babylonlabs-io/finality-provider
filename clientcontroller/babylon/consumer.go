@@ -36,8 +36,7 @@ func NewBabylonConsumerController(
 	cfg *fpcfg.BBNConfig,
 	logger *zap.Logger,
 ) (*BabylonConsumerController, error) {
-	bbnConfig := fpcfg.BBNConfigToBabylonConfig(cfg)
-
+	bbnConfig := cfg.ToBabylonConfig()
 	if err := bbnConfig.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config for Babylon client: %w", err)
 	}

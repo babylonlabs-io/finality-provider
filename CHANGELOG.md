@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
+* [#517](https://github.com/babylonlabs-io/finality-provider/pull/518) feat: rollup BSN finality provider setup
 * [#493](https://github.com/babylonlabs-io/finality-provider/pull/493) chore: key migration for test keyring
 * [#501](https://github.com/babylonlabs-io/finality-provider/pull/501) chore: signing context
 * [#500](https://github.com/babylonlabs-io/finality-provider/pull/500) feat: fpd abstract poller implementation

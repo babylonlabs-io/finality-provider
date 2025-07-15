@@ -1,6 +1,6 @@
 run:
   build-tags:
-    - e2e_op
+    - e2e_rollup
     - e2e_babylon
     - e2e_bcd
     - e2e_wasmd
@@ -71,6 +71,7 @@ issues:
   exclude-dirs:
     - e2etest
     - itest
+    - e2e
   exclude-rules:
     # Exclude some linters from running on tests files.
     - path: _test\.go
