@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"path/filepath"
 
+	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
+	fpdaemon "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/util"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -15,21 +17,8 @@ import (
 
 // CommandInit returns the init command of fpd daemon that starts the config dir.
 func CommandInit() *cobra.Command {
-	cmd := CommandInitTemplate()
+	cmd := fpdaemon.CommandInitTemplate()
 	cmd.RunE = clientctx.RunEWithClientCtx(runInitCmd)
-
-	return cmd
-}
-
-func CommandInitTemplate() *cobra.Command {
-	var cmd = &cobra.Command{
-		Use:     "init",
-		Short:   "Initialize a finality-provider home directory.",
-		Long:    `Creates a new finality-provider home directory with default config`,
-		Example: `fpd init --home /home/user/.fpd --force`,
-		Args:    cobra.NoArgs,
-	}
-	cmd.Flags().Bool(commoncmd.ForceFlag, false, "Override existing configuration")
 
 	return cmd
 }
@@ -39,8 +28,8 @@ func runInitCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	homePath = util.CleanAndExpandPath(homePath)
 
+	homePath = util.CleanAndExpandPath(homePath)
 	force, err := cmd.Flags().GetBool(commoncmd.ForceFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", commoncmd.ForceFlag, err)
@@ -59,7 +48,7 @@ func runInitCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	defaultConfig := fpcfg.DefaultConfigWithHome(homePath)
+	defaultConfig := rollupfpcfg.DefaultConfigWithHome(homePath)
 	fileParser := flags.NewParser(&defaultConfig, flags.Default)
 
 	return flags.NewIniParser(fileParser).WriteFile(fpcfg.CfgFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)

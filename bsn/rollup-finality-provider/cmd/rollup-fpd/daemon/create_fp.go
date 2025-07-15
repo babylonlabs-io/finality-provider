@@ -5,118 +5,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
 
 	"cosmossdk.io/math"
 	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
+	fpdaemon "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/cosmos/cosmos-sdk/client"
-	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
-var (
-	defaultFpdDaemonAddress = "127.0.0.1:" + strconv.Itoa(fpcfg.DefaultRPCPort)
-)
-
 // CommandCreateFP returns the create-finality-provider command by connecting to the fpd daemon.
 func CommandCreateFP() *cobra.Command {
-	cmd := CommandCreateFPTemplate()
+	cmd := fpdaemon.CommandCreateFPTemplate()
 	cmd.RunE = clientctx.RunEWithClientCtx(runCommandCreateFP)
-
-	return cmd
-}
-
-// CommandCreateFPTemplate returns the create-finality-provider command template
-// One needs to set the RunE function to the command after creating it
-func CommandCreateFPTemplate() *cobra.Command {
-	var cmd = &cobra.Command{
-		Use:     "create-finality-provider",
-		Aliases: []string{"cfp"},
-		Short:   "Create a finality provider object and save it in database.",
-		Long: "Create a new finality provider object and store it in the finality provider database. " +
-			"It needs to have an operating EOTS manager available and running.",
-		Example: strings.TrimSpace(
-			fmt.Sprintf(`
-Either by specifying all flags manually:
-
-$fpd create-finality-provider --daemon-address %s ...
-
-Or providing the path to finality-provider.json:
-$fpd create-finality-provider --daemon-address %s --from-file /path/to/finality-provider.json
-
-Where finality-provider.json contains:
-
-{
-  "keyName": "The unique key name of the finality provider's Babylon account",
-  "chainID": "The identifier of the consumer chain",
-  "passphrase": "The pass phrase used to encrypt the keys",
-  "commissionRate": "The initial commission rate for the finality provider, e.g., 0.05",
-  "commissionMaxRate": "The maximum commission rate percentage for the finality provider, e.g., 0.20",
-  "commissionMaxChangeRate": "The maximum commission change rate percentage (per day) for the finality provider, e.g., 0.01",
-  "moniker": ""A human-readable name for the finality provider",
-  "identity": "A optional identity signature",
-  "website": "Validator's (optional) website",
-  "securityContract": "Validator's (optional) security contact email",
-  "details": "Validator's (optional) details",
-  "eotsPK": "The hex string of the finality provider's EOTS public key"
-}
-`, defaultFpdDaemonAddress, defaultFpdDaemonAddress)),
-		Args: cobra.NoArgs,
-	}
-
-	f := cmd.Flags()
-	f.String(commoncmd.FpdDaemonAddressFlag, defaultFpdDaemonAddress, "The RPC server address of fpd")
-	f.String(commoncmd.KeyNameFlag, "", "The unique key name of the finality provider's Babylon account")
-	f.String(sdkflags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
-	f.String(commoncmd.ChainIDFlag, "", "The identifier of the consumer chain")
-	f.String(commoncmd.CommissionRateFlag, "", "The initial commission rate for the finality provider, e.g., 0.05")
-	f.String(commoncmd.CommissionMaxRateFlag, "", "The maximum commission rate percentage for the finality provider, e.g., 0.20")
-	f.String(commoncmd.CommissionMaxChangeRateFlag, "", "The maximum commission change rate percentage (per day) for the finality provider, e.g., 0.01")
-	f.String(commoncmd.MonikerFlag, "", "A human-readable name for the finality provider")
-	f.String(commoncmd.IdentityFlag, "", "An optional identity signature (ex. UPort or Keybase)")
-	f.String(commoncmd.WebsiteFlag, "", "An optional website link")
-	f.String(commoncmd.SecurityContactFlag, "", "An email for security contact")
-	f.String(commoncmd.DetailsFlag, "", "Other optional details")
-	f.String(commoncmd.FpEotsPkFlag, "", "The hex string of the finality provider's EOTS public key")
-	f.String(commoncmd.FromFileFlag, "", "Path to a json file containing finality provider data")
-
-	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
-		fromFilePath, _ := cmd.Flags().GetString(commoncmd.FromFileFlag)
-		if fromFilePath == "" {
-			// Mark flags as required only if --from-file is not provided
-			if err := cmd.MarkFlagRequired(commoncmd.ChainIDFlag); err != nil {
-				return err
-			}
-			if err := cmd.MarkFlagRequired(commoncmd.KeyNameFlag); err != nil {
-				return err
-			}
-			if err := cmd.MarkFlagRequired(commoncmd.MonikerFlag); err != nil {
-				return err
-			}
-			if err := cmd.MarkFlagRequired(commoncmd.CommissionRateFlag); err != nil {
-				return err
-			}
-			if err := cmd.MarkFlagRequired(commoncmd.CommissionMaxRateFlag); err != nil {
-				return err
-			}
-			if err := cmd.MarkFlagRequired(commoncmd.CommissionMaxChangeRateFlag); err != nil {
-				return err
-			}
-			if err := cmd.MarkFlagRequired(commoncmd.FpEotsPkFlag); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
 
 	return cmd
 }

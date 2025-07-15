@@ -8,36 +8,21 @@ import (
 	"github.com/babylonlabs-io/babylon/v3/types"
 	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
+	fpdaemon "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/log"
 	"github.com/babylonlabs-io/finality-provider/util"
 	"github.com/btcsuite/btcwallet/walletdb"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
 // CommandStart returns the start command of fpd daemon.
 func CommandStart() *cobra.Command {
-	cmd := CommandStartTemplate()
+	cmd := fpdaemon.CommandStartTemplate()
 	cmd.RunE = clientctx.RunEWithClientCtx(runStartCmd)
-
-	return cmd
-}
-
-func CommandStartTemplate() *cobra.Command {
-	var cmd = &cobra.Command{
-		Use:     "start",
-		Short:   "Start the finality-provider app daemon.",
-		Long:    `Start the finality-provider app. Note that eotsd should be started beforehand`,
-		Example: `fpd start --home /home/user/.fpd`,
-		Args:    cobra.NoArgs,
-	}
-	cmd.Flags().String(commoncmd.FpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")
-	cmd.Flags().String(commoncmd.RPCListenerFlag, "", "The address that the RPC server listens to")
-	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 
 	return cmd
 }
@@ -48,11 +33,6 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	homePath = util.CleanAndExpandPath(homePath)
-	cfg, err := fpcfg.LoadConfig(homePath)
-	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
-	}
-
 	flags := cmd.Flags()
 
 	fpStr, err := flags.GetString(commoncmd.FpEotsPkFlag)
@@ -63,6 +43,11 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	rpcListener, err := flags.GetString(commoncmd.RPCListenerFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", commoncmd.RPCListenerFlag, err)
+	}
+
+	cfg, err := fpcfg.LoadConfig(homePath)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	if cfg.BabylonConfig.KeyringBackend != "test" {

@@ -22,6 +22,13 @@ import (
 )
 
 func CommandRecoverProof() *cobra.Command {
+	cmd := CommandRecoverProofTemplate()
+	cmd.RunE = clientctx.RunEWithClientCtx(runCommandRecoverProof)
+
+	return cmd
+}
+
+func CommandRecoverProofTemplate() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "recover-rand-proof [fp-eots-pk-hex]",
 		Aliases: []string{"rrp"},
@@ -29,7 +36,6 @@ func CommandRecoverProof() *cobra.Command {
 		Long:    "Recover the public randomness' merkle proof for a finality provider. Currently only Babylon consumer chain is supported.",
 		Example: `fpd recover-rand-proof --home /home/user/.fpd [fp-eots-pk-hex]`,
 		Args:    cobra.ExactArgs(1),
-		RunE:    clientctx.RunEWithClientCtx(runCommandRecoverProof),
 	}
 	cmd.Flags().Uint64("start-height", 1, "The block height from which the proof is recovered from (optional)")
 	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
@@ -39,6 +45,23 @@ func CommandRecoverProof() *cobra.Command {
 }
 
 func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []string) error {
+	// Get homePath from context like in start.go
+	homePath, err := filepath.Abs(ctx.HomeDir)
+	if err != nil {
+		return err
+	}
+	homePath = util.CleanAndExpandPath(homePath)
+
+	cfg, err := fpcfg.LoadConfig(homePath)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	return RunCommandRecoverProofWithConfig(ctx, cmd, homePath, cfg, args)
+}
+
+func RunCommandRecoverProofWithConfig(ctx client.Context, cmd *cobra.Command, homePath string, cfg *fpcfg.Config, args []string) error {
+
 	chainID, err := cmd.Flags().GetString(flags.FlagChainID)
 	if err != nil {
 		return fmt.Errorf("failed to read chain id flag: %w", err)
@@ -55,18 +78,6 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	startHeight, err := cmd.Flags().GetUint64("start-height")
 	if err != nil {
 		return err
-	}
-
-	// Get homePath from context like in start.go
-	homePath, err := filepath.Abs(ctx.HomeDir)
-	if err != nil {
-		return err
-	}
-	homePath = util.CleanAndExpandPath(homePath)
-
-	cfg, err := fpcfg.LoadConfig(homePath)
-	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.LogLevel)
