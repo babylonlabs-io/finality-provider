@@ -9,10 +9,10 @@ import (
 
 	"github.com/babylonlabs-io/babylon/v3/types"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
-	common "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
+	fptypes "github.com/babylonlabs-io/finality-provider/types"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
@@ -58,7 +58,7 @@ func runCommandGetDaemonInfo(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	common.PrintRespJSON(info)
+	fptypes.PrintRespJSON(info)
 
 	return nil
 }
@@ -140,7 +140,7 @@ func runCommandLsFP(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	common.PrintRespJSON(resp)
+	fptypes.PrintRespJSON(resp)
 
 	return nil
 }
@@ -185,7 +185,7 @@ func runCommandInfoFP(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	common.PrintRespJSON(resp)
+	fptypes.PrintRespJSON(resp)
 
 	return nil
 }
@@ -269,7 +269,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	common.PrintRespJSON(res)
+	fptypes.PrintRespJSON(res)
 
 	return nil
 }

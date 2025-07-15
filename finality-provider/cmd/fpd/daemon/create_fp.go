@@ -9,10 +9,10 @@ import (
 
 	"cosmossdk.io/math"
 	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
-	common "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	dc "github.com/babylonlabs-io/finality-provider/finality-provider/service/client"
+	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -155,7 +155,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return err
 	}
 
-	common.PrintRespJSON(res)
+	types.PrintRespJSON(res)
 
 	cmd.Println("Your finality provider is successfully created. Please restart your fpd.")
 

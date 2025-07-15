@@ -1,6 +1,9 @@
 package types
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
 )
 
@@ -29,4 +32,15 @@ func NewBabylonTxResponse(resp *babylonclient.RelayerTxResponse) *babylonclient.
 		Code:      resp.Code,
 		Data:      resp.Data,
 	}
+}
+
+func PrintRespJSON(resp interface{}) {
+	jsonBytes, err := json.MarshalIndent(resp, "", "    ")
+	if err != nil {
+		fmt.Println("unable to decode response: ", err)
+
+		return
+	}
+
+	fmt.Printf("%s\n", jsonBytes)
 }
