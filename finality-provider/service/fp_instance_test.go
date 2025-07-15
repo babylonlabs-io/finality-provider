@@ -125,7 +125,7 @@ func FuzzDetermineStartHeight(f *testing.F) {
 		defer cleanUp()
 		fpIns.MustUpdateStateAfterFinalitySigSubmission(lastVotedHeight)
 
-		startHeight, err := fpIns.DetermineStartHeight()
+		startHeight, err := fpIns.DetermineStartHeight(context.Background())
 		require.NoError(t, err)
 
 		require.Equal(t, startHeight, max(finalityActivationHeight, highestVotedHeight+1, lastFinalizedHeight+1, lastVotedHeight+1))
@@ -167,7 +167,9 @@ func startFinalityProviderAppWithRegisteredFp(
 		service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore), consumerCon, em, logger, fpMetrics)
 
-	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, rndCommitter, fpMetrics, db, logger)
+	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, fpCfg.PollerConfig, logger)
+
+	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, fpMetrics, db, logger)
 	require.NoError(t, err)
 	err = app.Start()
 	require.NoError(t, err)
@@ -203,7 +205,7 @@ func startFinalityProviderAppWithRegisteredFp(
 	)
 	require.NoError(t, err)
 	m := metrics.NewFpMetrics()
-	fpIns, err := service.NewFinalityProviderInstance(eotsPk, &fpCfg, fpStore, pubRandProofStore, cc, consumerCon, em, poller, rndCommitter, m, make(chan *service.CriticalError), logger)
+	fpIns, err := service.NewFinalityProviderInstance(eotsPk, &fpCfg, fpStore, pubRandProofStore, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, m, make(chan *service.CriticalError), logger)
 	require.NoError(t, err)
 
 	cleanUp := func() {

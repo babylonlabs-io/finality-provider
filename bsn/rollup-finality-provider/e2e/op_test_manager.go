@@ -425,8 +425,10 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 		service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore), ctm.RollupBSNController, ctm.ConsumerEOTSClient, ctm.logger, fpMetrics)
 
+	heightDeterminer := service.NewStartHeightDeterminer(ctm.RollupBSNController, fpCfg.PollerConfig, ctm.logger)
+
 	fpInstance, err := service.NewFinalityProviderInstance(
-		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.RollupBSNController, ctm.ConsumerEOTSClient, poller, rndCommitter,
+		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.RollupBSNController, ctm.ConsumerEOTSClient, poller, rndCommitter, heightDeterminer,
 		fpMetrics, make(chan<- *service.CriticalError), ctm.logger)
 	require.NoError(t, err)
 	return fpInstance

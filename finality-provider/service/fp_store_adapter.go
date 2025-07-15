@@ -11,30 +11,30 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 )
 
-type fpState struct {
+type FpState struct {
 	mu  sync.Mutex
 	sfp *store.StoredFinalityProvider
 	s   *store.FinalityProviderStore
 }
 
-func newFpState(
+func NewFpState(
 	fp *store.StoredFinalityProvider,
 	s *store.FinalityProviderStore,
-) *fpState {
-	return &fpState{
+) *FpState {
+	return &FpState{
 		sfp: fp,
 		s:   s,
 	}
 }
 
-func (fps *fpState) withLock(action func()) {
+func (fps *FpState) withLock(action func()) {
 	fps.mu.Lock()
 	defer fps.mu.Unlock()
 
 	action()
 }
 
-func (fps *fpState) setStatus(s proto.FinalityProviderStatus) error {
+func (fps *FpState) setStatus(s proto.FinalityProviderStatus) error {
 	fps.mu.Lock()
 	fps.sfp.Status = s
 	fps.mu.Unlock()
@@ -42,7 +42,7 @@ func (fps *fpState) setStatus(s proto.FinalityProviderStatus) error {
 	return fps.s.SetFpStatus(fps.sfp.BtcPk, s)
 }
 
-func (fps *fpState) setLastVotedHeight(height uint64) error {
+func (fps *FpState) setLastVotedHeight(height uint64) error {
 	fps.mu.Lock()
 	fps.sfp.LastVotedHeight = height
 	fps.mu.Unlock()
