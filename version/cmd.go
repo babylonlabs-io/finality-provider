@@ -2,9 +2,16 @@ package version
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
+
+// AddVersionCommands adds all the version-related commands to the provided command.
+// The version commands are generic to {Babylon, Cosmos BSN, rollup BSN} finality providers
+func AddVersionCommands(cmd *cobra.Command, binaryName string) {
+	cmd.AddCommand(CommandVersion(binaryName))
+}
 
 // CommandVersion prints cmd version
 func CommandVersion(binaryName string) *cobra.Command {

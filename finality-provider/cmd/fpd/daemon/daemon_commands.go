@@ -22,6 +22,20 @@ var (
 	defaultFpdDaemonAddress = "127.0.0.1:" + strconv.Itoa(fpcfg.DefaultRPCPort)
 )
 
+// AddDaemonCommands adds all the daemon-related commands to the provided command.
+// These commands are generic to {Babylon, Cosmos BSN, rollup BSN} finality providers
+func AddDaemonCommands(cmd *cobra.Command) {
+	cmd.AddCommand(
+		CommandGetDaemonInfo(),
+		CommandUnjailFP(),
+		CommandLsFP(),
+		CommandInfoFP(),
+		CommandAddFinalitySig(),
+		CommandEditFinalityDescription(),
+		CommandUnsafePruneMerkleProof(),
+	)
+}
+
 // CommandGetDaemonInfo returns the get-info command by connecting to the fpd daemon.
 func CommandGetDaemonInfo() *cobra.Command {
 	var cmd = &cobra.Command{
