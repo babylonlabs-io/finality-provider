@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -176,7 +177,14 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	// 5. prepare finality-provider
 	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, wcc, eotsCli, poller, fpMetrics, fpdb, logger)
+	pubRandStore, err := store.NewPubRandProofStore(fpdb)
+	require.NoError(t, err)
+	rndCommitter := service.NewDefaultRandomnessCommitter(
+		service.NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
+		service.NewPubRandState(pubRandStore), wcc, eotsCli, logger, fpMetrics)
+	heightDeterminer := service.NewStartHeightDeterminer(wcc, cfg.PollerConfig, logger)
+
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, wcc, eotsCli, poller, rndCommitter, heightDeterminer, fpMetrics, fpdb, logger)
 	require.NoError(t, err)
 	err = fpApp.Start()
 	require.NoError(t, err)

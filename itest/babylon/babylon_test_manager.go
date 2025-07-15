@@ -3,14 +3,14 @@ package e2etest_babylon
 import (
 	"context"
 	"fmt"
+	"github.com/avast/retry-go/v4"
+	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/avast/retry-go/v4"
-	"github.com/babylonlabs-io/finality-provider/metrics"
 
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 
@@ -229,7 +229,14 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 
 	fpMetrics := metrics.NewFpMetrics()
 	poller := service.NewChainPoller(tm.logger, cfg.PollerConfig, bcc, fpMetrics)
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, eotsCli, poller, fpMetrics, fpdb, tm.logger)
+	pubRandStore, err := fpstore.NewPubRandProofStore(fpdb)
+	require.NoError(t, err)
+	rndCommitter := service.NewDefaultRandomnessCommitter(
+		service.NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
+		service.NewPubRandState(pubRandStore), bcc, eotsCli, tm.logger, fpMetrics)
+	heightDeterminer := service.NewStartHeightDeterminer(bcc, cfg.PollerConfig, tm.logger)
+
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, eotsCli, poller, rndCommitter, heightDeterminer, fpMetrics, fpdb, tm.logger)
 	require.NoError(t, err)
 	err = fpApp.Start()
 	require.NoError(t, err)

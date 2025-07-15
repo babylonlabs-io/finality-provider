@@ -379,13 +379,13 @@ EOTS Manager Daemon is fully active!
 
 #### 5.3.1. Migration guide test to file keyring backend
 
-If you are migrating from the `test` keyring backend to the `file` keyring backend, you need to execute following command:
+To migrate from the test keyring backend to the file keyring backend, execute the following command:
 
 ```shell
 eotsd keys export <name> --keyring-backend=test --unsafe --unarmored-hex --home <path>
 ```
 
-As a result of the `export` command you will get the EOTS key as a hex string,
+As a result of the `export` command, you will receive the EOTS key as a hex string,
 which you can use to import the key into the `file` keyring backend.
 
 Keyring backed `file` requires a setting up a password. You can then import the

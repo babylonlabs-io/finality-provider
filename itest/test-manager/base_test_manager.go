@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -632,7 +633,14 @@ func CreateAndStartFpApp(
 	fpMetrics := metrics.NewFpMetrics()
 	poller := service.NewChainPoller(logger, cfg.PollerConfig, cc, fpMetrics)
 
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, poller, fpMetrics, fpdb, logger)
+	pubRandStore, err := fpstore.NewPubRandProofStore(fpdb)
+	require.NoError(t, err)
+	rndCommitter := service.NewDefaultRandomnessCommitter(
+		service.NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
+		service.NewPubRandState(pubRandStore), cc, eotsCli, logger, fpMetrics)
+	heightDeterminer := service.NewStartHeightDeterminer(cc, cfg.PollerConfig, logger)
+
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, poller, rndCommitter, heightDeterminer, fpMetrics, fpdb, logger)
 	require.NoError(t, err)
 
 	err = fpApp.Start()
