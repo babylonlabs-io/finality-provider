@@ -37,7 +37,7 @@ func NewBabylonTxResponse(resp *babylonclient.RelayerTxResponse) *babylonclient.
 func PrintRespJSON(resp interface{}) {
 	jsonBytes, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
-		fmt.Println("unable to decode response: ", err)
+		fmt.Println("unable to marshal response: ", err)
 
 		return
 	}
