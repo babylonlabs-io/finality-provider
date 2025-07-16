@@ -12,8 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func CommandRecoverProof() *cobra.Command {
-	cmd := fpdaemon.CommandRecoverProofTemplate()
+func CommandRecoverProof(binaryName string) *cobra.Command {
+	cmd := fpdaemon.CommandRecoverProofTemplate(binaryName)
 	cmd.RunE = clientctx.RunEWithClientCtx(runCommandRecoverProof)
 
 	return cmd

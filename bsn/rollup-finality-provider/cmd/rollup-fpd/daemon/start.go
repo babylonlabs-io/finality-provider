@@ -18,8 +18,8 @@ import (
 )
 
 // CommandStart returns the start command of fpd daemon.
-func CommandStart() *cobra.Command {
-	cmd := fpdaemon.CommandStartTemplate()
+func CommandStart(binaryName string) *cobra.Command {
+	cmd := fpdaemon.CommandStartTemplate(binaryName)
 	cmd.RunE = clientctx.RunEWithClientCtx(runStartCmd)
 
 	return cmd

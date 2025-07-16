@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -37,7 +36,7 @@ func main() {
 	cmd := NewRootCmd()
 
 	// add all common commands
-	commoncmd.AddCommonCommands(cmd)
+	commoncmd.AddCommonCommands(cmd, BinaryName)
 	// add all keys commands
 	commoncmd.AddKeysCommands(cmd)
 	// add all incentive commands
@@ -47,14 +46,14 @@ func main() {
 
 	// add the rest of commands that are specific to rollup finality provider
 	cmd.AddCommand(
-		rollupfpdaemon.CommandInit(),
-		rollupfpdaemon.CommandStart(),
-		rollupfpdaemon.CommandCreateFP(),
-		rollupfpdaemon.CommandCommitPubRand(),
-		rollupfpdaemon.CommandRecoverProof(),
+		rollupfpdaemon.CommandInit(BinaryName),
+		rollupfpdaemon.CommandStart(BinaryName),
+		rollupfpdaemon.CommandCreateFP(BinaryName),
+		rollupfpdaemon.CommandCommitPubRand(BinaryName),
+		rollupfpdaemon.CommandRecoverProof(BinaryName),
 	)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	if err := cmd.ExecuteContext(ctx); err != nil {

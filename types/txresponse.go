@@ -2,9 +2,9 @@ package types
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
+	"github.com/spf13/cobra"
 )
 
 // TxResponse handles the transaction response in the interface ConsumerController
@@ -34,13 +34,13 @@ func NewBabylonTxResponse(resp *babylonclient.RelayerTxResponse) *babylonclient.
 	}
 }
 
-func PrintRespJSON(resp interface{}) {
+func PrintRespJSON(cmd *cobra.Command, resp interface{}) {
 	jsonBytes, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
-		fmt.Println("unable to marshal response: ", err)
+		cmd.Println("unable to marshal response: ", err)
 
 		return
 	}
 
-	fmt.Printf("%s\n", jsonBytes)
+	cmd.Printf("%s\n", jsonBytes)
 }

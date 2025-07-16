@@ -14,19 +14,19 @@ import (
 )
 
 // CommandInit returns the init command of fpd daemon that starts the config dir.
-func CommandInit() *cobra.Command {
-	cmd := CommandInitTemplate()
+func CommandInit(binaryName string) *cobra.Command {
+	cmd := CommandInitTemplate(binaryName)
 	cmd.RunE = clientctx.RunEWithClientCtx(runInitCmd)
 
 	return cmd
 }
 
-func CommandInitTemplate() *cobra.Command {
+func CommandInitTemplate(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "init",
 		Short:   "Initialize a finality-provider home directory.",
 		Long:    `Creates a new finality-provider home directory with default config`,
-		Example: `fpd init --home /home/user/.fpd --force`,
+		Example: fmt.Sprintf(`%s init --home /home/user/.fpd --force`, binaryName),
 		Args:    cobra.NoArgs,
 	}
 	cmd.Flags().Bool(commoncmd.ForceFlag, false, "Override existing configuration")

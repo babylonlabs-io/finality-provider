@@ -13,8 +13,8 @@ import (
 )
 
 // CommandCommitPubRand returns the commit-pubrand command by connecting to the fpd daemon.
-func CommandCommitPubRand() *cobra.Command {
-	cmd := fpdaemon.CommandCommitPubRandTemplate()
+func CommandCommitPubRand(binaryName string) *cobra.Command {
+	cmd := fpdaemon.CommandCommitPubRandTemplate(binaryName)
 	cmd.RunE = clientctx.RunEWithClientCtx(runCommandCommitPubRand)
 
 	return cmd

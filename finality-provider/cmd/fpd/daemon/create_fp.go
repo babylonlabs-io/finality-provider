@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -27,8 +26,8 @@ var (
 )
 
 // CommandCreateFP returns the create-finality-provider command by connecting to the fpd daemon.
-func CommandCreateFP() *cobra.Command {
-	cmd := CommandCreateFPTemplate()
+func CommandCreateFP(binaryName string) *cobra.Command {
+	cmd := CommandCreateFPTemplate(binaryName)
 	cmd.RunE = clientctx.RunEWithClientCtx(runCommandCreateFP)
 
 	return cmd
@@ -36,7 +35,7 @@ func CommandCreateFP() *cobra.Command {
 
 // CommandCreateFPTemplate returns the create-finality-provider command template
 // One needs to set the RunE function to the command after creating it
-func CommandCreateFPTemplate() *cobra.Command {
+func CommandCreateFPTemplate(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "create-finality-provider",
 		Aliases: []string{"cfp"},
@@ -47,10 +46,10 @@ func CommandCreateFPTemplate() *cobra.Command {
 			fmt.Sprintf(`
 Either by specifying all flags manually:
 
-$fpd create-finality-provider --daemon-address %s ...
+%s create-finality-provider --daemon-address %s ...
 
 Or providing the path to finality-provider.json:
-$fpd create-finality-provider --daemon-address %s --from-file /path/to/finality-provider.json
+%s create-finality-provider --daemon-address %s --from-file /path/to/finality-provider.json
 
 Where finality-provider.json contains:
 
@@ -68,7 +67,7 @@ Where finality-provider.json contains:
   "details": "Validator's (optional) details",
   "eotsPK": "The hex string of the finality provider's EOTS public key"
 }
-`, defaultFpdDaemonAddress, defaultFpdDaemonAddress)),
+`, binaryName, defaultFpdDaemonAddress, binaryName, defaultFpdDaemonAddress)),
 		Args: cobra.NoArgs,
 	}
 
@@ -166,7 +165,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 	}()
 
 	res, err := client.CreateFinalityProvider(
-		context.Background(),
+		cmd.Context(),
 		fp.KeyName,
 		fp.ChainID,
 		fp.EotsPK,
@@ -177,10 +176,9 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return err
 	}
 
-	types.PrintRespJSON(res)
+	types.PrintRespJSON(cmd, res)
 
-	cmd.Println("Your finality provider is successfully created. Please restart your fpd.")
-
+	cmd.Println("Finality provider created successfully. Please restart the fpd.")
 	return nil
 }
 

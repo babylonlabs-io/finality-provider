@@ -25,8 +25,8 @@ import (
 )
 
 // CommandCommitPubRand returns the commit-pubrand command by connecting to the fpd daemon.
-func CommandCommitPubRand() *cobra.Command {
-	cmd := CommandCommitPubRandTemplate()
+func CommandCommitPubRand(binaryName string) *cobra.Command {
+	cmd := CommandCommitPubRandTemplate(binaryName)
 	cmd.RunE = clientctx.RunEWithClientCtx(runCommandCommitPubRand)
 
 	return cmd
@@ -34,14 +34,14 @@ func CommandCommitPubRand() *cobra.Command {
 
 // CommandCommitPubRandTemplate returns the commit-pubrand command template
 // One needs to set the RunE function to the command after creating it
-func CommandCommitPubRandTemplate() *cobra.Command {
+func CommandCommitPubRandTemplate(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "unsafe-commit-pubrand [fp-eots-pk-hex] [target-height]",
 		Aliases: []string{"unsafe-cpr"},
 		Short:   "[UNSAFE] Manually trigger public randomness commitment for a finality provider",
 		Long: `[UNSAFE] Manually trigger public randomness commitment for a finality provider.
 WARNING: this can drain the finality provider's balance if the target height is too high.`,
-		Example: `fpd unsafe-commit-pubrand --home /home/user/.fpd [fp-eots-pk-hex] [target-height]`,
+		Example: fmt.Sprintf(`%s unsafe-commit-pubrand --home /home/user/.fpd [fp-eots-pk-hex] [target-height]`, binaryName),
 		Args:    cobra.ExactArgs(2),
 	}
 	cmd.Flags().Uint64("start-height", math.MaxUint64, "The block height to start committing pubrand from (optional)")

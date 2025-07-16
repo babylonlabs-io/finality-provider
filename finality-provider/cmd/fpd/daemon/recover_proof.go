@@ -21,20 +21,20 @@ import (
 	"github.com/babylonlabs-io/finality-provider/util"
 )
 
-func CommandRecoverProof() *cobra.Command {
-	cmd := CommandRecoverProofTemplate()
+func CommandRecoverProof(binaryName string) *cobra.Command {
+	cmd := CommandRecoverProofTemplate(binaryName)
 	cmd.RunE = clientctx.RunEWithClientCtx(runCommandRecoverProof)
 
 	return cmd
 }
 
-func CommandRecoverProofTemplate() *cobra.Command {
+func CommandRecoverProofTemplate(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "recover-rand-proof [fp-eots-pk-hex]",
 		Aliases: []string{"rrp"},
 		Short:   "Recover the public randomness' merkle proof for a finality provider",
 		Long:    "Recover the public randomness' merkle proof for a finality provider. Currently only Babylon consumer chain is supported.",
-		Example: `fpd recover-rand-proof --home /home/user/.fpd [fp-eots-pk-hex]`,
+		Example: fmt.Sprintf(`%s recover-rand-proof --home /home/user/.fpd [fp-eots-pk-hex]`, binaryName),
 		Args:    cobra.ExactArgs(1),
 	}
 	cmd.Flags().Uint64("start-height", 1, "The block height from which the proof is recovered from (optional)")

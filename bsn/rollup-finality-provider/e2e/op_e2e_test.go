@@ -7,11 +7,12 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"math/rand"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/stretchr/testify/require"
@@ -39,7 +40,7 @@ func TestPubRandCommitment(t *testing.T) {
 	require.NoError(t, err)
 
 	// query the last pub rand
-	pubRand, err := ctm.RollupBSNController.QueryLastPublicRandCommit(context.Background(), consumerFpPk.MustToBTCPK())
+	pubRand, err := ctm.RollupBSNController.QueryLastPublicRandCommit(ctx, consumerFpPk.MustToBTCPK())
 	require.NoError(t, err)
 	require.NotNil(t, pubRand)
 

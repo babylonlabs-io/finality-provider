@@ -37,7 +37,7 @@ func main() {
 	cmd := NewRootCmd()
 
 	// add all common commands
-	commoncmd.AddCommonCommands(cmd)
+	commoncmd.AddCommonCommands(cmd, BinaryName)
 	// add all keys commands
 	commoncmd.AddKeysCommands(cmd)
 	// add all incentive commands
@@ -47,11 +47,11 @@ func main() {
 
 	// add the rest of commands that are specific to Babylon finality provider
 	cmd.AddCommand(
-		daemon.CommandInit(),
-		daemon.CommandStart(),
-		daemon.CommandCreateFP(),
-		daemon.CommandCommitPubRand(),
-		daemon.CommandRecoverProof(),
+		daemon.CommandInit(BinaryName),
+		daemon.CommandStart(BinaryName),
+		daemon.CommandCreateFP(BinaryName),
+		daemon.CommandCommitPubRand(BinaryName),
+		daemon.CommandRecoverProof(BinaryName),
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

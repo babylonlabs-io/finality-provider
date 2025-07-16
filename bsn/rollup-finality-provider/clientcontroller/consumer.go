@@ -100,7 +100,7 @@ func (cc *RollupBSNController) ReliablySendMsg(ctx context.Context, msg sdk.Msg,
 }
 
 // QueryContractConfig queries the finality contract for its config
-func (cc *RollupBSNController) QueryContractConfig() (*Config, error) {
+func (cc *RollupBSNController) QueryContractConfig(ctx context.Context) (*Config, error) {
 	query := QueryMsg{
 		Config: &Config{},
 	}
@@ -109,7 +109,7 @@ func (cc *RollupBSNController) QueryContractConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to marshal config query: %w", err)
 	}
 
-	stateResp, err := cc.QuerySmartContractState(context.Background(), cc.Cfg.FinalityContractAddress, string(jsonData))
+	stateResp, err := cc.QuerySmartContractState(ctx, cc.Cfg.FinalityContractAddress, string(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
@@ -400,8 +400,8 @@ func (cc *RollupBSNController) QueryBlock(ctx context.Context, height uint64) (t
 
 // Note: this is specific to the RollupBSNController and only used for testing
 // QueryBlock returns the Ethereum block from a RPC call
-func (cc *RollupBSNController) QueryEthBlock(height uint64) (*ethtypes.Header, error) {
-	return cc.ethClient.HeaderByNumber(context.Background(), new(big.Int).SetUint64(height))
+func (cc *RollupBSNController) QueryEthBlock(ctx context.Context, height uint64) (*ethtypes.Header, error) {
+	return cc.ethClient.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
 }
 
 // QueryIsBlockFinalized returns whether the given the L2 block number has been finalized

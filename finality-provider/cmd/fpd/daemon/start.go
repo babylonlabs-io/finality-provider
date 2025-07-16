@@ -18,19 +18,19 @@ import (
 )
 
 // CommandStart returns the start command of fpd daemon.
-func CommandStart() *cobra.Command {
-	cmd := CommandStartTemplate()
+func CommandStart(binaryName string) *cobra.Command {
+	cmd := CommandStartTemplate(binaryName)
 	cmd.RunE = clientctx.RunEWithClientCtx(runStartCmd)
 
 	return cmd
 }
 
-func CommandStartTemplate() *cobra.Command {
+func CommandStartTemplate(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "start",
 		Short:   "Start the finality-provider app daemon.",
 		Long:    `Start the finality-provider app. Note that eotsd should be started beforehand`,
-		Example: `fpd start --home /home/user/.fpd`,
+		Example: fmt.Sprintf(`%s start --home /home/user/.fpd`, binaryName),
 		Args:    cobra.NoArgs,
 	}
 	cmd.Flags().String(commoncmd.FpEotsPkFlag, "", "The EOTS public key of the finality-provider to start")

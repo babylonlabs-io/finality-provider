@@ -1,7 +1,6 @@
 package common
 
 import (
-	"context"
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -24,25 +23,25 @@ var (
 
 // AddCommonCommands adds all the common subcommands to the given command.
 // These commands are generic to {Babylon, Cosmos BSN, rollup BSN} finality providers
-func AddCommonCommands(cmd *cobra.Command) {
+func AddCommonCommands(cmd *cobra.Command, binaryName string) {
 	cmd.AddCommand(
-		CommandGetDaemonInfo(),
-		CommandUnjailFP(),
-		CommandLsFP(),
-		CommandInfoFP(),
-		CommandAddFinalitySig(),
-		CommandEditFinalityDescription(),
-		CommandUnsafePruneMerkleProof(),
+		CommandGetDaemonInfo(binaryName),
+		CommandUnjailFP(binaryName),
+		CommandLsFP(binaryName),
+		CommandInfoFP(binaryName),
+		CommandAddFinalitySig(binaryName),
+		CommandEditFinalityDescription(binaryName),
+		CommandUnsafePruneMerkleProof(binaryName),
 	)
 }
 
 // CommandGetDaemonInfo returns the get-info command by connecting to the fpd daemon.
-func CommandGetDaemonInfo() *cobra.Command {
+func CommandGetDaemonInfo(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "get-info",
 		Aliases: []string{"gi"},
 		Short:   "Get information of the running fpd daemon.",
-		Example: fmt.Sprintf(`fpd get-info --daemon-address %s`, defaultFpdDaemonAddress),
+		Example: fmt.Sprintf(`%s get-info --daemon-address %s`, binaryName, defaultFpdDaemonAddress),
 		Args:    cobra.NoArgs,
 		RunE:    runCommandGetDaemonInfo,
 	}
@@ -67,23 +66,23 @@ func runCommandGetDaemonInfo(cmd *cobra.Command, _ []string) error {
 		}
 	}()
 
-	info, err := client.GetInfo(context.Background())
+	info, err := client.GetInfo(cmd.Context())
 	if err != nil {
 		return err
 	}
 
-	fptypes.PrintRespJSON(info)
+	fptypes.PrintRespJSON(cmd, info)
 
 	return nil
 }
 
 // CommandUnjailFP returns the unjail-finality-provider command by connecting to the fpd daemon.
-func CommandUnjailFP() *cobra.Command {
+func CommandUnjailFP(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "unjail-finality-provider",
 		Aliases: []string{"ufp"},
 		Short:   "Unjail the given finality provider.",
-		Example: fmt.Sprintf(`fpd unjail-finality-provider [eots-pk] --daemon-address %s ...`, defaultFpdDaemonAddress),
+		Example: fmt.Sprintf(`%s unjail-finality-provider [eots-pk] --daemon-address %s ...`, binaryName, defaultFpdDaemonAddress),
 		Args:    cobra.ExactArgs(1),
 		RunE:    clientctx.RunEWithClientCtx(runCommandUnjailFP),
 	}
@@ -111,7 +110,7 @@ func runCommandUnjailFP(_ client.Context, cmd *cobra.Command, args []string) err
 		}
 	}()
 
-	_, err = client.UnjailFinalityProvider(context.Background(), args[0])
+	_, err = client.UnjailFinalityProvider(cmd.Context(), args[0])
 	if err != nil {
 		return err
 	}
@@ -120,12 +119,12 @@ func runCommandUnjailFP(_ client.Context, cmd *cobra.Command, args []string) err
 }
 
 // CommandLsFP returns the list-finality-providers command by connecting to the fpd daemon.
-func CommandLsFP() *cobra.Command {
+func CommandLsFP(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "list-finality-providers",
 		Aliases: []string{"ls"},
 		Short:   "List finality providers stored in the database.",
-		Example: fmt.Sprintf(`fpd list-finality-providers --daemon-address %s`, defaultFpdDaemonAddress),
+		Example: fmt.Sprintf(`%s list-finality-providers --daemon-address %s`, binaryName, defaultFpdDaemonAddress),
 		Args:    cobra.NoArgs,
 		RunE:    runCommandLsFP,
 	}
@@ -150,22 +149,22 @@ func runCommandLsFP(cmd *cobra.Command, _ []string) error {
 		}
 	}()
 
-	resp, err := client.QueryFinalityProviderList(context.Background())
+	resp, err := client.QueryFinalityProviderList(cmd.Context())
 	if err != nil {
 		return err
 	}
-	fptypes.PrintRespJSON(resp)
+	fptypes.PrintRespJSON(cmd, resp)
 
 	return nil
 }
 
 // CommandInfoFP returns the finality-provider-info command by connecting to the fpd daemon.
-func CommandInfoFP() *cobra.Command {
+func CommandInfoFP(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "finality-provider-info [fp-eots-pk-hex]",
 		Aliases: []string{"fpi"},
 		Short:   "List finality providers stored in the database.",
-		Example: fmt.Sprintf(`fpd finality-provider-info --daemon-address %s`, defaultFpdDaemonAddress),
+		Example: fmt.Sprintf(`%s finality-provider-info --daemon-address %s`, binaryName, defaultFpdDaemonAddress),
 		Args:    cobra.ExactArgs(1),
 		RunE:    runCommandInfoFP,
 	}
@@ -195,23 +194,23 @@ func runCommandInfoFP(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	resp, err := client.QueryFinalityProviderInfo(context.Background(), fpPk)
+	resp, err := client.QueryFinalityProviderInfo(cmd.Context(), fpPk)
 	if err != nil {
 		return err
 	}
-	fptypes.PrintRespJSON(resp)
+	fptypes.PrintRespJSON(cmd, resp)
 
 	return nil
 }
 
 // CommandAddFinalitySig returns the add-finality-sig command by connecting to the fpd daemon.
-func CommandAddFinalitySig() *cobra.Command {
+func CommandAddFinalitySig(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "unsafe-add-finality-sig [fp-eots-pk-hex] [block-height]",
 		Aliases: []string{"unsafe-afs"},
 		Short:   "[UNSAFE] Send a finality signature to the consumer chain.",
 		Long:    "[UNSAFE] Send a finality signature to the consumer chain. This command should only be used for presentation/testing purposes",
-		Example: fmt.Sprintf(`fpd unsafe-add-finality-sig [fp-eots-pk-hex] [block-height] --daemon-address %s`, defaultFpdDaemonAddress),
+		Example: fmt.Sprintf(`%s unsafe-add-finality-sig [fp-eots-pk-hex] [block-height] --daemon-address %s`, binaryName, defaultFpdDaemonAddress),
 		Args:    cobra.ExactArgs(2),
 		RunE:    runCommandAddFinalitySig,
 	}
@@ -283,13 +282,13 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	fptypes.PrintRespJSON(res)
+	fptypes.PrintRespJSON(cmd, res)
 
 	return nil
 }
 
 // CommandEditFinalityDescription edits description of finality provider
-func CommandEditFinalityDescription() *cobra.Command {
+func CommandEditFinalityDescription(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "edit-finality-provider [eots_pk]",
 		Aliases: []string{"efp"},
@@ -298,7 +297,7 @@ func CommandEditFinalityDescription() *cobra.Command {
 			"\nThe provided [eots_pk] must correspond to the Babylon address controlled by the key specified in fpd.conf. " +
 			"\nIf one or more optional flags are passed (such as --moniker, --website, etc.), " +
 			"the corresponding values are updated, while unchanged fields retain their current values from the Babylon Node.",
-		Example: fmt.Sprintf(`fpd edit-finality-provider [eots_pk] --daemon-address %s --moniker "new-moniker"`, defaultFpdDaemonAddress),
+		Example: fmt.Sprintf(`%s edit-finality-provider [eots_pk] --daemon-address %s --moniker "new-moniker"`, binaryName, defaultFpdDaemonAddress),
 		Args:    cobra.ExactArgs(1),
 		RunE:    runCommandEditFinalityDescription,
 	}
@@ -358,7 +357,7 @@ func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error 
 }
 
 // CommandUnsafePruneMerkleProof prunes merkle proof
-func CommandUnsafePruneMerkleProof() *cobra.Command {
+func CommandUnsafePruneMerkleProof(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "unsafe-prune-merkle-proof [eots_pk]",
 		Aliases: []string{"rmp"},
@@ -366,7 +365,7 @@ func CommandUnsafePruneMerkleProof() *cobra.Command {
 		Long: strings.TrimSpace(`This command will prune all merkle proof up to the target height. The 
 operator of this command should ensure that finality provider has voted, or doesn't have voting power up to the target height.'
 `),
-		Example: fmt.Sprintf(`fpd unsafe-prune-merkle-proof [eots_pk] --daemon-address %s`, defaultFpdDaemonAddress),
+		Example: fmt.Sprintf(`%s unsafe-prune-merkle-proof [eots_pk] --daemon-address %s`, binaryName, defaultFpdDaemonAddress),
 		Args:    cobra.ExactArgs(1),
 		RunE:    runCommandUnsafePruneMerkleProof,
 	}

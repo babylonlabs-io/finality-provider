@@ -15,8 +15,8 @@ import (
 )
 
 // CommandInit returns the init command of fpd daemon that starts the config dir.
-func CommandInit() *cobra.Command {
-	cmd := fpdaemon.CommandInitTemplate()
+func CommandInit(binaryName string) *cobra.Command {
+	cmd := fpdaemon.CommandInitTemplate(binaryName)
 	cmd.RunE = clientctx.RunEWithClientCtx(runInitCmd)
 
 	return cmd

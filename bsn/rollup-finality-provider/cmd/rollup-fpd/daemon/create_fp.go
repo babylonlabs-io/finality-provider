@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"context"
 	"fmt"
 
 	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
@@ -15,8 +14,8 @@ import (
 )
 
 // CommandCreateFP returns the create-finality-provider command by connecting to the fpd daemon.
-func CommandCreateFP() *cobra.Command {
-	cmd := fpdaemon.CommandCreateFPTemplate()
+func CommandCreateFP(binaryName string) *cobra.Command {
+	cmd := fpdaemon.CommandCreateFPTemplate(binaryName)
 	cmd.RunE = clientctx.RunEWithClientCtx(runCommandCreateFP)
 
 	return cmd
@@ -68,7 +67,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 	}()
 
 	res, err := client.CreateFinalityProvider(
-		context.Background(),
+		cmd.Context(),
 		fp.KeyName,
 		fp.ChainID,
 		fp.EotsPK,
@@ -79,9 +78,9 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		return err
 	}
 
-	types.PrintRespJSON(res)
+	types.PrintRespJSON(cmd, res)
 
-	cmd.Println("Your finality provider is successfully created. Please restart your fpd.")
+	cmd.Println("Finality provider created successfully. Please restart the fpd.")
 
 	return nil
 }
