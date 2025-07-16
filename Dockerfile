@@ -9,7 +9,7 @@ ARG BUILD_TAGS="muslc"
 # hadolint ignore=DL3018
 RUN apk add --no-cache --update openssh git make build-base linux-headers libc-dev \
     pkgconfig zeromq-dev musl-dev alpine-sdk libsodium-dev \
-    libzmq-static libsodium-static gcc && rm -rf /var/cache/apk/*
+    libzmq-static libsodium-static gcc wget && rm -rf /var/cache/apk/*
 
 # Build
 WORKDIR /go/src/github.com/babylonlabs-io/finality-provider
@@ -21,12 +21,11 @@ COPY ./ /go/src/github.com/babylonlabs-io/finality-provider/
 
 # Cosmwasm - Download correct libwasmvm version
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
-RUN WASMVM_VERSION=$(grep github.com/CosmWasm/wasmvm go.mod | cut -d' ' -f2) &&
+RUN WASMVM_VERSION=$(grep github.com/CosmWasm/wasmvm go.mod | cut -d' ' -f2) && \
     wget -q https://github.com/CosmWasm/wasmvm/releases/download/$WASMVM_VERSION/libwasmvm_muslc."$(uname -m)".a \
-        -O /lib/libwasmvm_muslc."$(uname -m)".a &&
-    # verify checksum
-    wget -q https://github.com/CosmWasm/wasmvm/releases/download/$WASMVM_VERSION/checksums.txt -O /tmp/checksums.txt &&
-    sha256sum /lib/libwasmvm_muslc."$(uname -m)."a | grep $(cat /tmp/checksums.txt | grep libwasmvm_muslc."$(uname -m)" | cut -d ' ' -f 1)
+        -O /lib/libwasmvm_muslc."$(uname -m)".a && \
+    wget -q https://github.com/CosmWasm/wasmvm/releases/download/$WASMVM_VERSION/checksums.txt -O /tmp/checksums.txt && \
+    sha256sum /lib/libwasmvm_muslc."$(uname -m)".a | grep $(cat /tmp/checksums.txt | grep libwasmvm_muslc."$(uname -m)" | cut -d ' ' -f 1)
 
 RUN CGO_LDFLAGS="$CGO_LDFLAGS -lstdc++ -lm -lsodium" \
     CGO_ENABLED=1 \
