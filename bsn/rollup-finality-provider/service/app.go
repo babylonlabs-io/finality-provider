@@ -59,5 +59,7 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 		fpMetrics,
 	)
 
-	return service.NewFinalityProviderApp(cfg.Common, cc, consumerCon, em, poller, rndCommiter, fpMetrics, db, logger)
+	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, cfg.Common.PollerConfig, logger)
+
+	return service.NewFinalityProviderApp(cfg.Common, cc, consumerCon, em, poller, rndCommiter, heightDeterminer, fpMetrics, db, logger)
 }

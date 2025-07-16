@@ -38,6 +38,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	BinaryName = "fpd"
+)
+
 // TestFinalityProviderLifeCycle tests the whole life cycle of a finality-provider
 // creation -> registration -> randomness commitment ->
 // activation with BTC delegation and Covenant sig ->
@@ -242,7 +246,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 
 	fpIns := fps[0]
 
-	cmd := commoncmd.CommandEditFinalityDescription()
+	cmd := commoncmd.CommandEditFinalityDescription(BinaryName)
 
 	const (
 		monikerFlag          = "moniker"
@@ -321,7 +325,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 
 	fpIns := fps[0]
 
-	cmd := daemon.CommandCreateFP()
+	cmd := daemon.CommandCreateFP(BinaryName)
 
 	eotsKeyName := "eots-key-2"
 	eotsPkBz, err := tm.EOTSServerHandler.CreateKey(eotsKeyName, "")
@@ -390,7 +394,7 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 	fpIns := fps[0]
 
 	tm.WaitForFpPubRandTimestamped(t, fpIns)
-	cmd := commoncmd.CommandUnsafePruneMerkleProof()
+	cmd := commoncmd.CommandUnsafePruneMerkleProof(BinaryName)
 
 	cmd.SetArgs([]string{
 		fpIns.GetBtcPkHex(),
@@ -498,7 +502,7 @@ func TestRecoverRandProofCmd(t *testing.T) {
 	require.NoError(t, err)
 
 	// run the cmd
-	cmd := daemon.CommandRecoverProof()
+	cmd := daemon.CommandRecoverProof(BinaryName)
 	cmd.SetArgs([]string{
 		fpIns.GetBtcPkHex(),
 		"--home=" + fpHomePath,
@@ -845,7 +849,7 @@ func TestUnsafeCommitPubRandCmd(t *testing.T) {
 	require.NoError(t, err)
 
 	// run the cmd
-	cmd := daemon.CommandCommitPubRand()
+	cmd := daemon.CommandCommitPubRand(BinaryName)
 	cmd.SetArgs([]string{
 		fpIns.GetBtcPkBIP340().MarshalHex(),
 		"30000",
