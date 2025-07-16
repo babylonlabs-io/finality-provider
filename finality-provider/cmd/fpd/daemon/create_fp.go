@@ -179,6 +179,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 	types.PrintRespJSON(cmd, res)
 
 	cmd.Println("Finality provider created successfully. Please restart the fpd.")
+
 	return nil
 }
 
