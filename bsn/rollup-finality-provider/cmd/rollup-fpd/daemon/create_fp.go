@@ -58,7 +58,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create finality provider gRPC client: %w", err)
 	}
 	defer func() {
 		if err := cleanUp(); err != nil {
@@ -75,7 +75,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		fp.CommissionRates,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create finality provider: %w", err)
 	}
 
 	types.PrintRespJSON(cmd, res)

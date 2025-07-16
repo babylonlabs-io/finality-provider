@@ -151,7 +151,7 @@ func runCommandLsFP(cmd *cobra.Command, _ []string) error {
 
 	resp, err := client.QueryFinalityProviderList(cmd.Context())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to query finality provider list: %w", err)
 	}
 	fptypes.PrintRespJSON(cmd, resp)
 
@@ -176,7 +176,7 @@ func CommandInfoFP(binaryName string) *cobra.Command {
 func runCommandInfoFP(cmd *cobra.Command, args []string) error {
 	fpPk, err := types.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read flag %s: %w", FpdDaemonAddressFlag, err)
 	}
 
 	daemonAddress, err := cmd.Flags().GetString(FpdDaemonAddressFlag)
@@ -196,7 +196,7 @@ func runCommandInfoFP(cmd *cobra.Command, args []string) error {
 
 	resp, err := client.QueryFinalityProviderInfo(cmd.Context(), fpPk)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to query finality provider info: %w", err)
 	}
 	fptypes.PrintRespJSON(cmd, resp)
 
