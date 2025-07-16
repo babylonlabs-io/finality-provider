@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -53,7 +54,7 @@ func main() {
 		rollupfpdaemon.CommandRecoverProof(BinaryName),
 	)
 
-	ctx, cancel := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
