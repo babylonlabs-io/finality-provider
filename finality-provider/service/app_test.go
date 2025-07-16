@@ -95,8 +95,9 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		rndCommitter := service.NewDefaultRandomnessCommitter(
 			service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
 			service.NewPubRandState(pubRandStore), mockConsumerController, em, logger, fpMetrics)
+		heightDeterminer := service.NewStartHeightDeterminer(mockConsumerController, fpCfg.PollerConfig, logger)
 
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, poller, rndCommitter, fpMetrics, fpdb, logger)
+		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, poller, rndCommitter, heightDeterminer, fpMetrics, fpdb, logger)
 		require.NoError(t, err)
 		defer func() {
 			err = fpdb.Close()
@@ -335,8 +336,9 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 		rndCommitter := service.NewDefaultRandomnessCommitter(
 			service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
 			service.NewPubRandState(pubRandStore), mockConsumerController, em, logger, fpMetrics)
+		heightDeterminer := service.NewStartHeightDeterminer(mockConsumerController, fpCfg.PollerConfig, logger)
 
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, poller, rndCommitter, fpMetrics, fpdb, logger)
+		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, poller, rndCommitter, heightDeterminer, fpMetrics, fpdb, logger)
 		require.NoError(t, err)
 
 		defer func() {
@@ -432,8 +434,9 @@ func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg
 	rndCommitter := service.NewDefaultRandomnessCommitter(
 		service.NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore), consumerCon, em, logger, fpMetrics)
+	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, cfg.PollerConfig, logger)
 
-	app, err := service.NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, rndCommitter, fpMetrics, db, logger)
+	app, err := service.NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, fpMetrics, db, logger)
 	require.NoError(t, err)
 
 	// create registered finality-provider
