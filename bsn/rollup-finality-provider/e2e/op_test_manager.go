@@ -303,9 +303,7 @@ func createRollupFpConfig(
 		FinalityContractAddress: "",
 		// it must be a dialable RPC address checked by NewRollupBSNController
 		RollupNodeRPCAddress: "https://optimism-sepolia.drpc.org",
-		// the value does not matter for the test
-		BabylonFinalityGadgetRpc: "127.0.0.1:50051",
-		Common:                   cfg,
+		Common:               cfg,
 	}
 
 	return opConsumerCfg
