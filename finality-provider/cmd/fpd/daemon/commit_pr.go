@@ -129,9 +129,11 @@ func RunCommandCommitPubRandWithConfig(ctx client.Context, cmd *cobra.Command, h
 		return fmt.Errorf("failed to create finality-provider %s instance: %w", fpPk.MarshalHex(), err)
 	}
 
+	fpTester := fp.NewTestHelper()
+
 	if startHeight == math.MaxUint64 {
-		return fp.TestCommitPubRand(targetHeight)
+		return fpTester.CommitPubRand(ctx.CmdContext, targetHeight)
 	}
 
-	return fp.TestCommitPubRandWithStartHeight(ctx.CmdContext, startHeight, targetHeight)
+	return fpTester.CommitPubRandWithStartHeight(ctx.CmdContext, startHeight, targetHeight)
 }
