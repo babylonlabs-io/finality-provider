@@ -7,25 +7,26 @@ import (
 	"os/signal"
 	"syscall"
 
-	incentivecli "github.com/babylonlabs-io/babylon/v3/x/incentive/client/cli"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/spf13/cobra"
-
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
+	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/version"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/spf13/cobra"
 )
+
+const BinaryName = "fpd"
 
 // NewRootCmd creates a new root command for fpd. It is called once in the main function.
 func NewRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:               "fpd",
-		Short:             "fpd - Finality Provider Daemon (fpd).",
-		Long:              `fpd is the daemon to create and manage finality providers.`,
+		Use:               BinaryName,
+		Short:             fmt.Sprintf("%s - Finality Provider Daemon (%s).", BinaryName, BinaryName),
+		Long:              fmt.Sprintf(`%s is the daemon to create and manage finality providers.`, BinaryName),
 		SilenceErrors:     false,
-		PersistentPreRunE: fpcmd.PersistClientCtx(client.Context{}),
+		PersistentPreRunE: clientctx.PersistClientCtx(client.Context{}),
 	}
 	rootCmd.PersistentFlags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
 
@@ -34,21 +35,30 @@ func NewRootCmd() *cobra.Command {
 
 func main() {
 	cmd := NewRootCmd()
+
+	// add all common commands
+	commoncmd.AddCommonCommands(cmd, BinaryName)
+	// add all keys commands
+	commoncmd.AddKeysCommands(cmd)
+	// add all incentive commands
+	commoncmd.AddIncentiveCommands(cmd)
+	// add version commands
+	version.AddVersionCommands(cmd, BinaryName)
+
+	// add the rest of commands that are specific to Babylon finality provider
 	cmd.AddCommand(
-		daemon.CommandInit(), daemon.CommandStart(), daemon.CommandKeys(),
-		daemon.CommandGetDaemonInfo(), daemon.CommandCreateFP(), daemon.CommandLsFP(),
-		daemon.CommandInfoFP(), daemon.CommandAddFinalitySig(), daemon.CommandUnjailFP(),
-		daemon.CommandEditFinalityDescription(), daemon.CommandCommitPubRand(), daemon.CommandRecoverProof(),
-		incentivecli.NewWithdrawRewardCmd(), incentivecli.NewSetWithdrawAddressCmd(),
-		incentivecli.CmdQueryRewardGauges(),
-		version.CommandVersion("fpd"), daemon.CommandUnsafePruneMerkleProof(),
+		daemon.CommandInit(BinaryName),
+		daemon.CommandStart(BinaryName),
+		daemon.CommandCreateFP(BinaryName),
+		daemon.CommandCommitPubRand(BinaryName),
+		daemon.CommandRecoverProof(BinaryName),
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Whoops. There was an error while executing your fpd CLI '%s'", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Whoops. There was an error while executing your %s CLI '%s'", BinaryName, err)
 		os.Exit(1) //nolint:gocritic
 	}
 }
