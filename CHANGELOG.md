@@ -52,6 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [515](https://github.com/babylonlabs-io/finality-provider/pull/515) chore: abstract randomness committer
 * [#522](https://github.com/babylonlabs-io/finality-provider/pull/522) cli: refactor CLIs and generalise for rollup FPs
 * [516](https://github.com/babylonlabs-io/finality-provider/pull/516) chore: abstract bootstrap
+* [537](https://github.com/babylonlabs-io/finality-provider/pull/537) chore: mv helper methods from fpi
 
 ## v1.1.0-rc.1
 
