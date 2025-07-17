@@ -93,8 +93,9 @@ func (cc *RollupBSNController) ReliablySendMsg(ctx context.Context, msg sdk.Msg,
 	return cc.reliablySendMsgs(ctx, []sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
-// QueryContractConfig queries the finality contract for its config
-func (cc *RollupBSNController) QueryContractConfig(ctx context.Context) (*Config, error) {
+// queryContractConfig queries the finality contract for its config
+// nolint:unused
+func (cc *RollupBSNController) queryContractConfig(ctx context.Context) (*Config, error) {
 	query := QueryMsg{
 		Config: &Config{},
 	}
@@ -394,7 +395,8 @@ func (cc *RollupBSNController) QueryBlock(ctx context.Context, height uint64) (t
 
 // Note: this is specific to the RollupBSNController and only used for testing
 // QueryBlock returns the Ethereum block from a RPC call
-func (cc *RollupBSNController) QueryEthBlock(ctx context.Context, height uint64) (*ethtypes.Header, error) {
+// nolint:unused
+func (cc *RollupBSNController) queryEthBlock(ctx context.Context, height uint64) (*ethtypes.Header, error) {
 	return cc.ethClient.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
 }
 

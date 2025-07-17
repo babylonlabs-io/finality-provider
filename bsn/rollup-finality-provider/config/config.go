@@ -18,9 +18,8 @@ const (
 )
 
 type RollupFPConfig struct {
-	RollupNodeRPCAddress     string `long:"rollup-node-rpc-address" description:"the rpc address of the rollup node to connect to"`
-	BabylonFinalityGadgetRpc string `long:"babylon-finality-gadget-rpc" description:"the rpc address of rollup finality gadget"` //nolint:stylecheck,revive
-	FinalityContractAddress  string `long:"finality-contract-address" description:"the contract address of the rollup finality contract"`
+	RollupNodeRPCAddress    string `long:"rollup-node-rpc-address" description:"the rpc address of the rollup node to connect to"`
+	FinalityContractAddress string `long:"finality-contract-address" description:"the contract address of the rollup finality contract"`
 
 	// Below configurations are needed for the Babylon client
 	Common *fpcfg.Config
