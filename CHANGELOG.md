@@ -43,7 +43,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
-* [#517](https://github.com/babylonlabs-io/finality-provider/pull/518) feat: rollup BSN finality provider setup
 * [#493](https://github.com/babylonlabs-io/finality-provider/pull/493) chore: key migration for test keyring
 * [#501](https://github.com/babylonlabs-io/finality-provider/pull/501) chore: signing context
 * [#500](https://github.com/babylonlabs-io/finality-provider/pull/500) feat: fpd abstract poller implementation
@@ -52,6 +51,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [515](https://github.com/babylonlabs-io/finality-provider/pull/515) chore: abstract randomness committer
 * [#522](https://github.com/babylonlabs-io/finality-provider/pull/522) cli: refactor CLIs and generalise for rollup FPs
 * [516](https://github.com/babylonlabs-io/finality-provider/pull/516) chore: abstract bootstrap
+* [#517](https://github.com/babylonlabs-io/finality-provider/pull/518) feat: rollup BSN finality provider setup
+* [#526](https://github.com/babylonlabs-io/finality-provider/pull/526) rollup: remove dependency to finality gadget
 
 ## v1.1.0-rc.1
 

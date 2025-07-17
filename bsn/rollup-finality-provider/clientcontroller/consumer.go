@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math"
 	"math/big"
 
 	sdkErr "cosmossdk.io/errors"
@@ -29,10 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"go.uber.org/zap"
-)
-
-const (
-	BabylonChainName = "Babylon"
 )
 
 var _ api.ConsumerController = &RollupBSNController{}
@@ -98,8 +93,9 @@ func (cc *RollupBSNController) ReliablySendMsg(ctx context.Context, msg sdk.Msg,
 	return cc.reliablySendMsgs(ctx, []sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
-// QueryContractConfig queries the finality contract for its config
-func (cc *RollupBSNController) QueryContractConfig(ctx context.Context) (*Config, error) {
+// queryContractConfig queries the finality contract for its config
+// nolint:unused
+func (cc *RollupBSNController) queryContractConfig(ctx context.Context) (*Config, error) {
 	query := QueryMsg{
 		Config: &Config{},
 	}
@@ -207,7 +203,7 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 				FpPubkeyHex: fpPkHex,
 				Height:      block.GetHeight(),
 				PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(req.PubRandList[i]).MustMarshal(),
-				Proof:       ConvertProof(cmtProof),
+				Proof:       convertProof(cmtProof),
 				BlockHash:   block.Hash,
 				Signature:   bbntypes.NewSchnorrEOTSSigFromModNScalar(req.Sigs[i]).MustMarshal(),
 			},
@@ -399,7 +395,8 @@ func (cc *RollupBSNController) QueryBlock(ctx context.Context, height uint64) (t
 
 // Note: this is specific to the RollupBSNController and only used for testing
 // QueryBlock returns the Ethereum block from a RPC call
-func (cc *RollupBSNController) QueryEthBlock(ctx context.Context, height uint64) (*ethtypes.Header, error) {
+// nolint:unused
+func (cc *RollupBSNController) queryEthBlock(ctx context.Context, height uint64) (*ethtypes.Header, error) {
 	return cc.ethClient.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
 }
 
@@ -497,69 +494,13 @@ func (cc *RollupBSNController) UnjailFinalityProvider(_ context.Context, _ *btce
 	return nil, nil
 }
 
-func ConvertProof(cmtProof cmtcrypto.Proof) Proof {
+func convertProof(cmtProof cmtcrypto.Proof) Proof {
 	return Proof{
 		Total:    uint64(cmtProof.Total), // #nosec G115
 		Index:    uint64(cmtProof.Index), // #nosec G115
 		LeafHash: cmtProof.LeafHash,
 		Aunts:    cmtProof.Aunts,
 	}
-}
-
-// GetBlockNumberByTimestamp returns the L2 block number for the given BTC staking activation timestamp.
-// It uses a binary search to find the block number.
-func (cc *RollupBSNController) GetBlockNumberByTimestamp(ctx context.Context, targetTimestamp uint64) (uint64, error) {
-	// Check if the target timestamp is after the latest block
-	latestBlock, err := cc.ethClient.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return math.MaxUint64, err
-	}
-	if targetTimestamp > latestBlock.Time {
-		return math.MaxUint64, fmt.Errorf("target timestamp %d is after the latest block timestamp %d", targetTimestamp, latestBlock.Time)
-	}
-
-	// Check if the target timestamp is before the first block
-	firstBlock, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(1))
-	if err != nil {
-		return math.MaxUint64, err
-	}
-
-	// let's say block 0 is at t0 and block 1 at t1
-	// if t0 < targetTimestamp < t1, the activated height should be block 1
-	if targetTimestamp < firstBlock.Time {
-		return uint64(1), nil
-	}
-
-	// binary search between block 1 and the latest block
-	// start from block 1, b/c some L2s such as OP mainnet, block 0 is genesis block with timestamp 0
-	lowerBound := uint64(1)
-	upperBound := latestBlock.Number.Uint64()
-
-	for lowerBound <= upperBound {
-		midBlockNumber := (lowerBound + upperBound) / 2
-		block, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(int64(midBlockNumber))) // #nosec G115
-		if err != nil {
-			return math.MaxUint64, err
-		}
-
-		switch {
-		case block.Time < targetTimestamp:
-			lowerBound = midBlockNumber + 1
-		case block.Time > targetTimestamp:
-			upperBound = midBlockNumber - 1
-		default:
-			return midBlockNumber, nil
-		}
-	}
-
-	return lowerBound, nil
-}
-
-// QueryFinalityProviderSlashedOrJailed - returns if the fp has been slashed, jailed, err
-// nolint:revive // Ignore stutter warning - full name provides clarity
-func (cc *RollupBSNController) QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (bool, bool, error) {
-	// TODO: implement slashed or jailed feature in rollup BSN
-	return false, false, nil
 }
 
 func (cc *RollupBSNController) Close() error {
