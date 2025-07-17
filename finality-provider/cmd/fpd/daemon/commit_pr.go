@@ -66,7 +66,7 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 	return RunCommandCommitPubRandWithConfig(ctx, cmd, homePath, cfg, args)
 }
 
-func RunCommandCommitPubRandWithConfig(ctx client.Context, cmd *cobra.Command, homePath string, cfg *fpcfg.Config, args []string) error {
+func RunCommandCommitPubRandWithConfig(_ client.Context, cmd *cobra.Command, homePath string, cfg *fpcfg.Config, args []string) error {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
 		return err
