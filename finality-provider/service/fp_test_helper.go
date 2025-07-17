@@ -34,7 +34,7 @@ func NewFinalityProviderTestHelper(fp *FinalityProviderInstance) *FinalityProvid
 // - it will always start from the last committed height + 1
 // - if targetBlockHeight is too large, it will commit multiple fp.cfg.NumPubRand pairs in a loop until reaching the targetBlockHeight
 func (th *FinalityProviderTestHelper) CommitPubRand(ctx context.Context, targetBlockHeight uint64) error {
-	var startHeight, lastCommittedHeight uint64
+	var startHeight uint64
 	lastCommittedHeight, err := th.fp.GetLastCommittedHeight(ctx)
 	if err != nil {
 		return err
