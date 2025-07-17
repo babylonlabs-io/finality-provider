@@ -9,7 +9,6 @@ require (
 	cosmossdk.io/math v1.5.3
 	github.com/avast/retry-go/v4 v4.5.1
 	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250710070516-a8ad676746c1
-	github.com/babylonlabs-io/finality-gadget v0.1.1
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
 	github.com/btcsuite/btcd/btcutil v1.1.6
