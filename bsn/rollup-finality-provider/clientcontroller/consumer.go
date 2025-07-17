@@ -15,7 +15,6 @@ import (
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
-	fgclient "github.com/babylonlabs-io/finality-gadget/client"
 	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
@@ -421,33 +420,13 @@ func (cc *RollupBSNController) QueryIsBlockFinalized(ctx context.Context, height
 	return true, nil
 }
 
-// QueryActivatedHeight returns the L2 block number at which the finality gadget is activated.
-func (cc *RollupBSNController) QueryActivatedHeight(ctx context.Context) (uint64, error) {
-	finalityGadgetClient, err := fgclient.NewFinalityGadgetGrpcClient(cc.Cfg.BabylonFinalityGadgetRpc)
-	if err != nil {
-		cc.logger.Error("failed to initialize Babylon Finality Gadget Grpc client", zap.Error(err))
-
-		return math.MaxUint64, err
-	}
-
-	activatedTimestamp, err := finalityGadgetClient.QueryBtcStakingActivatedTimestamp()
-	if err != nil {
-		cc.logger.Error("failed to query BTC staking activate timestamp", zap.Error(err))
-
-		return math.MaxUint64, err
-	}
-
-	l2BlockNumber, err := cc.GetBlockNumberByTimestamp(ctx, activatedTimestamp)
-	if err != nil {
-		cc.logger.Error("failed to convert L2 block number from the given BTC staking activation timestamp", zap.Error(err))
-
-		return math.MaxUint64, err
-	}
-
-	return l2BlockNumber, nil
+// QueryActivatedHeight returns the rollup block number at which the finality gadget is activated.
+func (cc *RollupBSNController) QueryActivatedHeight(_ context.Context) (uint64, error) {
+	// TODO: implement finality activation feature in rollup
+	return 0, nil
 }
 
-// QueryLatestBlockHeight gets the latest L2 block number from a RPC call
+// QueryLatestBlockHeight gets the latest rollup block number from a RPC call
 func (cc *RollupBSNController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
 	l2LatestBlock, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(ethrpc.LatestBlockNumber.Int64()))
 	if err != nil {
