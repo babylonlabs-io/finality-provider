@@ -132,8 +132,8 @@ func RunCommandCommitPubRandWithConfig(ctx client.Context, cmd *cobra.Command, h
 	fpTester := fp.NewTestHelper()
 
 	if startHeight == math.MaxUint64 {
-		return fpTester.CommitPubRand(ctx.CmdContext, targetHeight)
+		return fpTester.CommitPubRand(cmd.Context(), targetHeight)
 	}
 
-	return fpTester.CommitPubRandWithStartHeight(ctx.CmdContext, startHeight, targetHeight)
+	return fpTester.CommitPubRandWithStartHeight(cmd.Context(), startHeight, targetHeight)
 }
