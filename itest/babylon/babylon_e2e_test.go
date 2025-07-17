@@ -117,7 +117,8 @@ func TestSkippingDoubleSignError(t *testing.T) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	b := types.NewBlockInfo(currentHeight, datagen.GenRandomByteArray(r, 32), false)
 	t.Logf("manually sending a vote for height %d", currentHeight)
-	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(ctx, b, true)
+
+	_, _, err = fpIns.NewTestHelper().SubmitFinalitySignatureAndExtractPrivKey(ctx, b, true)
 	require.NoError(t, err)
 
 	// restart the fp to see if it will skip sending the height
@@ -163,8 +164,10 @@ func TestDoubleSigning(t *testing.T) {
 
 	finalizedBlock := tm.WaitForNFinalizedBlocks(t, 1)
 
+	fpTestHelper := fpIns.NewTestHelper()
+
 	// test duplicate vote which should be ignored
-	res, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(ctx, finalizedBlock, false)
+	res, extractedKey, err := fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, finalizedBlock, false)
 	require.NoError(t, err)
 	require.Nil(t, extractedKey)
 	require.Empty(t, res)
@@ -176,10 +179,10 @@ func TestDoubleSigning(t *testing.T) {
 	b := types.NewBlockInfo(finalizedBlock.GetHeight(), datagen.GenRandomByteArray(r, 32), false)
 
 	// confirm we have double sign protection
-	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(ctx, b, true)
+	_, _, err = fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, b, true)
 	require.Contains(t, err.Error(), "FailedPrecondition")
 
-	_, extractedKey, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(ctx, b, false)
+	_, extractedKey, err = fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, b, false)
 	require.NoError(t, err)
 	require.NotNil(t, extractedKey)
 	localKey := tm.EOTSServerHandler.GetFPPrivKey(t, fpIns.GetBtcPkBIP340().MustMarshal())
@@ -550,7 +553,7 @@ func TestSigHeightOutdated(t *testing.T) {
 
 	finalizedBlock := tm.WaitForNFinalizedBlocks(t, 1)
 
-	res, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(ctx, finalizedBlock, false)
+	res, extractedKey, err := fpIns.NewTestHelper().SubmitFinalitySignatureAndExtractPrivKey(ctx, finalizedBlock, false)
 
 	require.NoError(t, err)
 	require.Nil(t, extractedKey)

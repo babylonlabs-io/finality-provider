@@ -12,9 +12,7 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	ftypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/gogo/protobuf/jsonpb"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
@@ -523,83 +521,6 @@ func (fp *FinalityProviderInstance) CommitPubRand(ctx context.Context, startHeig
 	return fp.rndCommitter.Commit(ctx, startHeight)
 }
 
-// TestCommitPubRand is exposed for devops/testing purpose to allow manual committing public randomness in cases
-// where FP is stuck due to lack of public randomness.
-//
-// Note:
-// - this function is similar to `CommitPubRand` but should not be used in the main pubrand submission loop.
-// - it will always start from the last committed height + 1
-// - if targetBlockHeight is too large, it will commit multiple fp.cfg.NumPubRand pairs in a loop until reaching the targetBlockHeight
-func (fp *FinalityProviderInstance) TestCommitPubRand(targetBlockHeight uint64) error {
-	var startHeight, lastCommittedHeight uint64
-	ctx := context.Background()
-	lastCommittedHeight, err := fp.GetLastCommittedHeight(ctx)
-	if err != nil {
-		return err
-	}
-
-	if lastCommittedHeight >= targetBlockHeight {
-		return fmt.Errorf(
-			"finality provider has already committed pubrand to target block height (pk: %s, target: %d, last committed: %d)",
-			fp.GetBtcPkHex(),
-			targetBlockHeight,
-			lastCommittedHeight,
-		)
-	}
-
-	if lastCommittedHeight == uint64(0) {
-		// Note: it can also be the case that the finality-provider has committed 1 pubrand before (but in practice, we
-		// will never set cfg.NumPubRand to 1. so we can safely assume it has never committed before)
-		startHeight = 0
-	} else {
-		startHeight = lastCommittedHeight + 1
-	}
-
-	return fp.TestCommitPubRandWithStartHeight(ctx, startHeight, targetBlockHeight)
-}
-
-// TestCommitPubRandWithStartHeight is exposed for devops/testing purpose to allow manual committing public randomness
-// in cases where FP is stuck due to lack of public randomness.
-func (fp *FinalityProviderInstance) TestCommitPubRandWithStartHeight(ctx context.Context, startHeight uint64, targetBlockHeight uint64) error {
-	if startHeight > targetBlockHeight {
-		return fmt.Errorf("start height should not be greater than target block height")
-	}
-
-	var lastCommittedHeight uint64
-	lastCommittedHeight, err := fp.GetLastCommittedHeight(ctx)
-	if err != nil {
-		return err
-	}
-	if lastCommittedHeight >= startHeight {
-		return fmt.Errorf(
-			"finality provider has already committed pubrand at the start height (pk: %s, startHeight: %d, lastCommittedHeight: %d)",
-			fp.GetBtcPkHex(),
-			startHeight,
-			lastCommittedHeight,
-		)
-	}
-
-	fp.logger.Info("Start committing pubrand from block height", zap.Uint64("start_height", startHeight))
-
-	for startHeight <= targetBlockHeight {
-		_, err = fp.CommitPubRand(ctx, startHeight)
-		if err != nil {
-			return err
-		}
-		lastCommittedHeight = startHeight + uint64(fp.cfg.NumPubRand) - 1
-		startHeight = lastCommittedHeight + 1
-		fp.logger.Info("Committed pubrand to block height", zap.Uint64("height", lastCommittedHeight))
-	}
-
-	// no error. success
-	return nil
-}
-
-// SubmitFinalitySignature builds and sends a finality signature over the given block to the consumer chain
-func (fp *FinalityProviderInstance) SubmitFinalitySignature(b *types.BlockInfo) (*types.TxResponse, error) {
-	return fp.SubmitBatchFinalitySignatures([]types.BlockDescription{b})
-}
-
 // SubmitBatchFinalitySignatures builds and sends a finality signature over the given block to the consumer chain
 // Contract:
 //  1. the input blocks should be in the ascending order of height
@@ -703,89 +624,8 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []types
 	return res, nil
 }
 
-// TestSubmitFinalitySignatureAndExtractPrivKey is exposed for presentation/testing purpose to allow manual sending finality signature
-// this API is the same as SubmitBatchFinalitySignatures except that we don't constraint the voting height and update status
-// Note: this should not be used in the submission loop
-func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey(
-	ctx context.Context,
-	b *types.BlockInfo, useSafeEOTSFunc bool,
-) (*types.TxResponse, *btcec.PrivateKey, error) {
-	// get public randomness
-	prList, err := fp.GetPubRandList(b.GetHeight(), 1)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get public randomness list: %w", err)
-	}
-	pubRand := prList[0]
-
-	// get proof
-	proofBytes, err := fp.pubRandState.getPubRandProof(fp.btcPk.MustMarshal(), fp.GetChainID(), b.GetHeight())
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %w", err)
-	}
-
-	eotsSignerFunc := func(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
-		var msgToSign []byte
-		if fp.cfg.ContextSigningHeight > b.GetHeight() {
-			signCtx := fp.consumerCon.GetFpFinVoteContext()
-			msgToSign = b.MsgToSign(signCtx)
-		} else {
-			msgToSign = b.MsgToSign("")
-		}
-
-		sig, err := fp.em.UnsafeSignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.GetHeight())
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign EOTS: %w", err)
-		}
-
-		return bbntypes.NewSchnorrEOTSSigFromModNScalar(sig), nil
-	}
-
-	if useSafeEOTSFunc {
-		eotsSignerFunc = fp.SignFinalitySig
-	}
-
-	// sign block
-	eotsSig, err := eotsSignerFunc(b)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// send finality signature to the consumer chain
-	res, err := fp.consumerCon.SubmitBatchFinalitySigs(ctx, &ccapi.SubmitBatchFinalitySigsRequest{
-		FpPk:        fp.GetBtcPk(),
-		Blocks:      []*types.BlockInfo{b},
-		PubRandList: []*btcec.FieldVal{pubRand},
-		ProofList:   [][]byte{proofBytes},
-		Sigs:        []*btcec.ModNScalar{eotsSig.ToModNScalar()},
-	})
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to send finality signature to the consumer chain: %w", err)
-	}
-
-	if res.TxHash == "" {
-		return res, nil, nil
-	}
-
-	// try to extract the private key
-	var privKey *btcec.PrivateKey
-	for _, ev := range res.Events {
-		if strings.Contains(ev.EventType, "EventSlashedFinalityProvider") {
-			evidenceStr := ev.Attributes["evidence"]
-			fp.logger.Debug("found slashing evidence")
-			var evidence ftypes.Evidence
-			if err := jsonpb.UnmarshalString(evidenceStr, &evidence); err != nil {
-				return nil, nil, fmt.Errorf("failed to decode evidence bytes to evidence: %s", err.Error())
-			}
-			privKey, err = evidence.ExtractBTCSK()
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to extract private key: %s", err.Error())
-			}
-
-			break
-		}
-	}
-
-	return res, privKey, nil
+func (fp *FinalityProviderInstance) NewTestHelper() *FinalityProviderTestHelper {
+	return NewFinalityProviderTestHelper(fp)
 }
 
 // DetermineStartHeight determines start height for block processing
@@ -856,31 +696,4 @@ func (fp *FinalityProviderInstance) GetVotingPowerWithRetry(height uint64) (bool
 	}
 
 	return hasPower, nil
-}
-
-func (fp *FinalityProviderInstance) GetFinalityProviderSlashedOrJailedWithRetry() (bool, bool, error) {
-	var (
-		status *ccapi.FinalityProviderStatusResponse
-		err    error
-	)
-
-	if err := retry.Do(func() error {
-		status, err = fp.consumerCon.QueryFinalityProviderStatus(context.Background(), fp.GetBtcPk())
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
-		fp.logger.Debug(
-			"failed to query the finality-provider",
-			zap.Uint("attempt", n+1),
-			zap.Uint("max_attempts", RtyAttNum),
-			zap.Error(err),
-		)
-	})); err != nil {
-		return false, false, err
-	}
-
-	return status.Slashed, status.Jailed, nil
 }
