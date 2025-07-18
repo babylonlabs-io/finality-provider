@@ -489,7 +489,7 @@ func ValidEotsSignBaby(eotsPk, babyAddr, eotsSigOverBabyAddr string) (bool, erro
 
 	schnorrSigBase64, err := base64.StdEncoding.DecodeString(eotsSigOverBabyAddr)
 	if err != nil {
-		return false, fmt.Errorf("failed to parse eots public key: %w", err)
+		return false, fmt.Errorf("failed to decode signature: %w", err)
 	}
 
 	schnorrSig, err := schnorr.ParseSignature(schnorrSigBase64)
