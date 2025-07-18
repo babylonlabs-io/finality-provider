@@ -277,7 +277,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	// send finality signature to the consumer chain
 	res, err := ds.consumerCtrl.SubmitBatchFinalitySigs(ctx, api.NewSubmitBatchFinalitySigsRequest(
 		ds.GetBtcPk(),
-		validBlocks,
+		validBlocks, // todo(lazar): change this to blockDescription
 		validPrList,
 		validProofList,
 		validSigList,
