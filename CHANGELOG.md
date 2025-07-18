@@ -55,6 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#526](https://github.com/babylonlabs-io/finality-provider/pull/526) rollup: remove dependency to finality gadget
 * [537](https://github.com/babylonlabs-io/finality-provider/pull/537) chore: mv helper methods from fpi
 * [#538](https://github.com/babylonlabs-io/finality-provider/pull/538) chore: fix e2e tags and wrap check
+* [520](https://github.com/babylonlabs-io/finality-provider/pull/520) chore: migration guide keyring test to file
 
 ## v1.1.0-rc.1
 
