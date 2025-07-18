@@ -162,7 +162,7 @@ func (bc *BabylonConsumerController) SubmitBatchFinalitySigs(
 			BlockHeight:  b.GetHeight(),
 			PubRand:      bbntypes.NewSchnorrPubRandFromFieldVal(req.PubRandList[i]),
 			Proof:        &cmtProof,
-			BlockAppHash: b.Hash,
+			BlockAppHash: b.GetHash(),
 			FinalitySig:  bbntypes.NewSchnorrEOTSSigFromModNScalar(req.Sigs[i]),
 		}
 		msgs = append(msgs, msg)

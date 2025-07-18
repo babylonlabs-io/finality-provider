@@ -108,7 +108,7 @@ type FinalityOperator interface {
 
 type SubmitBatchFinalitySigsRequest struct {
 	FpPk        *btcec.PublicKey
-	Blocks      []*types.BlockInfo
+	Blocks      []types.BlockDescription
 	PubRandList []*btcec.FieldVal
 	ProofList   [][]byte
 	Sigs        []*btcec.ModNScalar
@@ -140,7 +140,7 @@ type QueryFinalityProviderHasPowerRequest struct {
 
 func NewSubmitBatchFinalitySigsRequest(
 	fpPk *btcec.PublicKey,
-	blocks []*types.BlockInfo,
+	blocks []types.BlockDescription,
 	pubRandList []*btcec.FieldVal,
 	proofList [][]byte,
 	sigs []*btcec.ModNScalar,

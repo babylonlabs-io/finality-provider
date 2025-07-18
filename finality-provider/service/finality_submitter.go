@@ -281,7 +281,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	}
 
 	// Create slices to store only the valid items
-	validBlocks := make([]*types.BlockInfo, 0, len(blocks))
+	validBlocks := make([]types.BlockDescription, 0, len(blocks))
 	validPrList := make([]*btcec.FieldVal, 0, len(blocks))
 	validProofList := make([][]byte, 0, len(blocks))
 	validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
@@ -303,7 +303,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 		}
 
 		// If signature is valid, append all corresponding items
-		validBlocks = append(validBlocks, types.NewBlockInfo(b.GetHeight(), b.GetHash(), b.IsFinalized()))
+		validBlocks = append(validBlocks, b)
 		validPrList = append(validPrList, prList[i])
 		validProofList = append(validProofList, proofBytesList[i])
 		validSigList = append(validSigList, eotsSig.ToModNScalar())
@@ -319,7 +319,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	// send finality signature to the consumer chain
 	res, err := ds.consumerCtrl.SubmitBatchFinalitySigs(ctx, api.NewSubmitBatchFinalitySigsRequest(
 		ds.GetBtcPk(),
-		validBlocks, // todo(lazar): change this to blockDescription
+		validBlocks,
 		validPrList,
 		validProofList,
 		validSigList,

@@ -441,7 +441,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []types
 	}
 
 	// Create slices to store only the valid items
-	validBlocks := make([]*types.BlockInfo, 0, len(blocks))
+	validBlocks := make([]types.BlockDescription, 0, len(blocks))
 	validPrList := make([]*btcec.FieldVal, 0, len(blocks))
 	validProofList := make([][]byte, 0, len(blocks))
 	validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
@@ -463,9 +463,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []types
 			continue
 		}
 		// If signature is valid, append all corresponding items
-		// TODO(Lazar955): will change this type to interface BlockDescription but for now if we do it we need to
-		// change signature of SubmitBatchFinalitySigs and all implementing methods
-		validBlocks = append(validBlocks, types.NewBlockInfo(b.GetHeight(), b.GetHash(), b.IsFinalized()))
+		validBlocks = append(validBlocks, b)
 		validPrList = append(validPrList, prList[i])
 		validProofList = append(validProofList, proofBytesList[i])
 		validSigList = append(validSigList, eotsSig.ToModNScalar())
