@@ -484,7 +484,7 @@ func ValidPopExport(pop PoPExport) (bool, error) {
 func ValidEotsSignBaby(eotsPk, babyAddr, eotsSigOverBabyAddr string) (bool, error) {
 	eotsPubKey, err := bbntypes.NewBIP340PubKeyFromHex(eotsPk)
 	if err != nil {
-		return false, fmt.Errorf("failed to parse schnorr signature: %w", err)
+		return false, fmt.Errorf("failed to parse eots public key: %w", err)
 	}
 
 	schnorrSigBase64, err := base64.StdEncoding.DecodeString(eotsSigOverBabyAddr)
