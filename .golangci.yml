@@ -3,7 +3,6 @@ run:
     - e2e_rollup
     - e2e_babylon
     - e2e_bcd
-    - e2e_wasmd
   timeout: 5m
 
 linters:
