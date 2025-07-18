@@ -34,16 +34,17 @@ type FinalityProviderApp struct {
 	wg        sync.WaitGroup
 	quit      chan struct{}
 
-	cc               ccapi.ClientController
-	consumerCon      ccapi.ConsumerController
-	kr               keyring.Keyring
-	fps              *store.FinalityProviderStore
-	pubRandStore     *store.PubRandProofStore
-	config           *fpcfg.Config
-	logger           *zap.Logger
-	poller           types.BlockPoller[types.BlockDescription]
-	rndCommitter     types.RandomnessCommitter
-	heightDeterminer types.HeightDeterminer
+	cc                ccapi.ClientController
+	consumerCon       ccapi.ConsumerController
+	kr                keyring.Keyring
+	fps               *store.FinalityProviderStore
+	pubRandStore      *store.PubRandProofStore
+	config            *fpcfg.Config
+	logger            *zap.Logger
+	poller            types.BlockPoller[types.BlockDescription]
+	rndCommitter      types.RandomnessCommitter
+	heightDeterminer  types.HeightDeterminer
+	finalitySubmitter types.FinalitySignatureSubmitter
 
 	fpInsMu     sync.RWMutex // Protects fpIns
 	fpIns       *FinalityProviderInstance
@@ -102,8 +103,14 @@ func NewFinalityProviderAppFromConfig(
 	)
 
 	heightDeterminer := NewStartHeightDeterminer(consumerCon, cfg.PollerConfig, logger)
+	fsCfg := NewDefaultFinalitySubmitterConfig(
+		cfg.MaxSubmissionRetries,
+		cfg.ContextSigningHeight,
+		cfg.SubmissionRetryInterval,
+	)
+	finalitySubmitter := NewDefaultFinalitySubmitter(consumerCon, em, rndCommiter.GetPubRandProofList, fsCfg, logger, fpMetrics)
 
-	return NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, rndCommiter, heightDeterminer, fpMetrics, db, logger)
+	return NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, rndCommiter, heightDeterminer, finalitySubmitter, fpMetrics, db, logger)
 }
 
 func NewFinalityProviderApp(
@@ -114,6 +121,7 @@ func NewFinalityProviderApp(
 	poller types.BlockPoller[types.BlockDescription],
 	rndCommitter types.RandomnessCommitter,
 	heightDeterminer types.HeightDeterminer,
+	finalitySubmitter types.FinalitySignatureSubmitter,
 	metrics *metrics.FpMetrics,
 	db kvdb.Backend,
 	logger *zap.Logger,
@@ -148,6 +156,7 @@ func NewFinalityProviderApp(
 		poller:                            poller,
 		rndCommitter:                      rndCommitter,
 		heightDeterminer:                  heightDeterminer,
+		finalitySubmitter:                 finalitySubmitter,
 		metrics:                           metrics,
 		quit:                              make(chan struct{}),
 		unjailFinalityProviderRequestChan: make(chan *UnjailFinalityProviderRequest),
@@ -561,7 +570,7 @@ func (app *FinalityProviderApp) startFinalityProviderInstance(
 	if app.fpIns == nil {
 		fpIns, err := NewFinalityProviderInstance(
 			pk, app.config, app.fps, app.pubRandStore, app.cc, app.consumerCon,
-			app.eotsManager, app.poller, app.rndCommitter, app.heightDeterminer,
+			app.eotsManager, app.poller, app.rndCommitter, app.heightDeterminer, app.finalitySubmitter,
 			app.metrics, app.criticalErrChan, app.logger,
 		)
 		if err != nil {

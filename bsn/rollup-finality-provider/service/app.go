@@ -50,7 +50,7 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 		return nil, fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
 
-	rndCommiter := service.NewDefaultRandomnessCommitter(
+	rndCommitter := service.NewDefaultRandomnessCommitter(
 		service.NewRandomnessCommitterConfig(cfg.Common.NumPubRand, int64(cfg.Common.TimestampingDelayBlocks), cfg.Common.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore),
 		consumerCon,
@@ -60,8 +60,17 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 	)
 
 	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, cfg.Common.PollerConfig, logger)
+	finalitySubmitter := service.NewDefaultFinalitySubmitter(consumerCon,
+		em,
+		rndCommitter.GetPubRandProofList,
+		service.NewDefaultFinalitySubmitterConfig(cfg.Common.MaxSubmissionRetries,
+			cfg.Common.ContextSigningHeight,
+			cfg.Common.SubmissionRetryInterval),
+		logger,
+		fpMetrics,
+	)
 
-	fpApp, err := service.NewFinalityProviderApp(cfg.Common, cc, consumerCon, em, poller, rndCommiter, heightDeterminer, fpMetrics, db, logger)
+	fpApp, err := service.NewFinalityProviderApp(cfg.Common, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, db, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create finality provider app: %w", err)
 	}

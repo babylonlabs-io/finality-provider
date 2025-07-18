@@ -272,3 +272,16 @@ func (rc *DefaultRandomnessCommitter) signPubRandCommit(startHeight uint64, numP
 
 	return sig, nil
 }
+
+func (rc *DefaultRandomnessCommitter) GetPubRandProofList(height uint64, numPubRand uint64) ([][]byte, error) {
+	proofList, err := rc.pubRandState.getPubRandProofList(rc.btcPk.MustMarshal(), rc.cfg.ChainID, height, numPubRand)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get public randomness proof list: %w", err)
+	}
+
+	if len(proofList) == 0 {
+		return nil, fmt.Errorf("no public randomness proof found for height %d and num %d", height, numPubRand)
+	}
+
+	return proofList, nil
+}

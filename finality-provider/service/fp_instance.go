@@ -63,6 +63,7 @@ func NewFinalityProviderInstance(
 	poller types.BlockPoller[types.BlockDescription],
 	rndCommitter types.RandomnessCommitter,
 	heightDeterminer types.HeightDeterminer,
+	finalitySubmitter types.FinalitySignatureSubmitter,
 	metrics *metrics.FpMetrics,
 	errChan chan<- *CriticalError,
 	logger *zap.Logger,
@@ -76,7 +77,22 @@ func NewFinalityProviderInstance(
 		return nil, fmt.Errorf("the finality provider instance is already slashed")
 	}
 
-	return newFinalityProviderInstanceFromStore(sfp, cfg, s, prStore, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, metrics, errChan, logger)
+	return newFinalityProviderInstanceFromStore(
+		sfp,
+		cfg,
+		s,
+		prStore,
+		cc,
+		consumerCon,
+		em,
+		poller,
+		rndCommitter,
+		heightDeterminer,
+		finalitySubmitter,
+		metrics,
+		errChan,
+		logger,
+	)
 }
 
 // Helper function to create FinalityProviderInstance from store data
@@ -91,6 +107,7 @@ func newFinalityProviderInstanceFromStore(
 	poller types.BlockPoller[types.BlockDescription],
 	rndCommitter types.RandomnessCommitter,
 	heightDeterminer types.HeightDeterminer,
+	finalitySubmitter types.FinalitySignatureSubmitter,
 	metrics *metrics.FpMetrics,
 	errChan chan<- *CriticalError,
 	logger *zap.Logger,
@@ -101,20 +118,21 @@ func newFinalityProviderInstanceFromStore(
 	rndCommitter.SetChainID([]byte(sfp.ChainID))
 
 	return &FinalityProviderInstance{
-		btcPk:            bbntypes.NewBIP340PubKeyFromBTCPK(sfp.BtcPk),
-		fpState:          NewFpState(sfp, s),
-		pubRandState:     NewPubRandState(prStore),
-		cfg:              cfg,
-		logger:           logger,
-		isStarted:        atomic.NewBool(false),
-		criticalErrChan:  errChan,
-		em:               em,
-		poller:           poller,
-		rndCommitter:     rndCommitter,
-		heightDeterminer: heightDeterminer,
-		cc:               cc,
-		consumerCon:      consumerCon,
-		metrics:          metrics,
+		btcPk:             bbntypes.NewBIP340PubKeyFromBTCPK(sfp.BtcPk),
+		fpState:           NewFpState(sfp, s),
+		pubRandState:      NewPubRandState(prStore),
+		cfg:               cfg,
+		logger:            logger,
+		isStarted:         atomic.NewBool(false),
+		criticalErrChan:   errChan,
+		em:                em,
+		poller:            poller,
+		rndCommitter:      rndCommitter,
+		heightDeterminer:  heightDeterminer,
+		finalitySubmitter: finalitySubmitter,
+		cc:                cc,
+		consumerCon:       consumerCon,
+		metrics:           metrics,
 	}, nil
 }
 

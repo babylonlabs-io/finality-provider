@@ -168,8 +168,14 @@ func startFinalityProviderAppWithRegisteredFp(
 		service.NewPubRandState(pubRandStore), consumerCon, em, logger, fpMetrics)
 
 	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, fpCfg.PollerConfig, logger)
+	fsCfg := service.NewDefaultFinalitySubmitterConfig(
+		fpCfg.MaxSubmissionRetries,
+		fpCfg.ContextSigningHeight,
+		fpCfg.SubmissionRetryInterval,
+	)
+	finalitySubmitter := service.NewDefaultFinalitySubmitter(consumerCon, em, rndCommitter.GetPubRandProofList, fsCfg, logger, fpMetrics)
 
-	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, fpMetrics, db, logger)
+	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, db, logger)
 	require.NoError(t, err)
 	err = app.Start()
 	require.NoError(t, err)
@@ -205,7 +211,22 @@ func startFinalityProviderAppWithRegisteredFp(
 	)
 	require.NoError(t, err)
 	m := metrics.NewFpMetrics()
-	fpIns, err := service.NewFinalityProviderInstance(eotsPk, &fpCfg, fpStore, pubRandProofStore, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, m, make(chan *service.CriticalError), logger)
+	fpIns, err := service.NewFinalityProviderInstance(
+		eotsPk,
+		&fpCfg,
+		fpStore,
+		pubRandProofStore,
+		cc,
+		consumerCon,
+		em,
+		poller,
+		rndCommitter,
+		heightDeterminer,
+		finalitySubmitter,
+		m,
+		make(chan *service.CriticalError),
+		logger,
+	)
 	require.NoError(t, err)
 
 	cleanUp := func() {
