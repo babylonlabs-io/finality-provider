@@ -34,6 +34,21 @@ type DefaultFinalitySubmitter struct {
 	metrics      *metrics.FpMetrics
 }
 
+func NewDefaultFinalitySubmitter(
+	consumerCtrl api.ConsumerController,
+	em eotsmanager.EOTSManager,
+	cfg *fpcfg.Config,
+	logger *zap.Logger,
+	metrics *metrics.FpMetrics) *DefaultFinalitySubmitter {
+	return &DefaultFinalitySubmitter{
+		em:           em,
+		consumerCtrl: consumerCtrl,
+		cfg:          cfg,
+		logger:       logger.With(zap.String("module", "finality_submitter")),
+		metrics:      metrics,
+	}
+}
+
 func (ds *DefaultFinalitySubmitter) GetBtcPkHex() string {
 	if ds.btcPk == nil {
 		return ""
@@ -89,6 +104,9 @@ func (ds *DefaultFinalitySubmitter) MustSetStatus(s proto.FinalityProviderStatus
 	}
 }
 
+// FilterBlocksForVoting filters blocks based on the finality provider's voting power and height criteria for submission.
+// It returns a slice of blocks eligible for voting and an error if any issues are encountered during processing.
+// It also updates the fp instance status according to the block's voting power
 func (ds *DefaultFinalitySubmitter) FilterBlocksForVoting(ctx context.Context, blocks []types.BlockDescription) ([]types.BlockDescription, error) {
 	processedBlocks := make([]types.BlockDescription, 0, len(blocks))
 
@@ -140,7 +158,8 @@ func (ds *DefaultFinalitySubmitter) FilterBlocksForVoting(ctx context.Context, b
 	return processedBlocks, nil
 }
 
-// SubmitBatchFinalitySignatures implements the interface with retry logic hidden internally
+// SubmitBatchFinalitySignatures submits finality signatures for a batch of blocks to the consumer chain in a retry loop.
+// Returns a TxResponse upon success or an error if submission fails or context is canceled.
 func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Context, blocks []types.BlockDescription) (*types.TxResponse, error) {
 	if len(blocks) == 0 {
 		return nil, fmt.Errorf("cannot send signatures for empty blocks")
@@ -181,8 +200,8 @@ func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 			return res, nil
 		}
 
-		// Check if block is already finalized
-		finalized, err := ds.checkBlockFinalization(context.Background(), targetHeight)
+		// Check if the block is already finalized
+		finalized, err := ds.checkBlockFinalization(ctx, targetHeight)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query block finalization at height %v: %w", targetHeight, err)
 		}

@@ -16,7 +16,6 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
-	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -33,14 +32,15 @@ type FinalityProviderInstance struct {
 	pubRandState *PubRandState
 	cfg          *fpcfg.Config
 
-	logger           *zap.Logger
-	em               eotsmanager.EOTSManager
-	cc               ccapi.ClientController
-	consumerCon      ccapi.ConsumerController
-	poller           types.BlockPoller[types.BlockDescription]
-	rndCommitter     types.RandomnessCommitter
-	heightDeterminer types.HeightDeterminer
-	metrics          *metrics.FpMetrics
+	logger            *zap.Logger
+	em                eotsmanager.EOTSManager
+	cc                ccapi.ClientController
+	consumerCon       ccapi.ConsumerController
+	poller            types.BlockPoller[types.BlockDescription]
+	rndCommitter      types.RandomnessCommitter
+	heightDeterminer  types.HeightDeterminer
+	finalitySubmitter types.FinalitySignatureSubmitter
+	metrics           *metrics.FpMetrics
 
 	criticalErrChan chan<- *CriticalError
 
@@ -146,8 +146,8 @@ func (fp *FinalityProviderInstance) Start() error {
 	fp.quit = make(chan struct{})
 
 	fp.wg.Add(2)
-	// todo(lazar): should have ctx passed in
-	go fp.finalitySigSubmissionLoop()
+	// todo(lazar): will fix ctx in next PRs
+	go fp.finalitySigSubmissionLoop(context.Background())
 	// todo(lazar): will fix ctx in next PRs
 	go fp.randomnessCommitmentLoop(context.Background())
 
@@ -209,11 +209,11 @@ func (fp *FinalityProviderInstance) IsJailed() bool {
 	return fp.GetStatus() == proto.FinalityProviderStatus_JAILED
 }
 
-func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
+func (fp *FinalityProviderInstance) finalitySigSubmissionLoop(ctx context.Context) {
 	defer fp.wg.Done()
 
 	// Process immediately for the first iteration without waiting
-	fp.processAndSubmitSignatures()
+	fp.processAndSubmitSignatures(ctx)
 
 	ticker := time.NewTicker(fp.cfg.SignatureSubmissionInterval)
 	defer ticker.Stop()
@@ -221,7 +221,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			fp.processAndSubmitSignatures()
+			fp.processAndSubmitSignatures(ctx)
 		case <-fp.quit:
 			fp.logger.Info("the finality signature submission loop is closing")
 
@@ -232,7 +232,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop() {
 
 // processAndSubmitSignatures handles the logic of fetching blocks, checking jail status,
 // processing them, and submitting signatures
-func (fp *FinalityProviderInstance) processAndSubmitSignatures() {
+func (fp *FinalityProviderInstance) processAndSubmitSignatures(ctx context.Context) {
 	pollerBlocks := fp.getBatchBlocksFromPoller()
 	if len(pollerBlocks) == 0 {
 		return
@@ -253,7 +253,7 @@ func (fp *FinalityProviderInstance) processAndSubmitSignatures() {
 		zap.Uint64("end_height", targetHeight),
 	)
 
-	processedBlocks, err := fp.processBlocksToVote(pollerBlocks)
+	processedBlocks, err := fp.finalitySubmitter.FilterBlocksForVoting(ctx, pollerBlocks)
 	if err != nil {
 		fp.reportCriticalErr(err)
 
@@ -264,7 +264,7 @@ func (fp *FinalityProviderInstance) processAndSubmitSignatures() {
 		return
 	}
 
-	res, err := fp.retrySubmitSigsUntilFinalized(processedBlocks)
+	res, err := fp.finalitySubmitter.SubmitBatchFinalitySignatures(ctx, processedBlocks)
 	if err != nil {
 		fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
 
@@ -300,60 +300,7 @@ func (fp *FinalityProviderInstance) processAndSubmitSignatures() {
 	)
 }
 
-// processBlocksToVote processes a batch a blocks and picks ones that need to vote
-// it also updates the fp instance status according to the block's voting power
-func (fp *FinalityProviderInstance) processBlocksToVote(blocks []types.BlockDescription) ([]types.BlockDescription, error) {
-	processedBlocks := make([]types.BlockDescription, 0, len(blocks))
-
-	var hasPower bool
-	var err error
-	for _, b := range blocks {
-		blk := b
-		if blk.GetHeight() <= fp.GetLastVotedHeight() {
-			fp.logger.Debug(
-				"the block height is lower than last processed height",
-				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint64("block_height", blk.GetHeight()),
-				zap.Uint64("last_voted_height", fp.GetLastVotedHeight()),
-			)
-
-			continue
-		}
-
-		// check whether the finality provider has voting power
-		hasPower, err = fp.GetVotingPowerWithRetry(blk.GetHeight())
-		if err != nil {
-			return nil, fmt.Errorf("failed to get voting power for height %d: %w", blk.GetHeight(), err)
-		}
-		if !hasPower {
-			fp.logger.Debug(
-				"the finality-provider does not have voting power",
-				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint64("block_height", blk.GetHeight()),
-			)
-
-			// the finality provider does not have voting power
-			// and it will never will at this block, so continue
-			fp.metrics.IncrementFpTotalBlocksWithoutVotingPower(fp.GetBtcPkHex())
-
-			continue
-		}
-
-		processedBlocks = append(processedBlocks, blk)
-	}
-
-	// update fp status according to the power for the last block
-	if hasPower && fp.GetStatus() != proto.FinalityProviderStatus_ACTIVE {
-		fp.MustSetStatus(proto.FinalityProviderStatus_ACTIVE)
-	}
-
-	if !hasPower && fp.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
-		fp.MustSetStatus(proto.FinalityProviderStatus_INACTIVE)
-	}
-
-	return processedBlocks, nil
-}
-
+// getBatchBlocksFromPoller retrieves a batch of blocks from the poller, limited by the configured batch size.
 func (fp *FinalityProviderInstance) getBatchBlocksFromPoller() []types.BlockDescription {
 	var pollerBlocks []types.BlockDescription
 
@@ -374,6 +321,7 @@ func (fp *FinalityProviderInstance) getBatchBlocksFromPoller() []types.BlockDesc
 func (fp *FinalityProviderInstance) randomnessCommitmentLoop(ctx context.Context) {
 	defer fp.wg.Done()
 
+	// Process immediately for the first iteration without waiting
 	fp.processRandomnessCommitment(ctx)
 
 	ticker := time.NewTicker(fp.cfg.RandomnessCommitInterval)
@@ -424,96 +372,12 @@ func (fp *FinalityProviderInstance) processRandomnessCommitment(ctx context.Cont
 	}
 }
 
+// reportCriticalErr reports a critical error by sending it to the criticalErrChan for further handling.
 func (fp *FinalityProviderInstance) reportCriticalErr(err error) {
 	fp.criticalErrChan <- &CriticalError{
 		err:     err,
 		fpBtcPk: fp.GetBtcPkBIP340(),
 	}
-}
-
-// retrySubmitSigsUntilFinalized periodically tries to submit finality signature until success or the block is finalized
-// error will be returned if maximum retries have been reached or the query to the consumer chain fails
-func (fp *FinalityProviderInstance) retrySubmitSigsUntilFinalized(targetBlocks []types.BlockDescription) (*types.TxResponse, error) {
-	if len(targetBlocks) == 0 {
-		return nil, fmt.Errorf("cannot send signatures for empty blocks")
-	}
-
-	var failedCycles uint32
-	targetHeight := targetBlocks[len(targetBlocks)-1].GetHeight()
-
-	// First iteration happens before the loop
-	for {
-		// Attempt submission immediately
-		// error will be returned if max retries have been reached
-		var res *types.TxResponse
-		var err error
-		res, err = fp.SubmitBatchFinalitySignatures(targetBlocks)
-		if err != nil {
-			fp.logger.Debug(
-				"failed to submit finality signature to the consumer chain",
-				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint32("current_failures", failedCycles),
-				zap.Uint64("target_start_height", targetBlocks[0].GetHeight()),
-				zap.Uint64("target_end_height", targetHeight),
-				zap.Error(err),
-			)
-
-			if fpcc.IsUnrecoverable(err) {
-				return nil, fmt.Errorf("unrecoverable error during finality signature submission: %w", err)
-			}
-
-			if fpcc.IsExpected(err) {
-				return nil, nil
-			}
-
-			failedCycles++
-			if failedCycles > fp.cfg.MaxSubmissionRetries {
-				return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
-			}
-		} else {
-			// The signature has been successfully submitted
-			return res, nil
-		}
-
-		// periodically query the index block to be later checked whether it is Finalized
-		finalized, err := fp.checkBlockFinalization(context.Background(), targetHeight)
-		if err != nil {
-			return nil, fmt.Errorf("failed to query block finalization at height %v: %w", targetHeight, err)
-		}
-		if finalized {
-			fp.logger.Debug(
-				"the block is already finalized, skip submission",
-				zap.String("pk", fp.GetBtcPkHex()),
-				zap.Uint64("target_height", targetHeight),
-			)
-
-			fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
-
-			// TODO: returning nil here is to safely break the loop
-			//  the error still exists
-			return nil, nil
-		}
-
-		// Wait for the retry interval
-		select {
-		case <-time.After(fp.cfg.SubmissionRetryInterval):
-			// Continue to next retry iteration
-			continue
-		case <-fp.quit:
-			fp.logger.Debug("the finality-provider instance is closing", zap.String("pk", fp.GetBtcPkHex()))
-
-			return nil, ErrFinalityProviderShutDown
-		}
-	}
-}
-
-func (fp *FinalityProviderInstance) checkBlockFinalization(ctx context.Context, height uint64) (bool, error) {
-	b, err := fp.consumerCon.QueryBlock(ctx, height)
-	if err != nil {
-		return false, fmt.Errorf("failed to query block at height %d: %w", height, err)
-	}
-
-	return b.IsFinalized(), nil
 }
 
 // CommitPubRand commits a list of randomness from given start height
