@@ -186,7 +186,7 @@ func runCommandInfoFP(cmd *cobra.Command, args []string) error {
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", FpdDaemonAddressFlag, err)
+		return fmt.Errorf("failed to create grpc client: %w", err)
 	}
 	defer func() {
 		if err := cleanUp(); err != nil {
