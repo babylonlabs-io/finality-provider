@@ -642,12 +642,12 @@ func (fp *FinalityProviderInstance) GetLastCommittedHeight(ctx context.Context) 
 // nolint:unused
 func (fp *FinalityProviderInstance) getLatestBlockHeightWithRetry() (uint64, error) {
 	var (
-		latestBlockHeight uint64
-		err               error
+		latestBlock types.BlockDescription
+		err         error
 	)
 
 	if err := retry.Do(func() error {
-		latestBlockHeight, err = fp.consumerCon.QueryLatestBlockHeight(context.Background())
+		latestBlock, err = fp.consumerCon.QueryLatestBlock(context.Background())
 		if err != nil {
 			return err
 		}
@@ -663,9 +663,9 @@ func (fp *FinalityProviderInstance) getLatestBlockHeightWithRetry() (uint64, err
 	})); err != nil {
 		return 0, err
 	}
-	fp.metrics.RecordBabylonTipHeight(latestBlockHeight)
+	fp.metrics.RecordBabylonTipHeight(latestBlock.GetHeight())
 
-	return latestBlockHeight, nil
+	return latestBlock.GetHeight(), nil
 }
 
 func (fp *FinalityProviderInstance) GetVotingPowerWithRetry(height uint64) (bool, error) {

@@ -251,7 +251,7 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 	}
 
 	for _, fp := range fps {
-		latestBlockHeight, err := app.consumerCon.QueryLatestBlockHeight(ctx)
+		latestBlock, err := app.consumerCon.QueryLatestBlock(ctx)
 		if err != nil {
 			return err
 		}
@@ -259,11 +259,11 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 		pkHex := fp.GetBIP340BTCPK().MarshalHex()
 		hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(ctx, ccapi.NewQueryFinalityProviderHasPowerRequest(
 			fp.BtcPk,
-			latestBlockHeight,
+			latestBlock.GetHeight(),
 		))
 		if err != nil {
 			return fmt.Errorf("failed to query voting power for finality provider %s at height %d: %w",
-				fp.GetBIP340BTCPK().MarshalHex(), latestBlockHeight, err)
+				fp.GetBIP340BTCPK().MarshalHex(), latestBlock.GetHeight(), err)
 		}
 
 		// power > 0 (slashed_height must > 0), set status to ACTIVE

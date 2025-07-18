@@ -369,11 +369,11 @@ func (cp *ChainPoller) blocksWithRetry(ctx context.Context, start, end uint64, l
 }
 
 func (cp *ChainPoller) latestBlockHeightWithRetry(ctx context.Context) (uint64, error) {
-	var latestBlockHeight uint64
+	var latestBlock types.BlockDescription
 	var err error
 
 	retryErr := retry.Do(func() error {
-		latestBlockHeight, err = cp.consumerCon.QueryLatestBlockHeight(ctx)
+		latestBlock, err = cp.consumerCon.QueryLatestBlock(ctx)
 
 		return err
 	}, RtyAtt, RtyDel, RtyErr,
@@ -383,7 +383,7 @@ func (cp *ChainPoller) latestBlockHeightWithRetry(ctx context.Context) (uint64, 
 				zap.Error(err))
 		}))
 
-	return latestBlockHeight, retryErr
+	return latestBlock.GetHeight(), retryErr
 }
 
 func (cp *ChainPoller) NextHeight() uint64 {

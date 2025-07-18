@@ -3,11 +3,12 @@ package service_test
 import (
 	"context"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -59,7 +60,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		startingBlock := types.NewBlockInfo(randomStartingHeight, testutil.GenRandomByteArray(r, 32), false)
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
-		mockConsumerController.EXPECT().QueryLatestBlockHeight(context.Background()).Return(uint64(0), nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlock(context.Background()).Return(types.NewBlockInfo(0, testutil.GenRandomByteArray(r, 32), false), nil).AnyTimes()
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
 

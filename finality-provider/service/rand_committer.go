@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
@@ -90,7 +91,7 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 		return false, 0, fmt.Errorf("failed to get last committed height: %w", err)
 	}
 
-	tipHeight, err := rc.consumerCon.QueryLatestBlockHeight(ctx)
+	tipBlock, err := rc.consumerCon.QueryLatestBlock(ctx)
 	if err != nil {
 		return false, 0, fmt.Errorf("failed to get the last block: %w", err)
 	}
@@ -100,7 +101,7 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 	}
 
 	// #nosec G115
-	tipHeightWithDelay := tipHeight + uint64(rc.cfg.TimestampingDelayBlocks)
+	tipHeightWithDelay := tipBlock.GetHeight() + uint64(rc.cfg.TimestampingDelayBlocks)
 
 	var startHeight uint64
 	switch {
@@ -115,7 +116,7 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 		rc.logger.Debug(
 			"the finality-provider has sufficient public randomness, skip committing more",
 			zap.String("pk", rc.btcPk.MarshalHex()),
-			zap.Uint64("tip_height", tipHeight),
+			zap.Uint64("tip_height", tipBlock.GetHeight()),
 			zap.Uint64("last_committed_height", lastCommittedHeight),
 		)
 
@@ -125,7 +126,7 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 	rc.logger.Debug(
 		"the finality-provider should commit randomness",
 		zap.String("pk", rc.btcPk.MarshalHex()),
-		zap.Uint64("tip_height", tipHeight),
+		zap.Uint64("tip_height", tipBlock.GetHeight()),
 		zap.Uint64("last_committed_height", lastCommittedHeight),
 	)
 
