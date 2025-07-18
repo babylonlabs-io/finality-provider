@@ -3,7 +3,6 @@ package store_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/btcsuite/btcd/btcec/v2"
 	"io/fs"
 	"math/rand"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/btcsuite/btcd/btcec/v2"
 
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -520,7 +521,7 @@ func TestEOTSStore_BackupTime(t *testing.T) {
 					if !d.IsDir() {
 						info, err := d.Info()
 						if err != nil {
-							return err
+							return fmt.Errorf("failed to get info: %w", err)
 						}
 						totalSize += info.Size()
 					}

@@ -83,10 +83,15 @@ func (cc *RollupBSNController) QuerySmartContractState(ctx context.Context, cont
 	clientCtx := client.Context{Client: cc.bbnClient.RPCClient}
 	queryClient := wasmtypes.NewQueryClient(clientCtx)
 
-	return queryClient.SmartContractState(ctx, &wasmtypes.QuerySmartContractStateRequest{
+	resp, err := queryClient.SmartContractState(ctx, &wasmtypes.QuerySmartContractStateRequest{
 		Address:   contractAddress,
 		QueryData: wasmtypes.RawContractMessage(queryData),
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+
+	return resp, nil
 }
 
 func (cc *RollupBSNController) ReliablySendMsg(ctx context.Context, msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
@@ -397,7 +402,12 @@ func (cc *RollupBSNController) QueryBlock(ctx context.Context, height uint64) (t
 // QueryBlock returns the Ethereum block from a RPC call
 // nolint:unused
 func (cc *RollupBSNController) queryEthBlock(ctx context.Context, height uint64) (*ethtypes.Header, error) {
-	return cc.ethClient.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
+	header, err := cc.ethClient.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get header by number: %w", err)
+	}
+
+	return header, nil
 }
 
 // QueryIsBlockFinalized returns whether the given the L2 block number has been finalized

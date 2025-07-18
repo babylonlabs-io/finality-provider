@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"fmt"
+
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/spf13/cobra"
 )
@@ -52,7 +53,7 @@ func backup(cmd *cobra.Command, _ []string) error {
 
 	eotsdClient, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, "")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create eotsd client: %w", err)
 	}
 
 	backupName, err := eotsdClient.Backup(dbPath, backupDir)

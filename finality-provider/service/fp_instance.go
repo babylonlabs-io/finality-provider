@@ -518,7 +518,12 @@ func (fp *FinalityProviderInstance) checkBlockFinalization(ctx context.Context, 
 
 // CommitPubRand commits a list of randomness from given start height
 func (fp *FinalityProviderInstance) CommitPubRand(ctx context.Context, startHeight uint64) (*types.TxResponse, error) {
-	return fp.rndCommitter.Commit(ctx, startHeight)
+	txRes, err := fp.rndCommitter.Commit(ctx, startHeight)
+	if err != nil {
+		return nil, fmt.Errorf("failed to commit public randomness: %w", err)
+	}
+
+	return txRes, nil
 }
 
 // SubmitBatchFinalitySignatures builds and sends a finality signature over the given block to the consumer chain

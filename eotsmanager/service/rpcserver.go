@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/gogo/status"
@@ -50,7 +51,7 @@ func (r *rpcServer) CreateRandomnessPairList(_ context.Context, req *proto.Creat
 	pubRandList, err := r.em.CreateRandomnessPairList(req.Uid, req.ChainId, req.StartHeight, req.Num)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create randomness pair list: %w", err)
 	}
 
 	pubRandBytesList := make([][]byte, 0, len(pubRandList))
@@ -69,10 +70,10 @@ func (r *rpcServer) SignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 	sig, err := r.em.SignEOTS(req.Uid, req.ChainId, req.Msg, req.Height)
 	if err != nil {
 		if errors.Is(err, types.ErrDoubleSign) {
-			return nil, status.Error(codes.FailedPrecondition, err.Error())
+			return nil, status.Error(codes.FailedPrecondition, err.Error()) //nolint:wrapcheck
 		}
 
-		return nil, err
+		return nil, fmt.Errorf("failed to sign EOTS: %w", err)
 	}
 
 	sigBytes := sig.Bytes()
@@ -85,7 +86,7 @@ func (r *rpcServer) UnsafeSignEOTS(_ context.Context, req *proto.SignEOTSRequest
 	*proto.SignEOTSResponse, error) {
 	sig, err := r.em.UnsafeSignEOTS(req.Uid, req.ChainId, req.Msg, req.Height)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to sign EOTS: %w", err)
 	}
 
 	sigBytes := sig.Bytes()
@@ -98,7 +99,7 @@ func (r *rpcServer) SignSchnorrSig(_ context.Context, req *proto.SignSchnorrSigR
 	*proto.SignSchnorrSigResponse, error) {
 	sig, err := r.em.SignSchnorrSig(req.Uid, req.Msg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to sign EOTS: %w", err)
 	}
 
 	return &proto.SignSchnorrSigResponse{Sig: sig.Serialize()}, nil
@@ -111,16 +112,19 @@ func (r *rpcServer) SaveEOTSKeyName(
 ) (*proto.SaveEOTSKeyNameResponse, error) {
 	eotsPk, err := btcec.ParsePubKey(req.EotsPk)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse EOTS public key: %w", err)
+	}
+	if err := r.em.SaveEOTSKeyName(eotsPk, req.KeyName); err != nil {
+		return nil, fmt.Errorf("failed to save EOTS key name: %w", err)
 	}
 
-	return &proto.SaveEOTSKeyNameResponse{}, r.em.SaveEOTSKeyName(eotsPk, req.KeyName)
+	return &proto.SaveEOTSKeyNameResponse{}, nil
 }
 
 func (r *rpcServer) Backup(_ context.Context, req *proto.BackupRequest) (*proto.BackupResponse, error) {
 	backupName, err := r.em.Backup(req.DbPath, req.BackupDir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to backup: %w", err)
 	}
 
 	return &proto.BackupResponse{
@@ -131,7 +135,7 @@ func (r *rpcServer) Backup(_ context.Context, req *proto.BackupRequest) (*proto.
 func (r *rpcServer) UnlockKey(_ context.Context, req *proto.UnlockKeyRequest) (*proto.UnlockKeyResponse, error) {
 	err := r.em.Unlock(req.Uid, req.Passphrase)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unlock key: %w", err)
 	}
 
 	return &proto.UnlockKeyResponse{}, nil

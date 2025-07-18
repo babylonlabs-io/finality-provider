@@ -82,7 +82,12 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 	}
 
 	// sign the message hash using the finality-provider's BTC private key
-	return fp.em.SignSchnorrSig(fp.btcPk.MustMarshal(), hash)
+	sig, err := fp.em.SignSchnorrSig(fp.btcPk.MustMarshal(), hash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
+	}
+
+	return sig, nil
 }
 
 func (fp *FinalityProviderInstance) SignFinalitySig(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {

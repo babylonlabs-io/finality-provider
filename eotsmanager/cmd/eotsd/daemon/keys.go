@@ -233,7 +233,7 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 
 	records, err := kr.List()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to list keys: %w", err)
 	}
 
 	keyMap := make(map[string]*cryptokeyring.Record)
@@ -289,7 +289,7 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 func getAllEOTSKeys(cmd *cobra.Command) (map[string][]byte, error) {
 	homePath, err := getHomePath(cmd)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get home path: %w", err)
 	}
 
 	// Load configuration
