@@ -24,7 +24,7 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 	// Get homePath from context like in start.go
 	homePath, err := filepath.Abs(ctx.HomeDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
 	homePath = util.CleanAndExpandPath(homePath)
 
@@ -33,5 +33,9 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	return fpdaemon.RunCommandCommitPubRandWithConfig(ctx, cmd, homePath, cfg.Common, args)
+	if err := fpdaemon.RunCommandCommitPubRandWithConfig(ctx, cmd, homePath, cfg.Common, args); err != nil {
+		return fmt.Errorf("failed to run commit pubrand command: %w", err)
+	}
+
+	return nil
 }

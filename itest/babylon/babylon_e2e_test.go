@@ -737,8 +737,7 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	eotsCfg.KeyringBackend = keyring.BackendFile
 	eotsCfg.HMACKey = "some-hmac-key"
 
-	err := os.Setenv("HMAC_KEY", eotsCfg.HMACKey)
-	require.NoError(t, err)
+	t.Setenv("HMAC_KEY", eotsCfg.HMACKey)
 
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)

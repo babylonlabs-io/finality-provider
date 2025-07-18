@@ -92,25 +92,25 @@ Where finality-provider.json contains:
 		if fromFilePath == "" {
 			// Mark flags as required only if --from-file is not provided
 			if err := cmd.MarkFlagRequired(commoncmd.ChainIDFlag); err != nil {
-				return err
+				return fmt.Errorf("failed to mark chain ID flag as required: %w", err)
 			}
 			if err := cmd.MarkFlagRequired(commoncmd.KeyNameFlag); err != nil {
-				return err
+				return fmt.Errorf("failed to mark key name flag as required: %w", err)
 			}
 			if err := cmd.MarkFlagRequired(commoncmd.MonikerFlag); err != nil {
-				return err
+				return fmt.Errorf("failed to mark moniker flag as required: %w", err)
 			}
 			if err := cmd.MarkFlagRequired(commoncmd.CommissionRateFlag); err != nil {
-				return err
+				return fmt.Errorf("failed to mark commission rate flag as required: %w", err)
 			}
 			if err := cmd.MarkFlagRequired(commoncmd.CommissionMaxRateFlag); err != nil {
-				return err
+				return fmt.Errorf("failed to mark commission max rate flag as required: %w", err)
 			}
 			if err := cmd.MarkFlagRequired(commoncmd.CommissionMaxChangeRateFlag); err != nil {
-				return err
+				return fmt.Errorf("failed to mark commission max change rate flag as required: %w", err)
 			}
 			if err := cmd.MarkFlagRequired(commoncmd.FpEotsPkFlag); err != nil {
-				return err
+				return fmt.Errorf("failed to mark fp EOTS pk flag as required: %w", err)
 			}
 		}
 
@@ -156,7 +156,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create finality provider service grpc client: %w", err)
 	}
 	defer func() {
 		if err := cleanUp(); err != nil {
@@ -173,7 +173,7 @@ func runCommandCreateFP(ctx client.Context, cmd *cobra.Command, _ []string) erro
 		fp.CommissionRates,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create finality provider: %w", err)
 	}
 
 	types.PrintRespJSON(cmd, res)
@@ -209,7 +209,12 @@ func getDescriptionFromFlags(f *pflag.FlagSet) (stakingtypes.Description, error)
 
 	description := stakingtypes.NewDescription(monikerStr, identityStr, websiteStr, securityContactStr, detailsStr)
 
-	return description.EnsureLength()
+	desc, err = description.EnsureLength()
+	if err != nil {
+		return stakingtypes.Description{}, fmt.Errorf("failed to ensure description length: %w", err)
+	}
+
+	return desc, nil
 }
 
 type ParsedFinalityProvider struct {
@@ -239,12 +244,12 @@ func ParseFinalityProviderJSON(path string) (*ParsedFinalityProvider, error) {
 	// #nosec G304 - The log file path is provided by the user and not externally
 	contents, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	var fp internalFpJSON
 	if err := json.Unmarshal(contents, &fp); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
 	}
 
 	if fp.ChainID == "" {
@@ -278,7 +283,7 @@ func ParseFinalityProviderJSON(path string) (*ParsedFinalityProvider, error) {
 
 	description, err := stakingtypes.NewDescription(fp.Moniker, fp.Identity, fp.Website, fp.SecurityContract, fp.Details).EnsureLength()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to ensure description length: %w", err)
 	}
 
 	return &ParsedFinalityProvider{

@@ -72,31 +72,31 @@ func (kc *ChainKeyringController) CreateChainKey(passphrase, hdPath, mnemonic st
 	keyringAlgos, _ := kc.kr.SupportedAlgorithms()
 	algo, err := keyring.NewSigningAlgoFromString(secp256k1Type, keyringAlgos)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create signing algorithm: %w", err)
 	}
 
 	if len(mnemonic) == 0 {
 		// read entropy seed straight from tmcrypto.Rand and convert to mnemonic
 		entropySeed, err := bip39.NewEntropy(mnemonicEntropySize)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to generate entropy: %w", err)
 		}
 
 		mnemonic, err = bip39.NewMnemonic(entropySeed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to generate mnemonic: %w", err)
 		}
 	}
 
 	record, err := kc.kr.NewAccount(kc.fpName, mnemonic, passphrase, hdPath, algo)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create new account: %w", err)
 	}
 
 	privKey := record.GetLocal().PrivKey.GetCachedValue()
 	accAddress, err := record.GetAddress()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get address from record: %w", err)
 	}
 
 	switch v := privKey.(type) {
@@ -120,7 +120,12 @@ func (kc *ChainKeyringController) CreateChainKey(passphrase, hdPath, mnemonic st
 // this requires both keys created beforehand
 func (kc *ChainKeyringController) CreatePop(chainID string, fpAddr sdk.AccAddress, btcPrivKey *btcec.PrivateKey) (*bstypes.ProofOfPossessionBTC, error) {
 	// Use FpPopContextV0 with the provided chain ID
-	return datagen.NewPoPBTC(signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String()), fpAddr, btcPrivKey)
+	pop, err := datagen.NewPoPBTC(signingcontext.FpPopContextV0(chainID, signingcontext.AccBTCStaking.String()), fpAddr, btcPrivKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create proof of possession: %w", err)
+	}
+
+	return pop, nil
 }
 
 // Address returns the address from the keyring
@@ -130,5 +135,10 @@ func (kc *ChainKeyringController) Address() (sdk.AccAddress, error) {
 		return nil, fmt.Errorf("failed to get address: %w", err)
 	}
 
-	return k.GetAddress()
+	addr, err := k.GetAddress()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get address from key: %w", err)
+	}
+
+	return addr, nil
 }

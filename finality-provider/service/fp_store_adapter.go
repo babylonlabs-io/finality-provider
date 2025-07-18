@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"sync"
 
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -39,7 +40,11 @@ func (fps *FpState) setStatus(s proto.FinalityProviderStatus) error {
 	fps.sfp.Status = s
 	fps.mu.Unlock()
 
-	return fps.s.SetFpStatus(fps.sfp.BtcPk, s)
+	if err := fps.s.SetFpStatus(fps.sfp.BtcPk, s); err != nil {
+		return fmt.Errorf("failed to set finality provider status: %w", err)
+	}
+
+	return nil
 }
 
 func (fps *FpState) setLastVotedHeight(height uint64) error {
@@ -47,7 +52,11 @@ func (fps *FpState) setLastVotedHeight(height uint64) error {
 	fps.sfp.LastVotedHeight = height
 	fps.mu.Unlock()
 
-	return fps.s.SetFpLastVotedHeight(fps.sfp.BtcPk, height)
+	if err := fps.s.SetFpLastVotedHeight(fps.sfp.BtcPk, height); err != nil {
+		return fmt.Errorf("failed to set finality provider last voted height: %w", err)
+	}
+
+	return nil
 }
 
 func (fp *FinalityProviderInstance) GetStoreFinalityProvider() *store.StoredFinalityProvider {

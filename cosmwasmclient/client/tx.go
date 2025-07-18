@@ -46,11 +46,15 @@ func (c *Client) SendMsgsToMempool(ctx context.Context, msgs []sdk.Msg) error {
 			return retry.Unrecoverable(krErr)
 		}
 
-		return sendMsgErr
+		if sendMsgErr != nil {
+			return fmt.Errorf("failed to send messages to mempool: %w", sendMsgErr)
+		}
+
+		return nil
 	}, retry.Context(ctx), rtyAtt, rtyDel, rtyErr, retry.OnRetry(func(n uint, err error) {
 		c.logger.Debug("retrying", zap.Uint("attempt", n+1), zap.Uint("max_attempts", rtyAttNum), zap.Error(err))
 	})); err != nil {
-		return err
+		return fmt.Errorf("failed to retry sending messages: %w", err)
 	}
 
 	return nil
@@ -114,14 +118,18 @@ func (c *Client) ReliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedE
 				return nil
 			}
 
-			return sendMsgErr
+			if sendMsgErr != nil {
+				return fmt.Errorf("failed to send messages to mempool: %w", sendMsgErr)
+			}
+
+			return nil
 		}
 
 		return nil
 	}, retry.Context(ctx), rtyAtt, rtyDel, rtyErr, retry.OnRetry(func(n uint, err error) {
 		c.logger.Debug("retrying", zap.Uint("attempt", n+1), zap.Uint("max_attempts", rtyAttNum), zap.Error(err))
 	})); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to retry sending messages: %w", err)
 	}
 
 	wg.Wait()

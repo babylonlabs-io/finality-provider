@@ -43,7 +43,7 @@ func CommandStartTemplate(binaryName string) *cobra.Command {
 func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	homePath, err := filepath.Abs(ctx.HomeDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get home path: %w", err)
 	}
 	homePath = util.CleanAndExpandPath(homePath)
 	cfg, err := fpcfg.LoadConfig(homePath)
@@ -96,7 +96,11 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 
 	fpServer := service.NewFinalityProviderServer(cfg, logger, fpApp, dbBackend)
 
-	return fpServer.RunUntilShutdown(cmd.Context())
+	if err := fpServer.RunUntilShutdown(cmd.Context()); err != nil {
+		return fmt.Errorf("failed to run finality provider server: %w", err)
+	}
+
+	return nil
 }
 
 // StartApp starts the app and the handle of finality providers if needed based on flags.
@@ -119,16 +123,24 @@ func StartApp(
 			return fmt.Errorf("invalid finality provider public key %s: %w", fpPkStr, err)
 		}
 
-		return fpApp.StartFinalityProvider(fpPk)
+		if err := fpApp.StartFinalityProvider(fpPk); err != nil {
+			return fmt.Errorf("failed to start finality provider: %w", err)
+		}
+
+		return nil
 	}
 
 	storedFps, err := fpApp.GetFinalityProviderStore().GetAllStoredFinalityProviders()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get all stored finality providers: %w", err)
 	}
 
 	if len(storedFps) == 1 {
-		return fpApp.StartFinalityProvider(types.NewBIP340PubKeyFromBTCPK(storedFps[0].BtcPk))
+		if err := fpApp.StartFinalityProvider(types.NewBIP340PubKeyFromBTCPK(storedFps[0].BtcPk)); err != nil {
+			return fmt.Errorf("failed to start finality provider: %w", err)
+		}
+
+		return nil
 	}
 
 	if len(storedFps) > 1 {

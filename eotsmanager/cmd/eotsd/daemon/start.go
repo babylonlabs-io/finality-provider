@@ -2,8 +2,9 @@ package daemon
 
 import (
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"net"
+
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
@@ -72,5 +73,9 @@ func startFn(cmd *cobra.Command, _ []string) error {
 
 	eotsServer := eotsservice.NewEOTSManagerServer(cfg, logger, eotsManager, dbBackend)
 
-	return eotsServer.RunUntilShutdown(cmd.Context())
+	if err := eotsServer.RunUntilShutdown(cmd.Context()); err != nil {
+		return fmt.Errorf("failed to run EOTS server: %w", err)
+	}
+
+	return nil
 }

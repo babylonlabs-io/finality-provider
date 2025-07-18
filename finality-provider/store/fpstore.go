@@ -38,11 +38,18 @@ func NewFinalityProviderStore(db kvdb.Backend) (*FinalityProviderStore, error) {
 }
 
 func (s *FinalityProviderStore) initBuckets() error {
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		_, err := tx.CreateTopLevelBucket(finalityProviderBucketName)
+		if err != nil {
+			return fmt.Errorf("failed to create finality provider bucket: %w", err)
+		}
 
-		return err
-	})
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to initialize finality provider bucket: %w", err)
+	}
+
+	return nil
 }
 
 func (s *FinalityProviderStore) CreateFinalityProvider(
@@ -72,7 +79,7 @@ func (s *FinalityProviderStore) CreateFinalityProvider(
 func (s *FinalityProviderStore) createFinalityProviderInternal(
 	fp *proto.FinalityProvider,
 ) error {
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		fpBucket := tx.ReadWriteBucket(finalityProviderBucketName)
 		if fpBucket == nil {
 			return ErrCorruptedFinalityProviderDB
@@ -84,7 +91,11 @@ func (s *FinalityProviderStore) createFinalityProviderInternal(
 		}
 
 		return saveFinalityProvider(fpBucket, fp)
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to create finality provider: %w", err)
+	}
+
+	return nil
 }
 
 func saveFinalityProvider(
@@ -97,10 +108,14 @@ func saveFinalityProvider(
 
 	marshalled, err := pm.Marshal(fp)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal finality provider: %w", err)
 	}
 
-	return fpBucket.Put(fp.BtcPk, marshalled)
+	if err := fpBucket.Put(fp.BtcPk, marshalled); err != nil {
+		return fmt.Errorf("failed to store finality provider: %w", err)
+	}
+
+	return nil
 }
 
 func (s *FinalityProviderStore) SetFpStatus(btcPk *btcec.PublicKey, status proto.FinalityProviderStatus) error {
@@ -163,7 +178,7 @@ func (s *FinalityProviderStore) setFinalityProviderState(
 ) error {
 	pkBytes := schnorr.SerializePubKey(btcPk)
 
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		fpBucket := tx.ReadWriteBucket(finalityProviderBucketName)
 		if fpBucket == nil {
 			return ErrCorruptedFinalityProviderDB
@@ -184,14 +199,18 @@ func (s *FinalityProviderStore) setFinalityProviderState(
 		}
 
 		return saveFinalityProvider(fpBucket, &storedFp)
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set finality provider state: %w", err)
+	}
+
+	return nil
 }
 
 func (s *FinalityProviderStore) GetFinalityProvider(btcPk *btcec.PublicKey) (*StoredFinalityProvider, error) {
 	var storedFp *StoredFinalityProvider
 	pkBytes := schnorr.SerializePubKey(btcPk)
 
-	err := s.db.View(func(tx kvdb.RTx) error {
+	if err := s.db.View(func(tx kvdb.RTx) error {
 		fpBucket := tx.ReadBucket(finalityProviderBucketName)
 		if fpBucket == nil {
 			return ErrCorruptedFinalityProviderDB
@@ -215,10 +234,8 @@ func (s *FinalityProviderStore) GetFinalityProvider(btcPk *btcec.PublicKey) (*St
 		storedFp = fpFromDB
 
 		return nil
-	}, func() {})
-
-	if err != nil {
-		return nil, err
+	}, func() {}); err != nil {
+		return nil, fmt.Errorf("failed to get finality provider: %w", err)
 	}
 
 	return storedFp, nil
@@ -230,7 +247,7 @@ func (s *FinalityProviderStore) GetFinalityProvider(btcPk *btcec.PublicKey) (*St
 func (s *FinalityProviderStore) GetAllStoredFinalityProviders() ([]*StoredFinalityProvider, error) {
 	var storedFps []*StoredFinalityProvider
 
-	err := s.db.View(func(tx kvdb.RTx) error {
+	if err := s.db.View(func(tx kvdb.RTx) error {
 		fpBucket := tx.ReadBucket(finalityProviderBucketName)
 		if fpBucket == nil {
 			return ErrCorruptedFinalityProviderDB
@@ -250,10 +267,8 @@ func (s *FinalityProviderStore) GetAllStoredFinalityProviders() ([]*StoredFinali
 
 			return nil
 		})
-	}, func() {})
-
-	if err != nil {
-		return nil, err
+	}, func() {}); err != nil {
+		return nil, fmt.Errorf("failed to get all stored finality providers: %w", err)
 	}
 
 	return storedFps, nil
@@ -264,7 +279,7 @@ func (s *FinalityProviderStore) SetFpDescription(btcPk *btcec.PublicKey, desc *s
 	setDescription := func(fp *proto.FinalityProvider) error {
 		descBytes, err := desc.Marshal()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal description: %w", err)
 		}
 
 		fp.Description = descBytes

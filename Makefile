@@ -61,13 +61,13 @@ build-docker:
 
 .PHONY: build build-docker
 
-.PHONY: lint
 lint:
 	golangci-lint run
 
-.PHONY: test
 test:
-	go test -v ./...
+	go test ./...
+
+.PHONY: lint test
 
 install-bcd:
 	cd $(TOOLS_DIR); \
@@ -114,7 +114,7 @@ proto-gen:
 	make -C eotsmanager proto-gen
 	make -C finality-provider proto-gen
 
-.PHONY: proto-gen
+.PHONY: proto-gen proto-all
 
 mock-gen:
 	mkdir -p $(MOCKS_DIR)

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/cometbft/cometbft/crypto/merkle"
 )
@@ -17,17 +19,35 @@ func (st *PubRandState) addPubRandProofList(
 	pk, chainID []byte, height uint64, numPubRand uint64,
 	proofList []*merkle.Proof,
 ) error {
-	return st.s.AddPubRandProofList(chainID, pk, height, numPubRand, proofList)
+	if err := st.s.AddPubRandProofList(chainID, pk, height, numPubRand, proofList); err != nil {
+		return fmt.Errorf("failed to add pub rand proof list: %w", err)
+	}
+
+	return nil
 }
 
 func (st *PubRandState) getPubRandProof(pk, chainID []byte, height uint64) ([]byte, error) {
-	return st.s.GetPubRandProof(chainID, pk, height)
+	proof, err := st.s.GetPubRandProof(chainID, pk, height)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pub rand proof: %w", err)
+	}
+
+	return proof, nil
 }
 
 func (st *PubRandState) getPubRandProofList(pk, chainID []byte, height uint64, numPubRand uint64) ([][]byte, error) {
-	return st.s.GetPubRandProofList(chainID, pk, height, numPubRand)
+	proofList, err := st.s.GetPubRandProofList(chainID, pk, height, numPubRand)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pub rand proof list: %w", err)
+	}
+
+	return proofList, nil
 }
 
 func (st *PubRandState) close() error {
-	return st.s.Close()
+	if err := st.s.Close(); err != nil {
+		return fmt.Errorf("failed to close pub rand store: %w", err)
+	}
+
+	return nil
 }

@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
 	"io"
 	"strings"
+
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
 
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
@@ -54,7 +55,7 @@ func NewKeysCmd() *cobra.Command {
 		showCmd.RunE = func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get client query context: %w", err)
 			}
 
 			eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, args[0])
@@ -74,7 +75,7 @@ func NewKeysCmd() *cobra.Command {
 	addCmd.RunE = func(cmd *cobra.Command, args []string) error {
 		clientCtx, err := client.GetClientQueryContext(cmd)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get client query context: %w", err)
 		}
 		oldOut := cmd.OutOrStdout()
 
@@ -84,7 +85,7 @@ func NewKeysCmd() *cobra.Command {
 
 		// Run the original command
 		if err := runAddCmdPrepare(cmd, clientCtx, args); err != nil {
-			return err
+			return fmt.Errorf("failed to run add cmd prepare: %w", err)
 		}
 
 		cmd.SetOut(oldOut)
@@ -92,7 +93,7 @@ func NewKeysCmd() *cobra.Command {
 
 		eotsPk, err := saveKeyNameMapping(cmd, clientCtx, keyName)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to save key name mapping: %w", err)
 		}
 
 		if err := printFromKey(cmd, clientCtx, keyName, eotsPk); err != nil {
@@ -119,12 +120,14 @@ func saveKeyOnPostRun(cmd *cobra.Command, commandName string) {
 	subCmd.PostRunE = func(cmd *cobra.Command, args []string) error {
 		clientCtx, err := client.GetClientQueryContext(cmd)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get client query context: %w", err)
 		}
 		keyName := args[0]
-		_, err = saveKeyNameMapping(cmd, clientCtx, keyName)
+		if _, err := saveKeyNameMapping(cmd, clientCtx, keyName); err != nil {
+			return fmt.Errorf("failed to save key name mapping: %w", err)
+		}
 
-		return err
+		return nil
 	}
 }
 
@@ -137,13 +140,13 @@ func saveKeyNameMapping(cmd *cobra.Command, clientCtx client.Context, keyName st
 
 	rpcListener, err := cmd.Flags().GetString(rpcClientFlag)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get rpc client flag: %w", err)
 	}
 
 	if len(rpcListener) > 0 {
 		eotsClient, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, "")
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create eots client: %w", err)
 		}
 
 		eotsPk, err := eotsmanager.LoadBIP340PubKeyFromKeyName(clientCtx.Keyring, keyName)
@@ -209,13 +212,13 @@ func saveKeyNameMapping(cmd *cobra.Command, clientCtx client.Context, keyName st
 func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 	homePath, err := getHomePath(cmd)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get public key: %w", err)
 	}
 
 	// Initialize keyring
 	backend, err := cmd.Flags().GetString("keyring-backend")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get keyring backend: %w", err)
 	}
 
 	kr, err := eotsmanager.InitKeyring(homePath, backend, strings.NewReader(""))
@@ -225,12 +228,12 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 
 	eotsKeys, err := getAllEOTSKeys(cmd)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get keys from db: %w", err)
 	}
 
 	records, err := kr.List()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to list keys: %w", err)
 	}
 
 	keyMap := make(map[string]*cryptokeyring.Record)
@@ -247,7 +250,7 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 	for keyName, key := range eotsKeys {
 		pk, err := schnorr.ParsePubKey(key)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to parse public key: %w", err)
 		}
 		eotsPk := types.NewBIP340PubKeyFromBTCPK(pk)
 
@@ -259,18 +262,20 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 
 	output, err := cmd.Flags().GetString(flags.FlagOutput)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get output flag: %w", err)
 	}
 
 	if strings.EqualFold(output, flags.OutputFormatJSON) {
 		bz, err := json.MarshalIndent(keys, "", "  ")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal keys: %w", err)
 		}
 
-		_, err = fmt.Fprintln(cmd.OutOrStdout(), string(bz))
+		if _, err := fmt.Fprintln(cmd.OutOrStdout(), string(bz)); err != nil {
+			return fmt.Errorf("failed to print keys: %w", err)
+		}
 
-		return err
+		return nil
 	}
 
 	for _, k := range keys {
@@ -284,7 +289,7 @@ func runCommandPrintAllKeys(cmd *cobra.Command, _ []string) error {
 func getAllEOTSKeys(cmd *cobra.Command) (map[string][]byte, error) {
 	homePath, err := getHomePath(cmd)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get home path: %w", err)
 	}
 
 	// Load configuration
@@ -351,7 +356,7 @@ func printFromKey(cmd *cobra.Command, clientCtx client.Context, keyName string, 
 func printCreatePubKeyHex(cmd *cobra.Command, k *cryptokeyring.Record, eotsPk *types.BIP340PubKey, showMnemonic bool, mnemonic, outputFormat string) error {
 	out, err := keys.MkAccKeyOutput(k)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal keys: %w", err)
 	}
 	keyOutput := newKeyOutputWithPubKeyHex(out, eotsPk.MarshalHex())
 
@@ -375,7 +380,7 @@ func printCreatePubKeyHex(cmd *cobra.Command, k *cryptokeyring.Record, eotsPk *t
 
 		jsonString, err := json.MarshalIndent(keyOutput, "", "  ")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal keys: %w", err)
 		}
 
 		cmd.Println(string(jsonString))
@@ -404,11 +409,11 @@ func printKeyringRecord(w io.Writer, ko KeyOutputWithPubKeyHex, output string) e
 	case flags.OutputFormatJSON:
 		out, err := json.Marshal(ko)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal keys: %w", err)
 		}
 
 		if _, err := fmt.Fprintln(w, string(out)); err != nil {
-			return err
+			return fmt.Errorf("failed to print keys: %w", err)
 		}
 	}
 
@@ -418,11 +423,11 @@ func printKeyringRecord(w io.Writer, ko KeyOutputWithPubKeyHex, output string) e
 func printTextRecords(w io.Writer, kos []KeyOutputWithPubKeyHex) error {
 	out, err := yaml.Marshal(&kos)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal keys: %w", err)
 	}
 
 	if _, err := fmt.Fprintln(w, string(out)); err != nil {
-		return err
+		return fmt.Errorf("failed to print keys: %w", err)
 	}
 
 	return nil

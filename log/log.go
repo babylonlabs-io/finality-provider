@@ -63,12 +63,12 @@ func NewRootLogger(format string, level string, w io.Writer) (*zap.Logger, error
 
 func NewRootLoggerWithFile(logFile string, level string) (*zap.Logger, error) {
 	if err := util.MakeDirectory(filepath.Dir(logFile)); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create log directory: %w", err)
 	}
 	// #nosec G304 - The log file path is provided by the user and not externally
 	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}
 	mw := io.MultiWriter(os.Stdout, f)
 

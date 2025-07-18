@@ -40,19 +40,23 @@ func NewEOTSStore(db kvdb.Backend) (*EOTSStore, error) {
 }
 
 func (s *EOTSStore) initBuckets() error {
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		_, err := tx.CreateTopLevelBucket(eotsBucketName)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create eots bucket: %w", err)
 		}
 
 		_, err = tx.CreateTopLevelBucket(signRecordBucketName)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create sign record bucket: %w", err)
 		}
 
 		return nil
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to initialize buckets: %w", err)
+	}
+
+	return nil
 }
 
 func (s *EOTSStore) AddEOTSKeyName(
@@ -61,7 +65,7 @@ func (s *EOTSStore) AddEOTSKeyName(
 ) error {
 	pkBytes := schnorr.SerializePubKey(btcPk)
 
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		eotsBucket := tx.ReadWriteBucket(eotsBucketName)
 		if eotsBucket == nil {
 			return ErrCorruptedEOTSDb
@@ -78,7 +82,11 @@ func (s *EOTSStore) AddEOTSKeyName(
 		}
 
 		return saveEOTSKeyName(eotsBucket, pkBytes, keyName)
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to add EOTS key name: %w", err)
+	}
+
+	return nil
 }
 
 func saveEOTSKeyName(
@@ -90,7 +98,11 @@ func saveEOTSKeyName(
 		return fmt.Errorf("cannot save empty key name")
 	}
 
-	return eotsBucket.Put(btcPk, []byte(keyName))
+	if err := eotsBucket.Put(btcPk, []byte(keyName)); err != nil {
+		return fmt.Errorf("failed to put key name in bucket: %w", err)
+	}
+
+	return nil
 }
 
 func (s *EOTSStore) GetEOTSKeyName(pk []byte) (string, error) {
@@ -112,7 +124,7 @@ func (s *EOTSStore) GetEOTSKeyName(pk []byte) (string, error) {
 	}, func() {})
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get EOTS key name: %w", err)
 	}
 
 	return keyName, nil
@@ -140,7 +152,7 @@ func (s *EOTSStore) GetAllEOTSKeyNames() (map[string][]byte, error) {
 	}, func() {})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get EOTS key names: %w", err)
 	}
 
 	return result, nil
@@ -155,7 +167,7 @@ func (s *EOTSStore) SaveSignRecord(
 ) error {
 	key := getSignRecordKey(chainID, publicKey, height)
 
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		bucket := tx.ReadWriteBucket(signRecordBucketName)
 		if bucket == nil {
 			return ErrCorruptedEOTSDb
@@ -173,11 +185,15 @@ func (s *EOTSStore) SaveSignRecord(
 
 		marshalled, err := pm.Marshal(signRecord)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal signing record: %w", err)
 		}
 
 		return bucket.Put(key, marshalled)
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to save sign record: %w", err)
+	}
+
+	return nil
 }
 
 func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*SigningRecord, bool, error) {
@@ -203,7 +219,7 @@ func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*Signi
 			return nil, false, nil
 		}
 
-		return nil, false, err
+		return nil, false, fmt.Errorf("failed to get sign record: %w", err)
 	}
 
 	res := &SigningRecord{}
@@ -213,7 +229,11 @@ func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*Signi
 }
 
 func (s *EOTSStore) Close() error {
-	return s.db.Close()
+	if err := s.db.Close(); err != nil {
+		return fmt.Errorf("failed to close EOTS store database: %w", err)
+	}
+
+	return nil
 }
 
 // DeleteSignRecordsFromHeight deletes all sign records with the specified eotsPk and chainID
@@ -224,7 +244,7 @@ func (s *EOTSStore) DeleteSignRecordsFromHeight(eotsPk, chainID []byte, fromHeig
 		return fmt.Errorf("eotsPk and chainID must not be nil")
 	}
 
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		bucket := tx.ReadWriteBucket(signRecordBucketName)
 		if bucket == nil {
 			return ErrCorruptedEOTSDb
@@ -232,7 +252,7 @@ func (s *EOTSStore) DeleteSignRecordsFromHeight(eotsPk, chainID []byte, fromHeig
 
 		// We need to collect keys to delete since we can't delete while iterating
 		var keysToDelete [][]byte
-		err := bucket.ForEach(func(k, v []byte) error {
+		if err := bucket.ForEach(func(k, v []byte) error {
 			if k == nil || v == nil {
 				return fmt.Errorf("encountered invalid key or value in bucket")
 			}
@@ -256,20 +276,22 @@ func (s *EOTSStore) DeleteSignRecordsFromHeight(eotsPk, chainID []byte, fromHeig
 			}
 
 			return nil
-		})
-
-		if err != nil {
-			return err
+		}); err != nil {
+			return fmt.Errorf("failed to iterate over sign records: %w", err)
 		}
 
 		for _, key := range keysToDelete {
 			if err := bucket.Delete(key); err != nil {
-				return err
+				return fmt.Errorf("failed to delete sign record: %w", err)
 			}
 		}
 
 		return nil
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to delete sign records from height: %w", err)
+	}
+
+	return nil
 }
 
 // hasKeyPrefix checks if a key starts with the given chainID and eotsPk prefix.

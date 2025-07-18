@@ -37,7 +37,7 @@ func CommandInitTemplate(binaryName string) *cobra.Command {
 func runInitCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	homePath, err := filepath.Abs(ctx.HomeDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
 	homePath = util.CleanAndExpandPath(homePath)
 
@@ -51,16 +51,21 @@ func runInitCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	}
 
 	if err := util.MakeDirectory(homePath); err != nil {
-		return err
+		return fmt.Errorf("failed to make directory %s: %w", homePath, err)
 	}
 	// Create log directory
 	logDir := fpcfg.LogDir(homePath)
 	if err := util.MakeDirectory(logDir); err != nil {
-		return err
+		return fmt.Errorf("failed to make log directory %s: %w", logDir, err)
 	}
 
 	defaultConfig := fpcfg.DefaultConfigWithHome(homePath)
 	fileParser := flags.NewParser(&defaultConfig, flags.Default)
 
-	return flags.NewIniParser(fileParser).WriteFile(fpcfg.CfgFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
+	err = flags.NewIniParser(fileParser).WriteFile(fpcfg.CfgFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
+	if err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
 }
