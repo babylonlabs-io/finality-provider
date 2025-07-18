@@ -235,6 +235,7 @@ func TestCatchingUp(t *testing.T) {
 
 	// check if the fast sync works by checking if the gap is not more than 1
 	currentBlock, err := tm.BBNConsumerClient.QueryLatestBlock(ctx)
+	require.NoError(t, err)
 	currentHeight := currentBlock.GetHeight()
 	t.Logf("the current block is at %v", currentHeight)
 	require.NoError(t, err)
