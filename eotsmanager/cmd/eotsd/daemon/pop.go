@@ -513,7 +513,7 @@ func ValidBabySignEots(babyPk, babyAddr, eotsPkHex, babySigOverEotsPk string) (b
 
 	eotsPk, err := bbntypes.NewBIP340PubKeyFromHex(eotsPkHex)
 	if err != nil {
-		return false, fmt.Errorf("failed to parse baby public key: %w", err)
+		return false, fmt.Errorf("failed to parse eots public key: %w", err)
 	}
 
 	babySignEots := []byte(eotsPk.MarshalHex())
