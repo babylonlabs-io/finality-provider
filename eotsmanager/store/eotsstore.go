@@ -55,6 +55,7 @@ func (s *EOTSStore) initBuckets() error {
 	}); err != nil {
 		return fmt.Errorf("failed to initialize buckets: %w", err)
 	}
+
 	return nil
 }
 
@@ -64,7 +65,7 @@ func (s *EOTSStore) AddEOTSKeyName(
 ) error {
 	pkBytes := schnorr.SerializePubKey(btcPk)
 
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		eotsBucket := tx.ReadWriteBucket(eotsBucketName)
 		if eotsBucket == nil {
 			return ErrCorruptedEOTSDb
@@ -81,7 +82,11 @@ func (s *EOTSStore) AddEOTSKeyName(
 		}
 
 		return saveEOTSKeyName(eotsBucket, pkBytes, keyName)
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to add EOTS key name: %w", err)
+	}
+
+	return nil
 }
 
 func saveEOTSKeyName(
@@ -96,6 +101,7 @@ func saveEOTSKeyName(
 	if err := eotsBucket.Put(btcPk, []byte(keyName)); err != nil {
 		return fmt.Errorf("failed to put key name in bucket: %w", err)
 	}
+
 	return nil
 }
 
@@ -161,7 +167,7 @@ func (s *EOTSStore) SaveSignRecord(
 ) error {
 	key := getSignRecordKey(chainID, publicKey, height)
 
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		bucket := tx.ReadWriteBucket(signRecordBucketName)
 		if bucket == nil {
 			return ErrCorruptedEOTSDb
@@ -179,11 +185,15 @@ func (s *EOTSStore) SaveSignRecord(
 
 		marshalled, err := pm.Marshal(signRecord)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal signing record: %w", err)
 		}
 
 		return bucket.Put(key, marshalled)
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to save sign record: %w", err)
+	}
+
+	return nil
 }
 
 func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*SigningRecord, bool, error) {

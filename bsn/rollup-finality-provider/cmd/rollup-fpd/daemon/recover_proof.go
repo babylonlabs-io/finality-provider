@@ -35,5 +35,6 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	if err := fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, homePath, cfg.Common, args); err != nil {
 		return fmt.Errorf("failed to run recover proof command: %w", err)
 	}
+
 	return nil
 }

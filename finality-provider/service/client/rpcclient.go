@@ -40,7 +40,7 @@ func (c *FinalityProviderServiceGRpcClient) GetInfo(ctx context.Context) (*proto
 	req := &proto.GetInfoRequest{}
 	res, err := c.client.GetInfo(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get info: %w", err)
 	}
 
 	return res, nil
@@ -54,7 +54,7 @@ func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 ) (*proto.CreateFinalityProviderResponse, error) {
 	descBytes, err := description.Marshal()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal description: %w", err)
 	}
 
 	req := &proto.CreateFinalityProviderRequest{
@@ -67,7 +67,7 @@ func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 
 	res, err := c.client.CreateFinalityProvider(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create finality provider: %w", err)
 	}
 
 	return res, nil
@@ -89,7 +89,7 @@ func (c *FinalityProviderServiceGRpcClient) AddFinalitySignature(
 
 	res, err := c.client.AddFinalitySignature(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to add finality signature: %w", err)
 	}
 
 	return res, nil

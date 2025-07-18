@@ -55,6 +55,7 @@ func (c *QueryClient) Start() error {
 	if err := c.RPCClient.Start(); err != nil {
 		return fmt.Errorf("failed to start RPC client: %w", err)
 	}
+
 	return nil
 }
 
@@ -62,6 +63,7 @@ func (c *QueryClient) Stop() error {
 	if err := c.RPCClient.Stop(); err != nil {
 		return fmt.Errorf("failed to stop RPC client: %w", err)
 	}
+
 	return nil
 }
 

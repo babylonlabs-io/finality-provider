@@ -36,5 +36,6 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 	if err := fpdaemon.RunCommandCommitPubRandWithConfig(ctx, cmd, homePath, cfg.Common, args); err != nil {
 		return fmt.Errorf("failed to run commit pubrand command: %w", err)
 	}
+
 	return nil
 }

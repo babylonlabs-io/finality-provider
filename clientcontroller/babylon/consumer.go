@@ -89,12 +89,17 @@ func (bc *BabylonConsumerController) reliablySendMsg(ctx context.Context, msg sd
 }
 
 func (bc *BabylonConsumerController) reliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
-	return bc.bbnClient.ReliablySendMsgs(
+	resp, err := bc.bbnClient.ReliablySendMsgs(
 		ctx,
 		msgs,
 		expectedErrs,
 		unrecoverableErrs,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reliably send messages: %w", err)
+	}
+
+	return resp, nil
 }
 
 func (bc *BabylonConsumerController) GetFpRandCommitContext() string {
@@ -148,7 +153,7 @@ func (bc *BabylonConsumerController) SubmitBatchFinalitySigs(
 	for i, b := range req.Blocks {
 		cmtProof := cmtcrypto.Proof{}
 		if err := cmtProof.Unmarshal(req.ProofList[i]); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to unmarshal proof: %w", err)
 		}
 
 		msg := &finalitytypes.MsgAddFinalitySig{

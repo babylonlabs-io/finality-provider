@@ -84,5 +84,6 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	if err := fpServer.RunUntilShutdown(cmd.Context()); err != nil {
 		return fmt.Errorf("failed to run server until shutdown: %w", err)
 	}
+
 	return nil
 }

@@ -9,7 +9,12 @@ import (
 )
 
 func (c *Client) GetAddr() (string, error) {
-	return c.provider.Address()
+	addr, err := c.provider.Address()
+	if err != nil {
+		return "", fmt.Errorf("failed to get address: %w", err)
+	}
+
+	return addr, nil
 }
 
 func (c *Client) MustGetAddr() string {

@@ -72,5 +72,6 @@ func (db *DBConfig) GetDBBackend() (kvdb.Backend, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bolt backend: %w", err)
 	}
+
 	return backend, nil
 }

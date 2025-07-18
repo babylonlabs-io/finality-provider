@@ -42,7 +42,7 @@ func CreateClientCtx(keyringDir string, chainID string) (client.Context, error) 
 	if keyringDir == "" {
 		homeDir, err = os.UserHomeDir()
 		if err != nil {
-			return client.Context{}, err
+			return client.Context{}, fmt.Errorf("failed to get user home directory: %w", err)
 		}
 		keyringDir = path.Join(homeDir, ".finality-provider")
 	}

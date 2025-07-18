@@ -14,6 +14,7 @@ func (c *QueryClient) GetStatus(ctx context.Context) (*coretypes.ResultStatus, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
+
 	return status, nil
 }
 
@@ -23,6 +24,7 @@ func (c *QueryClient) GetBlock(ctx context.Context, height int64) (*coretypes.Re
 	if err != nil {
 		return nil, fmt.Errorf("failed to get block: %w", err)
 	}
+
 	return block, nil
 }
 
@@ -32,6 +34,7 @@ func (c *QueryClient) BlockSearch(ctx context.Context, events []string, page *in
 	if err != nil {
 		return nil, fmt.Errorf("failed to search blocks: %w", err)
 	}
+
 	return result, nil
 }
 
@@ -41,6 +44,7 @@ func (c *QueryClient) TxSearch(ctx context.Context, events []string, prove bool,
 	if err != nil {
 		return nil, fmt.Errorf("failed to search transactions: %w", err)
 	}
+
 	return result, nil
 }
 
@@ -50,6 +54,7 @@ func (c *QueryClient) GetTx(ctx context.Context, hash []byte) (*coretypes.Result
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transaction: %w", err)
 	}
+
 	return tx, nil
 }
 
@@ -58,6 +63,7 @@ func (c *QueryClient) Subscribe(ctx context.Context, subscriber, query string, o
 	if err != nil {
 		return nil, fmt.Errorf("failed to subscribe: %w", err)
 	}
+
 	return eventChan, nil
 }
 
@@ -65,6 +71,7 @@ func (c *QueryClient) Unsubscribe(ctx context.Context, subscriber, query string)
 	if err := c.RPCClient.Unsubscribe(ctx, subscriber, query); err != nil {
 		return fmt.Errorf("failed to unsubscribe: %w", err)
 	}
+
 	return nil
 }
 
@@ -72,5 +79,6 @@ func (c *QueryClient) UnsubscribeAll(ctx context.Context, subscriber string) err
 	if err := c.RPCClient.UnsubscribeAll(ctx, subscriber); err != nil {
 		return fmt.Errorf("failed to unsubscribe all: %w", err)
 	}
+
 	return nil
 }

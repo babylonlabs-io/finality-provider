@@ -509,6 +509,7 @@ func (cc *RollupBSNController) Close() error {
 	if err := cc.bbnClient.Stop(); err != nil {
 		return fmt.Errorf("failed to stop Babylon client: %w", err)
 	}
+
 	return nil
 }
 

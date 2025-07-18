@@ -53,5 +53,6 @@ func runInitCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	if err := flags.NewIniParser(fileParser).WriteFile(rollupfpcfg.CfgFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
+
 	return nil
 }
