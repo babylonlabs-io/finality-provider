@@ -219,7 +219,7 @@ func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*Signi
 			return nil, false, nil
 		}
 
-		return nil, false, err
+		return nil, false, fmt.Errorf("failed to get sign record: %w", err)
 	}
 
 	res := &SigningRecord{}
@@ -229,7 +229,11 @@ func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*Signi
 }
 
 func (s *EOTSStore) Close() error {
-	return s.db.Close()
+	if err := s.db.Close(); err != nil {
+		return fmt.Errorf("failed to close EOTS store database: %w", err)
+	}
+
+	return nil
 }
 
 // DeleteSignRecordsFromHeight deletes all sign records with the specified eotsPk and chainID
@@ -240,7 +244,7 @@ func (s *EOTSStore) DeleteSignRecordsFromHeight(eotsPk, chainID []byte, fromHeig
 		return fmt.Errorf("eotsPk and chainID must not be nil")
 	}
 
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		bucket := tx.ReadWriteBucket(signRecordBucketName)
 		if bucket == nil {
 			return ErrCorruptedEOTSDb
@@ -248,7 +252,7 @@ func (s *EOTSStore) DeleteSignRecordsFromHeight(eotsPk, chainID []byte, fromHeig
 
 		// We need to collect keys to delete since we can't delete while iterating
 		var keysToDelete [][]byte
-		err := bucket.ForEach(func(k, v []byte) error {
+		if err := bucket.ForEach(func(k, v []byte) error {
 			if k == nil || v == nil {
 				return fmt.Errorf("encountered invalid key or value in bucket")
 			}
@@ -272,20 +276,22 @@ func (s *EOTSStore) DeleteSignRecordsFromHeight(eotsPk, chainID []byte, fromHeig
 			}
 
 			return nil
-		})
-
-		if err != nil {
-			return err
+		}); err != nil {
+			return fmt.Errorf("failed to iterate over sign records: %w", err)
 		}
 
 		for _, key := range keysToDelete {
 			if err := bucket.Delete(key); err != nil {
-				return err
+				return fmt.Errorf("failed to delete sign record: %w", err)
 			}
 		}
 
 		return nil
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to delete sign records from height: %w", err)
+	}
+
+	return nil
 }
 
 // hasKeyPrefix checks if a key starts with the given chainID and eotsPk prefix.
