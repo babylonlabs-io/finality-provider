@@ -39,7 +39,7 @@ func (s *PubRandProofStore) initBuckets() error {
 
 		return nil
 	}); err != nil {
-		return fmt.Errorf("failed to initialize pub rand proof buckets: %w", err)
+		return fmt.Errorf("failed to initialize pub rand proof bucket: %w", err)
 	}
 
 	return nil
