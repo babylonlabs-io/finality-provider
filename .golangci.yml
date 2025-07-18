@@ -62,7 +62,7 @@ linters:
     - unused
     - wastedassign
     - whitespace
-#    - wrapcheck # we really should be using this, lax for now todo(lazar): unlax at somepoint, good practice
+    - wrapcheck # we really should be using this, lax for now
 
 issues:
   max-same-issues: 0

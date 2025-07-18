@@ -22,12 +22,12 @@ type QueryClient struct {
 // New creates a new QueryClient according to the given config
 func New(cfg *config.WasmQueryConfig) (*QueryClient, error) {
 	if err := cfg.Validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to validate config: %w", err)
 	}
 
 	tmClient, err := client.NewClientFromNode(cfg.RPCAddr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create client from node: %w", err)
 	}
 
 	return &QueryClient{
@@ -52,11 +52,17 @@ func NewWithClient(rpcClient rpcclient.Client, timeout time.Duration) (*QueryCli
 }
 
 func (c *QueryClient) Start() error {
-	return c.RPCClient.Start()
+	if err := c.RPCClient.Start(); err != nil {
+		return fmt.Errorf("failed to start RPC client: %w", err)
+	}
+	return nil
 }
 
 func (c *QueryClient) Stop() error {
-	return c.RPCClient.Stop()
+	if err := c.RPCClient.Stop(); err != nil {
+		return fmt.Errorf("failed to stop RPC client: %w", err)
+	}
+	return nil
 }
 
 func (c *QueryClient) IsRunning() bool {

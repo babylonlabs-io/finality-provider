@@ -28,7 +28,7 @@ func CommandStart(binaryName string) *cobra.Command {
 func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	homePath, err := filepath.Abs(ctx.HomeDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
 	homePath = util.CleanAndExpandPath(homePath)
 	flags := cmd.Flags()
@@ -81,5 +81,8 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 
 	fpServer := service.NewFinalityProviderServer(cfg.Common, logger, fpApp, dbBackend)
 
-	return fpServer.RunUntilShutdown(cmd.Context())
+	if err := fpServer.RunUntilShutdown(cmd.Context()); err != nil {
+		return fmt.Errorf("failed to run server until shutdown: %w", err)
+	}
+	return nil
 }

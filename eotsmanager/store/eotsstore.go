@@ -40,19 +40,22 @@ func NewEOTSStore(db kvdb.Backend) (*EOTSStore, error) {
 }
 
 func (s *EOTSStore) initBuckets() error {
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		_, err := tx.CreateTopLevelBucket(eotsBucketName)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create eots bucket: %w", err)
 		}
 
 		_, err = tx.CreateTopLevelBucket(signRecordBucketName)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create sign record bucket: %w", err)
 		}
 
 		return nil
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to initialize buckets: %w", err)
+	}
+	return nil
 }
 
 func (s *EOTSStore) AddEOTSKeyName(
@@ -90,7 +93,10 @@ func saveEOTSKeyName(
 		return fmt.Errorf("cannot save empty key name")
 	}
 
-	return eotsBucket.Put(btcPk, []byte(keyName))
+	if err := eotsBucket.Put(btcPk, []byte(keyName)); err != nil {
+		return fmt.Errorf("failed to put key name in bucket: %w", err)
+	}
+	return nil
 }
 
 func (s *EOTSStore) GetEOTSKeyName(pk []byte) (string, error) {
@@ -112,7 +118,7 @@ func (s *EOTSStore) GetEOTSKeyName(pk []byte) (string, error) {
 	}, func() {})
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get EOTS key name: %w", err)
 	}
 
 	return keyName, nil
@@ -140,7 +146,7 @@ func (s *EOTSStore) GetAllEOTSKeyNames() (map[string][]byte, error) {
 	}, func() {})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get EOTS key names: %w", err)
 	}
 
 	return result, nil
