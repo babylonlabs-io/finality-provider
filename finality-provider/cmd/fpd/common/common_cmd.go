@@ -68,7 +68,7 @@ func runCommandGetDaemonInfo(cmd *cobra.Command, _ []string) error {
 
 	info, err := client.GetInfo(cmd.Context())
 	if err != nil {
-		return fmt.Errorf("failed to unjail finality provider: %w", err)
+		return fmt.Errorf("failed to get daemon info: %w", err)
 	}
 
 	fptypes.PrintRespJSON(cmd, info)
