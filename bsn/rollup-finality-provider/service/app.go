@@ -61,5 +61,10 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 
 	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, cfg.Common.PollerConfig, logger)
 
-	return service.NewFinalityProviderApp(cfg.Common, cc, consumerCon, em, poller, rndCommiter, heightDeterminer, fpMetrics, db, logger)
+	fpApp, err := service.NewFinalityProviderApp(cfg.Common, cc, consumerCon, em, poller, rndCommiter, heightDeterminer, fpMetrics, db, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create finality provider app: %w", err)
+	}
+
+	return fpApp, nil
 }

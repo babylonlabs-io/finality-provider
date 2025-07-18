@@ -69,7 +69,7 @@ func LoadConfig(homePath string) (*RollupFPConfig, error) {
 	fileParser := flags.NewParser(&cfg, flags.Default)
 	err := flags.NewIniParser(fileParser).ParseFile(cfgFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
 	// Make sure everything we just loaded makes sense.

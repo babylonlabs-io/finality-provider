@@ -105,12 +105,17 @@ func (bc *BabylonController) reliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr
 }
 
 func (bc *BabylonController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
-	return bc.bbnClient.ReliablySendMsgs(
+	resp, err := bc.bbnClient.ReliablySendMsgs(
 		context.Background(),
 		msgs,
 		expectedErrs,
 		unrecoverableErrs,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reliably send messages: %w", err)
+	}
+
+	return resp, nil
 }
 
 func (bc *BabylonController) GetFpPopContextV0() string {
@@ -159,7 +164,7 @@ func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
 	rate *sdkmath.LegacyDec, description []byte) (*btcstakingtypes.MsgEditFinalityProvider, error) {
 	var reqDesc proto.Description
 	if err := protobuf.Unmarshal(description, &reqDesc); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal description: %w", err)
 	}
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
@@ -233,7 +238,11 @@ func (bc *BabylonController) Close() error {
 		return nil
 	}
 
-	return bc.bbnClient.Stop()
+	if err := bc.bbnClient.Stop(); err != nil {
+		return fmt.Errorf("failed to stop Babylon client: %w", err)
+	}
+
+	return nil
 }
 
 /*

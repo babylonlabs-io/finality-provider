@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"fmt"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -23,8 +24,11 @@ func (c *QueryClient) ListCodes(ctx context.Context, pagination *sdkquerytypes.P
 			Pagination: pagination,
 		}
 		resp, err = queryClient.Codes(ctx, req)
+		if err != nil {
+			return fmt.Errorf("failed to query codes: %w", err)
+		}
 
-		return err
+		return nil
 	})
 
 	return resp, err
@@ -39,8 +43,11 @@ func (c *QueryClient) ListContractsByCode(ctx context.Context, codeID uint64, pa
 			Pagination: pagination,
 		}
 		resp, err = queryClient.ContractsByCode(ctx, req)
+		if err != nil {
+			return fmt.Errorf("failed to query contracts by code: %w", err)
+		}
 
-		return err
+		return nil
 	})
 
 	return resp, err
@@ -55,8 +62,11 @@ func (c *QueryClient) QuerySmartContractState(ctx context.Context, contractAddre
 			QueryData: wasmtypes.RawContractMessage(queryData),
 		}
 		resp, err = queryClient.SmartContractState(ctx, req)
+		if err != nil {
+			return fmt.Errorf("failed to query smart contract state: %w", err)
+		}
 
-		return err
+		return nil
 	})
 
 	return resp, err

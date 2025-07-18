@@ -89,12 +89,17 @@ func (bc *BabylonConsumerController) reliablySendMsg(ctx context.Context, msg sd
 }
 
 func (bc *BabylonConsumerController) reliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
-	return bc.bbnClient.ReliablySendMsgs(
+	resp, err := bc.bbnClient.ReliablySendMsgs(
 		ctx,
 		msgs,
 		expectedErrs,
 		unrecoverableErrs,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reliably send messages: %w", err)
+	}
+
+	return resp, nil
 }
 
 func (bc *BabylonConsumerController) GetFpRandCommitContext() string {
@@ -148,7 +153,7 @@ func (bc *BabylonConsumerController) SubmitBatchFinalitySigs(
 	for i, b := range req.Blocks {
 		cmtProof := cmtcrypto.Proof{}
 		if err := cmtProof.Unmarshal(req.ProofList[i]); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to unmarshal proof: %w", err)
 		}
 
 		msg := &finalitytypes.MsgAddFinalitySig{
@@ -297,7 +302,7 @@ func (bc *BabylonConsumerController) QueryLastPublicRandCommit(_ context.Context
 	}
 
 	if err := commit.Validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to validate public randomness commitment: %w", err)
 	}
 
 	return commit, nil
@@ -363,7 +368,7 @@ func (bc *BabylonConsumerController) queryCometBestBlock(ctx context.Context) (*
 	defer cancel()
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query comet best block: %w", err)
 	}
 
 	// Returning response directly, if header with specified number did not exist
@@ -395,7 +400,11 @@ func (bc *BabylonConsumerController) Close() error {
 		return nil
 	}
 
-	return bc.bbnClient.Stop()
+	if err := bc.bbnClient.Stop(); err != nil {
+		return fmt.Errorf("failed to stop babylon client: %w", err)
+	}
+
+	return nil
 }
 
 // UnjailFinalityProvider sends an unjail transaction to the consumer chain
@@ -453,7 +462,7 @@ func (bc *BabylonConsumerController) QueryPublicRandCommitList(fpPk *btcec.Publi
 			}
 		}
 		if err := commit.Validate(); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to validate public randomness commitment: %w", err)
 		}
 
 		if startHeight <= commit.EndHeight() {

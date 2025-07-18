@@ -175,7 +175,7 @@ func (fp *FinalityProviderInstance) Stop() error {
 
 func (fp *FinalityProviderInstance) Shutdown() error {
 	if err := fp.Stop(); err != nil {
-		return err
+		return fmt.Errorf("failed to stop finality provider instance: %w", err)
 	}
 
 	if err := fp.pubRandState.close(); err != nil {
@@ -459,7 +459,7 @@ func (fp *FinalityProviderInstance) retrySubmitSigsUntilFinalized(targetBlocks [
 			)
 
 			if fpcc.IsUnrecoverable(err) {
-				return nil, err
+				return nil, fmt.Errorf("unrecoverable error during finality signature submission: %w", err)
 			}
 
 			if fpcc.IsExpected(err) {
@@ -510,7 +510,7 @@ func (fp *FinalityProviderInstance) retrySubmitSigsUntilFinalized(targetBlocks [
 func (fp *FinalityProviderInstance) checkBlockFinalization(ctx context.Context, height uint64) (bool, error) {
 	b, err := fp.consumerCon.QueryBlock(ctx, height)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to query block at height %d: %w", height, err)
 	}
 
 	return b.IsFinalized(), nil
@@ -518,7 +518,12 @@ func (fp *FinalityProviderInstance) checkBlockFinalization(ctx context.Context, 
 
 // CommitPubRand commits a list of randomness from given start height
 func (fp *FinalityProviderInstance) CommitPubRand(ctx context.Context, startHeight uint64) (*types.TxResponse, error) {
-	return fp.rndCommitter.Commit(ctx, startHeight)
+	txRes, err := fp.rndCommitter.Commit(ctx, startHeight)
+	if err != nil {
+		return nil, fmt.Errorf("failed to commit public randomness: %w", err)
+	}
+
+	return txRes, nil
 }
 
 // SubmitBatchFinalitySignatures builds and sends a finality signature over the given block to the consumer chain
@@ -565,7 +570,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []types
 		eotsSig, err := fp.SignFinalitySig(b)
 		if err != nil {
 			if !errors.Is(err, ErrFailedPrecondition) {
-				return nil, err
+				return nil, fmt.Errorf("failed to sign finality signature: %w", err)
 			}
 			// Skip this block and its corresponding items if we encounter FailedPrecondition
 			fp.logger.Warn("encountered FailedPrecondition error, skipping block",
@@ -608,7 +613,7 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []types
 			return nil, ErrFinalityProviderSlashed
 		}
 
-		return nil, err
+		return nil, fmt.Errorf("failed to submit batch finality signatures: %w", err)
 	}
 
 	// update the metrics with voted blocks
@@ -630,13 +635,23 @@ func (fp *FinalityProviderInstance) NewTestHelper() *FinalityProviderTestHelper 
 
 // DetermineStartHeight determines start height for block processing
 func (fp *FinalityProviderInstance) DetermineStartHeight(ctx context.Context) (uint64, error) {
-	return fp.heightDeterminer.DetermineStartHeight(ctx, fp.btcPk, func() (uint64, error) {
+	startHeight, err := fp.heightDeterminer.DetermineStartHeight(ctx, fp.btcPk, func() (uint64, error) {
 		return fp.GetLastVotedHeight(), nil
 	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to determine start height: %w", err)
+	}
+
+	return startHeight, nil
 }
 
 func (fp *FinalityProviderInstance) GetLastCommittedHeight(ctx context.Context) (uint64, error) {
-	return fp.rndCommitter.GetLastCommittedHeight(ctx)
+	height, err := fp.rndCommitter.GetLastCommittedHeight(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get last committed height: %w", err)
+	}
+
+	return height, nil
 }
 
 // nolint:unused
@@ -649,7 +664,7 @@ func (fp *FinalityProviderInstance) getLatestBlockHeightWithRetry() (uint64, err
 	if err := retry.Do(func() error {
 		latestBlock, err = fp.consumerCon.QueryLatestBlock(context.Background())
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query latest block height: %w", err)
 		}
 
 		return nil
@@ -661,7 +676,7 @@ func (fp *FinalityProviderInstance) getLatestBlockHeightWithRetry() (uint64, err
 			zap.Error(err),
 		)
 	})); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to get latest block height after retries: %w", err)
 	}
 	fp.metrics.RecordBabylonTipHeight(latestBlock.GetHeight())
 
@@ -680,7 +695,7 @@ func (fp *FinalityProviderInstance) GetVotingPowerWithRetry(height uint64) (bool
 			height,
 		))
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query finality provider voting power: %w", err)
 		}
 
 		return nil
@@ -692,7 +707,7 @@ func (fp *FinalityProviderInstance) GetVotingPowerWithRetry(height uint64) (bool
 			zap.Error(err),
 		)
 	})); err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get voting power after retries: %w", err)
 	}
 
 	return hasPower, nil

@@ -83,10 +83,15 @@ func (cc *RollupBSNController) QuerySmartContractState(ctx context.Context, cont
 	clientCtx := client.Context{Client: cc.bbnClient.RPCClient}
 	queryClient := wasmtypes.NewQueryClient(clientCtx)
 
-	return queryClient.SmartContractState(ctx, &wasmtypes.QuerySmartContractStateRequest{
+	resp, err := queryClient.SmartContractState(ctx, &wasmtypes.QuerySmartContractStateRequest{
 		Address:   contractAddress,
 		QueryData: wasmtypes.RawContractMessage(queryData),
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+
+	return resp, nil
 }
 
 func (cc *RollupBSNController) ReliablySendMsg(ctx context.Context, msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
@@ -129,7 +134,7 @@ func (cc *RollupBSNController) reliablySendMsgs(ctx context.Context, msgs []sdk.
 		unrecoverableErrs,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to reliably send messages: %w", err)
 	}
 
 	return types.NewBabylonTxResponse(resp), nil
@@ -161,7 +166,7 @@ func (cc *RollupBSNController) CommitPubRandList(
 	}
 	payload, err := json.Marshal(msg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal commit pubrand message: %w", err)
 	}
 	execMsg := &wasmtypes.MsgExecuteContract{
 		Sender:   cc.bbnClient.MustGetAddr(),
@@ -171,7 +176,7 @@ func (cc *RollupBSNController) CommitPubRandList(
 
 	res, err := cc.ReliablySendMsg(ctx, execMsg, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to send commit pubrand message: %w", err)
 	}
 	cc.logger.Debug("Successfully committed public randomness",
 		zap.String("fp_pk_hex", fpPkHex),
@@ -195,7 +200,7 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 	for i, block := range req.Blocks {
 		cmtProof := cmtcrypto.Proof{}
 		if err := cmtProof.Unmarshal(req.ProofList[i]); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to unmarshal proof: %w", err)
 		}
 
 		msg := SubmitFinalitySignatureMsg{
@@ -210,7 +215,7 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 		}
 		payload, err := json.Marshal(msg)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to marshal finality signature message: %w", err)
 		}
 		execMsg := &wasmtypes.MsgExecuteContract{
 			Sender:   cc.bbnClient.MustGetAddr(),
@@ -227,7 +232,7 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 
 	res, err := cc.reliablySendMsgs(ctx, msgs, expectedErrs, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to send finality signature messages: %w", err)
 	}
 	cc.logger.Debug(
 		"Successfully submitted finality signatures in a batch",
@@ -246,7 +251,7 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 ) (bool, error) {
 	pubRand, err := cc.QueryLastPublicRandCommit(ctx, req.FpPk)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to query last public rand commit: %w", err)
 	}
 	if pubRand == nil {
 		return false, nil
@@ -276,12 +281,12 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 	var nextKey []byte
 	btcStakingParams, err := cc.bbnClient.QueryClient.BTCStakingParams()
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to query BTC staking params: %w", err)
 	}
 	for {
 		resp, err := cc.bbnClient.QueryClient.FinalityProviderDelegations(fpBtcPkHex, &sdkquerytypes.PageRequest{Key: nextKey, Limit: 100})
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("failed to query finality provider delegations: %w", err)
 		}
 
 		for _, btcDels := range resp.BtcDelegatorDelegations {
@@ -316,7 +321,7 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 func (cc *RollupBSNController) QueryLatestFinalizedBlock(ctx context.Context) (types.BlockDescription, error) {
 	l2Block, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(ethrpc.FinalizedBlockNumber.Int64()))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get finalized block header: %w", err)
 	}
 
 	if l2Block.Number.Uint64() == 0 {
@@ -349,7 +354,7 @@ func (cc *RollupBSNController) QueryBlocks(ctx context.Context, req *api.QueryBl
 
 	// batch call
 	if err := cc.ethClient.Client().BatchCallContext(ctx, batchElemList); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to batch call context: %w", err)
 	}
 	for i := range batchElemList {
 		if batchElemList[i].Error != nil {
@@ -380,7 +385,7 @@ func (cc *RollupBSNController) QueryBlocks(ctx context.Context, req *api.QueryBl
 func (cc *RollupBSNController) QueryBlock(ctx context.Context, height uint64) (types.BlockDescription, error) {
 	l2Block, err := cc.ethClient.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get block header by number: %w", err)
 	}
 
 	blockHashBytes := l2Block.Hash().Bytes()
@@ -397,14 +402,19 @@ func (cc *RollupBSNController) QueryBlock(ctx context.Context, height uint64) (t
 // QueryBlock returns the Ethereum block from a RPC call
 // nolint:unused
 func (cc *RollupBSNController) queryEthBlock(ctx context.Context, height uint64) (*ethtypes.Header, error) {
-	return cc.ethClient.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
+	header, err := cc.ethClient.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get header by number: %w", err)
+	}
+
+	return header, nil
 }
 
 // QueryIsBlockFinalized returns whether the given the L2 block number has been finalized
 func (cc *RollupBSNController) QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error) {
 	l2Block, err := cc.QueryLatestFinalizedBlock(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to query latest finalized block: %w", err)
 	}
 
 	if l2Block == nil {
@@ -427,7 +437,7 @@ func (cc *RollupBSNController) QueryActivatedHeight(_ context.Context) (uint64, 
 func (cc *RollupBSNController) QueryLatestBlock(ctx context.Context) (types.BlockDescription, error) {
 	l2LatestBlock, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(ethrpc.LatestBlockNumber.Int64()))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get latest block header: %w", err)
 	}
 
 	return types.NewBlockInfo(l2LatestBlock.Number.Uint64(), l2LatestBlock.Hash().Bytes(), false), nil
@@ -465,7 +475,7 @@ func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fp
 		return nil, nil
 	}
 	if err := resp.Validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to validate response: %w", err)
 	}
 
 	return resp, nil
@@ -506,7 +516,11 @@ func convertProof(cmtProof cmtcrypto.Proof) Proof {
 func (cc *RollupBSNController) Close() error {
 	cc.ethClient.Close()
 
-	return cc.bbnClient.Stop()
+	if err := cc.bbnClient.Stop(); err != nil {
+		return fmt.Errorf("failed to stop Babylon client: %w", err)
+	}
+
+	return nil
 }
 
 // nolint:unparam

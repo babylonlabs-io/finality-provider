@@ -40,7 +40,7 @@ func (c *FinalityProviderServiceGRpcClient) GetInfo(ctx context.Context) (*proto
 	req := &proto.GetInfoRequest{}
 	res, err := c.client.GetInfo(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get info: %w", err)
 	}
 
 	return res, nil
@@ -54,7 +54,7 @@ func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 ) (*proto.CreateFinalityProviderResponse, error) {
 	descBytes, err := description.Marshal()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal description: %w", err)
 	}
 
 	req := &proto.CreateFinalityProviderRequest{
@@ -67,7 +67,7 @@ func (c *FinalityProviderServiceGRpcClient) CreateFinalityProvider(
 
 	res, err := c.client.CreateFinalityProvider(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create finality provider: %w", err)
 	}
 
 	return res, nil
@@ -89,7 +89,7 @@ func (c *FinalityProviderServiceGRpcClient) AddFinalitySignature(
 
 	res, err := c.client.AddFinalitySignature(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to add finality signature: %w", err)
 	}
 
 	return res, nil
@@ -102,7 +102,7 @@ func (c *FinalityProviderServiceGRpcClient) UnjailFinalityProvider(ctx context.C
 
 	res, err := c.client.UnjailFinalityProvider(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unjail finality provider: %w", err)
 	}
 
 	return res, nil
@@ -112,7 +112,7 @@ func (c *FinalityProviderServiceGRpcClient) QueryFinalityProviderList(ctx contex
 	req := &proto.QueryFinalityProviderListRequest{}
 	res, err := c.client.QueryFinalityProviderList(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query finality provider list: %w", err)
 	}
 
 	return res, nil
@@ -123,7 +123,7 @@ func (c *FinalityProviderServiceGRpcClient) QueryFinalityProviderInfo(ctx contex
 	req := &proto.QueryFinalityProviderRequest{BtcPk: fpPk.MarshalHex()}
 	res, err := c.client.QueryFinalityProvider(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query finality provider: %w", err)
 	}
 
 	return res, nil
@@ -148,7 +148,7 @@ func (c *FinalityProviderServiceGRpcClient) UnsafeRemoveMerkleProof(
 	req := &proto.RemoveMerkleProofRequest{BtcPkHex: fpPk.MarshalHex(), ChainId: chainID, TargetHeight: targetHeight}
 	_, err := c.client.UnsafeRemoveMerkleProof(ctx, req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to remove merkle proof: %w", err)
 	}
 
 	return nil

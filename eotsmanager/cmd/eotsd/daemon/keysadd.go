@@ -67,7 +67,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 	algoStr, _ := cmd.Flags().GetString(flags.FlagKeyType)
 	algo, err := cryptokeyring.NewSigningAlgoFromString(algoStr, keyringAlgos)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get signing algo: %w", err)
 	}
 
 	if dryRun, _ := cmd.Flags().GetBool(flags.FlagDryRun); dryRun {
@@ -79,7 +79,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 			// account exists, ask for user confirmation
 			response, err2 := input.GetConfirmation(fmt.Sprintf("override the existing name %s", name), inBuf, cmd.ErrOrStderr())
 			if err2 != nil {
-				return err2
+				return fmt.Errorf("failed to get confirmation: %w", err2)
 			}
 
 			if !response {
@@ -88,7 +88,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 
 			err2 = kb.Delete(name)
 			if err2 != nil {
-				return err2
+				return fmt.Errorf("failed to delete key: %w", err2)
 			}
 		}
 
@@ -97,18 +97,18 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 			pks := make([]cryptotypes.PubKey, len(multisigKeys))
 			multisigThreshold, _ := cmd.Flags().GetInt(flagMultiSigThreshold)
 			if err := validateMultisigThreshold(multisigThreshold, len(multisigKeys)); err != nil {
-				return err
+				return fmt.Errorf("failed to validate multisig threshold: %w", err)
 			}
 
 			for i, keyname := range multisigKeys {
 				k, err := kb.Key(keyname)
 				if err != nil {
-					return err
+					return fmt.Errorf("failed to get key: %w", err)
 				}
 
 				key, err := k.GetPubKey()
 				if err != nil {
-					return err
+					return fmt.Errorf("failed to get pubkey: %w", err)
 				}
 				pks[i] = key
 			}
@@ -122,7 +122,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 			pk := multisig.NewLegacyAminoPubKey(multisigThreshold, pks)
 			_, err := kb.SaveMultisig(name, pk)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to save multisig: %w", err)
 			}
 
 			return nil
@@ -137,12 +137,12 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 	if pubKey != "" {
 		var pk cryptotypes.PubKey
 		if err = ctx.Codec.UnmarshalInterfaceJSON([]byte(pubKey), &pk); err != nil {
-			return err
+			return fmt.Errorf("failed to unmarshal pubkey: %w", err)
 		}
 
 		_, err := kb.SaveOfflineKey(name, pk)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to save offline key: %w", err)
 		}
 
 		return nil
@@ -150,14 +150,14 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 	if pubKeyBase64 != "" {
 		b64, err := base64.StdEncoding.DecodeString(pubKeyBase64)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to decode pubkey base64: %w", err)
 		}
 
 		var pk cryptotypes.PubKey
 		// create an empty pubkey in order to get the algo TypeUrl.
 		tempAny, err := codectypes.NewAnyWithValue(algo.Generate()([]byte{}).PubKey())
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create any with value: %w", err)
 		}
 
 		jsonPub, err := json.Marshal(struct {
@@ -169,7 +169,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 		}
 
 		if err = ctx.Codec.UnmarshalInterfaceJSON(jsonPub, &pk); err != nil {
-			return err
+			return fmt.Errorf("failed to unmarshal interface json: %w", err)
 		}
 
 		_, err = kb.SaveOfflineKey(name, pk)
@@ -198,7 +198,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 		bech32PrefixAccAddr := sdk.GetConfig().GetBech32AccountAddrPrefix()
 		_, err := kb.SaveLedgerKey(name, hd.Secp256k1, bech32PrefixAccAddr, coinType, account, index)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to save ledger key: %w", err)
 		}
 
 		return nil
@@ -213,12 +213,12 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 		if mnemonicSrc != "" {
 			mnemonic, err = readMnemonicFromFile(mnemonicSrc)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to read mnemonic from file: %w", err)
 			}
 		} else {
 			mnemonic, err = input.GetString("Enter your bip39 mnemonic", inBuf)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get string: %w", err)
 			}
 		}
 
@@ -229,12 +229,12 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 		if mnemonicSrc != "" {
 			mnemonic, err = readMnemonicFromFile(mnemonicSrc)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to read mnemonic from file: %w", err)
 			}
 		} else {
 			mnemonic, err = input.GetString("Enter your bip39 mnemonic, or hit enter to generate one.", inBuf)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get string: %w", err)
 			}
 		}
 
@@ -247,12 +247,12 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 		// read entropy seed straight from cmtcrypto.Rand and convert to mnemonic
 		entropySeed, err := bip39.NewEntropy(mnemonicEntropySize)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to new entropy: %w", err)
 		}
 
 		mnemonic, err = bip39.NewMnemonic(entropySeed)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to new mnemonic: %w", err)
 		}
 	}
 
@@ -262,14 +262,14 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 			"Enter your bip39 passphrase. This is combined with the mnemonic to derive the seed. "+
 				"Most users should just hit enter to use the default, \"\"", inBuf)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get string: %w", err)
 		}
 
 		// if they use one, make them re-enter it
 		if len(bip39Passphrase) != 0 {
 			p2, err := input.GetString("Repeat the passphrase:", inBuf)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get string: %w", err)
 			}
 
 			if bip39Passphrase != p2 {
@@ -280,7 +280,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 
 	_, err = kb.NewAccount(name, mnemonic, bip39Passphrase, hdPath, algo)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create new account: %w", err)
 	}
 
 	// Recover key from seed passphrase
@@ -312,13 +312,13 @@ func validateMultisigThreshold(k, nKeys int) error {
 func readMnemonicFromFile(filePath string) (string, error) {
 	file, err := os.Open(filepath.Clean(filePath))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to open mnemonic file: %w", err)
 	}
 	defer file.Close()
 
 	bz, err := io.ReadAll(file)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read mnemonic file: %w", err)
 	}
 
 	return string(bz), nil

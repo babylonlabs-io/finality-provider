@@ -58,7 +58,7 @@ func runCommandGetDaemonInfo(cmd *cobra.Command, _ []string) error {
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create grpc client: %w", err)
 	}
 	defer func() {
 		if err := cleanUp(); err != nil {
@@ -68,7 +68,7 @@ func runCommandGetDaemonInfo(cmd *cobra.Command, _ []string) error {
 
 	info, err := client.GetInfo(cmd.Context())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get daemon info: %w", err)
 	}
 
 	fptypes.PrintRespJSON(cmd, info)
@@ -102,7 +102,7 @@ func runCommandUnjailFP(_ client.Context, cmd *cobra.Command, args []string) err
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create grpc client: %w", err)
 	}
 	defer func() {
 		if err := cleanUp(); err != nil {
@@ -112,7 +112,7 @@ func runCommandUnjailFP(_ client.Context, cmd *cobra.Command, args []string) err
 
 	_, err = client.UnjailFinalityProvider(cmd.Context(), args[0])
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unjail finality provider: %w", err)
 	}
 
 	return nil
@@ -141,7 +141,7 @@ func runCommandLsFP(cmd *cobra.Command, _ []string) error {
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create grpc client: %w", err)
 	}
 	defer func() {
 		if err := cleanUp(); err != nil {
@@ -186,7 +186,7 @@ func runCommandInfoFP(cmd *cobra.Command, args []string) error {
 
 	client, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create grpc client: %w", err)
 	}
 	defer func() {
 		if err := cleanUp(); err != nil {
@@ -232,11 +232,11 @@ func CommandAddFinalitySig(binaryName string) *cobra.Command {
 func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 	fpPk, err := types.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse BIP340 public key from hex: %w", err)
 	}
 	blkHeight, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse block height: %w", err)
 	}
 
 	flags := cmd.Flags()
@@ -280,7 +280,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 
 	res, err := client.AddFinalitySignature(cmd.Context(), fpPk.MarshalHex(), blkHeight, appHash, checkDoubleSign)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to add finality signature: %w", err)
 	}
 	fptypes.PrintRespJSON(cmd, res)
 
@@ -315,7 +315,7 @@ func CommandEditFinalityDescription(binaryName string) *cobra.Command {
 func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error {
 	fpPk, err := types.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse BIP340 public key from hex: %w", err)
 	}
 
 	flags := cmd.Flags()
@@ -326,7 +326,7 @@ func runCommandEditFinalityDescription(cmd *cobra.Command, args []string) error 
 
 	grpcClient, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create grpc client: %w", err)
 	}
 	defer func() {
 		if err := cleanUp(); err != nil {
@@ -387,7 +387,7 @@ operator of this command should ensure that finality provider has voted, or does
 func runCommandUnsafePruneMerkleProof(cmd *cobra.Command, args []string) error {
 	fpPk, err := types.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse BIP340 public key from hex: %w", err)
 	}
 
 	flags := cmd.Flags()
@@ -398,7 +398,7 @@ func runCommandUnsafePruneMerkleProof(cmd *cobra.Command, args []string) error {
 
 	grpcClient, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(daemonAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create grpc client: %w", err)
 	}
 	defer func() {
 		if err := cleanUp(); err != nil {
@@ -410,7 +410,7 @@ func runCommandUnsafePruneMerkleProof(cmd *cobra.Command, args []string) error {
 	targetHeight, _ := cmd.Flags().GetUint64(UpToHeightFlag)
 
 	if err := grpcClient.UnsafeRemoveMerkleProof(cmd.Context(), fpPk, chainID, targetHeight); err != nil {
-		return fmt.Errorf("failed to edit finality provider %v err %w", fpPk.MarshalHex(), err)
+		return fmt.Errorf("failed to remove merkle proof %v err %w", fpPk.MarshalHex(), err)
 	}
 
 	return nil

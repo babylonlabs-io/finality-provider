@@ -23,7 +23,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	// Get homePath from context like in start.go
 	homePath, err := filepath.Abs(ctx.HomeDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
 	homePath = util.CleanAndExpandPath(homePath)
 
@@ -32,5 +32,9 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	return fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, homePath, cfg.Common, args)
+	if err := fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, homePath, cfg.Common, args); err != nil {
+		return fmt.Errorf("failed to run recover proof command: %w", err)
+	}
+
+	return nil
 }

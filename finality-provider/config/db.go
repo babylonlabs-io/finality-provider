@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/lightningnetwork/lnd/kvdb"
@@ -67,5 +68,10 @@ func (db *DBConfig) DBConfigToBoltBackendConfig() *kvdb.BoltBackendConfig {
 }
 
 func (db *DBConfig) GetDBBackend() (kvdb.Backend, error) {
-	return kvdb.GetBoltBackend(db.DBConfigToBoltBackendConfig())
+	backend, err := kvdb.GetBoltBackend(db.DBConfigToBoltBackendConfig())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bolt backend: %w", err)
+	}
+
+	return backend, nil
 }

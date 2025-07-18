@@ -16,18 +16,18 @@ import (
 func (c *Client) StoreWasmCode(ctx context.Context, wasmFile string) error {
 	wasmCode, err := os.ReadFile(wasmFile) // #nosec G304
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read wasm file: %w", err)
 	}
 	if strings.HasSuffix(wasmFile, "wasm") { // compress for gas limit
 		var buf bytes.Buffer
 		gz := gzip.NewWriter(&buf)
 		_, err = gz.Write(wasmCode)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to write compressed wasm code: %w", err)
 		}
 		err = gz.Close()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to close gzip writer: %w", err)
 		}
 		wasmCode = buf.Bytes()
 	}
@@ -86,7 +86,7 @@ func (c *Client) GetLatestCodeID(ctx context.Context) (uint64, error) {
 	}
 	resp, err := c.ListCodes(ctx, pagination)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to list codes: %w", err)
 	}
 
 	if len(resp.CodeInfos) == 0 {

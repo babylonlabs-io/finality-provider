@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"encoding/hex"
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -104,7 +105,7 @@ func CreateChainKey(keyringDir, chainID, keyName, backend, passphrase, hdPath, m
 		keyringDir, chainID,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create client ctx: %w", err)
 	}
 
 	krController, err := fpkr.NewChainKeyringController(
@@ -113,10 +114,15 @@ func CreateChainKey(keyringDir, chainID, keyName, backend, passphrase, hdPath, m
 		backend,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create chain keyring controller: %w", err)
 	}
 
-	return krController.CreateChainKey(passphrase, hdPath, mnemonic)
+	info, err := krController.CreateChainKey(passphrase, hdPath, mnemonic)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create chain key: %w", err)
+	}
+
+	return info, nil
 }
 
 func GenSdkContext(r *rand.Rand, t *testing.T) client.Context {
