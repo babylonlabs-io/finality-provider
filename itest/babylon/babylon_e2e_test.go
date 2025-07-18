@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -26,18 +25,21 @@ import (
 
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
-	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/btcsuite/btcd/btcec/v2/schnorr"
-	goflags "github.com/jessevdk/go-flags"
-	"github.com/stretchr/testify/require"
-
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
+	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcec/v2/schnorr"
+	goflags "github.com/jessevdk/go-flags"
+	"github.com/stretchr/testify/require"
+)
+
+const (
+	BinaryName = "fpd"
 )
 
 // TestFinalityProviderLifeCycle tests the whole life cycle of a finality-provider
@@ -61,11 +63,9 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 
 	// check the BTC delegation is pending
 	delsResp := tm.WaitForNPendingDels(t, n)
-	var dels []*bstypes.BTCDelegation
 	for _, delResp := range delsResp {
 		del, err := e2eutils.ParseRespBTCDelToBTCDel(delResp)
 		require.NoError(t, err)
-		dels = append(dels, del)
 		// send covenant sigs
 		tm.InsertCovenantSigForDelegation(t, del)
 	}
@@ -117,7 +117,8 @@ func TestSkippingDoubleSignError(t *testing.T) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	b := types.NewBlockInfo(currentHeight, datagen.GenRandomByteArray(r, 32), false)
 	t.Logf("manually sending a vote for height %d", currentHeight)
-	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(ctx, b, true)
+
+	_, _, err = fpIns.NewTestHelper().SubmitFinalitySignatureAndExtractPrivKey(ctx, b, true)
 	require.NoError(t, err)
 
 	// restart the fp to see if it will skip sending the height
@@ -163,8 +164,10 @@ func TestDoubleSigning(t *testing.T) {
 
 	finalizedBlock := tm.WaitForNFinalizedBlocks(t, 1)
 
+	fpTestHelper := fpIns.NewTestHelper()
+
 	// test duplicate vote which should be ignored
-	res, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(ctx, finalizedBlock, false)
+	res, extractedKey, err := fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, finalizedBlock, false)
 	require.NoError(t, err)
 	require.Nil(t, extractedKey)
 	require.Empty(t, res)
@@ -176,10 +179,10 @@ func TestDoubleSigning(t *testing.T) {
 	b := types.NewBlockInfo(finalizedBlock.GetHeight(), datagen.GenRandomByteArray(r, 32), false)
 
 	// confirm we have double sign protection
-	_, _, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(ctx, b, true)
+	_, _, err = fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, b, true)
 	require.Contains(t, err.Error(), "FailedPrecondition")
 
-	_, extractedKey, err = fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(ctx, b, false)
+	_, extractedKey, err = fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, b, false)
 	require.NoError(t, err)
 	require.NotNil(t, extractedKey)
 	localKey := tm.EOTSServerHandler.GetFPPrivKey(t, fpIns.GetBtcPkBIP340().MustMarshal())
@@ -246,7 +249,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 
 	fpIns := fps[0]
 
-	cmd := daemon.CommandEditFinalityDescription()
+	cmd := commoncmd.CommandEditFinalityDescription(BinaryName)
 
 	const (
 		monikerFlag          = "moniker"
@@ -325,7 +328,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 
 	fpIns := fps[0]
 
-	cmd := daemon.CommandCreateFP()
+	cmd := daemon.CommandCreateFP(BinaryName)
 
 	eotsKeyName := "eots-key-2"
 	eotsPkBz, err := tm.EOTSServerHandler.CreateKey(eotsKeyName, "")
@@ -362,16 +365,13 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 	}
 
 	file, err := os.Create(fmt.Sprintf("%s/%s", t.TempDir(), "finality-provider.json"))
-	if err != nil {
-		log.Fatalf("Failed to create file: %v", err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		_ = os.Remove(file.Name())
 	})
 
-	if err := json.NewEncoder(file).Encode(data); err != nil {
-		log.Fatalf("Failed to write JSON to file: %v", err)
-	}
+	err = json.NewEncoder(file).Encode(data)
+	require.NoError(t, err)
 
 	cmd.SetArgs([]string{
 		"--from-file=" + file.Name(),
@@ -397,7 +397,7 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 	fpIns := fps[0]
 
 	tm.WaitForFpPubRandTimestamped(t, fpIns)
-	cmd := daemon.CommandUnsafePruneMerkleProof()
+	cmd := commoncmd.CommandUnsafePruneMerkleProof(BinaryName)
 
 	cmd.SetArgs([]string{
 		fpIns.GetBtcPkHex(),
@@ -505,7 +505,7 @@ func TestRecoverRandProofCmd(t *testing.T) {
 	require.NoError(t, err)
 
 	// run the cmd
-	cmd := daemon.CommandRecoverProof()
+	cmd := daemon.CommandRecoverProof(BinaryName)
 	cmd.SetArgs([]string{
 		fpIns.GetBtcPkHex(),
 		"--home=" + fpHomePath,
@@ -553,7 +553,7 @@ func TestSigHeightOutdated(t *testing.T) {
 
 	finalizedBlock := tm.WaitForNFinalizedBlocks(t, 1)
 
-	res, extractedKey, err := fpIns.TestSubmitFinalitySignatureAndExtractPrivKey(ctx, finalizedBlock, false)
+	res, extractedKey, err := fpIns.NewTestHelper().SubmitFinalitySignatureAndExtractPrivKey(ctx, finalizedBlock, false)
 
 	require.NoError(t, err)
 	require.Nil(t, extractedKey)
@@ -852,7 +852,7 @@ func TestUnsafeCommitPubRandCmd(t *testing.T) {
 	require.NoError(t, err)
 
 	// run the cmd
-	cmd := daemon.CommandCommitPubRand()
+	cmd := daemon.CommandCommitPubRand(BinaryName)
 	cmd.SetArgs([]string{
 		fpIns.GetBtcPkBIP340().MarshalHex(),
 		"30000",

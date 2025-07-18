@@ -86,7 +86,7 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 	// wait for Babylon node starts b/c we will fund the FP address with babylon node
 	babylonController, _ := waitForBabylonNodeStart(t, keyDir, testDir, logger, manager, babylond)
 
-	// deploy finality gadget cw contract
+	// deploy rollup BSN finality contract
 	contractAddress := deployCwContract(t, babylonController.GetBBNClient(), ctx)
 	t.Logf(log.Prefix("rollup BSN finality contract address: %s"), contractAddress)
 
@@ -121,13 +121,13 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 	babylonFpApp := base_test_manager.CreateAndStartFpApp(t, logger, babylonFpCfg, babylonConsumerController, EOTSClients[0])
 	t.Log(log.Prefix("Started Babylon FP App"))
 
-	// create rollup consumer controller
+	// create rollup BSN controller
 	rollupBSNController, err := rollupfpcontroller.NewRollupBSNController(rollupFpCfg, logger)
 	require.NoError(t, err)
 
-	// create and start consumer FP app
+	// create and start BSN FP app
 	consumerFpApp := base_test_manager.CreateAndStartFpApp(t, logger, rollupFpCfg.Common, rollupBSNController, EOTSClients[1])
-	t.Log(log.Prefix("Started Consumer FP App"))
+	t.Log(log.Prefix("Started BSN FP App"))
 
 	ctm := &OpL2ConsumerTestManager{
 		BaseTestManager: BaseTestManager{
@@ -303,9 +303,7 @@ func createRollupFpConfig(
 		FinalityContractAddress: "",
 		// it must be a dialable RPC address checked by NewRollupBSNController
 		RollupNodeRPCAddress: "https://optimism-sepolia.drpc.org",
-		// the value does not matter for the test
-		BabylonFinalityGadgetRpc: "127.0.0.1:50051",
-		Common:                   cfg,
+		Common:               cfg,
 	}
 
 	return opConsumerCfg

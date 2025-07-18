@@ -1,4 +1,4 @@
-package cmd
+package clientctx
 
 import (
 	"context"
@@ -6,11 +6,11 @@ import (
 
 	"github.com/babylonlabs-io/babylon/v3/app/params"
 	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	incentivetypes "github.com/babylonlabs-io/babylon/v3/x/incentive/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/std"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
-	incentivetypes "github.com/babylonlabs-io/babylon/v3/x/incentive/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 

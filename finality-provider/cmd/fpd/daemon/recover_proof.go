@@ -13,7 +13,7 @@ import (
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
-	fpcmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd"
+	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/log"
@@ -21,15 +21,21 @@ import (
 	"github.com/babylonlabs-io/finality-provider/util"
 )
 
-func CommandRecoverProof() *cobra.Command {
+func CommandRecoverProof(binaryName string) *cobra.Command {
+	cmd := CommandRecoverProofTemplate(binaryName)
+	cmd.RunE = clientctx.RunEWithClientCtx(runCommandRecoverProof)
+
+	return cmd
+}
+
+func CommandRecoverProofTemplate(binaryName string) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:     "recover-rand-proof [fp-eots-pk-hex]",
 		Aliases: []string{"rrp"},
 		Short:   "Recover the public randomness' merkle proof for a finality provider",
 		Long:    "Recover the public randomness' merkle proof for a finality provider. Currently only Babylon consumer chain is supported.",
-		Example: `fpd recover-rand-proof --home /home/user/.fpd [fp-eots-pk-hex]`,
+		Example: fmt.Sprintf(`%s recover-rand-proof --home /home/user/.fpd [fp-eots-pk-hex]`, binaryName),
 		Args:    cobra.ExactArgs(1),
-		RunE:    fpcmd.RunEWithClientCtx(runCommandRecoverProof),
 	}
 	cmd.Flags().Uint64("start-height", 1, "The block height from which the proof is recovered from (optional)")
 	cmd.Flags().String(flags.FlagHome, fpcfg.DefaultFpdDir, "The application home directory")
@@ -39,6 +45,22 @@ func CommandRecoverProof() *cobra.Command {
 }
 
 func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []string) error {
+	// Get homePath from context like in start.go
+	homePath, err := filepath.Abs(ctx.HomeDir)
+	if err != nil {
+		return err
+	}
+	homePath = util.CleanAndExpandPath(homePath)
+
+	cfg, err := fpcfg.LoadConfig(homePath)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	return RunCommandRecoverProofWithConfig(ctx, cmd, homePath, cfg, args)
+}
+
+func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, homePath string, cfg *fpcfg.Config, args []string) error {
 	chainID, err := cmd.Flags().GetString(flags.FlagChainID)
 	if err != nil {
 		return fmt.Errorf("failed to read chain id flag: %w", err)
@@ -55,18 +77,6 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	startHeight, err := cmd.Flags().GetUint64("start-height")
 	if err != nil {
 		return err
-	}
-
-	// Get homePath from context like in start.go
-	homePath, err := filepath.Abs(ctx.HomeDir)
-	if err != nil {
-		return err
-	}
-	homePath = util.CleanAndExpandPath(homePath)
-
-	cfg, err := fpcfg.LoadConfig(homePath)
-	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.LogLevel)

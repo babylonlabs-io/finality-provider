@@ -151,7 +151,7 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 
 		b := types.NewBlockInfo(req.GetHeight(), req.GetAppHash(), false)
 
-		txRes, privKey, err := fpi.TestSubmitFinalitySignatureAndExtractPrivKey(ctx, b, req.CheckDoubleSign)
+		txRes, privKey, err := fpi.NewTestHelper().SubmitFinalitySignatureAndExtractPrivKey(ctx, b, req.CheckDoubleSign)
 		if err != nil {
 			return nil, err
 		}

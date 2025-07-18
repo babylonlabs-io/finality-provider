@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"path/filepath"
 
+	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	fpdaemon "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	"github.com/babylonlabs-io/finality-provider/util"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/jessevdk/go-flags"
@@ -15,21 +16,8 @@ import (
 
 // CommandInit returns the init command of fpd daemon that starts the config dir.
 func CommandInit(binaryName string) *cobra.Command {
-	cmd := CommandInitTemplate(binaryName)
+	cmd := fpdaemon.CommandInitTemplate(binaryName)
 	cmd.RunE = clientctx.RunEWithClientCtx(runInitCmd)
-
-	return cmd
-}
-
-func CommandInitTemplate(binaryName string) *cobra.Command {
-	var cmd = &cobra.Command{
-		Use:     "init",
-		Short:   "Initialize a finality-provider home directory.",
-		Long:    `Creates a new finality-provider home directory with default config`,
-		Example: fmt.Sprintf(`%s init --home /home/user/.fpd --force`, binaryName),
-		Args:    cobra.NoArgs,
-	}
-	cmd.Flags().Bool(commoncmd.ForceFlag, false, "Override existing configuration")
 
 	return cmd
 }
@@ -39,8 +27,8 @@ func runInitCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	homePath = util.CleanAndExpandPath(homePath)
 
+	homePath = util.CleanAndExpandPath(homePath)
 	force, err := cmd.Flags().GetBool(commoncmd.ForceFlag)
 	if err != nil {
 		return fmt.Errorf("failed to read flag %s: %w", commoncmd.ForceFlag, err)
@@ -54,13 +42,13 @@ func runInitCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	// Create log directory
-	logDir := fpcfg.LogDir(homePath)
+	logDir := rollupfpcfg.LogDir(homePath)
 	if err := util.MakeDirectory(logDir); err != nil {
 		return err
 	}
 
-	defaultConfig := fpcfg.DefaultConfigWithHome(homePath)
+	defaultConfig := rollupfpcfg.DefaultConfigWithHome(homePath)
 	fileParser := flags.NewParser(&defaultConfig, flags.Default)
 
-	return flags.NewIniParser(fileParser).WriteFile(fpcfg.CfgFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
+	return flags.NewIniParser(fileParser).WriteFile(rollupfpcfg.CfgFile(homePath), flags.IniIncludeComments|flags.IniIncludeDefaults)
 }

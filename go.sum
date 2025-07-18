@@ -739,8 +739,6 @@ github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250407051200-a5d652116d6d h1:9z
 github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250407051200-a5d652116d6d/go.mod h1:ks4/p72aNJTIN8+CnCFxNX0HqfgHdClEwU4LxAxryJQ=
 github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250711 h1:l95QWwd3hGek0LYiYGp+8I8ljADXApRbshugjMg+1Oo=
 github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250711/go.mod h1:/X1bVC4WUKDBxRTazXvZd/6WINc2tqXAtZOBJknM8OA=
-github.com/babylonlabs-io/finality-gadget v0.1.1 h1:izW+sxtrsVPC9FlGx0wzWTJqRk+buEw9zfV7nXKQmWA=
-github.com/babylonlabs-io/finality-gadget v0.1.1/go.mod h1:+BICJA7mUJpfYOSYds1G5w6nLO0gKVe9XwdmpIUiXmk=
 github.com/babylonlabs-io/tokenfactory v0.50.6-wasmvm2 h1:7wtBLjwncBsYgc+LlW4eir/bGcycrhpbz7PkUVADzBc=
 github.com/babylonlabs-io/tokenfactory v0.50.6-wasmvm2/go.mod h1:L8XfncoH1M6fOrzqfRVQZePqo54ZlTDdatUpEr0Iz/E=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
