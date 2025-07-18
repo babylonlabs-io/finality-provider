@@ -46,7 +46,7 @@ func (s *FinalityProviderStore) initBuckets() error {
 
 		return nil
 	}); err != nil {
-		return fmt.Errorf("failed to initialize finality provider buckets: %w", err)
+		return fmt.Errorf("failed to initialize finality provider bucket: %w", err)
 	}
 
 	return nil
