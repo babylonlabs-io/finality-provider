@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -20,12 +21,12 @@ func getHomePath(cmd *cobra.Command) (string, error) {
 func getCleanPath(cmd *cobra.Command, flag string) (string, error) {
 	rawPath, err := cmd.Flags().GetString(flag)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get %s flag: %w", flag, err)
 	}
 
 	cleanPath, err := filepath.Abs(rawPath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
 	return util.CleanAndExpandPath(cleanPath), nil

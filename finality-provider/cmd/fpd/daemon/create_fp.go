@@ -92,10 +92,10 @@ Where finality-provider.json contains:
 		if fromFilePath == "" {
 			// Mark flags as required only if --from-file is not provided
 			if err := cmd.MarkFlagRequired(commoncmd.ChainIDFlag); err != nil {
-				return err
+				return fmt.Errorf("failed to mark chain ID flag as required: %w", err)
 			}
 			if err := cmd.MarkFlagRequired(commoncmd.KeyNameFlag); err != nil {
-				return err
+				return fmt.Errorf("failed to mark key name flag as required: %w", err)
 			}
 			if err := cmd.MarkFlagRequired(commoncmd.MonikerFlag); err != nil {
 				return err

@@ -179,7 +179,7 @@ func (app *FinalityProviderApp) GetPubRandProofStore() *store.PubRandProofStore 
 func (app *FinalityProviderApp) GetFinalityProviderInfo(fpPk *bbntypes.BIP340PubKey) (*proto.FinalityProviderInfo, error) {
 	storedFp, err := app.fps.GetFinalityProvider(fpPk.MustToBTCPK())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get finality provider: %w", err)
 	}
 
 	fpInfo := storedFp.ToFinalityProviderInfo()
@@ -194,7 +194,7 @@ func (app *FinalityProviderApp) GetFinalityProviderInfo(fpPk *bbntypes.BIP340Pub
 func (app *FinalityProviderApp) ListAllFinalityProvidersInfo() ([]*proto.FinalityProviderInfo, error) {
 	storedFps, err := app.fps.GetAllStoredFinalityProviders()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get all stored finality providers: %w", err)
 	}
 
 	fpsInfo := make([]*proto.FinalityProviderInfo, 0, len(storedFps))
@@ -247,13 +247,13 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 	ctx := context.Background()
 	fps, err := app.fps.GetAllStoredFinalityProviders()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get all stored finality providers: %w", err)
 	}
 
 	for _, fp := range fps {
 		latestBlockHeight, err := app.consumerCon.QueryLatestBlockHeight(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query latest block height: %w", err)
 		}
 
 		pkHex := fp.GetBIP340BTCPK().MarshalHex()
@@ -283,7 +283,7 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 		}
 		status, err := app.consumerCon.QueryFinalityProviderStatus(ctx, fp.BtcPk)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query finality provider status: %w", err)
 		}
 		if status.Slashed {
 			app.fps.MustSetFpStatus(fp.BtcPk, proto.FinalityProviderStatus_SLASHED)
@@ -385,7 +385,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 	// 1. check if the chain key exists
 	kr, err := fpkr.NewChainKeyringControllerWithKeyring(app.kr, keyName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create keyring controller: %w", err)
 	}
 
 	fpAddr, err := kr.Address()
@@ -426,7 +426,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 		// get updated fp from db
 		storedFp, err := app.fps.GetFinalityProvider(eotsPk.MustToBTCPK())
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get finality provider: %w", err)
 		}
 
 		return &CreateFinalityProviderResult{
@@ -471,7 +471,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 
 		storedFp, err := app.fps.GetFinalityProvider(btcPk)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get finality provider: %w", err)
 		}
 
 		return &CreateFinalityProviderResult{
@@ -651,15 +651,15 @@ func (app *FinalityProviderApp) putFpFromResponse(ctx context.Context, fp *bstyp
 			return nil
 		}
 
-		return err
+		return fmt.Errorf("failed to get finality provider: %w", err)
 	}
 
 	if err := app.fps.SetFpDescription(btcPk, fp.Description, fp.Commission); err != nil {
-		return err
+		return fmt.Errorf("failed to set finality provider description: %w", err)
 	}
 
 	if err := app.fps.SetFpLastVotedHeight(btcPk, uint64(fp.HighestVotedHeight)); err != nil {
-		return err
+		return fmt.Errorf("failed to set finality provider last voted height: %w", err)
 	}
 
 	hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(ctx, ccapi.NewQueryFinalityProviderHasPowerRequest(

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
@@ -119,7 +120,7 @@ func (bt *StartHeightDeterminer) highestVotedHeightWithRetry(ctx context.Context
 	if err := retry.Do(func() error {
 		h, err := bt.consumerCon.QueryFinalityProviderHighestVotedHeight(ctx, bt.btcPk.MustToBTCPK())
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query the highest voted height: %w", err)
 		}
 		height = h
 
@@ -132,7 +133,7 @@ func (bt *StartHeightDeterminer) highestVotedHeightWithRetry(ctx context.Context
 			zap.Error(err),
 		)
 	})); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to query the highest voted height: %w", err)
 	}
 
 	return height, nil
@@ -143,7 +144,7 @@ func (bt *StartHeightDeterminer) latestFinalizedHeightWithRetry(ctx context.Cont
 	if err := retry.Do(func() error {
 		block, err := bt.consumerCon.QueryLatestFinalizedBlock(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query the latest finalized height: %w", err)
 		}
 		if block == nil {
 			// no finalized block yet
@@ -160,7 +161,7 @@ func (bt *StartHeightDeterminer) latestFinalizedHeightWithRetry(ctx context.Cont
 			zap.Error(err),
 		)
 	})); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to query the latest finalized height: %w", err)
 	}
 
 	return height, nil
@@ -171,7 +172,7 @@ func (bt *StartHeightDeterminer) getFinalityActivationHeightWithRetry(ctx contex
 	if err := retry.Do(func() error {
 		finalityActivationHeight, err := bt.consumerCon.QueryFinalityActivationBlockHeight(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query the finality activation height: %w", err)
 		}
 		response = finalityActivationHeight
 
@@ -184,7 +185,7 @@ func (bt *StartHeightDeterminer) getFinalityActivationHeightWithRetry(ctx contex
 			zap.Error(err),
 		)
 	})); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to query the finality activation height: %w", err)
 	}
 
 	return response, nil

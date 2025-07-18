@@ -291,12 +291,12 @@ func babyFlags(cmd *cobra.Command) (string, string, string, error) {
 
 	babyKeyName, err := f.GetString(flagKeyNameBaby)
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", fmt.Errorf("failed to get baby key name: %w", err)
 	}
 
 	babyKeyringBackend, err := f.GetString(flagKeyringBackendBaby)
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", fmt.Errorf("failed to get baby keyring backend: %w", err)
 	}
 
 	return babyHomePath, babyKeyName, babyKeyringBackend, nil
@@ -310,22 +310,22 @@ func eotsFlags(cmd *cobra.Command) (string, string, string, string, error) {
 
 	eotsKeyName, err := f.GetString(keyNameFlag)
 	if err != nil {
-		return "", "", "", "", err
+		return "", "", "", "", fmt.Errorf("failed to get eots key name: %w", err)
 	}
 
 	eotsFpPubKeyStr, err := f.GetString(eotsPkFlag)
 	if err != nil {
-		return "", "", "", "", err
+		return "", "", "", "", fmt.Errorf("failed to get eots public key: %w", err)
 	}
 
 	eotsKeyringBackend, err := f.GetString(sdkflags.FlagKeyringBackend)
 	if err != nil {
-		return "", "", "", "", err
+		return "", "", "", "", fmt.Errorf("failed to get eots keyring backend: %w", err)
 	}
 
 	eotsHomePath, err := getHomePath(cmd)
 	if err != nil {
-		return "", "", "", "", fmt.Errorf("failed to load home flag: %w", err)
+		return "", "", "", "", fmt.Errorf("failed to get eots home path: %w", err)
 	}
 
 	return eotsHomePath, eotsKeyName, eotsFpPubKeyStr, eotsKeyringBackend, nil
@@ -334,7 +334,7 @@ func eotsFlags(cmd *cobra.Command) (string, string, string, string, error) {
 func getInterpretedMessage(cmd *cobra.Command) (string, error) {
 	msg, err := cmd.Flags().GetString(flagMessage)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get message flag: %w", err)
 	}
 	if len(msg) == 0 {
 		return "", fmt.Errorf("flage --%s is empty", flagMessage)
@@ -343,7 +343,7 @@ func getInterpretedMessage(cmd *cobra.Command) (string, error) {
 	// We are assuming we are receiving string literal with escape characters
 	interpretedMsg, err := strconv.Unquote(`"` + msg + `"`)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to unquote message: %w", err)
 	}
 
 	return interpretedMsg, nil
@@ -352,19 +352,19 @@ func getInterpretedMessage(cmd *cobra.Command) (string, error) {
 func handleOutputJSON(cmd *cobra.Command, out any) error {
 	jsonBz, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal output: %w", err)
 	}
 
 	outputFilePath, err := cmd.Flags().GetString(flagOutputFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get output file path: %w", err)
 	}
 
 	if len(outputFilePath) > 0 {
 		// Add path validation
 		cleanPath, err := filepath.Abs(filepath.Clean(outputFilePath))
 		if err != nil {
-			return fmt.Errorf("invalid output file path: %w", err)
+			return fmt.Errorf("failed to get absolute path: %w", err)
 		}
 
 		// Create directory if it doesn't exist
@@ -395,12 +395,12 @@ func babyKeyring(
 
 	babyKeyRecord, err := babyKeyring.Key(babyKeyName)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("failed to get baby keyring: %w", err)
 	}
 
 	babyPubKey, err := babyPk(babyKeyRecord)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("failed to get baby public key: %w", err)
 	}
 
 	return babyKeyring, babyPubKey, sdk.AccAddress(babyPubKey.Address().Bytes()), nil
@@ -418,12 +418,12 @@ func loadEotsManager(eotsHomePath, eotsFpPubKeyStr, eotsKeyName, eotsKeyringBack
 
 	logger, err := log.NewRootLoggerWithFile(config.LogFile(eotsHomePath), cfg.LogLevel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load the logger")
+		return nil, fmt.Errorf("failed to load the logger: %w", err)
 	}
 
 	dbBackend, err := cfg.DatabaseConfig.GetDBBackend()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create db backend: %w", err)
+		return nil, fmt.Errorf("failed to get db backend: %w", err)
 	}
 
 	eotsManager, err := eotsmanager.NewLocalEOTSManager(eotsHomePath, eotsKeyringBackend, dbBackend, logger)
@@ -484,17 +484,17 @@ func ValidPopExport(pop PoPExport) (bool, error) {
 func ValidEotsSignBaby(eotsPk, babyAddr, eotsSigOverBabyAddr string) (bool, error) {
 	eotsPubKey, err := bbntypes.NewBIP340PubKeyFromHex(eotsPk)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to parse schnorr signature: %w", err)
 	}
 
 	schnorrSigBase64, err := base64.StdEncoding.DecodeString(eotsSigOverBabyAddr)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to parse eots public key: %w", err)
 	}
 
 	schnorrSig, err := schnorr.ParseSignature(schnorrSigBase64)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to parse schnorr signature: %w", err)
 	}
 	sha256Addr := tmhash.Sum([]byte(babyAddr))
 
@@ -504,7 +504,7 @@ func ValidEotsSignBaby(eotsPk, babyAddr, eotsSigOverBabyAddr string) (bool, erro
 func ValidBabySignEots(babyPk, babyAddr, eotsPkHex, babySigOverEotsPk string) (bool, error) {
 	babyPubKeyBz, err := base64.StdEncoding.DecodeString(babyPk)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to parse baby public key: %w", err)
 	}
 
 	babyPubKey := &secp256k1.PubKey{
@@ -513,7 +513,7 @@ func ValidBabySignEots(babyPk, babyAddr, eotsPkHex, babySigOverEotsPk string) (b
 
 	eotsPk, err := bbntypes.NewBIP340PubKeyFromHex(eotsPkHex)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to parse baby public key: %w", err)
 	}
 
 	babySignEots := []byte(eotsPk.MarshalHex())
@@ -521,14 +521,14 @@ func ValidBabySignEots(babyPk, babyAddr, eotsPkHex, babySigOverEotsPk string) (b
 	babySignBtcDoc := NewCosmosSignDoc(babyAddr, base64Bytes)
 	babySignBtcMarshaled, err := json.Marshal(babySignBtcDoc)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to marshal sign doc: %w", err)
 	}
 
 	babySignEotsBz := sdk.MustSortJSON(babySignBtcMarshaled)
 
 	secp256SigBase64, err := base64.StdEncoding.DecodeString(babySigOverEotsPk)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to parse baby signature: %w", err)
 	}
 
 	return babyPubKey.VerifySignature(babySignEotsBz, secp256SigBase64), nil
@@ -537,14 +537,14 @@ func ValidBabySignEots(babyPk, babyAddr, eotsPkHex, babySigOverEotsPk string) (b
 func babyPk(babyRecord *keyring.Record) (*secp256k1.PubKey, error) {
 	pubKey, err := babyRecord.GetPubKey()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get baby public key: %w", err)
 	}
 
 	switch v := pubKey.(type) {
 	case *secp256k1.PubKey:
 		return v, nil
 	default:
-		return nil, fmt.Errorf("unsupported key type in keyring")
+		return nil, fmt.Errorf("unsupported key type in keyring: %T", pubKey)
 	}
 }
 
@@ -561,7 +561,12 @@ func eotsPubKey(
 		return fpPk, nil
 	}
 
-	return eotsManager.LoadBIP340PubKeyFromKeyName(keyName)
+	fpPk, err := eotsManager.LoadBIP340PubKeyFromKeyName(keyName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load EOTS public key from key name: %w", err)
+	}
+
+	return fpPk, nil
 }
 
 func eotsSignMsg(
@@ -582,7 +587,12 @@ func eotsSignMsg(
 		return signature, fpPk, nil
 	}
 
-	return eotsManager.SignSchnorrSigFromKeyname(keyName, hashOfMsgToSign)
+	signature, fpPk, err := eotsManager.SignSchnorrSigFromKeyname(keyName, hashOfMsgToSign)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to sign msg with key name %s: %w", keyName, err)
+	}
+
+	return signature, fpPk, nil
 }
 
 func cmdCloseEots(

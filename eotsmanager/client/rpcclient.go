@@ -62,7 +62,7 @@ func (c *EOTSManagerGRpcClient) Ping() error {
 
 	_, err := c.client.Ping(context.Background(), req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to ping EOTS manager: %w", err)
 	}
 
 	return nil
@@ -77,7 +77,7 @@ func (c *EOTSManagerGRpcClient) CreateRandomnessPairList(uid, chainID []byte, st
 	}
 	res, err := c.client.CreateRandomnessPairList(context.Background(), req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create randomness pair list: %w", err)
 	}
 
 	pubRandFieldValList := make([]*btcec.FieldVal, 0, len(res.PubRandList))
@@ -96,8 +96,11 @@ func (c *EOTSManagerGRpcClient) SaveEOTSKeyName(pk *btcec.PublicKey, keyName str
 		EotsPk:  pk.SerializeUncompressed(),
 	}
 	_, err := c.client.SaveEOTSKeyName(context.Background(), req)
+	if err != nil {
+		return fmt.Errorf("failed to save EOTS key name: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 func (c *EOTSManagerGRpcClient) SignEOTS(uid, chaiID, msg []byte, height uint64) (*btcec.ModNScalar, error) {
@@ -109,7 +112,7 @@ func (c *EOTSManagerGRpcClient) SignEOTS(uid, chaiID, msg []byte, height uint64)
 	}
 	res, err := c.client.SignEOTS(context.Background(), req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to sign EOTS: %w", err)
 	}
 
 	var s btcec.ModNScalar
@@ -127,7 +130,7 @@ func (c *EOTSManagerGRpcClient) UnsafeSignEOTS(uid, chaiID, msg []byte, height u
 	}
 	res, err := c.client.UnsafeSignEOTS(context.Background(), req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unsafe sign EOTS: %w", err)
 	}
 
 	var s btcec.ModNScalar
@@ -140,12 +143,12 @@ func (c *EOTSManagerGRpcClient) SignSchnorrSig(uid, msg []byte) (*schnorr.Signat
 	req := &proto.SignSchnorrSigRequest{Uid: uid, Msg: msg}
 	res, err := c.client.SignSchnorrSig(context.Background(), req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to sign Schnorr signature: %w", err)
 	}
 
 	sig, err := schnorr.ParseSignature(res.Sig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse Schnorr signature: %w", err)
 	}
 
 	return sig, nil
@@ -159,7 +162,7 @@ func (c *EOTSManagerGRpcClient) Unlock(uid []byte, passphrase string) error {
 
 	_, err := c.client.UnlockKey(context.Background(), req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unlock key: %w", err)
 	}
 
 	return nil
@@ -173,12 +176,16 @@ func (c *EOTSManagerGRpcClient) Backup(dbPath string, backupDir string) (string,
 
 	res, err := c.client.Backup(context.Background(), req)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to backup: %w", err)
 	}
 
 	return res.BackupName, nil
 }
 
 func (c *EOTSManagerGRpcClient) Close() error {
-	return c.conn.Close()
+	if err := c.conn.Close(); err != nil {
+		return fmt.Errorf("failed to close EOTS manager client connection: %w", err)
+	}
+
+	return nil
 }

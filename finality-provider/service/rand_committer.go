@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
@@ -131,7 +132,7 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 
 	activationBlkHeight, err := rc.consumerCon.QueryFinalityActivationBlockHeight(ctx)
 	if err != nil {
-		return false, 0, err
+		return false, 0, fmt.Errorf("failed to query finality activation block height: %w", err)
 	}
 
 	// make sure that the start height is at least the finality activation height
@@ -144,7 +145,7 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 func (rc *DefaultRandomnessCommitter) GetLastCommittedHeight(ctx context.Context) (uint64, error) {
 	pubRandCommit, err := rc.lastCommittedPublicRandWithRetry(ctx)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to query the last committed public randomness: %w", err)
 	}
 
 	// no committed randomness yet
@@ -160,11 +161,11 @@ func (rc *DefaultRandomnessCommitter) lastCommittedPublicRandWithRetry(ctx conte
 	if err := retry.Do(func() error {
 		resp, err := rc.consumerCon.QueryLastPublicRandCommit(ctx, rc.btcPk.MustToBTCPK())
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query the last committed public randomness: %w", err)
 		}
 		if resp != nil {
 			if err := resp.Validate(); err != nil {
-				return err
+				return fmt.Errorf("failed to validate the last committed public randomness: %w", err)
 			}
 		}
 		response = resp
@@ -178,7 +179,7 @@ func (rc *DefaultRandomnessCommitter) lastCommittedPublicRandWithRetry(ctx conte
 			zap.Error(err),
 		)
 	})); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query the last committed public randomness: %w", err)
 	}
 
 	return response, nil
@@ -238,7 +239,7 @@ func (rc *DefaultRandomnessCommitter) getPubRandList(startHeight uint64, numPubR
 		numPubRand,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create randomness pair list: %w", err)
 	}
 
 	return pubRandList, nil
@@ -264,5 +265,10 @@ func (rc *DefaultRandomnessCommitter) signPubRandCommit(startHeight uint64, numP
 	}
 
 	// sign the message hash using the finality-provider's BTC private key
-	return rc.em.SignSchnorrSig(rc.btcPk.MustMarshal(), hash)
+	sig, err := rc.em.SignSchnorrSig(rc.btcPk.MustMarshal(), hash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
+	}
+
+	return sig, nil
 }

@@ -103,7 +103,7 @@ func (cp *ChainPoller) NextBlock(ctx context.Context) (types.BlockDescription, e
 
 		return block, nil
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, fmt.Errorf("context done: %w", ctx.Err())
 	case <-cp.quit:
 		return nil, fmt.Errorf("chain poller is shutting down")
 	}
@@ -151,7 +151,7 @@ func (cp *ChainPoller) Stop() error {
 	if err := cp.consumerCon.Close(); err != nil {
 		cp.logger.Error("failed to close consumer connection", zap.Error(err))
 
-		return err
+		return fmt.Errorf("failed to close consumer connection: %w", err)
 	}
 
 	cp.logger.Info("the chain poller is successfully stopped")
@@ -168,7 +168,7 @@ func (cp *ChainPoller) waitForActivation(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("context done: %w", ctx.Err())
 		case <-cp.quit:
 			return fmt.Errorf("poller shutting down")
 		case <-ticker.C:
@@ -346,7 +346,7 @@ func (cp *ChainPoller) blocksWithRetry(ctx context.Context, start, end uint64, l
 	retryErr := retry.Do(func() error {
 		blocks, err = cp.consumerCon.QueryBlocks(ctx, ccapi.NewQueryBlocksRequest(start, end, limit))
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query blocks: %w", err)
 		}
 
 		if len(blocks) == 0 {
@@ -374,16 +374,24 @@ func (cp *ChainPoller) latestBlockHeightWithRetry(ctx context.Context) (uint64, 
 
 	retryErr := retry.Do(func() error {
 		latestBlockHeight, err = cp.consumerCon.QueryLatestBlockHeight(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to query latest block height: %w", err)
+		}
 
-		return err
+		return nil
 	}, RtyAtt, RtyDel, RtyErr,
 		retry.OnRetry(func(n uint, err error) {
 			cp.logger.Debug("retrying latest block height query",
 				zap.Uint("attempt", n+1),
 				zap.Error(err))
-		}))
+		}),
+	)
 
-	return latestBlockHeight, retryErr
+	if retryErr != nil {
+		return 0, fmt.Errorf("failed to query latest block height: %w", retryErr)
+	}
+
+	return latestBlockHeight, nil
 }
 
 func (cp *ChainPoller) NextHeight() uint64 {

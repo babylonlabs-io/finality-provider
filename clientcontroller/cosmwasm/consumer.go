@@ -630,7 +630,12 @@ func (wc *CosmwasmConsumerController) GetLatestCodeID() (uint64, error) {
 // ListContractsByCode lists all contracts by wasm code id
 // NOTE: this function is only meant to be used in tests.
 func (wc *CosmwasmConsumerController) ListContractsByCode(codeID uint64, pagination *sdkquerytypes.PageRequest) (*wasmdtypes.QueryContractsByCodeResponse, error) {
-	return wc.cwClient.ListContractsByCode(context.Background(), codeID, pagination)
+	res, err := wc.cwClient.ListContractsByCode(context.Background(), codeID, pagination)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list contracts by code: %w", err)
+	}
+
+	return res, nil
 }
 
 // SetBtcStakingContractAddress updates the BtcStakingContractAddress in the configuration
@@ -654,7 +659,12 @@ func (wc *CosmwasmConsumerController) MustGetValidatorAddress() string {
 // GetCometNodeStatus gets the tendermint node status of the consumer chain
 // NOTE: this function is only meant to be used in tests.
 func (wc *CosmwasmConsumerController) GetCometNodeStatus() (*coretypes.ResultStatus, error) {
-	return wc.cwClient.GetStatus(context.Background())
+	res, err := wc.cwClient.GetStatus(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get comet node status: %w", err)
+	}
+
+	return res, nil
 }
 
 // QueryIndexedBlock queries the indexed block at a given height
