@@ -2,10 +2,11 @@ package service_test
 
 import (
 	"context"
-	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -37,7 +38,7 @@ func FuzzChainPoller_Start(f *testing.F) {
 		mockConsumerController := mocks.NewMockConsumerController(ctl)
 		mockConsumerController.EXPECT().Close().Return(nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryActivatedHeight(ctx).Return(uint64(1), nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryLatestBlockHeight(ctx).Return(endHeight, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlock(ctx).Return(currentBlockRes, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryBlock(ctx, endHeight).Return(currentBlockRes, nil).AnyTimes()
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
 

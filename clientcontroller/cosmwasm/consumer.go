@@ -344,13 +344,13 @@ func (wc *CosmwasmConsumerController) QueryActivatedHeight(ctx context.Context) 
 	return resp.Height, nil
 }
 
-func (wc *CosmwasmConsumerController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
+func (wc *CosmwasmConsumerController) QueryLatestBlock(ctx context.Context) (fptypes.BlockDescription, error) {
 	block, err := wc.queryCometBestBlock(ctx)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return block.GetHeight(), nil
+	return block, nil
 }
 
 func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight(_ context.Context) (uint64, error) {

@@ -35,7 +35,7 @@ all EOTS key operations.
 ## Finality Provider for Consumer Networks Specification
 
 For detailed technical specifications and requirements of the finality provider
-program for Consumer networks, please see [SPEC-CONSUMER.md](SPEC-CONSUMER.md).
+program for Consumer networks, please see [./docs/SPEC-CONSUMER.md](./docs/SPEC-CONSUMER.md).
 The spec document outlines the Consumer's interfaces, message handlers and
 queries.
 It also provides guidance for integrators.
