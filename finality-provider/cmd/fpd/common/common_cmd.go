@@ -280,7 +280,7 @@ func runCommandAddFinalitySig(cmd *cobra.Command, args []string) error {
 
 	res, err := client.AddFinalitySignature(cmd.Context(), fpPk.MarshalHex(), blkHeight, appHash, checkDoubleSign)
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", FpdDaemonAddressFlag, err)
+		return fmt.Errorf("failed to add finality signature: %w", err)
 	}
 	fptypes.PrintRespJSON(cmd, res)
 
