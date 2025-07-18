@@ -2,6 +2,7 @@ package clientctx
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/babylonlabs-io/babylon/v3/app/params"
@@ -45,7 +46,7 @@ func PersistClientCtx(ctx client.Context) func(cmd *cobra.Command, _ []string) e
 		cmd.SetErr(cmd.ErrOrStderr())
 
 		if err := client.SetCmdClientContextHandler(ctx, cmd); err != nil {
-			return err
+			return fmt.Errorf("failed to set cmd client context handler: %w", err)
 		}
 
 		ctx = client.GetClientContextFromCmd(cmd)
@@ -80,7 +81,7 @@ func FillContextFromBabylonConfig(ctx client.Context, flagSet *pflag.FlagSet, bb
 	if !flagSet.Changed(flags.FlagKeyringBackend) {
 		kr, err := client.NewKeyringFromBackend(ctx, bbnConf.KeyringBackend)
 		if err != nil {
-			return ctx, err
+			return ctx, fmt.Errorf("failed to create keyring from backend: %w", err)
 		}
 
 		ctx = ctx.WithKeyring(kr)
@@ -105,7 +106,7 @@ func RunEWithClientCtx(
 	return func(cmd *cobra.Command, args []string) error {
 		clientCtx, err := client.GetClientQueryContext(cmd)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get client query context: %w", err)
 		}
 
 		return fRunWithCtx(clientCtx, cmd, args)

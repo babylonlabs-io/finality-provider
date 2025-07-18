@@ -18,7 +18,7 @@ func GetBabylonVersion() (string, error) {
 	// Get the current working directory
 	wd, err := os.Getwd()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get current working directory: %w", err)
 	}
 
 	// Walk up directories until we find go.mod
@@ -40,13 +40,13 @@ func GetBabylonVersion() (string, error) {
 
 	data, err := os.ReadFile(goModPath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to parse go.mod file: %w", err)
 	}
 
 	// Parse the go.mod file
 	modFile, err := modfile.Parse("go.mod", data, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read go.mod file: %w", err)
 	}
 
 	for _, require := range modFile.Require {
@@ -63,7 +63,7 @@ func GetBabylonVersion() (string, error) {
 func GetBabylonCommitHash() (string, error) {
 	version, err := GetBabylonVersion()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get babylon version: %w", err)
 	}
 
 	return getFullCommit(modName, version)

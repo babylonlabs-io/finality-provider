@@ -3,7 +3,6 @@ run:
     - e2e_rollup
     - e2e_babylon
     - e2e_bcd
-    - e2e_wasmd
   timeout: 5m
 
 linters:
@@ -63,7 +62,7 @@ linters:
     - unused
     - wastedassign
     - whitespace
-#    - wrapcheck # we really should be using this, lax for now todo(lazar): unlax at somepoint, good practice
+    - wrapcheck
 
 issues:
   max-same-issues: 0

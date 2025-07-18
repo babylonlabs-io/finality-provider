@@ -54,7 +54,7 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 	// Get homePath from context like in start.go
 	homePath, err := filepath.Abs(ctx.HomeDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get absolute home path: %w", err)
 	}
 	homePath = util.CleanAndExpandPath(homePath)
 
@@ -69,15 +69,15 @@ func runCommandCommitPubRand(ctx client.Context, cmd *cobra.Command, args []stri
 func RunCommandCommitPubRandWithConfig(_ client.Context, cmd *cobra.Command, homePath string, cfg *fpcfg.Config, args []string) error {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse BIP340 public key from hex: %w", err)
 	}
 	targetHeight, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse target height: %w", err)
 	}
 	startHeight, err := cmd.Flags().GetUint64("start-height")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get start-height flag: %w", err)
 	}
 
 	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.LogLevel)
@@ -132,8 +132,16 @@ func RunCommandCommitPubRandWithConfig(_ client.Context, cmd *cobra.Command, hom
 	fpTester := fp.NewTestHelper()
 
 	if startHeight == math.MaxUint64 {
-		return fpTester.CommitPubRand(cmd.Context(), targetHeight)
+		if err := fpTester.CommitPubRand(cmd.Context(), targetHeight); err != nil {
+			return fmt.Errorf("failed to commit pubrand: %w", err)
+		}
+
+		return nil
 	}
 
-	return fpTester.CommitPubRandWithStartHeight(cmd.Context(), startHeight, targetHeight)
+	if err := fpTester.CommitPubRandWithStartHeight(cmd.Context(), startHeight, targetHeight); err != nil {
+		return fmt.Errorf("failed to commit pubrand with start height: %w", err)
+	}
+
+	return nil
 }

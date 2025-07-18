@@ -68,13 +68,18 @@ func NewLocalEOTSManager(homeDir, keyringBackend string, dbbackend kvdb.Backend,
 }
 
 func InitKeyring(homeDir, keyringBackend string, input *strings.Reader) (keyring.Keyring, error) {
-	return keyring.New(
+	kr, err := keyring.New(
 		"eots-manager",
 		keyringBackend,
 		homeDir,
 		input,
 		codec.MakeCodec(),
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create keyring: %w", err)
+	}
+
+	return kr, nil
 }
 
 // CreateKey creates a new EOTS key with a random mnemonic and returns the public key in bytes.
@@ -97,12 +102,12 @@ func NewMnemonic() (string, error) {
 	// read entropy seed straight from tmcrypto.Rand and convert to mnemonic
 	entropySeed, err := bip39.NewEntropy(MnemonicEntropySize)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to generate entropy: %w", err)
 	}
 
 	mnemonic, err := bip39.NewMnemonic(entropySeed)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to generate mnemonic: %w", err)
 	}
 
 	return mnemonic, nil
@@ -120,7 +125,7 @@ func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, mnemonic, passphrase str
 	keyringAlgos, _ := lm.kr.SupportedAlgorithms()
 	algo, err := keyring.NewSigningAlgoFromString(secp256k1Type, keyringAlgos)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create signing algorithm: %w", err)
 	}
 
 	// when the first key is created for the `file` keyring backend, it will prompt for a passphrase twice
@@ -128,7 +133,7 @@ func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, mnemonic, passphrase str
 	lm.input.Reset(passphrase + "\n" + passphrase)
 	_, err = lm.kr.NewAccount(name, mnemonic, "", "", algo)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create new account: %w", err)
 	}
 
 	eotsPk, err := lm.LoadBIP340PubKeyFromKeyName(name)
@@ -151,11 +156,20 @@ func (lm *LocalEOTSManager) CreateKeyWithMnemonic(name, mnemonic, passphrase str
 }
 
 func (lm *LocalEOTSManager) SaveEOTSKeyName(pk *btcec.PublicKey, keyName string) error {
-	return lm.es.AddEOTSKeyName(pk, keyName)
+	if err := lm.es.AddEOTSKeyName(pk, keyName); err != nil {
+		return fmt.Errorf("failed to save EOTS key name: %w", err)
+	}
+
+	return nil
 }
 
 func (lm *LocalEOTSManager) LoadBIP340PubKeyFromKeyName(keyName string) (*bbntypes.BIP340PubKey, error) {
-	return LoadBIP340PubKeyFromKeyName(lm.kr, keyName)
+	pk, err := LoadBIP340PubKeyFromKeyName(lm.kr, keyName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load BIP340 public key from key name %s: %w", keyName, err)
+	}
+
+	return pk, nil
 }
 
 func LoadBIP340PubKeyFromKeyName(kr keyring.Keyring, keyName string) (*bbntypes.BIP340PubKey, error) {
@@ -165,7 +179,7 @@ func LoadBIP340PubKeyFromKeyName(kr keyring.Keyring, keyName string) (*bbntypes.
 	}
 	pubKey, err := info.GetPubKey()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get public key from keyring info: %w", err)
 	}
 
 	var eotsPk *bbntypes.BIP340PubKey
@@ -173,7 +187,7 @@ func LoadBIP340PubKeyFromKeyName(kr keyring.Keyring, keyName string) (*bbntypes.
 	case *secp256k1.PubKey:
 		pk, err := btcec.ParsePubKey(v.Key)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse public key: %w", err)
 		}
 		eotsPk = bbntypes.NewBIP340PubKeyFromBTCPK(pk)
 
@@ -250,7 +264,7 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 
 	signedBytes, err := eots.Sign(privKey, privRand, msg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign eots")
+		return nil, fmt.Errorf("failed to sign eots: %w", err)
 	}
 
 	b := signedBytes.Bytes()
@@ -277,7 +291,12 @@ func (lm *LocalEOTSManager) UnsafeSignEOTS(fpPk []byte, chainID []byte, msg []by
 	lm.metrics.IncrementEotsFpTotalEotsSignCounter(hex.EncodeToString(fpPk))
 	lm.metrics.SetEotsFpLastEotsSignHeight(hex.EncodeToString(fpPk), float64(height))
 
-	return eots.Sign(privKey, privRand, msg)
+	signedBytes, err := eots.Sign(privKey, privRand, msg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign eots: %w", err)
+	}
+
+	return signedBytes, nil
 }
 
 func (lm *LocalEOTSManager) SignSchnorrSig(fpPk []byte, msg []byte) (*schnorr.Signature, error) {
@@ -294,7 +313,12 @@ func (lm *LocalEOTSManager) signSchnorrSigFromPrivKey(privKey *btcec.PrivateKey,
 	// Update metrics
 	lm.metrics.IncrementEotsFpTotalSchnorrSignCounter(hex.EncodeToString(fpPk))
 
-	return schnorr.Sign(privKey, msg)
+	sig, err := schnorr.Sign(privKey, msg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign schnorr signature: %w", err)
+	}
+
+	return sig, nil
 }
 
 func (lm *LocalEOTSManager) SignSchnorrSigFromKeyname(keyName string, msg []byte) (*schnorr.Signature, *bbntypes.BIP340PubKey, error) {
@@ -320,7 +344,11 @@ func (lm *LocalEOTSManager) SignSchnorrSigFromKeyname(keyName string, msg []byte
 }
 
 func (lm *LocalEOTSManager) Close() error {
-	return lm.es.Close()
+	if err := lm.es.Close(); err != nil {
+		return fmt.Errorf("failed to close EOTS store: %w", err)
+	}
+
+	return nil
 }
 
 // getRandomnessPair returns a randomness pair generated based on the given finality provider key, chainID and height
@@ -337,7 +365,7 @@ func (lm *LocalEOTSManager) getRandomnessPair(fpPk []byte, chainID []byte, heigh
 func (lm *LocalEOTSManager) KeyRecord(fpPk []byte) (*eotstypes.KeyRecord, error) {
 	name, err := lm.es.GetEOTSKeyName(fpPk)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get EOTS key name: %w", err)
 	}
 	privKey, err := lm.getEOTSPrivKey(fpPk)
 	if err != nil {
@@ -355,7 +383,7 @@ func (lm *LocalEOTSManager) getEOTSPrivKey(fpPk []byte) (*btcec.PrivateKey, erro
 	defer lm.mu.Unlock()
 	keyName, err := lm.es.GetEOTSKeyName(fpPk)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get EOTS key name: %w", err)
 	}
 
 	return lm.eotsPrivKeyFromKeyName(keyName)
@@ -389,7 +417,7 @@ func (lm *LocalEOTSManager) Unlock(fpPk []byte, passphrase string) error {
 
 	keyName, err := lm.es.GetEOTSKeyName(fpPk)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get EOTS key name: %w", err)
 	}
 
 	privKey, err := lm.getKeyFromKeyring(keyName, passphrase)
@@ -425,7 +453,7 @@ func (lm *LocalEOTSManager) getKeyFromKeyring(keyName, passphrase string) (*btce
 
 	k, err := lm.kr.Key(keyName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get key from keyring: %w", err)
 	}
 	privKeyCached := k.GetLocal().PrivKey.GetCachedValue()
 
@@ -447,12 +475,21 @@ func (lm *LocalEOTSManager) keyExists(name string) bool {
 }
 
 func (lm *LocalEOTSManager) ListEOTSKeys() (map[string][]byte, error) {
-	return lm.es.GetAllEOTSKeyNames()
+	keys, err := lm.es.GetAllEOTSKeyNames()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all EOTS key names: %w", err)
+	}
+
+	return keys, nil
 }
 
 // UnsafeDeleteSignStoreRecords removes all sign store records from the given height
 func (lm *LocalEOTSManager) UnsafeDeleteSignStoreRecords(eotsPK []byte, chainID []byte, fromHeight uint64) error {
-	return lm.es.DeleteSignRecordsFromHeight(eotsPK, chainID, fromHeight)
+	if err := lm.es.DeleteSignRecordsFromHeight(eotsPK, chainID, fromHeight); err != nil {
+		return fmt.Errorf("failed to delete sign records from height %d: %w", fromHeight, err)
+	}
+
+	return nil
 }
 
 func (lm *LocalEOTSManager) IsRecordInDB(eotsPk []byte, chainID []byte, height uint64) (bool, error) {
@@ -465,5 +502,10 @@ func (lm *LocalEOTSManager) IsRecordInDB(eotsPk []byte, chainID []byte, height u
 }
 
 func (lm *LocalEOTSManager) Backup(dbPath string, backupDir string) (string, error) {
-	return lm.es.BackupDB(dbPath, backupDir)
+	backupPath, err := lm.es.BackupDB(dbPath, backupDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to backup database: %w", err)
+	}
+
+	return backupPath, nil
 }

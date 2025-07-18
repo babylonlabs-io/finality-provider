@@ -33,7 +33,7 @@ func (sfp *FinalityProvider) MustGetBIP340BTCPK() *bbn.BIP340PubKey {
 func NewFinalityProviderInfo(sfp *FinalityProvider) (*FinalityProviderInfo, error) {
 	var des types.Description
 	if err := des.Unmarshal(sfp.Description); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal description: %w", err)
 	}
 
 	return &FinalityProviderInfo{

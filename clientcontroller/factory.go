@@ -32,7 +32,7 @@ func NewBabylonController(bbnConfig *fpcfg.BBNConfig, logger *zap.Logger) (api.C
 		return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
 	}
 
-	return cc, err
+	return cc, nil
 }
 
 func NewConsumerController(config *fpcfg.Config, logger *zap.Logger) (api.ConsumerController, error) {
@@ -57,5 +57,5 @@ func NewConsumerController(config *fpcfg.Config, logger *zap.Logger) (api.Consum
 		return nil, fmt.Errorf("unsupported consumer chain")
 	}
 
-	return ccc, err
+	return ccc, nil
 }

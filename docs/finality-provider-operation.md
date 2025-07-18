@@ -26,7 +26,8 @@ gain an overall understanding of the finality provider.
       1. [Create an EOTS key](#521-create-an-eots-key)
       2. [Import an existing EOTS key](#522-import-an-existing-eots-key)
    3. [Starting the EOTS Daemon](#53-starting-the-eots-daemon)
-      1. [Unlock file-based keyring](#531-unlock-file-based-keyring)
+       1. [Migrating from test to file keyring](#531-Migration-guide-test-to-file-keyring-backend)
+       2. [Unlock file-based keyring](#532-unlock-file-based-keyring)
 6. [Setting up the Finality Provider](#6-setting-up-the-finality-provider)
    1. [Initialize the Finality Provider Daemon](#61-initialize-the-finality-provider-daemon)
    2. [Add key for the Babylon Genesis account](#62-add-key-for-the-babylon-genesis-account)
@@ -376,7 +377,42 @@ this value by specifying a custom address with the `--rpc-listener` flag.
 EOTS Manager Daemon is fully active!
 ```
 
-#### 5.3.1. Unlock file-based keyring
+#### 5.3.1. Migration guide test to file keyring backend
+
+You will first need to stop eotsd and export your private EOTS key in hex format by executing the following command:
+
+```shell
+eotsd keys export <name> --keyring-backend=test --unsafe --unarmored-hex --home <path>
+```
+
+As a result of the `export` command, you will receive the EOTS key as a hex string,
+which you can use to import the key into the `file` keyring backend.
+
+Keyring backed `file` requires a setting up a password, this password will be used in the `unlock` command. You can then import the
+key into the `file` keyring backend using the following command:
+
+```shell
+eotsd keys import-hex <name> <hexstring> --keyring-backend=file --home <path>
+```
+
+To confirm that you have successfully imported your EOTS key to the `file` keyring backend,
+you can run the following command:
+
+```shell
+eotsd keys show <name> --home <path> --keyring-backend file
+```
+
+In the `eots.conf` change the `keyring-backend` to `file`:
+
+```diff
++ KeyringBackend = file
+- KeyringBackend = test
+```
+After you have changed the keyring backend to `file`, you can start the eotsd and run the unlock command.
+
+In order to run eotsd with the `file` keyring, please read the [Unlock file-based keyring](#532-unlock-file-based-keyring) section below.
+
+#### 5.3.2. Unlock file-based keyring
 
 ⚠️⚠️⚠️ Mandatory step for file-based keyring backend ⚠️⚠️⚠️
 

@@ -48,7 +48,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	// Get homePath from context like in start.go
 	homePath, err := filepath.Abs(ctx.HomeDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get home path: %w", err)
 	}
 	homePath = util.CleanAndExpandPath(homePath)
 
@@ -72,11 +72,11 @@ func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, home
 
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse EOTS public key: %w", err)
 	}
 	startHeight, err := cmd.Flags().GetUint64("start-height")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get start height flag: %w", err)
 	}
 
 	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.LogLevel)

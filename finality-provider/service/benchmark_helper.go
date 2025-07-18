@@ -3,12 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
-	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"time"
 
-	"go.uber.org/zap"
-
+	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"go.uber.org/zap"
 )
 
 // CommitPubRandTiming - helper struct used to capture times for benchmark
@@ -53,7 +52,7 @@ func (fp *FinalityProviderInstance) commitPubRandPairsWithTiming(ctx context.Con
 
 	activationBlkHeight, err := fp.consumerCon.QueryFinalityActivationBlockHeight(ctx)
 	if err != nil {
-		return nil, timing, err
+		return nil, timing, fmt.Errorf("failed to query the finality activation block height: %w", err)
 	}
 
 	startHeight = max(startHeight, activationBlkHeight)

@@ -1,16 +1,20 @@
+//go:build e2e_babylon
+// +build e2e_babylon
+
 package e2etest_babylon
 
 import (
 	"context"
 	"fmt"
-	"github.com/avast/retry-go/v4"
-	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
-	"github.com/babylonlabs-io/finality-provider/metrics"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/avast/retry-go/v4"
+	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 

@@ -31,11 +31,18 @@ func NewPubRandProofStore(db kvdb.Backend) (*PubRandProofStore, error) {
 }
 
 func (s *PubRandProofStore) initBuckets() error {
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		_, err := tx.CreateTopLevelBucket(pubRandProofBucketName)
+		if err != nil {
+			return fmt.Errorf("failed to create pub rand proof bucket: %w", err)
+		}
 
-		return err
-	})
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to initialize pub rand proof bucket: %w", err)
+	}
+
+	return nil
 }
 
 // getKey key is (chainID || pk || height)
@@ -94,7 +101,7 @@ func (s *PubRandProofStore) AddPubRandProofList(
 		proofBytesList = append(proofBytesList, proofBytes)
 	}
 
-	return kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
 		bucket := tx.ReadWriteBucket(pubRandProofBucketName)
 		if bucket == nil {
 			return ErrCorruptedPubRandProofDB
@@ -103,19 +110,23 @@ func (s *PubRandProofStore) AddPubRandProofList(
 		for i, key := range keys {
 			// set to DB
 			if err := bucket.Put(key, proofBytesList[i]); err != nil {
-				return err
+				return fmt.Errorf("failed to store pub rand proof: %w", err)
 			}
 		}
 
 		return nil
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to add pub rand proof list: %w", err)
+	}
+
+	return nil
 }
 
 func (s *PubRandProofStore) GetPubRandProof(chainID []byte, pk []byte, height uint64) ([]byte, error) {
 	key := getKey(chainID, pk, height)
 	var proofBytes []byte
 
-	err := s.db.View(func(tx kvdb.RTx) error {
+	if err := s.db.View(func(tx kvdb.RTx) error {
 		bucket := tx.ReadBucket(pubRandProofBucketName)
 		if bucket == nil {
 			return ErrCorruptedPubRandProofDB
@@ -127,10 +138,8 @@ func (s *PubRandProofStore) GetPubRandProof(chainID []byte, pk []byte, height ui
 		}
 
 		return nil
-	}, func() {})
-
-	if err != nil {
-		return nil, err
+	}, func() {}); err != nil {
+		return nil, fmt.Errorf("failed to get pub rand proof: %w", err)
 	}
 
 	return proofBytes, nil
@@ -145,7 +154,7 @@ func (s *PubRandProofStore) GetPubRandProofList(chainID []byte,
 
 	var proofBytesList [][]byte
 
-	err := s.db.View(func(tx kvdb.RTx) error {
+	if err := s.db.View(func(tx kvdb.RTx) error {
 		bucket := tx.ReadBucket(pubRandProofBucketName)
 		if bucket == nil {
 			return ErrCorruptedPubRandProofDB
@@ -160,10 +169,8 @@ func (s *PubRandProofStore) GetPubRandProofList(chainID []byte,
 		}
 
 		return nil
-	}, func() {})
-
-	if err != nil {
-		return nil, err
+	}, func() {}); err != nil {
+		return nil, fmt.Errorf("failed to get pub rand proof list: %w", err)
 	}
 
 	return proofBytesList, nil
@@ -173,7 +180,7 @@ func (s *PubRandProofStore) GetPubRandProofList(chainID []byte,
 func (s *PubRandProofStore) RemovePubRandProofList(chainID []byte, pk []byte, targetHeight uint64) error {
 	prefix := getPrefixKey(chainID, pk)
 
-	err := s.db.Update(func(tx walletdb.ReadWriteTx) error {
+	if err := s.db.Update(func(tx walletdb.ReadWriteTx) error {
 		bucket := tx.ReadWriteBucket(pubRandProofBucketName)
 		if bucket == nil {
 			return walletdb.ErrBucketNotFound
@@ -191,20 +198,22 @@ func (s *PubRandProofStore) RemovePubRandProofList(chainID []byte, pk []byte, ta
 			}
 
 			if err := cursor.Delete(); err != nil {
-				return err
+				return fmt.Errorf("failed to delete pub rand proof: %w", err)
 			}
 		}
 
 		return nil
-	}, func() {})
-
-	if err != nil {
-		return err
+	}, func() {}); err != nil {
+		return fmt.Errorf("failed to remove pub rand proof list: %w", err)
 	}
 
 	return nil
 }
 
 func (s *PubRandProofStore) Close() error {
-	return s.db.Close()
+	if err := s.db.Close(); err != nil {
+		return fmt.Errorf("failed to close pub rand proof store database: %w", err)
+	}
+
+	return nil
 }

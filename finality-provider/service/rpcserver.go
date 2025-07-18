@@ -88,17 +88,17 @@ func (r *rpcServer) CreateFinalityProvider(
 ) (*proto.CreateFinalityProviderResponse, error) {
 	commissionRates, err := req.GetCommissionRates()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get commission rates: %w", err)
 	}
 
 	var description stakingtypes.Description
 	if err := description.Unmarshal(req.Description); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal description: %w", err)
 	}
 
 	eotsPk, err := parseEotsPk(req.EotsPkHex)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse EOTS public key: %w", err)
 	}
 
 	result, err := r.app.CreateFinalityProvider(
@@ -111,7 +111,7 @@ func (r *rpcServer) CreateFinalityProvider(
 	)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create finality provider: %w", err)
 	}
 
 	return &proto.CreateFinalityProviderResponse{
@@ -139,7 +139,7 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 	default:
 		fpi, err := r.app.GetFinalityProviderInstance()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get finality provider instance: %w", err)
 		}
 
 		if fpi.GetBtcPkHex() != req.BtcPk {
@@ -153,7 +153,7 @@ func (r *rpcServer) AddFinalitySignature(ctx context.Context, req *proto.AddFina
 
 		txRes, privKey, err := fpi.NewTestHelper().SubmitFinalitySignatureAndExtractPrivKey(ctx, b, req.CheckDoubleSign)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to submit finality signature: %w", err)
 		}
 
 		res = &proto.AddFinalitySignatureResponse{TxHash: txRes.TxHash}
@@ -173,7 +173,7 @@ func (r *rpcServer) UnjailFinalityProvider(_ context.Context, req *proto.UnjailF
 	*proto.UnjailFinalityProviderResponse, error) {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse BTC public key: %w", err)
 	}
 
 	res, err := r.app.UnjailFinalityProvider(fpPk)
@@ -189,11 +189,11 @@ func (r *rpcServer) QueryFinalityProvider(_ context.Context, req *proto.QueryFin
 	*proto.QueryFinalityProviderResponse, error) {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse BTC public key: %w", err)
 	}
 	fp, err := r.app.GetFinalityProviderInfo(fpPk)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get finality provider info: %w", err)
 	}
 
 	return &proto.QueryFinalityProviderResponse{FinalityProvider: fp}, nil
@@ -202,7 +202,7 @@ func (r *rpcServer) QueryFinalityProvider(_ context.Context, req *proto.QueryFin
 func (r *rpcServer) EditFinalityProvider(_ context.Context, req *proto.EditFinalityProviderRequest) (*proto.EmptyResponse, error) {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse BTC public key: %w", err)
 	}
 
 	// Commission can be nil (case when commission == "")
@@ -210,24 +210,24 @@ func (r *rpcServer) EditFinalityProvider(_ context.Context, req *proto.EditFinal
 	if req.Commission != "" {
 		value, err := sdkmath.LegacyNewDecFromStr(req.Commission)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse commission: %w", err)
 		}
 		rate = &value
 	}
 
 	descBytes, err := protobuf.Marshal(req.Description)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal description: %w", err)
 	}
 
 	fpPub := fpPk.MustToBTCPK()
 	updatedMsg, err := r.app.cc.EditFinalityProvider(fpPub, rate, descBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to edit finality provider: %w", err)
 	}
 
 	if err := r.app.fps.SetFpDescription(fpPub, updatedMsg.Description, updatedMsg.Commission); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to set finality provider description: %w", err)
 	}
 
 	return nil, nil
@@ -238,7 +238,7 @@ func (r *rpcServer) QueryFinalityProviderList(_ context.Context, _ *proto.QueryF
 	*proto.QueryFinalityProviderListResponse, error) {
 	fps, err := r.app.ListAllFinalityProvidersInfo()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list all finality providers info: %w", err)
 	}
 
 	return &proto.QueryFinalityProviderListResponse{FinalityProviders: fps}, nil
@@ -248,11 +248,11 @@ func (r *rpcServer) QueryFinalityProviderList(_ context.Context, _ *proto.QueryF
 func (r *rpcServer) UnsafeRemoveMerkleProof(_ context.Context, req *proto.RemoveMerkleProofRequest) (*proto.EmptyResponse, error) {
 	fpPk, err := parseEotsPk(req.BtcPkHex)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse EOTS public key: %w", err)
 	}
 
 	if err := r.app.pubRandStore.RemovePubRandProofList([]byte(req.ChainId), fpPk.MustMarshal(), req.TargetHeight); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to remove merkle proof list: %w", err)
 	}
 
 	return nil, nil
@@ -263,5 +263,10 @@ func parseEotsPk(eotsPkHex string) (*bbntypes.BIP340PubKey, error) {
 		return nil, fmt.Errorf("eots-pk cannot be empty")
 	}
 
-	return bbntypes.NewBIP340PubKeyFromHex(eotsPkHex)
+	pk, err := bbntypes.NewBIP340PubKeyFromHex(eotsPkHex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse EOTS public key: %w", err)
+	}
+
+	return pk, nil
 }
