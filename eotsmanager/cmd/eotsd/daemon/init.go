@@ -25,11 +25,11 @@ func NewInitCmd() *cobra.Command {
 func initHome(cmd *cobra.Command, _ []string) error {
 	homePath, err := getHomePath(cmd)
 	if err != nil {
-		return fmt.Errorf("failed to get force flag: %w", err)
+		return fmt.Errorf("failed to get home path: %w", err)
 	}
 	force, err := cmd.Flags().GetBool(forceFlag)
 	if err != nil {
-		return fmt.Errorf("failed to get home path: %w", err)
+		return fmt.Errorf("failed to get force flag: %w", err)
 	}
 
 	if util.FileExists(homePath) && !force {
