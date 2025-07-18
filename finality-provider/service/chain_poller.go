@@ -292,7 +292,7 @@ func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, bloc
 		case cp.blockChan <- block:
 			// Block sent successfully
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("context done: %w", ctx.Err())
 		default:
 			cp.logger.Warn("block channel is full, consumer may be slow",
 				zap.Int("buffer_used", len(cp.blockChan)),
@@ -306,7 +306,7 @@ func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, bloc
 			case <-time.After(time.Second * 30):
 				return fmt.Errorf("failed to send block %d: channel full for too long", block.GetHeight())
 			case <-ctx.Done():
-				return ctx.Err()
+				return fmt.Errorf("context done: %w", ctx.Err())
 			case <-cp.quit:
 				return fmt.Errorf("poller shutting down")
 			}
@@ -363,9 +363,14 @@ func (cp *ChainPoller) blocksWithRetry(ctx context.Context, start, end uint64, l
 				zap.Uint64("start_height", start),
 				zap.Uint64("end_height", end),
 				zap.Error(err))
-		}))
+		}),
+	)
 
-	return blocks, retryErr
+	if retryErr != nil {
+		return nil, fmt.Errorf("failed to query blocks: %w", retryErr)
+	}
+
+	return blocks, nil
 }
 
 func (cp *ChainPoller) latestBlockHeightWithRetry(ctx context.Context) (uint64, error) {
