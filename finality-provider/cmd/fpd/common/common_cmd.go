@@ -387,7 +387,7 @@ operator of this command should ensure that finality provider has voted, or does
 func runCommandUnsafePruneMerkleProof(cmd *cobra.Command, args []string) error {
 	fpPk, err := types.NewBIP340PubKeyFromHex(args[0])
 	if err != nil {
-		return fmt.Errorf("failed to read flag %s: %w", FpdDaemonAddressFlag, err)
+		return fmt.Errorf("failed to parse BIP340 public key from hex: %w", err)
 	}
 
 	flags := cmd.Flags()
