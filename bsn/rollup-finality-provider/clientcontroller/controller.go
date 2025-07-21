@@ -67,10 +67,15 @@ func NewRollupBSNController(
 	return cc, nil
 }
 
-func (cc *RollupBSNController) QuerySmartContractState(ctx context.Context, contractAddress string, queryData string) (*wasmtypes.QuerySmartContractStateResponse, error) {
+func (cc *RollupBSNController) GetBBNClient() *bbnclient.Client {
+	return cc.bbnClient
+}
+
+func (cc *RollupBSNController) QueryFinalityContractState(ctx context.Context, queryData string) (*wasmtypes.QuerySmartContractStateResponse, error) {
 	clientCtx := client.Context{Client: cc.bbnClient.RPCClient}
 	queryClient := wasmtypes.NewQueryClient(clientCtx)
 
+	contractAddress := cc.Cfg.FinalityContractAddress
 	resp, err := queryClient.SmartContractState(ctx, &wasmtypes.QuerySmartContractStateRequest{
 		Address:   contractAddress,
 		QueryData: wasmtypes.RawContractMessage(queryData),
@@ -97,7 +102,7 @@ func (cc *RollupBSNController) queryContractConfig(ctx context.Context) (*Config
 		return nil, fmt.Errorf("failed to marshal config query: %w", err)
 	}
 
-	stateResp, err := cc.QuerySmartContractState(ctx, cc.Cfg.FinalityContractAddress, string(jsonData))
+	stateResp, err := cc.QueryFinalityContractState(ctx, string(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}

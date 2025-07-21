@@ -322,14 +322,10 @@ func deployCwContract(t *testing.T, bbnClient *bbnclient.Client, ctx context.Con
 	require.Equal(t, uint64(1), codeId, "first deployed contract code_id should be 1")
 
 	// instantiate contract with FG disabled
-	opFinalityGadgetInitMsg := map[string]interface{}{
-		"admin":        bbnClient.MustGetAddr(),
-		"bsn_id":       rollupBSNID,
-		"min_pub_rand": 100,
-	}
-	opFinalityGadgetInitMsgBytes, err := json.Marshal(opFinalityGadgetInitMsg)
+	initMsg := NewRollupBSNContractInitMsg(bbnClient.MustGetAddr(), rollupBSNID, 100, 100, 100, 0, 1, nil)
+	initMsgBytes, err := json.Marshal(initMsg)
 	require.NoError(t, err)
-	err = InstantiateContract(bbnClient, ctx, codeId, opFinalityGadgetInitMsgBytes)
+	err = InstantiateContract(bbnClient, ctx, codeId, initMsgBytes)
 	require.NoError(t, err)
 
 	var listContractsResponse *wasmtypes.QueryContractsByCodeResponse
@@ -346,7 +342,7 @@ func deployCwContract(t *testing.T, bbnClient *bbnclient.Client, ctx context.Con
 	return listContractsResponse.Contracts[0]
 }
 
-func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*bbntypes.BIP340PubKey {
+func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) (*bbntypes.BIP340PubKey, *bbntypes.BIP340PubKey) {
 	babylonCfg := ctm.BabylonFpApp.GetConfig()
 	babylonKeyName := babylonCfg.BabylonConfig.Key
 
@@ -404,7 +400,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 		return true
 	}, 30*time.Second, 1*time.Second, "Failed to wait for consumer FP registration")
 
-	return []*bbntypes.BIP340PubKey{babylonFpPk, consumerFpPk}
+	return babylonFpPk, consumerFpPk
 }
 
 func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
@@ -449,10 +445,23 @@ func (ctm *OpL2ConsumerTestManager) delegateBTCAndWaitForActivation(t *testing.T
 	ctm.WaitForNActiveDels(t, 1)
 }
 
-func (ctm *OpL2ConsumerTestManager) queryCwContract(
+func (ctm *OpL2ConsumerTestManager) AddFPToAllowList(t *testing.T, ctx context.Context, fpPk *bbntypes.BIP340PubKey) {
+	msg := NewAddToAllowListMsg(fpPk)
+	execMsgBytes, err := json.Marshal(msg)
+	require.NoError(t, err)
+
+	bbnClient := ctm.BabylonController.GetBBNClient()
+	finalityContractAddress := ctm.RollupBSNController.Cfg.FinalityContractAddress
+	err = ExecuteContract(ctx, bbnClient, finalityContractAddress, execMsgBytes, nil)
+	require.NoError(t, err)
+
+	t.Logf(log.Prefix("Added %s to allow list"), fpPk.MarshalHex())
+}
+
+func (ctm *OpL2ConsumerTestManager) queryFinalityContract(
 	t *testing.T,
-	queryMsg map[string]interface{},
 	ctx context.Context,
+	queryMsg map[string]interface{},
 ) *wasmtypes.QuerySmartContractStateResponse {
 	// create rollup controller
 	rollupController, err := rollupfpcontroller.NewRollupBSNController(ctm.RollupBSNController.Cfg, ctm.logger)
@@ -464,9 +473,8 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 
 	var queryResponse *wasmtypes.QuerySmartContractStateResponse
 	require.Eventually(t, func() bool {
-		queryResponse, err = rollupController.QuerySmartContractState(
+		queryResponse, err = rollupController.QueryFinalityContractState(
 			ctx,
-			ctm.RollupBSNController.Cfg.FinalityContractAddress,
 			string(queryMsgBytes),
 		)
 		return err == nil

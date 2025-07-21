@@ -70,7 +70,7 @@ func (cc *RollupBSNController) queryLastPublicRandCommit(ctx context.Context, fp
 		return nil, fmt.Errorf("failed marshaling to JSON: %w", err)
 	}
 
-	stateResp, err := cc.QuerySmartContractState(ctx, cc.Cfg.FinalityContractAddress, string(jsonData))
+	stateResp, err := cc.QueryFinalityContractState(ctx, string(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
