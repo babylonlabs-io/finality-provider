@@ -393,7 +393,7 @@ func (fp *FinalityProviderInstance) processRandomnessCommitment(ctx context.Cont
 func (fp *FinalityProviderInstance) reportCriticalErr(err error) {
 	fp.criticalErrChan <- &CriticalError{
 		err:     err,
-		fpBtcPk: fp.getBtcPkBIP340(),
+		fpBtcPk: fp.GetBtcPkBIP340(),
 	}
 }
 
@@ -502,7 +502,7 @@ func (fp *FinalityProviderInstance) GetStoreFinalityProvider() *store.StoredFina
 	return sfp
 }
 
-func (fp *FinalityProviderInstance) getBtcPkBIP340() *bbntypes.BIP340PubKey {
+func (fp *FinalityProviderInstance) GetBtcPkBIP340() *bbntypes.BIP340PubKey {
 	return fp.fpState.GetBtcPkBIP340()
 }
 
@@ -511,7 +511,7 @@ func (fp *FinalityProviderInstance) GetBtcPk() *btcec.PublicKey {
 }
 
 func (fp *FinalityProviderInstance) GetBtcPkHex() string {
-	return fp.getBtcPkBIP340().MarshalHex()
+	return fp.GetBtcPkBIP340().MarshalHex()
 }
 
 func (fp *FinalityProviderInstance) GetStatus() proto.FinalityProviderStatus {
