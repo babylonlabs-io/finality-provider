@@ -85,7 +85,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		mockConsumerController.EXPECT().
 			SubmitBatchFinalitySigs(context.Background(), gomock.Any()).
 			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
-		providerRes, err := fpIns.SubmitBatchFinalitySignatures([]types.BlockDescription{nextBlock})
+		providerRes, err := fpIns.NewTestHelper().SubmitBatchFinalitySignatures(t, []types.BlockDescription{nextBlock})
 		require.NoError(t, err)
 		require.Equal(t, expectedTxHash, providerRes.TxHash)
 

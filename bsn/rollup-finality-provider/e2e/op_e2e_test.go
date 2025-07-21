@@ -86,7 +86,7 @@ func TestFinalitySigSubmission(t *testing.T) {
 
 	// submit finality signature
 	// this will call consumer controller's SubmitBatchFinalitySignatures function
-	_, err = consumerFpInstance.SubmitBatchFinalitySignatures(blocks)
+	_, err = consumerFpInstance.NewTestHelper().SubmitBatchFinalitySignatures(t, blocks)
 	require.NoError(t, err)
 
 	// fill the query message with the block height and hash

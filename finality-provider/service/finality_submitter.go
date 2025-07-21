@@ -25,7 +25,6 @@ var _ types.FinalitySignatureSubmitter = (*DefaultFinalitySubmitter)(nil)
 type PubRandProofListGetterFunc func(startHeight uint64, numPubRand uint64) ([][]byte, error)
 
 type DefaultFinalitySubmitter struct {
-	btcPk               *bbntypes.BIP340PubKey
 	state               types.FinalityProviderState
 	em                  eotsmanager.EOTSManager
 	consumerCtrl        api.ConsumerController
@@ -91,7 +90,7 @@ func (ds *DefaultFinalitySubmitter) GetChainID() []byte {
 }
 
 func (ds *DefaultFinalitySubmitter) GetLastVotedHeight() uint64 {
-	return ds.GetLastVotedHeight()
+	return ds.state.GetLastVotedHeight()
 }
 
 func (ds *DefaultFinalitySubmitter) MustUpdateStateAfterFinalitySigSubmission(height uint64) {
@@ -167,8 +166,10 @@ func (ds *DefaultFinalitySubmitter) FilterBlocksForVoting(ctx context.Context, b
 	return processedBlocks, nil
 }
 
-// SubmitBatchFinalitySignatures submits finality signatures for a batch of blocks to the consumer chain in a retry loop.
-// Returns a TxResponse upon success or an error if submission fails or context is canceled.
+// SubmitBatchFinalitySignatures builds and sends a finality signature over the given block to the consumer chain
+// Contract:
+//  1. the input blocks should be in the ascending order of height
+//  2. the returned response could be nil due to no transactions might be made in the end
 func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Context, blocks []types.BlockDescription) (*types.TxResponse, error) {
 	if len(blocks) == 0 {
 		return nil, fmt.Errorf("cannot send signatures for empty blocks")

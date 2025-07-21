@@ -11,6 +11,7 @@ import (
 	"github.com/gogo/protobuf/jsonpb"
 	"go.uber.org/zap"
 	"strings"
+	"testing"
 )
 
 // FinalityProviderTestHelper provides testing utilities for FinalityProviderInstance
@@ -187,4 +188,15 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 // This can be useful for accessing other methods or properties if needed
 func (th *FinalityProviderTestHelper) GetFinalityProviderInstance() *FinalityProviderInstance {
 	return th.fp
+}
+
+func (th *FinalityProviderTestHelper) SubmitBatchFinalitySignatures(t *testing.T, blocks []types.BlockDescription) (*types.TxResponse, error) {
+	t.Helper()
+
+	res, err := th.fp.finalitySubmitter.SubmitBatchFinalitySignatures(context.Background(), blocks)
+	if err != nil {
+		return nil, fmt.Errorf("failed to submit batch finality signatures: %w", err)
+	}
+
+	return res, nil
 }

@@ -159,6 +159,7 @@ func (fps *FpState) GetBtcPk() *btcec.PublicKey {
 	fps.withLock(func() {
 		pk = fps.sfp.BtcPk
 	})
+
 	return pk
 }
 
@@ -167,6 +168,7 @@ func (fps *FpState) GetBtcPkBIP340() *bbntypes.BIP340PubKey {
 	fps.withLock(func() {
 		pk = fps.sfp.GetBIP340BTCPK()
 	})
+
 	return pk
 }
 
@@ -179,6 +181,7 @@ func (fps *FpState) GetChainID() []byte {
 	fps.withLock(func() {
 		chainID = fps.sfp.ChainID
 	})
+
 	return []byte(chainID)
 }
 
@@ -187,6 +190,7 @@ func (fps *FpState) GetLastVotedHeight() uint64 {
 	fps.withLock(func() {
 		lastVotedHeight = fps.sfp.LastVotedHeight
 	})
+
 	return lastVotedHeight
 }
 
@@ -195,6 +199,7 @@ func (fps *FpState) GetStatus() proto.FinalityProviderStatus {
 	fps.withLock(func() {
 		status = fps.sfp.Status
 	})
+
 	return status
 }
 
