@@ -9,6 +9,7 @@ import (
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	ckpttypes "github.com/babylonlabs-io/babylon/v3/x/checkpointing/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
@@ -95,16 +96,16 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 	ctx context.Context,
 	req *api.QueryFinalityProviderHasPowerRequest,
 ) (bool, error) {
-	// 1. Check whether there is pub rand at this height
-	hasPubRand, err := cc.hasPubRandAtHeight(ctx, req.FpPk, req.BlockHeight)
+	// 1. Check whether there is timestamped pub rand at this height
+	hasPubRand, err := cc.hasTimestampedPubRandAtHeight(ctx, req.FpPk, req.BlockHeight)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to query timestamped pub rand at height: %w", err)
 	}
 	if !hasPubRand {
 		return false, nil
 	}
 
-	// 2. Check whether there is 1 active BTC delegation under this FP currently
+	// 2. Check whether there is >= 1 active BTC delegation under this FP currently
 	hasActiveDelegation, err := cc.hasActiveBTCDelegation(ctx, req.FpPk)
 	if err != nil {
 		return false, err
@@ -116,9 +117,9 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 	return true, nil
 }
 
-// hasPubRandAtHeight checks if the finality provider has public randomness committed at the given block height.
-func (cc *RollupBSNController) hasPubRandAtHeight(ctx context.Context, fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
-	pubRand, err := cc.QueryLastPublicRandCommit(ctx, fpPk)
+// hasPubRandAtHeight checks if the finality provider has timestamped public randomness committed at the given block height.
+func (cc *RollupBSNController) hasTimestampedPubRandAtHeight(ctx context.Context, fpPk *btcec.PublicKey, blockHeight uint64) (bool, error) {
+	pubRand, err := cc.queryLastPublicRandCommit(ctx, fpPk)
 	if err != nil {
 		return false, fmt.Errorf("failed to query last public rand commit: %w", err)
 	}
@@ -132,12 +133,25 @@ func (cc *RollupBSNController) hasPubRandAtHeight(ctx context.Context, fpPk *btc
 		zap.Uint64("height", lastCommittedPubRandHeight),
 	)
 
-	// TODO: Handle the case where public randomness is not consecutive.
 	// For now, we only check if the requested height is less than or equal to the last committed height.
 	if blockHeight > lastCommittedPubRandHeight {
 		cc.logger.Debug(
 			"FP has 0 voting power because there is no public randomness at this height",
 			zap.Uint64("height", blockHeight),
+		)
+
+		return false, nil
+	}
+
+	lastFinalizedCkpt, err := cc.bbnClient.LatestEpochFromStatus(ckpttypes.Finalized)
+	if err != nil {
+		return false, fmt.Errorf("failed to query last finalized checkpoint: %w", err)
+	}
+	if pubRand.BabylonEpoch > lastFinalizedCkpt.RawCheckpoint.EpochNum {
+		cc.logger.Debug(
+			"the pub rand's corresponding epoch hasn't been finalized yet, last finalized epoch",
+			zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
+			zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
 		)
 
 		return false, nil

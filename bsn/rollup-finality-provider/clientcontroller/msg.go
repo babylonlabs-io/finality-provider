@@ -36,9 +36,13 @@ type SubmitFinalitySignatureResponse struct {
 }
 
 type QueryMsg struct {
-	Config             *Config        `json:"config,omitempty"`
-	FirstPubRandCommit *PubRandCommit `json:"first_pub_rand_commit,omitempty"`
-	LastPubRandCommit  *PubRandCommit `json:"last_pub_rand_commit,omitempty"`
+	Config             *Config               `json:"config,omitempty"`
+	FirstPubRandCommit *PubRandCommitRequest `json:"first_pub_rand_commit,omitempty"`
+	LastPubRandCommit  *PubRandCommitRequest `json:"last_pub_rand_commit,omitempty"`
+}
+
+type PubRandCommitRequest struct {
+	BtcPkHex string `json:"btc_pk_hex"`
 }
 
 type Config struct {
@@ -46,8 +50,17 @@ type Config struct {
 	MinPubRand uint64 `json:"min_pub_rand"`
 }
 
+// PubRandCommit represents a commitment to a series of public randomness.
+// The commitment is currently the root of a Merkle tree that includes a series of public randomness values.
 type PubRandCommit struct {
-	BtcPkHex string `json:"btc_pk_hex"`
+	StartHeight  uint64 `json:"start_height"`  // The height of the first commitment
+	NumPubRand   uint64 `json:"num_pub_rand"`  // The amount of committed public randomness
+	BabylonEpoch uint64 `json:"babylon_epoch"` // The epoch number of Babylon when the commit was submitted
+	Commitment   []byte `json:"commitment"`    // Value of the commitment (Merkle root of public randomness)
+}
+
+func (c *PubRandCommit) EndHeight() uint64 {
+	return c.StartHeight + c.NumPubRand - 1
 }
 
 // FIXME: Remove this ancillary struct.

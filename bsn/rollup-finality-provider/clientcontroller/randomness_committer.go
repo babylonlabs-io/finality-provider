@@ -57,12 +57,10 @@ func (cc *RollupBSNController) CommitPubRandList(
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-// QueryLastPublicRandCommit returns the last public randomness commitments
-// It is fetched from the state of a CosmWasm contract OP finality gadget.
-func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
+func (cc *RollupBSNController) queryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*PubRandCommit, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	queryMsg := &QueryMsg{
-		LastPubRandCommit: &PubRandCommit{
+		LastPubRandCommit: &PubRandCommitRequest{
 			BtcPkHex: fpPubKey.MarshalHex(),
 		},
 	}
@@ -80,18 +78,24 @@ func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fp
 		return nil, nil
 	}
 
-	// TODO: have its own type with epoch number
-	var resp *types.PubRandCommit
+	var resp PubRandCommit
 	err = json.Unmarshal(stateResp.Data, &resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
-	if resp == nil {
-		return nil, nil
-	}
-	if err := resp.Validate(); err != nil {
-		return nil, fmt.Errorf("failed to validate response: %w", err)
+
+	return &resp, nil
+}
+
+func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
+	resp, err := cc.queryLastPublicRandCommit(ctx, fpPk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query last pub rand commit: %w", err)
 	}
 
-	return resp, nil
+	return &types.PubRandCommit{
+		StartHeight: resp.StartHeight,
+		NumPubRand:  resp.NumPubRand,
+		Commitment:  resp.Commitment,
+	}, nil
 }
