@@ -25,14 +25,16 @@ func TestPubRandCommitment(t *testing.T) {
 	defer ctm.Stop(t)
 
 	// create and register Babylon FP and rollup BSN FP
-	fps := ctm.setupBabylonAndConsumerFp(t)
+	babylonFpPk, bsnFpPk := ctm.setupBabylonAndConsumerFp(t)
+
+	// add the consumer FP to the allow list
+	ctm.AddFPToAllowList(t, ctx, bsnFpPk)
 
 	// send a BTC delegation and wait for activation
-	consumerFpPk := fps[1]
-	ctm.delegateBTCAndWaitForActivation(t, fps[0], consumerFpPk)
+	ctm.delegateBTCAndWaitForActivation(t, babylonFpPk, bsnFpPk)
 
 	// get the consumer FP instance
-	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
+	consumerFpInstance := ctm.getConsumerFpInstance(t, bsnFpPk)
 
 	// commit pub rand with start height 1
 	// this will call consumer controller's CommitPubRandList function
@@ -40,7 +42,7 @@ func TestPubRandCommitment(t *testing.T) {
 	require.NoError(t, err)
 
 	// query the last pub rand
-	pubRand, err := ctm.RollupBSNController.QueryLastPublicRandCommit(ctx, consumerFpPk.MustToBTCPK())
+	pubRand, err := ctm.RollupBSNController.QueryLastPublicRandCommit(ctx, bsnFpPk.MustToBTCPK())
 	require.NoError(t, err)
 	require.NotNil(t, pubRand)
 
@@ -60,14 +62,16 @@ func TestFinalitySigSubmission(t *testing.T) {
 	defer ctm.Stop(t)
 
 	// create and register Babylon FP and rollup BSN FP
-	fps := ctm.setupBabylonAndConsumerFp(t)
-	consumerFpPk := fps[1]
+	babylonFpPk, bsnFpPk := ctm.setupBabylonAndConsumerFp(t)
 
 	// send a BTC delegation and wait for activation
-	ctm.delegateBTCAndWaitForActivation(t, fps[0], consumerFpPk)
+	ctm.delegateBTCAndWaitForActivation(t, babylonFpPk, bsnFpPk)
+
+	// add the consumer FP to the allow list
+	ctm.AddFPToAllowList(t, ctx, bsnFpPk)
 
 	// get the consumer FP instance
-	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
+	consumerFpInstance := ctm.getConsumerFpInstance(t, bsnFpPk)
 
 	// commit pub rand with start height 1
 	// this will call consumer controller's CommitPubRandList function
@@ -99,7 +103,7 @@ func TestFinalitySigSubmission(t *testing.T) {
 	}
 
 	// query block_voters from finality gadget CW contract
-	queryResponse := ctm.queryCwContract(t, queryMsg, ctx)
+	queryResponse := ctm.queryFinalityContract(t, ctx, queryMsg)
 	// Define a struct matching the returned BlockVoterInfo
 	type BlockVoterInfo struct {
 		FpBtcPkHex        string          `json:"fp_btc_pk_hex"`
@@ -113,7 +117,7 @@ func TestFinalitySigSubmission(t *testing.T) {
 
 	// check the voter, it should be the consumer FP public key
 	require.Equal(t, 1, len(voters))
-	require.Equal(t, consumerFpPk.MarshalHex(), voters[0].FpBtcPkHex)
+	require.Equal(t, bsnFpPk.MarshalHex(), voters[0].FpBtcPkHex)
 }
 
 // TestFinalityProviderHasPower tests the consumer controller's function:
@@ -125,38 +129,40 @@ func TestFinalityProviderHasPower(t *testing.T) {
 	defer ctm.Stop(t)
 
 	// create and register Babylon FP and rollup BSN FP
-	fps := ctm.setupBabylonAndConsumerFp(t)
-	consumerFpPk := fps[1]
+	babylonFpPk, bsnFpPk := ctm.setupBabylonAndConsumerFp(t)
+
+	// add the consumer FP to the allow list
+	ctm.AddFPToAllowList(t, ctx, bsnFpPk)
 
 	// query the finality provider has power
 	hasPower, err := ctm.RollupBSNController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
-		consumerFpPk.MustToBTCPK(),
+		bsnFpPk.MustToBTCPK(),
 		1,
 	))
 	require.NoError(t, err)
 	require.False(t, hasPower)
 
 	// send a BTC delegation and wait for activation
-	ctm.delegateBTCAndWaitForActivation(t, fps[0], consumerFpPk)
+	ctm.delegateBTCAndWaitForActivation(t, babylonFpPk, bsnFpPk)
 
 	// query the finality provider has power again
 	// fp has 0 voting power b/c there is no public randomness at this height
 	hasPower, err = ctm.RollupBSNController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
-		consumerFpPk.MustToBTCPK(),
+		bsnFpPk.MustToBTCPK(),
 		1,
 	))
 	require.NoError(t, err)
 	require.False(t, hasPower)
 
 	// commit pub rand with start height 1
-	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
+	consumerFpInstance := ctm.getConsumerFpInstance(t, bsnFpPk)
 	_, err = consumerFpInstance.CommitPubRand(ctx, 1)
 	require.NoError(t, err)
 
 	// query the finality provider has power again
 	// fp has voting power now
 	hasPower, err = ctm.RollupBSNController.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
-		consumerFpPk.MustToBTCPK(),
+		bsnFpPk.MustToBTCPK(),
 		1,
 	))
 	require.NoError(t, err)

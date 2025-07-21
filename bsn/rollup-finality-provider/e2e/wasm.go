@@ -13,6 +13,7 @@ import (
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
+	bbn "github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
@@ -122,4 +123,35 @@ func GetLatestCodeID(ctx context.Context, bbnClient *bbnclient.Client) (uint64, 
 	}
 
 	return resp.CodeInfos[0].CodeID, nil
+}
+
+func NewRollupBSNContractInitMsg(
+	admin string,
+	bsnID string,
+	minPubRand uint64,
+	rateLimitingInterval uint64,
+	maxMsgsPerInterval uint32,
+	bsnActivationHeight uint64,
+	finalitySignatureInterval uint64,
+	allowedFinalityProviders []string,
+) map[string]interface{} {
+	return map[string]interface{}{
+		"admin":                       admin,
+		"bsn_id":                      bsnID,
+		"min_pub_rand":                minPubRand,
+		"rate_limiting_interval":      rateLimitingInterval,
+		"max_msgs_per_interval":       maxMsgsPerInterval,
+		"bsn_activation_height":       bsnActivationHeight,
+		"finality_signature_interval": finalitySignatureInterval,
+		"allowed_finality_providers":  allowedFinalityProviders,
+	}
+}
+
+func NewAddToAllowListMsg(fpPk *bbn.BIP340PubKey) map[string]interface{} {
+	allowListMsg := map[string]interface{}{
+		"add_to_allowlist": map[string]interface{}{
+			"fp_pubkey_hex_list": []string{fpPk.MarshalHex()},
+		},
+	}
+	return allowListMsg
 }
