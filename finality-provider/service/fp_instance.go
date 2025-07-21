@@ -663,7 +663,7 @@ func (fp *FinalityProviderInstance) getLatestBlockHeightWithRetry() (uint64, err
 
 	if err := retry.Do(func() error {
 		latestBlock, err = fp.consumerCon.QueryLatestBlock(context.Background())
-		if err != nil {
+		if latestBlock == nil || err != nil {
 			return fmt.Errorf("failed to query latest block height: %w", err)
 		}
 

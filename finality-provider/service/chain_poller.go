@@ -379,7 +379,7 @@ func (cp *ChainPoller) latestBlockHeightWithRetry(ctx context.Context) (uint64, 
 
 	retryErr := retry.Do(func() error {
 		latestBlock, err = cp.consumerCon.QueryLatestBlock(ctx)
-		if err != nil {
+		if latestBlock == nil || err != nil {
 			return fmt.Errorf("failed to query latest block height: %w", err)
 		}
 

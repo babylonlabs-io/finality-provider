@@ -252,7 +252,7 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 
 	for _, fp := range fps {
 		latestBlock, err := app.consumerCon.QueryLatestBlock(ctx)
-		if err != nil {
+		if latestBlock == nil || err != nil {
 			return fmt.Errorf("failed to query latest block height: %w", err)
 		}
 

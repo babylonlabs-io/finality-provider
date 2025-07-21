@@ -92,7 +92,7 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 	}
 
 	tipBlock, err := rc.consumerCon.QueryLatestBlock(ctx)
-	if err != nil {
+	if tipBlock == nil || err != nil {
 		return false, 0, fmt.Errorf("failed to get the last block: %w", err)
 	}
 
