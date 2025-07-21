@@ -135,7 +135,7 @@ func newFinalityProviderInstanceFromStore(
 	}, nil
 }
 
-func (fp *FinalityProviderInstance) Start() error {
+func (fp *FinalityProviderInstance) Start(ctx context.Context) error {
 	if fp.isStarted.Swap(true) {
 		return fmt.Errorf("the finality-provider instance %s is already started", fp.GetBtcPkHex())
 	}
@@ -145,9 +145,7 @@ func (fp *FinalityProviderInstance) Start() error {
 			zap.String("pk", fp.GetBtcPkHex()))
 	}
 
-	// todo(lazar): will fix ctx in next PRs
-	startHeight, err := fp.DetermineStartHeight(context.Background())
-
+	startHeight, err := fp.DetermineStartHeight(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get the start height: %w", err)
 	}
@@ -155,18 +153,15 @@ func (fp *FinalityProviderInstance) Start() error {
 	fp.logger.Info("starting the finality provider instance",
 		zap.String("pk", fp.GetBtcPkHex()), zap.Uint64("height", startHeight))
 
-	// todo(lazar): will fix this in next PRs
-	if err := fp.poller.SetStartHeight(context.Background(), startHeight); err != nil {
+	if err := fp.poller.SetStartHeight(ctx, startHeight); err != nil {
 		return fmt.Errorf("failed to start the poller with start height %d: %w", startHeight, err)
 	}
 
 	fp.quit = make(chan struct{})
 
 	fp.wg.Add(2)
-	// todo(lazar): will fix ctx in next PRs
-	go fp.finalitySigSubmissionLoop(context.Background())
-	// todo(lazar): will fix ctx in next PRs
-	go fp.randomnessCommitmentLoop(context.Background())
+	go fp.finalitySigSubmissionLoop(ctx)
+	go fp.randomnessCommitmentLoop(ctx)
 
 	return nil
 }
@@ -240,6 +235,7 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop(ctx context.Contex
 		case <-ticker.C:
 			fp.processAndSubmitSignatures(ctx)
 		case <-fp.quit:
+		case <-ctx.Done():
 			fp.logger.Info("the finality signature submission loop is closing")
 
 			return
@@ -349,6 +345,7 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop(ctx context.Context
 		case <-ticker.C:
 			fp.processRandomnessCommitment(ctx)
 		case <-fp.quit:
+		case <-ctx.Done():
 			fp.logger.Info("the randomness commitment loop is closing")
 
 			return

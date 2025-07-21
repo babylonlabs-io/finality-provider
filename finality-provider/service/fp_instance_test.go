@@ -177,7 +177,7 @@ func startFinalityProviderAppWithRegisteredFp(
 
 	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, db, logger)
 	require.NoError(t, err)
-	err = app.Start()
+	err = app.Start(context.Background())
 	require.NoError(t, err)
 
 	// create registered finality-provider

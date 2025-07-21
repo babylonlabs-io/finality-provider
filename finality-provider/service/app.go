@@ -238,10 +238,10 @@ func (app *FinalityProviderApp) Logger() *zap.Logger {
 
 // StartFinalityProvider starts a finality provider instance with the given EOTS public key
 // Note: this should be called right after the finality-provider is registered
-func (app *FinalityProviderApp) StartFinalityProvider(fpPk *bbntypes.BIP340PubKey) error {
+func (app *FinalityProviderApp) StartFinalityProvider(ctx context.Context, fpPk *bbntypes.BIP340PubKey) error {
 	app.logger.Info("starting finality provider", zap.String("pk", fpPk.MarshalHex()))
 
-	if err := app.startFinalityProviderInstance(fpPk); err != nil {
+	if err := app.startFinalityProviderInstance(ctx, fpPk); err != nil {
 		return err
 	}
 
@@ -250,10 +250,9 @@ func (app *FinalityProviderApp) StartFinalityProvider(fpPk *bbntypes.BIP340PubKe
 	return nil
 }
 
-// SyncAllFinalityProvidersStatus syncs the status of all the stored finality providers with the chain.
+// syncAllFinalityProvidersStatus syncs the status of all the stored finality providers with the chain.
 // it should be called before a fp instance is started
-func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
-	ctx := context.Background()
+func (app *FinalityProviderApp) syncAllFinalityProvidersStatus(ctx context.Context) error {
 	fps, err := app.fps.GetAllStoredFinalityProviders()
 	if err != nil {
 		return fmt.Errorf("failed to get all stored finality providers: %w", err)
@@ -330,21 +329,21 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 }
 
 // Start starts only the finality-provider daemon without any finality-provider instances
-func (app *FinalityProviderApp) Start() error {
+func (app *FinalityProviderApp) Start(ctx context.Context) error {
 	var startErr error
 	app.startOnce.Do(func() {
 		app.logger.Info("Starting FinalityProviderApp")
 
-		startErr = app.SyncAllFinalityProvidersStatus()
+		startErr = app.syncAllFinalityProvidersStatus(ctx)
 		if startErr != nil {
 			return
 		}
 
 		app.wg.Add(4)
-		go app.metricsUpdateLoop()
-		go app.monitorCriticalErr()
-		go app.registrationLoop()
-		go app.unjailFpLoop()
+		go app.metricsUpdateLoop(ctx)
+		go app.monitorCriticalErr(ctx)
+		go app.registrationLoop(ctx)
+		go app.unjailFpLoop(ctx)
 	})
 
 	return startErr
@@ -561,6 +560,7 @@ func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntyp
 }
 
 func (app *FinalityProviderApp) startFinalityProviderInstance(
+	ctx context.Context,
 	pk *bbntypes.BIP340PubKey,
 ) error {
 	pkHex := pk.MarshalHex()
@@ -583,7 +583,7 @@ func (app *FinalityProviderApp) startFinalityProviderInstance(
 			"please restart the daemon to switch to another instance", app.fpIns.btcPk.MarshalHex())
 	}
 
-	return app.fpIns.Start()
+	return app.fpIns.Start(ctx)
 }
 
 func (app *FinalityProviderApp) IsFinalityProviderRunning(fpPk *bbntypes.BIP340PubKey) bool {

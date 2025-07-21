@@ -248,7 +248,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, eotsCli, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, fpdb, tm.logger)
 	require.NoError(t, err)
-	err = fpApp.Start()
+	err = fpApp.Start(context.Background())
 	require.NoError(t, err)
 
 	// Create and register the finality provider
@@ -262,7 +262,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	err = fpApp.StartFinalityProvider(eotsPk)
+	err = fpApp.StartFinalityProvider(context.Background(), eotsPk)
 	require.NoError(t, err)
 
 	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb)
@@ -411,7 +411,7 @@ func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *
 
 	t.Log("restarting the finality-provider instance")
 
-	err = fpIns.Start()
+	err = fpIns.Start(context.Background())
 	require.NoError(t, err)
 }
 

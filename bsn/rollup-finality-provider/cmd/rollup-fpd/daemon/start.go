@@ -75,7 +75,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to create finality-provider app: %w", err)
 	}
 
-	if err := fpdaemon.StartApp(fpApp, fpStr); err != nil {
+	if err := fpdaemon.StartApp(cmd.Context(), fpApp, fpStr); err != nil {
 		return fmt.Errorf("failed to start app: %w", err)
 	}
 

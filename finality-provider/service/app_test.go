@@ -45,6 +45,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
 		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
 		r := rand.New(rand.NewSource(seed))
 
 		logger := testutil.GetTestLogger(t)
@@ -123,9 +124,10 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 			require.NoError(t, err)
 		}()
 
-		err = app.Start()
+		err = app.Start(ctx)
 		require.NoError(t, err)
 		defer func() {
+			cancel()
 			err = app.Stop()
 			require.NoError(t, err)
 		}()
@@ -160,7 +162,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 				gomock.Any(),
 			).Return(&types.TxResponse{TxHash: txHash}, nil).AnyTimes()
 		mockBabylonController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(nil, nil).AnyTimes()
-		res, err := app.CreateFinalityProvider(context.Background(), keyName, chainID, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
+		res, err := app.CreateFinalityProvider(ctx, keyName, chainID, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
 		require.NoError(t, err)
 		require.Equal(t, txHash, res.TxHash)
 
@@ -290,7 +292,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 
 		expectedTxHash := datagen.GenRandomHexStr(r, 32)
 		mockConsumerController.EXPECT().UnjailFinalityProvider(gomock.Any(), fpPk.MustToBTCPK()).Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
-		err := app.StartFinalityProvider(fpPk)
+		err := app.StartFinalityProvider(context.Background(), fpPk)
 		require.NoError(t, err)
 		fpIns, err := app.GetFinalityProviderInstance()
 		require.NoError(t, err)
@@ -381,10 +383,11 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 			err = os.RemoveAll(fpHomeDir)
 			require.NoError(t, err)
 		}()
-
-		err = app.Start()
+		ctx, cancel := context.WithCancel(context.Background())
+		err = app.Start(ctx)
 		require.NoError(t, err)
 		defer func() {
+			cancel()
 			err = app.Stop()
 			require.NoError(t, err)
 		}()
@@ -425,7 +428,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 
 		mockBabylonController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(fpRes, nil).AnyTimes()
 
-		res, err := app.CreateFinalityProvider(context.Background(), keyName, chainID, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
+		res, err := app.CreateFinalityProvider(ctx, keyName, chainID, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
 		require.NoError(t, err)
 		require.Equal(t, res.FpInfo.BtcPkHex, eotsPk.MarshalHex())
 
@@ -512,10 +515,12 @@ func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg
 		chainID,
 	)
 	require.NoError(t, err)
-	err = app.Start()
+	ctx, cancel := context.WithCancel(context.Background())
+	err = app.Start(ctx)
 	require.NoError(t, err)
 
 	cleanUp := func() {
+		cancel()
 		err = app.Stop()
 		require.NoError(t, err)
 		err = eotsdb.Close()

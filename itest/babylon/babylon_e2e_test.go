@@ -122,7 +122,7 @@ func TestSkippingDoubleSignError(t *testing.T) {
 	require.NoError(t, err)
 
 	// restart the fp to see if it will skip sending the height
-	err = fpIns.Start()
+	err = fpIns.Start(context.Background())
 	require.NoError(t, err)
 
 	// assert that the fp voting continues

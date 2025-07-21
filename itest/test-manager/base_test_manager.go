@@ -649,7 +649,7 @@ func CreateAndStartFpApp(
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, fpdb, logger)
 	require.NoError(t, err)
 
-	err = fpApp.Start()
+	err = fpApp.Start(context.Background())
 	require.NoError(t, err)
 
 	return fpApp
