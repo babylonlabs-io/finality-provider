@@ -1,13 +1,9 @@
-//go:build e2e_rollup
-// +build e2e_rollup
-
 package e2e
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -23,6 +19,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	ckpttypes "github.com/babylonlabs-io/babylon/v3/x/checkpointing/types"
 	rollupfpcontroller "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/clientcontroller"
 	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
@@ -321,11 +318,16 @@ func deployCwContract(t *testing.T, bbnClient *bbnclient.Client, ctx context.Con
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 	require.Equal(t, uint64(1), codeId, "first deployed contract code_id should be 1")
 
-	// instantiate contract with FG disabled
+	// instantiate contract with all required fields for the new InstantiateMsg
 	opFinalityGadgetInitMsg := map[string]interface{}{
-		"admin":        bbnClient.MustGetAddr(),
-		"bsn_id":       rollupBSNID,
-		"min_pub_rand": 100,
+		"admin":                       bbnClient.MustGetAddr(),
+		"bsn_id":                      rollupBSNID,
+		"min_pub_rand":                100,
+		"rate_limiting_interval":      10000, // test value
+		"max_msgs_per_interval":       100,   // test value
+		"bsn_activation_height":       0,     // immediate activation for tests
+		"finality_signature_interval": 1,     // allow signatures every block for tests
+		"allowed_finality_providers":  nil,   // allow all by default
 	}
 	opFinalityGadgetInitMsgBytes, err := json.Marshal(opFinalityGadgetInitMsg)
 	require.NoError(t, err)
@@ -476,14 +478,45 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 }
 
 func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
-	t.Log("Stopping test manager")
+	if ctm.manager != nil {
+		ctm.manager.ClearResources()
+	}
+	if ctm.EOTSServerHandler != nil {
+		ctm.EOTSServerHandler.Stop()
+	}
+	if ctm.BabylonFpApp != nil {
+		ctm.BabylonFpApp.Stop()
+	}
+	if ctm.ConsumerFpApp != nil {
+		ctm.ConsumerFpApp.Stop()
+	}
+}
+
+// WaitForFpPubRandTimestamped waits for the FP to commit public randomness and get it timestamped
+// This is a rollup-specific version that works with the rollup controller
+func (ctm *OpL2ConsumerTestManager) WaitForFpPubRandTimestamped(t *testing.T, fpIns *service.FinalityProviderInstance) {
+	var lastCommittedHeight uint64
 	var err error
-	err = ctm.BabylonFpApp.Stop()
+
+	require.Eventually(t, func() bool {
+		lastCommittedHeight, err = fpIns.GetLastCommittedHeight(context.Background())
+		if err != nil {
+			return false
+		}
+		return lastCommittedHeight > 0
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	t.Logf("public randomness is successfully committed, last committed height: %d", lastCommittedHeight)
+
+	// wait until the last registered epoch is finalised
+	currentEpoch, err := ctm.BabylonController.QueryCurrentEpoch()
 	require.NoError(t, err)
-	err = ctm.ConsumerFpApp.Stop()
+
+	ctm.FinalizeUntilEpoch(t, currentEpoch)
+
+	res, err := ctm.BabylonController.GetBBNClient().LatestEpochFromStatus(ckpttypes.Finalized)
 	require.NoError(t, err)
-	err = ctm.manager.ClearResources()
-	require.NoError(t, err)
-	err = os.RemoveAll(ctm.BaseDir)
-	require.NoError(t, err)
+	t.Logf("last finalized epoch: %d", res.RawCheckpoint.EpochNum)
+
+	t.Logf("public randomness is successfully timestamped, last finalized epoch: %d", currentEpoch)
 }

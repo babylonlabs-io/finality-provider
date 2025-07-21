@@ -1,6 +1,3 @@
-//go:build e2e_rollup
-// +build e2e_rollup
-
 package e2e
 
 import (

@@ -1,6 +1,3 @@
-//go:build e2e_bcd
-// +build e2e_bcd
-
 package e2etest_bcd
 
 import (
