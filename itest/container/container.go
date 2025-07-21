@@ -24,6 +24,7 @@ import (
 
 const (
 	babylondContainerName = "babylond"
+	anvilContainerName    = "anvil"
 )
 
 var errRegex = regexp.MustCompile(`(E|e)rror`)
@@ -123,6 +124,37 @@ func (m *Manager) RunBabylondResource(
 	}
 
 	m.resources[babylondContainerName] = resource
+
+	return resource, nil
+}
+
+// RunAnvilResource starts an Anvil (local Ethereum node) container
+func (m *Manager) RunAnvilResource(t *testing.T) (*dockertest.Resource, error) {
+	resource, err := m.pool.RunWithOptions(
+		&dockertest.RunOptions{
+			Name:       fmt.Sprintf("%s-%s", anvilContainerName, t.Name()),
+			Repository: m.cfg.AnvilRepository,
+			Tag:        m.cfg.AnvilVersion,
+			Labels: map[string]string{
+				"e2e": "anvil",
+			},
+			ExposedPorts: []string{
+				"8545/tcp", // Ethereum JSON-RPC port
+			},
+			// Don't override Cmd - let the wrapper.sh handle it
+		},
+		func(config *docker.HostConfig) {
+			config.PortBindings = map[docker.Port][]docker.PortBinding{
+				"8545/tcp": {{HostIP: "", HostPort: strconv.Itoa(testutil.AllocateUniquePort(t))}},
+			}
+		},
+		noRestart,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	m.resources[anvilContainerName] = resource
 
 	return resource, nil
 }

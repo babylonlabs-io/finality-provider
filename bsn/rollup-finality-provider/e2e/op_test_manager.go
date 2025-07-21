@@ -59,6 +59,7 @@ type OpL2ConsumerTestManager struct {
 	ConsumerFpApp       *service.FinalityProviderApp
 	BabylonEOTSClient   *client.EOTSManagerGRpcClient
 	ConsumerEOTSClient  *client.EOTSManagerGRpcClient
+	AnvilResource       *dockertest.Resource
 	logger              *zap.Logger
 }
 
@@ -73,12 +74,12 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 
 	// setup logger
 	config := zap.NewDevelopmentConfig()
-	config.Level = zap.NewAtomicLevelAt(zapcore.Level(zap.DebugLevel))
+	config.Level = zap.NewAtomicLevelAt(zapcore.Level(zap.ErrorLevel))
 	logger, err := config.Build()
 	require.NoError(t, err)
 
 	// start Babylon node
-	manager, babylond, covenantPrivKeys, keyDir := startBabylonNode(t)
+	manager, babylond, anvil, covenantPrivKeys, keyDir := startBabylonNode(t)
 
 	// wait for Babylon node starts b/c we will fund the FP address with babylon node
 	babylonController, _ := waitForBabylonNodeStart(t, keyDir, testDir, logger, manager, babylond)
@@ -88,7 +89,7 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 	t.Logf(log.Prefix("rollup BSN finality contract address: %s"), contractAddress)
 
 	// create cosmwasm client
-	rollupFpCfg := createRollupFpConfig(t, testDir, manager, babylond)
+	rollupFpCfg := createRollupFpConfig(t, testDir, manager, babylond, anvil)
 	rollupFpCfg.FinalityContractAddress = contractAddress
 
 	// register consumer chain to Babylon
@@ -139,13 +140,14 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 		ConsumerFpApp:       consumerFpApp,
 		BabylonEOTSClient:   EOTSClients[0],
 		ConsumerEOTSClient:  EOTSClients[1],
+		AnvilResource:       anvil,
 		logger:              logger,
 	}
 
 	return ctm
 }
 
-func startBabylonNode(t *testing.T) (*container.Manager, *dockertest.Resource, []*secp256k1.PrivateKey, string) {
+func startBabylonNode(t *testing.T) (*container.Manager, *dockertest.Resource, *dockertest.Resource, []*secp256k1.PrivateKey, string) {
 	// generate covenant committee
 	covenantQuorum := 2
 	numCovenants := 3
@@ -163,9 +165,14 @@ func startBabylonNode(t *testing.T) (*container.Manager, *dockertest.Resource, [
 	babylond, err := manager.RunBabylondResource(t, babylonDir, covenantQuorum, covenantPubKeys)
 	require.NoError(t, err)
 
+	// Start anvil node in docker
+	anvil, err := manager.RunAnvilResource(t)
+	require.NoError(t, err)
+	t.Logf("Started Anvil node on port %s", anvil.GetPort("8545/tcp"))
+
 	keyDir := filepath.Join(babylonDir, "node0", "babylond")
 
-	return manager, babylond, covenantPrivKeys, keyDir
+	return manager, babylond, anvil, covenantPrivKeys, keyDir
 }
 
 func waitForBabylonNodeStart(
@@ -238,6 +245,7 @@ func createRollupFpConfig(
 	testDir string,
 	manager *container.Manager,
 	babylond *dockertest.Resource,
+	anvil *dockertest.Resource,
 ) *rollupfpconfig.RollupFPConfig {
 	fpHomeDir := filepath.Join(testDir, "consumer-fp-home")
 	t.Logf(log.Prefix("Consumer FP home dir: %s"), fpHomeDir)
@@ -253,6 +261,14 @@ func createRollupFpConfig(
 	// Update ports with dynamically allocated ones from docker
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("localhost:%s", babylond.GetPort("9090/tcp"))
+
+	// Configure poller for rollup chain
+	cfg.PollerConfig.PollInterval = 1 * time.Second // Poll every 1 second
+	// cfg.PollerConfig.StaticChainScanningStartHeight = 1 // Start from block 1
+	cfg.PollerConfig.AutoChainScanningMode = true // Use static start height
+	cfg.PollerConfig.PollSize = 1000              // Poll 10 blocks at a time
+
+	fmt.Println("cfg.PollerConfig", cfg.PollerConfig)
 
 	// create consumer FP key/address
 	fpBbnKeyInfo, err := testutil.CreateChainKey(
@@ -298,10 +314,12 @@ func createRollupFpConfig(
 	opConsumerCfg := &rollupfpconfig.RollupFPConfig{
 		// it will be updated later
 		FinalityContractAddress: "",
-		// it must be a dialable RPC address checked by NewRollupBSNController
-		RollupNodeRPCAddress: "https://optimism-sepolia.drpc.org",
+		// use local anvil node with dynamically allocated port
+		RollupNodeRPCAddress: fmt.Sprintf("http://localhost:%s", anvil.GetPort("8545/tcp")),
 		Common:               cfg,
 	}
+
+	t.Logf(log.Prefix("Using Anvil RPC address: %s"), opConsumerCfg.RollupNodeRPCAddress)
 
 	return opConsumerCfg
 }
@@ -407,6 +425,66 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	}, 30*time.Second, 1*time.Second, "Failed to wait for consumer FP registration")
 
 	return []*bbntypes.BIP340PubKey{babylonFpPk, consumerFpPk}
+}
+
+func (ctm *OpL2ConsumerTestManager) addFpToContractAllowlist(t *testing.T, ctx context.Context, fpPk *bbntypes.BIP340PubKey) {
+	// Create the AddToAllowlist message following the same pattern as local deployment
+	addToAllowlistMsg := map[string]interface{}{
+		"add_to_allowlist": map[string]interface{}{
+			"fp_pubkey_hex_list": []string{fpPk.MarshalHex()},
+		},
+	}
+
+	addToAllowlistMsgBytes, err := json.Marshal(addToAllowlistMsg)
+	require.NoError(t, err)
+
+	// Execute the contract to add FP to allowlist
+	bbnClient := ctm.BabylonController.GetBBNClient()
+	executeMsg := &wasmtypes.MsgExecuteContract{
+		Sender:   bbnClient.MustGetAddr(),
+		Contract: ctm.RollupBSNController.Cfg.FinalityContractAddress,
+		Msg:      addToAllowlistMsgBytes,
+		Funds:    nil,
+	}
+
+	_, err = bbnClient.ReliablySendMsg(ctx, executeMsg, nil, nil)
+	require.NoError(t, err)
+
+	t.Logf(log.Prefix("Added FP %s to contract allowlist"), fpPk.MarshalHex())
+
+	// Verify FP is now in allowlist
+	require.Eventually(t, func() bool {
+		queryMsg := map[string]interface{}{
+			"allowed_finality_providers": map[string]interface{}{},
+		}
+		queryMsgBytes, err := json.Marshal(queryMsg)
+		if err != nil {
+			return false
+		}
+
+		queryResponse, err := ctm.RollupBSNController.QuerySmartContractState(
+			ctx,
+			ctm.RollupBSNController.Cfg.FinalityContractAddress,
+			string(queryMsgBytes),
+		)
+		if err != nil {
+			return false
+		}
+
+		var allowedFPs []string
+		err = json.Unmarshal(queryResponse.Data, &allowedFPs)
+		if err != nil {
+			return false
+		}
+
+		// Check if our FP is in the list
+		for _, allowedFP := range allowedFPs {
+			if allowedFP == fpPk.MarshalHex() {
+				return true
+			}
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime, "FP should be added to contract allowlist")
 }
 
 func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(

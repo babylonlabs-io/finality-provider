@@ -50,6 +50,10 @@ func TestRollupFinalityProviderLifeCycle(t *testing.T) {
 		return len(babylonFps) >= 1 && len(consumerFps) >= 1
 	}, eventuallyWaitTimeOut, eventuallyPollTime, "Both Babylon and consumer FPs should be registered")
 
+	// Step 1.5: Add consumer FP to contract allowlist
+	t.Log("Step 1.5: Adding consumer FP to contract allowlist")
+	ctm.addFpToContractAllowlist(t, ctx, consumerFpPk)
+
 	// Step 2: Delegate BTC and wait for activation
 	t.Log("Step 2: Delegating BTC and waiting for activation")
 	ctm.delegateBTCAndWaitForActivation(t, babylonFpPk, consumerFpPk)

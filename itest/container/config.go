@@ -13,10 +13,13 @@ import (
 type ImageConfig struct {
 	BabylonRepository string
 	BabylonVersion    string
+	AnvilRepository   string
+	AnvilVersion      string
 }
 
 const (
 	dockerBabylondRepository = "babylonlabs/babylond"
+	dockerAnvilRepository    = "babylonlabs-io/foundry-anvil"
 )
 
 // NewImageConfig returns ImageConfig needed for running e2e test.
@@ -32,5 +35,7 @@ func NewImageConfig(t *testing.T) ImageConfig {
 	return ImageConfig{
 		BabylonRepository: dockerBabylondRepository,
 		BabylonVersion:    babylondVersion,
+		AnvilRepository:   dockerAnvilRepository,
+		AnvilVersion:      "latest",
 	}
 }
