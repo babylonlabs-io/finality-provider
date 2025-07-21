@@ -2,17 +2,13 @@ package service
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"math"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	"github.com/btcsuite/btcd/btcec/v2"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
@@ -113,13 +109,15 @@ func newFinalityProviderInstanceFromStore(
 	logger *zap.Logger,
 ) (*FinalityProviderInstance, error) {
 	btcPk := bbntypes.NewBIP340PubKeyFromBTCPK(sfp.BtcPk)
+	fpState := NewFpState(sfp, s, logger, metrics)
 
 	rndCommitter.SetBtcPk(btcPk)
 	rndCommitter.SetChainID([]byte(sfp.ChainID))
+	finalitySubmitter.SetState(fpState)
 
 	return &FinalityProviderInstance{
 		btcPk:             bbntypes.NewBIP340PubKeyFromBTCPK(sfp.BtcPk),
-		fpState:           NewFpState(sfp, s),
+		fpState:           fpState,
 		pubRandState:      NewPubRandState(prStore),
 		cfg:               cfg,
 		logger:            logger,
@@ -413,100 +411,99 @@ func (fp *FinalityProviderInstance) CommitPubRand(ctx context.Context, startHeig
 //  1. the input blocks should be in the ascending order of height
 //  2. the returned response could be nil due to no transactions might be made in the end
 func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []types.BlockDescription) (*types.TxResponse, error) {
-	if len(blocks) == 0 {
-		return nil, fmt.Errorf("should not submit batch finality signature with zero block")
-	}
-
-	if len(blocks) > math.MaxUint32 {
-		return nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
-	}
-
-	// get public randomness list
-	numPubRand := len(blocks)
-	// #nosec G115 -- performed the conversion check above
-	prList, err := fp.GetPubRandList(blocks[0].GetHeight(), uint32(numPubRand))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get public randomness list: %w", err)
-	}
-	// get proof list
-	// TODO: how to recover upon having an error in getPubRandProofList?
-	proofBytesList, err := fp.pubRandState.getPubRandProofList(
-		fp.btcPk.MustMarshal(),
-		fp.GetChainID(),
-		blocks[0].GetHeight(),
-		uint64(numPubRand),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w\nplease recover the randomness proof from db", err)
-	}
-
-	// Create slices to store only the valid items
-	validBlocks := make([]types.BlockDescription, 0, len(blocks))
-	validPrList := make([]*btcec.FieldVal, 0, len(blocks))
-	validProofList := make([][]byte, 0, len(blocks))
-	validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
-
-	// Process each block and collect only valid items
-	// (skip ones encountering double sign error)
-	for i, b := range blocks {
-		eotsSig, err := fp.SignFinalitySig(b)
-		if err != nil {
-			if !errors.Is(err, ErrFailedPrecondition) {
-				return nil, fmt.Errorf("failed to sign finality signature: %w", err)
-			}
-			// Skip this block and its corresponding items if we encounter FailedPrecondition
-			fp.logger.Warn("encountered FailedPrecondition error, skipping block",
-				zap.Uint64("height", b.GetHeight()),
-				zap.String("hash", hex.EncodeToString(b.GetHash())),
-				zap.Error(err))
-
-			continue
-		}
-		// If signature is valid, append all corresponding items
-		validBlocks = append(validBlocks, b)
-		validPrList = append(validPrList, prList[i])
-		validProofList = append(validProofList, proofBytesList[i])
-		validSigList = append(validSigList, eotsSig.ToModNScalar())
-	}
-
-	// If all blocks were skipped, return early
-	if len(validBlocks) == 0 {
-		fp.logger.Info("all blocks were skipped due to double sign errors")
-
-		return nil, nil
-	}
-
-	// send finality signature to the consumer chain with only valid items
-	res, err := fp.consumerCon.SubmitBatchFinalitySigs(context.Background(), ccapi.NewSubmitBatchFinalitySigsRequest(
-		fp.GetBtcPk(),
-		validBlocks,
-		validPrList,
-		validProofList,
-		validSigList,
-	))
-
-	if err != nil {
-		if strings.Contains(err.Error(), "jailed") {
-			return nil, ErrFinalityProviderJailed
-		}
-		if strings.Contains(err.Error(), "slashed") {
-			return nil, ErrFinalityProviderSlashed
-		}
-
-		return nil, fmt.Errorf("failed to submit batch finality signatures: %w", err)
-	}
-
-	// update the metrics with voted blocks
-	for _, b := range validBlocks {
-		fp.metrics.RecordFpVotedHeight(fp.GetBtcPkHex(), b.GetHeight())
-	}
-
-	// update state with the highest height of this batch even though
-	// some of the votes are skipped due to double sign error
-	highBlock := blocks[len(blocks)-1]
-	fp.MustUpdateStateAfterFinalitySigSubmission(highBlock.GetHeight())
-
-	return res, nil
+	return fp.finalitySubmitter.SubmitBatchFinalitySignatures(context.Background(), blocks)
+	//if len(blocks) == 0 {
+	//	return nil, fmt.Errorf("should not submit batch finality signature with zero block")
+	//}
+	//
+	//if len(blocks) > math.MaxUint32 {
+	//	return nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
+	//}
+	//
+	//// get public randomness list
+	//numPubRand := len(blocks)
+	//// #nosec G115 -- performed the conversion check above
+	//prList, err := fp.GetPubRandList(blocks[0].GetHeight(), uint32(numPubRand))
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to get public randomness list: %w", err)
+	//}
+	//// get proof list
+	//// TODO: how to recover upon having an error in getPubRandProofList?
+	//proofBytesList, err := fp.rndCommitter.GetPubRandProofList(
+	//	blocks[0].GetHeight(),
+	//	uint64(numPubRand),
+	//)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w\nplease recover the randomness proof from db", err)
+	//}
+	//
+	//// Create slices to store only the valid items
+	//validBlocks := make([]types.BlockDescription, 0, len(blocks))
+	//validPrList := make([]*btcec.FieldVal, 0, len(blocks))
+	//validProofList := make([][]byte, 0, len(blocks))
+	//validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
+	//
+	//// Process each block and collect only valid items
+	//// (skip ones encountering double sign error)
+	//for i, b := range blocks {
+	//	eotsSig, err := fp.SignFinalitySig(b)
+	//	if err != nil {
+	//		if !errors.Is(err, ErrFailedPrecondition) {
+	//			return nil, fmt.Errorf("failed to sign finality signature: %w", err)
+	//		}
+	//		// Skip this block and its corresponding items if we encounter FailedPrecondition
+	//		fp.logger.Warn("encountered FailedPrecondition error, skipping block",
+	//			zap.Uint64("height", b.GetHeight()),
+	//			zap.String("hash", hex.EncodeToString(b.GetHash())),
+	//			zap.Error(err))
+	//
+	//		continue
+	//	}
+	//	// If signature is valid, append all corresponding items
+	//	validBlocks = append(validBlocks, b)
+	//	validPrList = append(validPrList, prList[i])
+	//	validProofList = append(validProofList, proofBytesList[i])
+	//	validSigList = append(validSigList, eotsSig.ToModNScalar())
+	//}
+	//
+	//// If all blocks were skipped, return early
+	//if len(validBlocks) == 0 {
+	//	fp.logger.Info("all blocks were skipped due to double sign errors")
+	//
+	//	return nil, nil
+	//}
+	//
+	//// send finality signature to the consumer chain with only valid items
+	//res, err := fp.consumerCon.SubmitBatchFinalitySigs(context.Background(), ccapi.NewSubmitBatchFinalitySigsRequest(
+	//	fp.GetBtcPk(),
+	//	validBlocks,
+	//	validPrList,
+	//	validProofList,
+	//	validSigList,
+	//))
+	//
+	//if err != nil {
+	//	if strings.Contains(err.Error(), "jailed") {
+	//		return nil, ErrFinalityProviderJailed
+	//	}
+	//	if strings.Contains(err.Error(), "slashed") {
+	//		return nil, ErrFinalityProviderSlashed
+	//	}
+	//
+	//	return nil, fmt.Errorf("failed to submit batch finality signatures: %w", err)
+	//}
+	//
+	//// update the metrics with voted blocks
+	//for _, b := range validBlocks {
+	//	fp.metrics.RecordFpVotedHeight(fp.GetBtcPkHex(), b.GetHeight())
+	//}
+	//
+	//// update state with the highest height of this batch even though
+	//// some of the votes are skipped due to double sign error
+	//highBlock := blocks[len(blocks)-1]
+	//fp.MustUpdateStateAfterFinalitySigSubmission(highBlock.GetHeight())
+	//
+	//return res, nil
 }
 
 func (fp *FinalityProviderInstance) NewTestHelper() *FinalityProviderTestHelper {

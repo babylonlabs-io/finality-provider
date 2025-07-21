@@ -26,7 +26,7 @@ type PubRandProofListGetterFunc func(startHeight uint64, numPubRand uint64) ([][
 
 type DefaultFinalitySubmitter struct {
 	btcPk               *bbntypes.BIP340PubKey
-	fpState             *FpState
+	state               types.FinalityProviderState
 	em                  eotsmanager.EOTSManager
 	consumerCtrl        api.ConsumerController
 	proofListGetterFunc PubRandProofListGetterFunc
@@ -71,56 +71,42 @@ func NewDefaultFinalitySubmitter(
 }
 
 func (ds *DefaultFinalitySubmitter) GetBtcPkHex() string {
-	if ds.btcPk == nil {
-		return ""
-	}
-
-	return ds.btcPk.MarshalHex()
+	return ds.GetBtcPkBIP340().MarshalHex()
 }
 
 func (ds *DefaultFinalitySubmitter) GetBtcPk() *btcec.PublicKey {
-	return ds.btcPk.MustToBTCPK()
+	return ds.state.GetBtcPk()
+}
+
+func (ds *DefaultFinalitySubmitter) GetBtcPkBIP340() *bbntypes.BIP340PubKey {
+	return ds.state.GetBtcPkBIP340()
+}
+
+func (ds *DefaultFinalitySubmitter) SetState(state types.FinalityProviderState) {
+	ds.state = state
 }
 
 func (ds *DefaultFinalitySubmitter) GetChainID() []byte {
-	var chainID string
-	ds.fpState.withLock(func() {
-		chainID = ds.fpState.sfp.ChainID
-	})
-
-	return []byte(chainID)
+	return ds.state.GetChainID()
 }
 
 func (ds *DefaultFinalitySubmitter) GetLastVotedHeight() uint64 {
-	var lastVotedHeight uint64
-	ds.fpState.withLock(func() {
-		lastVotedHeight = ds.fpState.sfp.LastVotedHeight
-	})
-
-	return lastVotedHeight
+	return ds.GetLastVotedHeight()
 }
 
 func (ds *DefaultFinalitySubmitter) MustUpdateStateAfterFinalitySigSubmission(height uint64) {
-	if err := ds.fpState.setLastVotedHeight(height); err != nil {
+	if err := ds.state.SetLastVotedHeight(height); err != nil {
 		ds.logger.Fatal("failed to update state after finality signature submitted",
-			zap.String("pk", ds.GetBtcPkHex()), zap.Uint64("height", height))
+			zap.String("pk", ds.GetBtcPkHex()), zap.Uint64("height", height), zap.Error(err))
 	}
-	ds.metrics.RecordFpVoteTime(ds.GetBtcPkHex())
-	ds.metrics.RecordFpLastVotedHeight(ds.GetBtcPkHex(), height)
-	ds.metrics.RecordFpLastProcessedHeight(ds.GetBtcPkHex(), height)
 }
 
 func (ds *DefaultFinalitySubmitter) GetStatus() proto.FinalityProviderStatus {
-	var status proto.FinalityProviderStatus
-	ds.fpState.withLock(func() {
-		status = ds.fpState.sfp.Status
-	})
-
-	return status
+	return ds.state.GetStatus()
 }
 
 func (ds *DefaultFinalitySubmitter) MustSetStatus(s proto.FinalityProviderStatus) {
-	if err := ds.fpState.setStatus(s); err != nil {
+	if err := ds.state.SetStatus(s); err != nil {
 		ds.logger.Fatal("failed to set finality-provider status",
 			zap.String("pk", ds.GetBtcPkHex()), zap.String("status", s.String()))
 	}
@@ -368,7 +354,7 @@ func (ds *DefaultFinalitySubmitter) signFinalitySig(b types.BlockDescription) (*
 		msgToSign = b.MsgToSign("")
 	}
 
-	sig, err := ds.em.SignEOTS(ds.btcPk.MustMarshal(), ds.GetChainID(), msgToSign, b.GetHeight())
+	sig, err := ds.em.SignEOTS(ds.GetBtcPkBIP340().MustMarshal(), ds.GetChainID(), msgToSign, b.GetHeight())
 	if err != nil {
 		if strings.Contains(err.Error(), failedPreconditionErrStr) {
 			return nil, ErrFailedPrecondition
@@ -382,7 +368,7 @@ func (ds *DefaultFinalitySubmitter) signFinalitySig(b types.BlockDescription) (*
 
 func (ds *DefaultFinalitySubmitter) GetPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
 	pubRandList, err := ds.em.CreateRandomnessPairList(
-		ds.btcPk.MustMarshal(),
+		ds.GetBtcPkBIP340().MustMarshal(),
 		ds.GetChainID(),
 		startHeight,
 		numPubRand,
