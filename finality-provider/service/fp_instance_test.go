@@ -123,7 +123,7 @@ func FuzzDetermineStartHeight(f *testing.F) {
 
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, false, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
-		fpIns.MustUpdateStateAfterFinalitySigSubmission(lastVotedHeight)
+		fpIns.NewTestHelper().MustUpdateStateAfterFinalitySigSubmission(t, lastVotedHeight)
 
 		startHeight, err := fpIns.DetermineStartHeight(context.Background())
 		require.NoError(t, err)

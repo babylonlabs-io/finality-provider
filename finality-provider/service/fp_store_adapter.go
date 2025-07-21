@@ -45,115 +45,6 @@ func (fps *FpState) withLock(action func()) {
 	action()
 }
 
-func (fps *FpState) setStatus(s proto.FinalityProviderStatus) error {
-	fps.mu.Lock()
-	fps.sfp.Status = s
-	fps.mu.Unlock()
-
-	if err := fps.s.SetFpStatus(fps.sfp.BtcPk, s); err != nil {
-		return fmt.Errorf("failed to set finality provider status: %w", err)
-	}
-
-	return nil
-}
-
-func (fps *FpState) setLastVotedHeight(height uint64) error {
-	fps.mu.Lock()
-	fps.sfp.LastVotedHeight = height
-	fps.mu.Unlock()
-
-	if err := fps.s.SetFpLastVotedHeight(fps.sfp.BtcPk, height); err != nil {
-		return fmt.Errorf("failed to set finality provider last voted height: %w", err)
-	}
-
-	return nil
-}
-
-func (fp *FinalityProviderInstance) GetStoreFinalityProvider() *store.StoredFinalityProvider {
-	var sfp *store.StoredFinalityProvider
-	fp.fpState.withLock(func() {
-		// Create a copy of the stored finality provider to prevent data races
-		sfpCopy := *fp.fpState.sfp
-		sfp = &sfpCopy
-	})
-
-	return sfp
-}
-
-func (fp *FinalityProviderInstance) GetBtcPkBIP340() *bbntypes.BIP340PubKey {
-	var pk *bbntypes.BIP340PubKey
-	fp.fpState.withLock(func() {
-		pk = fp.fpState.sfp.GetBIP340BTCPK()
-	})
-
-	return pk
-}
-
-func (fp *FinalityProviderInstance) GetBtcPk() *btcec.PublicKey {
-	var pk *btcec.PublicKey
-	fp.fpState.withLock(func() {
-		pk = fp.fpState.sfp.BtcPk
-	})
-
-	return pk
-}
-
-func (fp *FinalityProviderInstance) GetBtcPkHex() string {
-	return fp.GetBtcPkBIP340().MarshalHex()
-}
-
-func (fp *FinalityProviderInstance) GetStatus() proto.FinalityProviderStatus {
-	var status proto.FinalityProviderStatus
-	fp.fpState.withLock(func() {
-		status = fp.fpState.sfp.Status
-	})
-
-	return status
-}
-
-func (fp *FinalityProviderInstance) GetLastVotedHeight() uint64 {
-	var lastVotedHeight uint64
-	fp.fpState.withLock(func() {
-		lastVotedHeight = fp.fpState.sfp.LastVotedHeight
-	})
-
-	return lastVotedHeight
-}
-
-func (fp *FinalityProviderInstance) GetChainID() []byte {
-	var chainID string
-	fp.fpState.withLock(func() {
-		chainID = fp.fpState.sfp.ChainID
-	})
-
-	return []byte(chainID)
-}
-
-func (fp *FinalityProviderInstance) SetStatus(s proto.FinalityProviderStatus) error {
-	return fp.fpState.setStatus(s)
-}
-
-func (fp *FinalityProviderInstance) MustSetStatus(s proto.FinalityProviderStatus) {
-	if err := fp.SetStatus(s); err != nil {
-		fp.logger.Fatal("failed to set finality-provider status",
-			zap.String("pk", fp.GetBtcPkHex()), zap.String("status", s.String()))
-	}
-}
-
-func (fp *FinalityProviderInstance) updateStateAfterFinalitySigSubmission(height uint64) error {
-	return fp.fpState.setLastVotedHeight(height)
-}
-
-func (fp *FinalityProviderInstance) MustUpdateStateAfterFinalitySigSubmission(height uint64) {
-	if err := fp.updateStateAfterFinalitySigSubmission(height); err != nil {
-		fp.logger.Fatal("failed to update state after finality signature submitted",
-			zap.String("pk", fp.GetBtcPkHex()), zap.Uint64("height", height))
-	}
-	fp.metrics.RecordFpVoteTime(fp.GetBtcPkHex())
-	fp.metrics.RecordFpLastVotedHeight(fp.GetBtcPkHex(), height)
-	fp.metrics.RecordFpLastProcessedHeight(fp.GetBtcPkHex(), height)
-}
-
 func (fps *FpState) GetBtcPk() *btcec.PublicKey {
 	var pk *btcec.PublicKey
 	fps.withLock(func() {
@@ -232,7 +123,6 @@ func (fps *FpState) SetLastVotedHeight(height uint64) error {
 		zap.String("pk", fps.GetBtcPkHex()),
 		zap.Uint64("height", height))
 
-	// Record metrics if available
 	if fps.metrics != nil {
 		fps.metrics.RecordFpVoteTime(fps.GetBtcPkHex())
 		fps.metrics.RecordFpLastVotedHeight(fps.GetBtcPkHex(), height)

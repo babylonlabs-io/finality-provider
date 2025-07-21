@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/btcec/v2"
 	"sync"
 	"time"
 
@@ -219,7 +220,7 @@ func (fp *FinalityProviderInstance) IsJailed() bool {
 	}
 
 	if storedFp.Status != fp.GetStatus() {
-		fp.MustSetStatus(storedFp.Status)
+		fp.mustSetStatus(storedFp.Status)
 	}
 
 	return fp.GetStatus() == proto.FinalityProviderStatus_JAILED
@@ -285,7 +286,7 @@ func (fp *FinalityProviderInstance) processAndSubmitSignatures(ctx context.Conte
 		fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
 
 		if errors.Is(err, ErrFinalityProviderJailed) {
-			fp.MustSetStatus(proto.FinalityProviderStatus_JAILED)
+			fp.mustSetStatus(proto.FinalityProviderStatus_JAILED)
 			fp.logger.Debug("the finality-provider has been jailed",
 				zap.String("pk", fp.GetBtcPkHex()))
 
@@ -392,7 +393,7 @@ func (fp *FinalityProviderInstance) processRandomnessCommitment(ctx context.Cont
 func (fp *FinalityProviderInstance) reportCriticalErr(err error) {
 	fp.criticalErrChan <- &CriticalError{
 		err:     err,
-		fpBtcPk: fp.GetBtcPkBIP340(),
+		fpBtcPk: fp.getBtcPkBIP340(),
 	}
 }
 
@@ -488,4 +489,46 @@ func (fp *FinalityProviderInstance) GetVotingPowerWithRetry(height uint64) (bool
 	}
 
 	return hasPower, nil
+}
+
+func (fp *FinalityProviderInstance) GetStoreFinalityProvider() *store.StoredFinalityProvider {
+	var sfp *store.StoredFinalityProvider
+	fp.fpState.withLock(func() {
+		// Create a copy of the stored finality provider to prevent data races
+		sfpCopy := *fp.fpState.sfp
+		sfp = &sfpCopy
+	})
+
+	return sfp
+}
+
+func (fp *FinalityProviderInstance) getBtcPkBIP340() *bbntypes.BIP340PubKey {
+	return fp.fpState.GetBtcPkBIP340()
+}
+
+func (fp *FinalityProviderInstance) GetBtcPk() *btcec.PublicKey {
+	return fp.fpState.GetBtcPk()
+}
+
+func (fp *FinalityProviderInstance) GetBtcPkHex() string {
+	return fp.getBtcPkBIP340().MarshalHex()
+}
+
+func (fp *FinalityProviderInstance) GetStatus() proto.FinalityProviderStatus {
+	return fp.fpState.GetStatus()
+}
+
+func (fp *FinalityProviderInstance) GetLastVotedHeight() uint64 {
+	return fp.fpState.GetLastVotedHeight()
+}
+
+func (fp *FinalityProviderInstance) GetChainID() []byte {
+	return fp.fpState.GetChainID()
+}
+
+func (fp *FinalityProviderInstance) mustSetStatus(s proto.FinalityProviderStatus) {
+	if err := fp.fpState.SetStatus(s); err != nil {
+		fp.logger.Fatal("failed to set finality-provider status",
+			zap.String("pk", fp.GetBtcPkHex()), zap.String("status", s.String()))
+	}
 }

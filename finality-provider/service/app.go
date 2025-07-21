@@ -621,7 +621,7 @@ func (app *FinalityProviderApp) removeFinalityProviderInstance() error {
 }
 
 func (app *FinalityProviderApp) setFinalityProviderSlashed(fpi *FinalityProviderInstance) {
-	fpi.MustSetStatus(proto.FinalityProviderStatus_SLASHED)
+	fpi.mustSetStatus(proto.FinalityProviderStatus_SLASHED)
 	if err := app.removeFinalityProviderInstance(); err != nil {
 		panic(fmt.Errorf("failed to terminate a slashed finality-provider %s: %w", fpi.GetBtcPkHex(), err))
 	}

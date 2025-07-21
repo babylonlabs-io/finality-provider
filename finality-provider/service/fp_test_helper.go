@@ -200,3 +200,10 @@ func (th *FinalityProviderTestHelper) SubmitBatchFinalitySignatures(t *testing.T
 
 	return res, nil
 }
+
+func (th *FinalityProviderTestHelper) MustUpdateStateAfterFinalitySigSubmission(t *testing.T, height uint64) {
+	t.Helper()
+	if err := th.fp.fpState.SetLastVotedHeight(height); err != nil {
+		t.Fatalf("failed to update state after finality sig submission: %s", err.Error())
+	}
+}
