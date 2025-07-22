@@ -114,7 +114,9 @@ func newFinalityProviderInstanceFromStore(
 
 	rndCommitter.SetBtcPk(btcPk)
 	rndCommitter.SetChainID([]byte(sfp.ChainID))
-	finalitySubmitter.SetState(fpState)
+	if err := finalitySubmitter.InitState(fpState); err != nil {
+		return nil, fmt.Errorf("failed to initialize finality submitter state: %w", err)
+	}
 
 	return &FinalityProviderInstance{
 		btcPk:             bbntypes.NewBIP340PubKeyFromBTCPK(sfp.BtcPk),
@@ -270,18 +272,7 @@ func (fp *FinalityProviderInstance) processAndSubmitSignatures(ctx context.Conte
 		zap.Uint64("end_height", targetHeight),
 	)
 
-	processedBlocks, err := fp.finalitySubmitter.FilterBlocksForVoting(ctx, pollerBlocks)
-	if err != nil {
-		fp.reportCriticalErr(err)
-
-		return
-	}
-
-	if len(processedBlocks) == 0 {
-		return
-	}
-
-	res, err := fp.finalitySubmitter.SubmitBatchFinalitySignatures(ctx, processedBlocks)
+	res, err := fp.finalitySubmitter.SubmitBatchFinalitySignatures(ctx, pollerBlocks)
 	if err != nil {
 		fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
 

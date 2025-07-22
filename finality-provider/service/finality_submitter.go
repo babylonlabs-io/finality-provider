@@ -95,15 +95,21 @@ func (ds *DefaultFinalitySubmitter) mustSetStatus(s proto.FinalityProviderStatus
 	}
 }
 
-// SetState sets the finality provider state store.
-func (ds *DefaultFinalitySubmitter) SetState(state types.FinalityProviderState) {
+// InitState sets the finality provider state store.
+func (ds *DefaultFinalitySubmitter) InitState(state types.FinalityProviderState) error {
+	if ds.state != nil {
+		return fmt.Errorf("finality provider state is already set")
+	}
+
 	ds.state = state
+
+	return nil
 }
 
-// FilterBlocksForVoting filters blocks based on the finality provider's voting power and height criteria for submission.
+// filterBlocksForVoting filters blocks based on the finality provider's voting power and height criteria for submission.
 // It returns a slice of blocks eligible for voting and an error if any issues are encountered during processing.
 // It also updates the fp instance status according to the block's voting power
-func (ds *DefaultFinalitySubmitter) FilterBlocksForVoting(ctx context.Context, blocks []types.BlockDescription) ([]types.BlockDescription, error) {
+func (ds *DefaultFinalitySubmitter) filterBlocksForVoting(ctx context.Context, blocks []types.BlockDescription) ([]types.BlockDescription, error) {
 	processedBlocks := make([]types.BlockDescription, 0, len(blocks))
 
 	var hasPower bool
@@ -162,6 +168,21 @@ func (ds *DefaultFinalitySubmitter) FilterBlocksForVoting(ctx context.Context, b
 func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Context, blocks []types.BlockDescription) (*types.TxResponse, error) {
 	if len(blocks) == 0 {
 		return nil, fmt.Errorf("cannot send signatures for empty blocks")
+	}
+
+	blocks, err := ds.filterBlocksForVoting(ctx, blocks)
+	if err != nil {
+		return nil, fmt.Errorf("failed to filter blocks for voting: %w", err)
+	}
+
+	if len(blocks) == 0 {
+		ds.logger.Debug(
+			"no blocks to vote for after filtering",
+			zap.String("pk", ds.getBtcPkHex()),
+			zap.Uint64("last_voted_height", ds.state.GetLastVotedHeight()),
+		)
+
+		return nil, nil // No blocks to vote for
 	}
 
 	var failedCycles uint32

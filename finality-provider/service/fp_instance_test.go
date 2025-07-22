@@ -76,7 +76,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		}
 		mockConsumerController.EXPECT().QueryLastPublicRandCommit(context.Background(), gomock.Any()).Return(lastCommittedPubRand, nil).AnyTimes()
 		// mock voting power and commit pub rand
-		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(fpIns.GetBtcPk(), gomock.Any()).
+		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(context.Background(), gomock.Any()).
 			Return(true, nil).AnyTimes()
 
 		// submit finality sig
