@@ -310,7 +310,16 @@ func (wc *CosmwasmConsumerController) QueryIsBlockFinalized(ctx context.Context,
 	return resp.Finalized, nil
 }
 
-func (wc *CosmwasmConsumerController) QueryActivatedHeight(ctx context.Context) (uint64, error) {
+func (wc *CosmwasmConsumerController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
+	block, err := wc.queryCometBestBlock(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	return block.GetHeight(), nil
+}
+
+func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error) {
 	// Construct the query message
 	queryMsg := QueryMsgActivatedHeight{
 		ActivatedHeight: struct{}{},
@@ -342,20 +351,6 @@ func (wc *CosmwasmConsumerController) QueryActivatedHeight(ctx context.Context) 
 
 	// Return the activated height
 	return resp.Height, nil
-}
-
-func (wc *CosmwasmConsumerController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
-	block, err := wc.queryCometBestBlock(ctx)
-	if err != nil {
-		return 0, err
-	}
-
-	return block.GetHeight(), nil
-}
-
-func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight(_ context.Context) (uint64, error) {
-	// TODO: implement finality activation feature in OP stack L2
-	return 0, nil
 }
 
 func (wc *CosmwasmConsumerController) QueryFinalityProviderHighestVotedHeight(_ context.Context, _ *btcec.PublicKey) (uint64, error) {

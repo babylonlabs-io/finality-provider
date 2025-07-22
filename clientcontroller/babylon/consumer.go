@@ -326,15 +326,6 @@ func (bc *BabylonConsumerController) QueryFinalityActivationBlockHeight(_ contex
 	return res.Params.FinalityActivationHeight, nil
 }
 
-func (bc *BabylonConsumerController) QueryActivatedHeight(_ context.Context) (uint64, error) {
-	res, err := bc.bbnClient.QueryClient.ActivatedHeight()
-	if err != nil {
-		return 0, fmt.Errorf("failed to query activated height: %w", err)
-	}
-
-	return res.Height, nil
-}
-
 // QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
 func (bc *BabylonConsumerController) QueryFinalityProviderHighestVotedHeight(_ context.Context, fpPk *btcec.PublicKey) (uint64, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)

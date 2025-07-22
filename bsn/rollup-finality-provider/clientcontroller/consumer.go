@@ -427,12 +427,6 @@ func (cc *RollupBSNController) QueryIsBlockFinalized(ctx context.Context, height
 	return true, nil
 }
 
-// QueryActivatedHeight returns the rollup block number at which the finality gadget is activated.
-func (cc *RollupBSNController) QueryActivatedHeight(_ context.Context) (uint64, error) {
-	// TODO: implement finality activation feature in rollup
-	return 0, nil
-}
-
 // QueryLatestBlockHeight gets the latest rollup block number from a RPC call
 func (cc *RollupBSNController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
 	l2LatestBlock, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(ethrpc.LatestBlockNumber.Int64()))
