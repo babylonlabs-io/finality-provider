@@ -74,7 +74,7 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 
 	// setup logger
 	config := zap.NewDevelopmentConfig()
-	config.Level = zap.NewAtomicLevelAt(zapcore.Level(zap.ErrorLevel))
+	config.Level = zap.NewAtomicLevelAt(zapcore.Level(zap.WarnLevel))
 	logger, err := config.Build()
 	require.NoError(t, err)
 
@@ -494,7 +494,9 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	fpCfg := ctm.ConsumerFpApp.GetConfig()
 	fpStore := ctm.ConsumerFpApp.GetFinalityProviderStore()
 	pubRandStore := ctm.ConsumerFpApp.GetPubRandProofStore()
-	bc := ctm.BabylonFpApp.GetBabylonController()
+	// Use the Consumer FP App's own Babylon controller, not the Babylon App's controller
+	// This ensures proper connection lifecycle management
+	bc := ctm.ConsumerFpApp.GetBabylonController()
 
 	fpMetrics := metrics.NewFpMetrics()
 	poller := service.NewChainPoller(ctm.logger, fpCfg.PollerConfig, ctm.RollupBSNController, fpMetrics)
@@ -597,4 +599,30 @@ func (ctm *OpL2ConsumerTestManager) WaitForFpPubRandTimestamped(t *testing.T, fp
 	t.Logf("last finalized epoch: %d", res.RawCheckpoint.EpochNum)
 
 	t.Logf("public randomness is successfully timestamped, last finalized epoch: %d", currentEpoch)
+}
+
+// WaitForNRollupBlocks waits for the rollup chain to produce N more blocks
+// This is the BSN equivalent of the Babylon test's WaitForNBlocks function
+func (ctm *OpL2ConsumerTestManager) WaitForNRollupBlocks(t *testing.T, n int) uint64 {
+	beforeHeight, err := ctm.RollupBSNController.QueryLatestBlockHeight(context.Background())
+	require.NoError(t, err)
+
+	var afterHeight uint64
+	require.Eventually(t, func() bool {
+		height, err := ctm.RollupBSNController.QueryLatestBlockHeight(context.Background())
+		if err != nil {
+			t.Logf("Failed to query latest rollup block height: %v", err)
+			return false
+		}
+
+		if height >= uint64(n)+beforeHeight {
+			afterHeight = height
+			return true
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime,
+		fmt.Sprintf("rollup chain should produce %d more blocks", n))
+
+	t.Logf("Rollup chain produced %d blocks: %d -> %d", n, beforeHeight, afterHeight)
+	return afterHeight
 }

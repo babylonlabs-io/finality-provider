@@ -516,6 +516,10 @@ func convertProof(cmtProof cmtcrypto.Proof) Proof {
 func (cc *RollupBSNController) Close() error {
 	cc.ethClient.Close()
 
+	if !cc.bbnClient.IsRunning() {
+		return nil
+	}
+
 	if err := cc.bbnClient.Stop(); err != nil {
 		return fmt.Errorf("failed to stop Babylon client: %w", err)
 	}

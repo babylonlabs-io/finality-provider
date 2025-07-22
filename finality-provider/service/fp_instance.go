@@ -119,6 +119,7 @@ func newFinalityProviderInstanceFromStore(
 }
 
 func (fp *FinalityProviderInstance) Start() error {
+	fmt.Println("Starting finality provider instance", fp.GetBtcPkHex())
 	if fp.isStarted.Swap(true) {
 		return fmt.Errorf("the finality-provider instance %s is already started", fp.GetBtcPkHex())
 	}
@@ -155,6 +156,7 @@ func (fp *FinalityProviderInstance) Start() error {
 }
 
 func (fp *FinalityProviderInstance) Stop() error {
+	fmt.Println("Stopping finality provider instance", fp.GetBtcPkHex())
 	if !fp.isStarted.Swap(false) {
 		return fmt.Errorf("the finality-provider %s has already stopped", fp.GetBtcPkHex())
 	}
