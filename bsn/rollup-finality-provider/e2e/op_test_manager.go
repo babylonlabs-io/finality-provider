@@ -634,19 +634,19 @@ func (ctm *OpL2ConsumerTestManager) WaitForFpPubRandTimestamped(t *testing.T, fp
 // WaitForNRollupBlocks waits for the rollup chain to produce N more blocks
 // This is the BSN equivalent of the Babylon test's WaitForNBlocks function
 func (ctm *OpL2ConsumerTestManager) WaitForNRollupBlocks(t *testing.T, n int) uint64 {
-	beforeHeight, err := ctm.RollupBSNController.QueryLatestBlockHeight(context.Background())
+	beforeHeight, err := ctm.RollupBSNController.QueryLatestBlock(context.Background())
 	require.NoError(t, err)
 
 	var afterHeight uint64
 	require.Eventually(t, func() bool {
-		height, err := ctm.RollupBSNController.QueryLatestBlockHeight(context.Background())
+		height, err := ctm.RollupBSNController.QueryLatestBlock(context.Background())
 		if err != nil {
 			t.Logf("Failed to query latest rollup block height: %v", err)
 			return false
 		}
 
-		if height >= uint64(n)+beforeHeight {
-			afterHeight = height
+		if height.GetHeight() >= uint64(n)+beforeHeight.GetHeight() {
+			afterHeight = height.GetHeight()
 			return true
 		}
 		return false

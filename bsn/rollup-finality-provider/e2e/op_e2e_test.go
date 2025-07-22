@@ -2,14 +2,10 @@ package e2e
 
 import (
 	"context"
-	"encoding/hex"
-	"encoding/json"
 	"math/rand"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/stretchr/testify/require"

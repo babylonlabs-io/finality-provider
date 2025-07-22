@@ -5,6 +5,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
+	"strings"
+	"time"
+
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
@@ -15,9 +19,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"go.uber.org/zap"
-	"math"
-	"strings"
-	"time"
 )
 
 var _ types.FinalitySignatureSubmitter = (*DefaultFinalitySubmitter)(nil)
@@ -166,6 +167,10 @@ func (ds *DefaultFinalitySubmitter) filterBlocksForVoting(ctx context.Context, b
 //  1. the input blocks should be in the ascending order of height
 //  2. the returned response could be nil due to no transactions might be made in the end
 func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Context, blocks []types.BlockDescription) (*types.TxResponse, error) {
+	fmt.Println("DEBUG: Submitting finality signature to the consumer chain")
+	// print length of blocks
+	fmt.Println("DEBUG: Length of blocks", len(blocks))
+
 	if len(blocks) == 0 {
 		return nil, fmt.Errorf("cannot send signatures for empty blocks")
 	}
@@ -191,8 +196,13 @@ func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 	// Retry loop with internal retry logic
 	for {
 		// Attempt submission
+		fmt.Println("DEBUG: Attempting submission")
+		// print first and last block height
+		fmt.Println("DEBUG: First block height", blocks[0].GetHeight())
+		fmt.Println("DEBUG: Last block height", blocks[len(blocks)-1].GetHeight())
 		res, err := ds.submitBatchFinalitySignaturesOnce(ctx, blocks)
 		if err != nil {
+			fmt.Println("DEBUG: Error", err)
 			ds.logger.Debug(
 				"failed to submit finality signature to the consumer chain",
 				zap.String("pk", ds.getBtcPkHex()),
