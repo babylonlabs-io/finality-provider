@@ -10,17 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/babylonlabs-io/finality-provider/metrics"
-
-	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
-
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
-	sdkkeyring "github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/require"
-
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
@@ -29,9 +22,13 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/keyring"
+	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/babylonlabs-io/finality-provider/util"
+	sdkkeyring "github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -183,7 +180,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 
 		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryLatestFinalizedBlock(gomock.Any()).Return(nil, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryLatestBlockHeight(gomock.Any()).Return(currentHeight, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlock(gomock.Any()).Return(types.NewBlockInfo(currentHeight, testutil.GenRandomByteArray(r, 32), false), nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryBlock(gomock.Any(), gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
 
 		noVotingPowerTable := r.Int31n(10) > 5
@@ -191,10 +188,10 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 			allowedErr := fmt.Sprintf("failed to query Finality Voting Power at Height %d: rpc error: code = Unknown desc = %s: unknown request",
 				currentHeight, finalitytypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", currentHeight).Error())
 			mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-			mockConsumerController.EXPECT().QueryActivatedHeight(gomock.Any()).Return(uint64(0), errors.New(allowedErr)).AnyTimes()
+			mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(uint64(0), errors.New(allowedErr)).AnyTimes()
 		} else {
 			mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
-			mockConsumerController.EXPECT().QueryActivatedHeight(gomock.Any()).Return(currentHeight, nil).AnyTimes()
+			mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(currentHeight, nil).AnyTimes()
 		}
 		mockConsumerController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any(), gomock.Any()).Return(uint64(0), nil).AnyTimes()
 		var isSlashedOrJailed int
@@ -271,13 +268,12 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 
 		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryLatestFinalizedBlock(gomock.Any()).Return(nil, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryLatestBlockHeight(gomock.Any()).Return(currentHeight, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlock(gomock.Any()).Return(types.NewBlockInfo(currentHeight, testutil.GenRandomByteArray(r, 32), false), nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
 
 		// set voting power to be positive so that the fp should eventually become ACTIVE
 		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryActivatedHeight(gomock.Any()).Return(uint64(1), nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(&api.FinalityProviderStatusResponse{
 			Slashed: false,
 			Jailed:  true,

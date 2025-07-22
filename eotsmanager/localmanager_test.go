@@ -1,7 +1,6 @@
 package eotsmanager_test
 
 import (
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -10,13 +9,13 @@ import (
 	"github.com/babylonlabs-io/babylon/v3/crypto/eots"
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/types"
+	fplog "github.com/babylonlabs-io/finality-provider/log"
 	"github.com/babylonlabs-io/finality-provider/testutil"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/stretchr/testify/require"
 )
 
 // FuzzCreateKey tests the creation of an EOTS key
@@ -46,7 +45,9 @@ func FuzzCreateKey(f *testing.F) {
 			require.NoError(t, err)
 		}()
 
-		lm, err := eotsmanager.NewLocalEOTSManager(homeDir, eotsCfg.KeyringBackend, dbBackend, zap.NewNop())
+		logger, err := fplog.NewDevLogger()
+		require.NoError(t, err)
+		lm, err := eotsmanager.NewLocalEOTSManager(homeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
 
 		fpPk, err := lm.CreateKey(fpName, passphrase)
@@ -95,7 +96,9 @@ func FuzzCreateRandomnessPairList(f *testing.F) {
 			require.NoError(t, err)
 		}()
 		require.NoError(t, err)
-		lm, err := eotsmanager.NewLocalEOTSManager(homeDir, eotsCfg.KeyringBackend, dbBackend, zap.NewNop())
+		logger, err := fplog.NewDevLogger()
+		require.NoError(t, err)
+		lm, err := eotsmanager.NewLocalEOTSManager(homeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
 
 		fpPk, err := lm.CreateKey(fpName, passphrase)
@@ -145,7 +148,9 @@ func FuzzSignRecord(f *testing.F) {
 			passphrase = testutil.GenRandomHexStr(r, 8)
 		}
 
-		lm, err := eotsmanager.NewLocalEOTSManager(homeDir, eotsCfg.KeyringBackend, dbBackend, zap.NewNop())
+		logger, err := fplog.NewDevLogger()
+		require.NoError(t, err)
+		lm, err := eotsmanager.NewLocalEOTSManager(homeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
 
 		startHeight := datagen.RandomInt(r, 100)

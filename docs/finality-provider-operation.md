@@ -694,7 +694,9 @@ saves the finality provider information in the database.
 fpd create-finality-provider \
   --chain-id <chain-id> \
   --eots-pk <eots-pk-hex> \
-  --commission-rate 0.05 \
+  --commission-rate 0.1 \
+  --commission-max-rate 0.2 \
+  --commission-max-change-rate 0.01 \
   --key-name finality-provider \
   --moniker "MyFinalityProvider" \
   --website "https://myfinalityprovider.com" \
@@ -711,8 +713,12 @@ Required parameters:
   instance that the finality provider should use. If one is not provided the
   finality provider will request the creation of a new one from the connected
   EOTS manager instance.
-* `--commission`: The commission rate (between 0 and 1) that you'll receive from
-  delegators
+* `--commission-rate`: The initial commission rate percentage (between 0 and 1)
+  that you'll receive from delegators
+* `--commission-max-rate`: The maximum commission rate percentage (between 0 and 1) that
+  you'll receive from delegators
+* `--commission-max-change-rate`: The maximum commission change rate percentage
+  (per day)
 * `--key-name`: The key name in your Babylon Genesis keyring that your finality
   provider will be associated with
 * `--moniker`: A human-readable name for your finality provider
