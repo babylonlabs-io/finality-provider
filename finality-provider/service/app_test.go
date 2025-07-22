@@ -93,8 +93,25 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 			service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
 			service.NewPubRandState(pubRandStore), mockConsumerController, em, logger, fpMetrics)
 		heightDeterminer := service.NewStartHeightDeterminer(mockConsumerController, fpCfg.PollerConfig, logger)
+		fsCfg := service.NewDefaultFinalitySubmitterConfig(
+			fpCfg.MaxSubmissionRetries,
+			fpCfg.ContextSigningHeight,
+			fpCfg.SubmissionRetryInterval,
+		)
+		finalitySubmitter := service.NewDefaultFinalitySubmitter(mockConsumerController, em, rndCommitter.GetPubRandProofList, fsCfg, logger, fpMetrics)
 
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, poller, rndCommitter, heightDeterminer, fpMetrics, fpdb, logger)
+		app, err := service.NewFinalityProviderApp(&fpCfg,
+			mockBabylonController,
+			mockConsumerController,
+			em,
+			poller,
+			rndCommitter,
+			heightDeterminer,
+			finalitySubmitter,
+			fpMetrics,
+			fpdb,
+			logger,
+		)
 		require.NoError(t, err)
 		defer func() {
 			err = fpdb.Close()
@@ -333,8 +350,25 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 			service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
 			service.NewPubRandState(pubRandStore), mockConsumerController, em, logger, fpMetrics)
 		heightDeterminer := service.NewStartHeightDeterminer(mockConsumerController, fpCfg.PollerConfig, logger)
+		fsCfg := service.NewDefaultFinalitySubmitterConfig(
+			fpCfg.MaxSubmissionRetries,
+			fpCfg.ContextSigningHeight,
+			fpCfg.SubmissionRetryInterval,
+		)
+		finalitySubmitter := service.NewDefaultFinalitySubmitter(mockConsumerController, em, rndCommitter.GetPubRandProofList, fsCfg, logger, fpMetrics)
 
-		app, err := service.NewFinalityProviderApp(&fpCfg, mockBabylonController, mockConsumerController, em, poller, rndCommitter, heightDeterminer, fpMetrics, fpdb, logger)
+		app, err := service.NewFinalityProviderApp(&fpCfg,
+			mockBabylonController,
+			mockConsumerController,
+			em,
+			poller,
+			rndCommitter,
+			heightDeterminer,
+			finalitySubmitter,
+			fpMetrics,
+			fpdb,
+			logger,
+		)
 		require.NoError(t, err)
 
 		defer func() {
@@ -431,8 +465,14 @@ func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg
 		service.NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore), consumerCon, em, logger, fpMetrics)
 	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, cfg.PollerConfig, logger)
+	fsCfg := service.NewDefaultFinalitySubmitterConfig(
+		cfg.MaxSubmissionRetries,
+		cfg.ContextSigningHeight,
+		cfg.SubmissionRetryInterval,
+	)
+	finalitySubmitter := service.NewDefaultFinalitySubmitter(consumerCon, em, rndCommitter.GetPubRandProofList, fsCfg, logger, fpMetrics)
 
-	app, err := service.NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, fpMetrics, db, logger)
+	app, err := service.NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, db, logger)
 	require.NoError(t, err)
 
 	// create registered finality-provider

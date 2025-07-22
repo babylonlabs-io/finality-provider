@@ -209,7 +209,7 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 				Height:      block.GetHeight(),
 				PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(req.PubRandList[i]).MustMarshal(),
 				Proof:       convertProof(cmtProof),
-				BlockHash:   block.Hash,
+				BlockHash:   block.GetHash(),
 				Signature:   bbntypes.NewSchnorrEOTSSigFromModNScalar(req.Sigs[i]).MustMarshal(),
 			},
 		}

@@ -424,10 +424,28 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 		service.NewPubRandState(pubRandStore), ctm.RollupBSNController, ctm.ConsumerEOTSClient, ctm.logger, fpMetrics)
 
 	heightDeterminer := service.NewStartHeightDeterminer(ctm.RollupBSNController, fpCfg.PollerConfig, ctm.logger)
+	finalitySubmitter := service.NewDefaultFinalitySubmitter(ctm.RollupBSNController, ctm.ConsumerEOTSClient, rndCommitter.GetPubRandProofList,
+		service.NewDefaultFinalitySubmitterConfig(fpCfg.MaxSubmissionRetries,
+			fpCfg.ContextSigningHeight,
+			fpCfg.SubmissionRetryInterval),
+		ctm.logger, fpMetrics)
 
 	fpInstance, err := service.NewFinalityProviderInstance(
-		consumerFpPk, fpCfg, fpStore, pubRandStore, bc, ctm.RollupBSNController, ctm.ConsumerEOTSClient, poller, rndCommitter, heightDeterminer,
-		fpMetrics, make(chan<- *service.CriticalError), ctm.logger)
+		consumerFpPk,
+		fpCfg,
+		fpStore,
+		pubRandStore,
+		bc,
+		ctm.RollupBSNController,
+		ctm.ConsumerEOTSClient,
+		poller,
+		rndCommitter,
+		heightDeterminer,
+		finalitySubmitter,
+		fpMetrics,
+		make(chan<- *service.CriticalError),
+		ctm.logger,
+	)
 	require.NoError(t, err)
 	return fpInstance
 }

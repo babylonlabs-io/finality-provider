@@ -72,12 +72,22 @@ func NewDefaultRandomnessCommitter(
 	}
 }
 
-func (rc *DefaultRandomnessCommitter) SetBtcPk(btcPk *bbntypes.BIP340PubKey) {
-	rc.btcPk = btcPk
-}
+func (rc *DefaultRandomnessCommitter) Init(btcPk *bbntypes.BIP340PubKey, chainID []byte) error {
+	if btcPk == nil {
+		return fmt.Errorf("btcPk cannot be nil")
+	}
+	if len(chainID) == 0 {
+		return fmt.Errorf("chainID cannot be empty")
+	}
 
-func (rc *DefaultRandomnessCommitter) SetChainID(chainID []byte) {
+	if rc.btcPk != nil && rc.cfg.ChainID != nil {
+		return fmt.Errorf("randomness committer is already initialized with btcPk and chainID")
+	}
+
+	rc.btcPk = btcPk
 	rc.cfg.ChainID = chainID
+
+	return nil
 }
 
 // ShouldCommit determines whether a new randomness commit should be made
@@ -271,4 +281,17 @@ func (rc *DefaultRandomnessCommitter) signPubRandCommit(startHeight uint64, numP
 	}
 
 	return sig, nil
+}
+
+func (rc *DefaultRandomnessCommitter) GetPubRandProofList(height uint64, numPubRand uint64) ([][]byte, error) {
+	proofList, err := rc.pubRandState.getPubRandProofList(rc.btcPk.MustMarshal(), rc.cfg.ChainID, height, numPubRand)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get public randomness proof list: %w", err)
+	}
+
+	if len(proofList) == 0 {
+		return nil, fmt.Errorf("no public randomness proof found for height %d and num %d", height, numPubRand)
+	}
+
+	return proofList, nil
 }

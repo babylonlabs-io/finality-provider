@@ -239,8 +239,14 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 		service.NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore), bcc, eotsCli, tm.logger, fpMetrics)
 	heightDeterminer := service.NewStartHeightDeterminer(bcc, cfg.PollerConfig, tm.logger)
+	fsCfg := service.NewDefaultFinalitySubmitterConfig(
+		cfg.MaxSubmissionRetries,
+		cfg.ContextSigningHeight,
+		cfg.SubmissionRetryInterval,
+	)
+	finalitySubmitter := service.NewDefaultFinalitySubmitter(bcc, eotsCli, rndCommitter.GetPubRandProofList, fsCfg, tm.logger, fpMetrics)
 
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, eotsCli, poller, rndCommitter, heightDeterminer, fpMetrics, fpdb, tm.logger)
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, eotsCli, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, fpdb, tm.logger)
 	require.NoError(t, err)
 	err = fpApp.Start()
 	require.NoError(t, err)
