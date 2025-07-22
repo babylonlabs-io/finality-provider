@@ -213,21 +213,6 @@ func (mr *MockConsumerControllerMockRecorder) GetFpRandCommitContext() *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFpRandCommitContext", reflect.TypeOf((*MockConsumerController)(nil).GetFpRandCommitContext))
 }
 
-// QueryActivatedHeight mocks base method.
-func (m *MockConsumerController) QueryActivatedHeight(ctx context.Context) (uint64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryActivatedHeight", ctx)
-	ret0, _ := ret[0].(uint64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// QueryActivatedHeight indicates an expected call of QueryActivatedHeight.
-func (mr *MockConsumerControllerMockRecorder) QueryActivatedHeight(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryActivatedHeight", reflect.TypeOf((*MockConsumerController)(nil).QueryActivatedHeight), ctx)
-}
-
 // QueryBlock mocks base method.
 func (m *MockConsumerController) QueryBlock(ctx context.Context, height uint64) (types0.BlockDescription, error) {
 	m.ctrl.T.Helper()
@@ -498,21 +483,6 @@ func NewMockBlockQuerier[T types0.BlockDescription](ctrl *gomock.Controller) *Mo
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockBlockQuerier[T]) EXPECT() *MockBlockQuerierMockRecorder[T] {
 	return m.recorder
-}
-
-// QueryActivatedHeight mocks base method.
-func (m *MockBlockQuerier[T]) QueryActivatedHeight(ctx context.Context) (uint64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryActivatedHeight", ctx)
-	ret0, _ := ret[0].(uint64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// QueryActivatedHeight indicates an expected call of QueryActivatedHeight.
-func (mr *MockBlockQuerierMockRecorder[T]) QueryActivatedHeight(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryActivatedHeight", reflect.TypeOf((*MockBlockQuerier[T])(nil).QueryActivatedHeight), ctx)
 }
 
 // QueryBlock mocks base method.

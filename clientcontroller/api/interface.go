@@ -80,9 +80,6 @@ type BlockQuerier[T types.BlockDescription] interface {
 	// QueryLatestBlock queries the tip block of the consumer chain
 	QueryLatestBlock(ctx context.Context) (T, error)
 
-	// QueryActivatedHeight returns the activated height of the consumer chain
-	QueryActivatedHeight(ctx context.Context) (uint64, error)
-
 	// QueryFinalityActivationBlockHeight return the block height when finality voting starts
 	QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error)
 }

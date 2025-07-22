@@ -33,7 +33,7 @@ func PrepareMockedConsumerControllerWithTxHash(t *testing.T, r *rand.Rand, start
 
 	mockConsumerController.EXPECT().Close().Return(nil).AnyTimes()
 	mockConsumerController.EXPECT().QueryLatestBlock(gomock.Any()).Return(types.NewBlockInfo(currentHeight, GenRandomByteArray(r, 32), false), nil).AnyTimes()
-	mockConsumerController.EXPECT().QueryActivatedHeight(gomock.Any()).Return(uint64(1), nil).AnyTimes()
+	mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(uint64(1), nil).AnyTimes()
 
 	// can't return (nil, nil) or `randomnessCommitmentLoop` will fatal (logic added in #454)
 	mockConsumerController.EXPECT().

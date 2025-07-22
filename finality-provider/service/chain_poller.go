@@ -172,9 +172,9 @@ func (cp *ChainPoller) waitForActivation(ctx context.Context) error {
 		case <-cp.quit:
 			return fmt.Errorf("poller shutting down")
 		case <-ticker.C:
-			activatedHeight, err := cp.consumerCon.QueryActivatedHeight(ctx)
+			activatedHeight, err := cp.consumerCon.QueryFinalityActivationBlockHeight(ctx)
 			if err != nil {
-				cp.logger.Debug("BTC staking not yet activated", zap.Error(err))
+				cp.logger.Debug("BTC staking finality is not activated yet", zap.Error(err))
 
 				continue
 			}
@@ -188,7 +188,7 @@ func (cp *ChainPoller) waitForActivation(ctx context.Context) error {
 			}
 			cp.mu.Unlock()
 
-			cp.logger.Info("BTC staking is activated", zap.Uint64("activation_height", activatedHeight))
+			cp.logger.Info("BTC staking finality is activated", zap.Uint64("activation_height", activatedHeight))
 
 			return nil
 		}

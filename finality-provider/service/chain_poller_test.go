@@ -7,16 +7,14 @@ import (
 	"time"
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
-
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/testutil/mocks"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 // FuzzChainPoller_Start tests the poller polling blocks
@@ -37,8 +35,8 @@ func FuzzChainPoller_Start(f *testing.F) {
 		ctl := gomock.NewController(t)
 		mockConsumerController := mocks.NewMockConsumerController(ctl)
 		mockConsumerController.EXPECT().Close().Return(nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryActivatedHeight(ctx).Return(uint64(1), nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryLatestBlock(ctx).Return(currentBlockRes, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(ctx).Return(uint64(1), nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryBlock(ctx, endHeight).Return(currentBlockRes, nil).AnyTimes()
 		pollerCfg := fpcfg.DefaultChainPollerConfig()
 

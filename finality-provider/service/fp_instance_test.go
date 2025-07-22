@@ -8,22 +8,21 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
-
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/require"
-
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/testutil"
+	"github.com/babylonlabs-io/finality-provider/testutil/mocks"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func FuzzCommitPubRandList(f *testing.F) {
@@ -108,19 +107,20 @@ func FuzzDetermineStartHeight(f *testing.F) {
 		lastFinalizedHeight := uint64(r.Int63n(1000) + 1)
 
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
-		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
-		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
+
+		ctl := gomock.NewController(t)
+		mockConsumerController := mocks.NewMockConsumerController(ctl)
 
 		// setup mocks
-		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(context.Background()).Return(finalityActivationHeight, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(finalityActivationHeight, nil).AnyTimes()
 		mockConsumerController.EXPECT().
-			QueryFinalityProviderHighestVotedHeight(context.Background(), gomock.Any()).
+			QueryFinalityProviderHighestVotedHeight(gomock.Any(), gomock.Any()).
 			Return(highestVotedHeight, nil).
 			AnyTimes()
 
 		finalizedBlock := types.NewBlockInfo(lastFinalizedHeight, testutil.GenRandomByteArray(r, 32), false)
-		mockConsumerController.EXPECT().QueryLatestFinalizedBlock(context.Background()).Return(finalizedBlock, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestFinalizedBlock(gomock.Any()).Return(finalizedBlock, nil).AnyTimes()
 
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, false, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
@@ -129,7 +129,10 @@ func FuzzDetermineStartHeight(f *testing.F) {
 		startHeight, err := fpIns.DetermineStartHeight(context.Background())
 		require.NoError(t, err)
 
-		require.Equal(t, startHeight, max(finalityActivationHeight, highestVotedHeight+1, lastFinalizedHeight+1, lastVotedHeight+1))
+		actualLastVotedHeight := fpIns.GetLastVotedHeight()
+		expectedStartHeight := max(max(actualLastVotedHeight, highestVotedHeight, lastFinalizedHeight)+1, finalityActivationHeight)
+
+		require.Equal(t, expectedStartHeight, startHeight)
 	})
 }
 
