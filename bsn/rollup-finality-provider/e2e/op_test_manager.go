@@ -284,13 +284,21 @@ func createRollupFpConfig(
 
 	// fund the consumer FP address
 	t.Logf(log.Prefix("Funding %dubbn to %s"), bbnAddrTopUpAmount, fpBbnKeyInfo.AccAddress.String())
-	_, _, err = manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), fmt.Sprintf("%dubbn", bbnAddrTopUpAmount), "node0")
+	txOut, _, err := manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), fmt.Sprintf("%dubbn", bbnAddrTopUpAmount), "node0")
+	if err != nil {
+		t.Logf("❌ Funding transaction failed: %v", err)
+		t.Logf("📋 Transaction output: %s", txOut.String())
+	} else {
+		t.Logf("✅ Funding transaction submitted successfully")
+		t.Logf("📋 Transaction output: %s", txOut.String())
+	}
 	require.NoError(t, err)
 
 	// check consumer FP address balance
 	require.Eventually(t, func() bool {
 		out, _, err := manager.ExecBabylondCmd(t, []string{"query", "bank", "balances", fpBbnKeyInfo.AccAddress.String(), "--output=json"})
 		if err != nil {
+			t.Logf("❌ Failed to query balance: %v", err)
 			return false
 		}
 		var balances struct {
@@ -300,13 +308,17 @@ func createRollupFpConfig(
 			} `json:"balances"`
 		}
 		if err := json.Unmarshal(out.Bytes(), &balances); err != nil {
+			t.Logf("❌ Failed to unmarshal balance response: %v", err)
 			return false
 		}
+		t.Logf("📊 Current balances: %+v", balances.Balances)
 		for _, bal := range balances.Balances {
 			if bal.Denom == "ubbn" && bal.Amount == fmt.Sprintf("%d", bbnAddrTopUpAmount) {
+				t.Logf("✅ Expected balance found: %s %s", bal.Amount, bal.Denom)
 				return true
 			}
 		}
+		t.Logf("⏳ Expected %d ubbn, checking again...", bbnAddrTopUpAmount)
 		return false
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
