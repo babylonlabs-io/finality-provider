@@ -198,3 +198,107 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 	t.Logf("✅ Duplicate sign protection mechanism working correctly in BSN environment")
 	t.Logf("✅ This validates the FP can recover from network interruptions without double signing")
 }
+
+// TestBSNDoubleSigning tests the attack scenario where the BSN finality-provider
+// sends a finality vote over a conflicting block in the rollup BSN environment
+// In this case, the BTC private key should be extracted by the system
+func TestBSNDoubleSigning(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctm := StartRollupTestManager(t, ctx)
+	defer ctm.Stop(t)
+
+	// Step 1: Setup FPs and activation
+	t.Log("Step 1: Setting up finality providers and BTC delegation")
+	fps := ctm.setupBabylonAndConsumerFp(t)
+	babylonFpPk := fps[0]
+	consumerFpPk := fps[1]
+
+	// Add consumer FP to contract allowlist
+	ctm.addFpToContractAllowlist(t, ctx, consumerFpPk)
+	ctm.delegateBTCAndWaitForActivation(t, babylonFpPk, consumerFpPk)
+
+	// Step 2: Start FP instance and wait for initial operations
+	t.Log("Step 2: Starting FP instance and waiting for operations")
+	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
+	err := consumerFpInstance.Start()
+	require.NoError(t, err)
+
+	// Clean up - ensure we stop the FP instance when test ends
+	t.Cleanup(func() {
+		_ = consumerFpInstance.Stop()
+	})
+
+	// Wait for FP to commit randomness and get it timestamped
+	ctm.WaitForFpPubRandTimestamped(t, consumerFpInstance)
+
+	// Wait for FP to vote on at least one rollup block and for finalization
+	var lastVotedHeight uint64
+	require.Eventually(t, func() bool {
+		if consumerFpInstance.GetLastVotedHeight() > 0 {
+			lastVotedHeight = consumerFpInstance.GetLastVotedHeight()
+			t.Logf("FP voted on rollup block at height: %d", lastVotedHeight)
+			return true
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime, "FP should vote on at least one rollup block")
+
+	t.Logf("The rollup block at height %v is voted on", lastVotedHeight)
+
+	// Step 3: Wait for block finalization - get finalized blocks from the rollup chain
+	t.Log("Step 3: Waiting for block finalization")
+	var finalizedBlock *types.BlockInfo
+	require.Eventually(t, func() bool {
+		// Query the latest finalized block from the rollup chain
+		latestFinalized, err := ctm.RollupBSNController.QueryLatestFinalizedBlock(ctx)
+		if err != nil {
+			t.Logf("Failed to query latest finalized block: %v", err)
+			return false
+		}
+		if latestFinalized != nil && latestFinalized.GetHeight() >= lastVotedHeight {
+			finalizedBlock = types.NewBlockInfo(latestFinalized.GetHeight(), latestFinalized.GetHash(), true)
+			t.Logf("Block at height %d is finalized", finalizedBlock.GetHeight())
+			return true
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime, "Should have at least one finalized block")
+
+	fpTestHelper := consumerFpInstance.NewTestHelper()
+
+	// Step 4: Test duplicate vote which should be ignored
+	t.Log("Step 4: Testing duplicate vote (should be ignored)")
+	res, extractedKey, err := fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, finalizedBlock, false)
+	require.NoError(t, err)
+	require.Nil(t, extractedKey)
+	require.Empty(t, res)
+	t.Logf("Duplicate vote for rollup block %d was properly ignored", finalizedBlock.GetHeight())
+
+	// Step 5: Double signing attack - manually submit a finality vote over a conflicting block
+	// to trigger the extraction of finality-provider's private key
+	t.Log("Step 5: Performing double signing attack with conflicting block")
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	conflictingBlock := types.NewBlockInfo(finalizedBlock.GetHeight(), testutil.GenRandomByteArray(r, 32), false)
+
+	// First confirm we have double sign protection
+	t.Log("Step 5a: Confirming double sign protection is active")
+	_, _, err = fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, conflictingBlock, true)
+	require.Contains(t, err.Error(), "FailedPrecondition", "Double sign protection should prevent conflicting signatures")
+	t.Logf("✅ Double sign protection correctly blocked the conflicting signature")
+
+	// Step 6: Force the double signing attack (bypass protection) and extract private key
+	t.Log("Step 6: Forcing double signing attack to extract private key")
+	_, extractedKey, err = fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, conflictingBlock, false)
+	require.NoError(t, err)
+	require.NotNil(t, extractedKey, "Private key should be extracted from double signing")
+
+	// Verify the extracted key matches the local key
+	localKey := ctm.EOTSServerHandler.GetFPPrivKey(t, consumerFpInstance.GetBtcPkBIP340().MustMarshal())
+	require.True(t, localKey.Key.Equals(&extractedKey.Key) || localKey.Key.Negate().Equals(&extractedKey.Key),
+		"Extracted private key should match the original key (or its negation)")
+
+	t.Log("✅ BSN Double Signing Attack Test Completed Successfully!")
+	t.Logf("✅ Successfully extracted private key from double signing attack")
+	t.Logf("✅ Double sign protection mechanism working correctly in BSN rollup environment")
+	t.Logf("✅ Private key extraction proves the equivocation was detected and handled")
+}
