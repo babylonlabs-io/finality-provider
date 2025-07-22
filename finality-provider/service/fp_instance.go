@@ -112,9 +112,12 @@ func newFinalityProviderInstanceFromStore(
 	btcPk := bbntypes.NewBIP340PubKeyFromBTCPK(sfp.BtcPk)
 	fpState := NewFpState(sfp, s, logger, metrics)
 
-	rndCommitter.SetBtcPk(btcPk)
-	rndCommitter.SetChainID([]byte(sfp.ChainID))
-	finalitySubmitter.SetState(fpState)
+	if err := rndCommitter.Init(btcPk, []byte(sfp.ChainID)); err != nil {
+		return nil, fmt.Errorf("failed to initialize randomness committer: %w", err)
+	}
+	if err := finalitySubmitter.InitState(fpState); err != nil {
+		return nil, fmt.Errorf("failed to initialize finality submitter state: %w", err)
+	}
 
 	return &FinalityProviderInstance{
 		btcPk:             bbntypes.NewBIP340PubKeyFromBTCPK(sfp.BtcPk),
@@ -266,18 +269,7 @@ func (fp *FinalityProviderInstance) processAndSubmitSignatures(ctx context.Conte
 		zap.Uint64("end_height", targetHeight),
 	)
 
-	processedBlocks, err := fp.finalitySubmitter.FilterBlocksForVoting(ctx, pollerBlocks)
-	if err != nil {
-		fp.reportCriticalErr(err)
-
-		return
-	}
-
-	if len(processedBlocks) == 0 {
-		return
-	}
-
-	res, err := fp.finalitySubmitter.SubmitBatchFinalitySignatures(ctx, processedBlocks)
+	res, err := fp.finalitySubmitter.SubmitBatchFinalitySignatures(ctx, pollerBlocks)
 	if err != nil {
 		fp.metrics.IncrementFpTotalFailedVotes(fp.GetBtcPkHex())
 
@@ -432,13 +424,13 @@ func (fp *FinalityProviderInstance) GetLastCommittedHeight(ctx context.Context) 
 // nolint:unused
 func (fp *FinalityProviderInstance) getLatestBlockHeightWithRetry() (uint64, error) {
 	var (
-		latestBlockHeight uint64
-		err               error
+		latestBlock types.BlockDescription
+		err         error
 	)
 
 	if err := retry.Do(func() error {
-		latestBlockHeight, err = fp.consumerCon.QueryLatestBlockHeight(context.Background())
-		if err != nil {
+		latestBlock, err = fp.consumerCon.QueryLatestBlock(context.Background())
+		if latestBlock == nil || err != nil {
 			return fmt.Errorf("failed to query latest block height: %w", err)
 		}
 
@@ -453,9 +445,9 @@ func (fp *FinalityProviderInstance) getLatestBlockHeightWithRetry() (uint64, err
 	})); err != nil {
 		return 0, fmt.Errorf("failed to get latest block height after retries: %w", err)
 	}
-	fp.metrics.RecordBabylonTipHeight(latestBlockHeight)
+	fp.metrics.RecordBabylonTipHeight(latestBlock.GetHeight())
 
-	return latestBlockHeight, nil
+	return latestBlock.GetHeight(), nil
 }
 
 func (fp *FinalityProviderInstance) GetVotingPowerWithRetry(height uint64) (bool, error) {

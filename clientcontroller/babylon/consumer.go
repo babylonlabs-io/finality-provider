@@ -326,15 +326,6 @@ func (bc *BabylonConsumerController) QueryFinalityActivationBlockHeight(_ contex
 	return res.Params.FinalityActivationHeight, nil
 }
 
-func (bc *BabylonConsumerController) QueryActivatedHeight(_ context.Context) (uint64, error) {
-	res, err := bc.bbnClient.QueryClient.ActivatedHeight()
-	if err != nil {
-		return 0, fmt.Errorf("failed to query activated height: %w", err)
-	}
-
-	return res.Height, nil
-}
-
 // QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
 func (bc *BabylonConsumerController) QueryFinalityProviderHighestVotedHeight(_ context.Context, fpPk *btcec.PublicKey) (uint64, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
@@ -346,19 +337,19 @@ func (bc *BabylonConsumerController) QueryFinalityProviderHighestVotedHeight(_ c
 	return uint64(res.FinalityProvider.HighestVotedHeight), nil
 }
 
-func (bc *BabylonConsumerController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
+func (bc *BabylonConsumerController) QueryLatestBlock(ctx context.Context) (types.BlockDescription, error) {
 	blocks, err := bc.queryLatestBlocks(nil, 1, finalitytypes.QueriedBlockStatus_ANY, true)
 	if err != nil || len(blocks) != 1 {
 		// try query comet block if the index block query is not available
 		block, err := bc.queryCometBestBlock(ctx)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 
-		return block.GetHeight(), nil
+		return block, nil
 	}
 
-	return blocks[0].GetHeight(), nil
+	return blocks[0], nil
 }
 
 func (bc *BabylonConsumerController) queryCometBestBlock(ctx context.Context) (*types.BlockInfo, error) {

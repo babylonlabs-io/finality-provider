@@ -72,12 +72,22 @@ func NewDefaultRandomnessCommitter(
 	}
 }
 
-func (rc *DefaultRandomnessCommitter) SetBtcPk(btcPk *bbntypes.BIP340PubKey) {
-	rc.btcPk = btcPk
-}
+func (rc *DefaultRandomnessCommitter) Init(btcPk *bbntypes.BIP340PubKey, chainID []byte) error {
+	if btcPk == nil {
+		return fmt.Errorf("btcPk cannot be nil")
+	}
+	if len(chainID) == 0 {
+		return fmt.Errorf("chainID cannot be empty")
+	}
 
-func (rc *DefaultRandomnessCommitter) SetChainID(chainID []byte) {
+	if rc.btcPk != nil && rc.cfg.ChainID != nil {
+		return fmt.Errorf("randomness committer is already initialized with btcPk and chainID")
+	}
+
+	rc.btcPk = btcPk
 	rc.cfg.ChainID = chainID
+
+	return nil
 }
 
 // ShouldCommit determines whether a new randomness commit should be made
@@ -91,8 +101,8 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 		return false, 0, fmt.Errorf("failed to get last committed height: %w", err)
 	}
 
-	tipHeight, err := rc.consumerCon.QueryLatestBlockHeight(ctx)
-	if err != nil {
+	tipBlock, err := rc.consumerCon.QueryLatestBlock(ctx)
+	if tipBlock == nil || err != nil {
 		return false, 0, fmt.Errorf("failed to get the last block: %w", err)
 	}
 
@@ -101,7 +111,7 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 	}
 
 	// #nosec G115
-	tipHeightWithDelay := tipHeight + uint64(rc.cfg.TimestampingDelayBlocks)
+	tipHeightWithDelay := tipBlock.GetHeight() + uint64(rc.cfg.TimestampingDelayBlocks)
 
 	var startHeight uint64
 	switch {
@@ -116,7 +126,7 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 		rc.logger.Debug(
 			"the finality-provider has sufficient public randomness, skip committing more",
 			zap.String("pk", rc.btcPk.MarshalHex()),
-			zap.Uint64("tip_height", tipHeight),
+			zap.Uint64("tip_height", tipBlock.GetHeight()),
 			zap.Uint64("last_committed_height", lastCommittedHeight),
 		)
 
@@ -126,7 +136,7 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 	rc.logger.Debug(
 		"the finality-provider should commit randomness",
 		zap.String("pk", rc.btcPk.MarshalHex()),
-		zap.Uint64("tip_height", tipHeight),
+		zap.Uint64("tip_height", tipBlock.GetHeight()),
 		zap.Uint64("last_committed_height", lastCommittedHeight),
 	)
 
