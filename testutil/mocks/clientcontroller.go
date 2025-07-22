@@ -333,19 +333,19 @@ func (mr *MockConsumerControllerMockRecorder) QueryLastPublicRandCommit(ctx, fpP
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryLastPublicRandCommit", reflect.TypeOf((*MockConsumerController)(nil).QueryLastPublicRandCommit), ctx, fpPk)
 }
 
-// QueryLatestBlockHeight mocks base method.
-func (m *MockConsumerController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
+// QueryLatestBlock mocks base method.
+func (m *MockConsumerController) QueryLatestBlock(ctx context.Context) (types0.BlockDescription, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryLatestBlockHeight", ctx)
-	ret0, _ := ret[0].(uint64)
+	ret := m.ctrl.Call(m, "QueryLatestBlock", ctx)
+	ret0, _ := ret[0].(types0.BlockDescription)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// QueryLatestBlockHeight indicates an expected call of QueryLatestBlockHeight.
-func (mr *MockConsumerControllerMockRecorder) QueryLatestBlockHeight(ctx any) *gomock.Call {
+// QueryLatestBlock indicates an expected call of QueryLatestBlock.
+func (mr *MockConsumerControllerMockRecorder) QueryLatestBlock(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryLatestBlockHeight", reflect.TypeOf((*MockConsumerController)(nil).QueryLatestBlockHeight), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryLatestBlock", reflect.TypeOf((*MockConsumerController)(nil).QueryLatestBlock), ctx)
 }
 
 // QueryLatestFinalizedBlock mocks base method.
@@ -545,19 +545,19 @@ func (mr *MockBlockQuerierMockRecorder[T]) QueryIsBlockFinalized(ctx, height any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryIsBlockFinalized", reflect.TypeOf((*MockBlockQuerier[T])(nil).QueryIsBlockFinalized), ctx, height)
 }
 
-// QueryLatestBlockHeight mocks base method.
-func (m *MockBlockQuerier[T]) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
+// QueryLatestBlock mocks base method.
+func (m *MockBlockQuerier[T]) QueryLatestBlock(ctx context.Context) (T, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryLatestBlockHeight", ctx)
-	ret0, _ := ret[0].(uint64)
+	ret := m.ctrl.Call(m, "QueryLatestBlock", ctx)
+	ret0, _ := ret[0].(T)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// QueryLatestBlockHeight indicates an expected call of QueryLatestBlockHeight.
-func (mr *MockBlockQuerierMockRecorder[T]) QueryLatestBlockHeight(ctx any) *gomock.Call {
+// QueryLatestBlock indicates an expected call of QueryLatestBlock.
+func (mr *MockBlockQuerierMockRecorder[T]) QueryLatestBlock(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryLatestBlockHeight", reflect.TypeOf((*MockBlockQuerier[T])(nil).QueryLatestBlockHeight), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryLatestBlock", reflect.TypeOf((*MockBlockQuerier[T])(nil).QueryLatestBlock), ctx)
 }
 
 // QueryLatestFinalizedBlock mocks base method.

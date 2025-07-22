@@ -8,15 +8,17 @@
 - [Keywords](#keywords)
 - [Types of Integration](#types-of-integration)
 - [Specification](#specification)
-  - [**Expected behavior of the Finality Provider Adapter:**](#expected-behavior-of-the-finality-provider-adapter)
+  - [Consumer Controller Interface](#consumer-controller-interface)
+  - [Randomness Committer Interface](#randomness-committer-interface)
+  - [Block Querier Interface](#block-querier-interface)
+  - [Finality Operator Interface](#finality-operator-interface)
+  - [Request and Response Types](#request-and-response-types)
+  - [Expected behavior of the Finality Provider Adapter](#expected-behavior-of-the-finality-provider-adapter)
   - [**Start Height Determination Logic:**](#start-height-determination-logic)
 - [Implementation status](#implementation-status)
 
 ## Changelog
 
-- 15-01-2025: Updated interface signatures to match actual implementation,
-  clarified start height determination algorithm, updated method names to align
-  with codebase
 - 05-06-2025: Initial draft.
 
 ## Abstract
@@ -92,7 +94,7 @@ provider program:
 
 What we define here is a standard interface that the finality provider program
 must implement, which defines the interaction with Babylon-integrated chains and
-rollups. 
+rollups.
 
 In this way, the finality provider program can be reused across different
 blockchains, while allowing each chain or rollup to implement only the specific
@@ -176,10 +178,148 @@ type ConsumerQueries interface {
 }
 ```
 
-### **Expected behavior of the Finality Provider Adapter:** 
+### Consumer Controller Interface
+
+The main interface that consumer chains must implement. It combines three sub-interfaces:
+
+```go
+type ConsumerController interface {
+    RandomnessCommitter
+    BlockQuerier[types.BlockDescription]
+    FinalityOperator
+
+    Close() error
+}
+```
+
+### Randomness Committer Interface
+
+Handles public randomness commitment operations:
+
+```go
+type RandomnessCommitter interface {
+    // MUST: Core randomness commitment
+    // GetFpRandCommitContext returns the signing context for public randomness commitment
+    GetFpRandCommitContext() string
+
+    // MUST: Core randomness commitment
+    // CommitPubRandList commits a list of EOTS public randomness to the consumer chain
+    CommitPubRandList(ctx context.Context, req *CommitPubRandListRequest) (*types.TxResponse, error)
+
+    // MUST: Core randomness commitment
+    // QueryLastPublicRandCommit returns the last public randomness commitment
+    QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*types.PubRandCommit, error)
+}
+```
+
+### Block Querier Interface
+
+Handles block-related queries (generic over BlockDescription):
+
+```go
+type BlockQuerier[T types.BlockDescription] interface {
+    // MUST: Core block queries
+    // QueryLatestFinalizedBlock returns the latest finalized block
+    QueryLatestFinalizedBlock(ctx context.Context) (T, error)
+
+    // MUST: Core block queries
+    // QueryBlock queries the block at the given height
+    QueryBlock(ctx context.Context, height uint64) (T, error)
+
+    // MUST: Core block queries
+    // QueryLatestBlock queries the tip block of the consumer chain
+    QueryLatestBlock(ctx context.Context) (T, error)
+
+    // MUST: Core block queries
+    // QueryActivatedHeight returns the activated height of the consumer chain
+    QueryActivatedHeight(ctx context.Context) (uint64, error)
+
+    // MUST: Core block queries
+    // QueryFinalityActivationBlockHeight returns the block height when finality voting starts
+    QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error)
+
+    // SHOULD: Convenience block queries
+    // QueryIsBlockFinalized queries if the block at the given height is finalized
+    QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error)
+
+    // SHOULD: Convenience block queries
+    // QueryBlocks returns a list of blocks from startHeight to endHeight
+    QueryBlocks(ctx context.Context, req *QueryBlocksRequest) ([]T, error)
+}
+```
+
+### Finality Operator Interface
+
+Handles finality signature submission operations:
+
+```go
+type FinalityOperator interface {
+    // MUST: Core finality operations
+    // GetFpFinVoteContext returns the signing context for finality vote
+    GetFpFinVoteContext() string
+
+    // MUST: Core finality operations
+    // SubmitBatchFinalitySigs submits a batch of finality signatures to the consumer chain
+    SubmitBatchFinalitySigs(ctx context.Context, req *SubmitBatchFinalitySigsRequest) (*types.TxResponse, error)
+
+    // MUST: Core finality operations
+    // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
+    QueryFinalityProviderHasPower(ctx context.Context, req *QueryFinalityProviderHasPowerRequest) (bool, error)
+
+    // MUST: Core finality operations
+    // QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
+    QueryFinalityProviderHighestVotedHeight(ctx context.Context, fpPk *btcec.PublicKey) (uint64, error)
+
+    // SHOULD: Convenience finality operations
+    // UnjailFinalityProvider sends an unjail transaction to the consumer chain
+    UnjailFinalityProvider(ctx context.Context, fpPk *btcec.PublicKey) (*types.TxResponse, error)
+
+    // SHOULD: Convenience finality operations
+    // QueryFinalityProviderStatus queries the finality provider status
+    QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*FinalityProviderStatusResponse, error)
+}
+```
+
+### Request and Response Types
+
+```go
+type CommitPubRandListRequest struct {
+    FpPk        *btcec.PublicKey
+    StartHeight uint64
+    NumPubRand  uint64
+    Commitment  []byte
+    Sig         *schnorr.Signature
+}
+
+type SubmitBatchFinalitySigsRequest struct {
+    FpPk        *btcec.PublicKey
+    Blocks      []*types.BlockInfo
+    PubRandList []*btcec.FieldVal
+    ProofList   [][]byte
+    Sigs        []*btcec.ModNScalar
+}
+
+type QueryBlocksRequest struct {
+    StartHeight uint64
+    EndHeight   uint64
+    Limit       uint32
+}
+
+type QueryFinalityProviderHasPowerRequest struct {
+    FpPk        *btcec.PublicKey
+    BlockHeight uint64
+}
+
+type FinalityProviderStatusResponse struct {
+    Slashed bool
+    Jailed  bool
+}
+```
+
+### Expected behavior of the Finality Provider Adapter
 
 The finality provider adapter is expected to implement the `ConsumerController`
-and `ConsumerQueries` interfaces, which define the interaction with the Consumer
+interface and its sub-interfaces, which define the interaction with the Consumer
 chain. The adapter should handle the following behaviors:
 
 1. **Commit public randomness**: The adapter should be able to commit a list of

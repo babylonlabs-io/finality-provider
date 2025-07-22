@@ -353,6 +353,15 @@ func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight(ctx con
 	return resp.Height, nil
 }
 
+func (wc *CosmwasmConsumerController) QueryLatestBlock(ctx context.Context) (fptypes.BlockDescription, error) {
+	block, err := wc.queryCometBestBlock(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return block, nil
+}
+
 func (wc *CosmwasmConsumerController) QueryFinalityProviderHighestVotedHeight(_ context.Context, _ *btcec.PublicKey) (uint64, error) {
 	// TODO: implement highest voted height feature in OP stack L2
 	return 0, nil

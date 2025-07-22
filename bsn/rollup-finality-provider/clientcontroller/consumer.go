@@ -428,13 +428,13 @@ func (cc *RollupBSNController) QueryIsBlockFinalized(ctx context.Context, height
 }
 
 // QueryLatestBlockHeight gets the latest rollup block number from a RPC call
-func (cc *RollupBSNController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
+func (cc *RollupBSNController) QueryLatestBlock(ctx context.Context) (types.BlockDescription, error) {
 	l2LatestBlock, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(ethrpc.LatestBlockNumber.Int64()))
 	if err != nil {
-		return 0, fmt.Errorf("failed to get latest block header: %w", err)
+		return nil, fmt.Errorf("failed to get latest block header: %w", err)
 	}
 
-	return l2LatestBlock.Number.Uint64(), nil
+	return types.NewBlockInfo(l2LatestBlock.Number.Uint64(), l2LatestBlock.Hash().Bytes(), false), nil
 }
 
 // QueryLastPublicRandCommit returns the last public randomness commitments

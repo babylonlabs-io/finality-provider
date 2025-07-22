@@ -389,18 +389,19 @@ func (tm *TestManager) WaitForFpVoteCastAtHeight(t *testing.T, fpIns *service.Fi
 }
 
 func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
-	blockBeforeStop, err := tm.BBNConsumerClient.QueryLatestBlockHeight(context.Background())
+	blockBeforeStop, err := tm.BBNConsumerClient.QueryLatestBlock(context.Background())
+	require.NotNil(t, blockBeforeStop)
 	require.NoError(t, err)
 	err = fpIns.Stop()
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		headerAfterStop, err := tm.BBNConsumerClient.QueryLatestBlockHeight(context.Background())
-		if err != nil {
+		headerAfterStop, err := tm.BBNConsumerClient.QueryLatestBlock(context.Background())
+		if headerAfterStop == nil || err != nil {
 			return false
 		}
 
-		return headerAfterStop >= uint64(n)+blockBeforeStop
+		return headerAfterStop.GetHeight() >= uint64(n)+blockBeforeStop.GetHeight()
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	t.Log("restarting the finality-provider instance")
@@ -410,18 +411,19 @@ func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *
 }
 
 func (tm *TestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
-	beforeHeight, err := tm.BBNConsumerClient.QueryLatestBlockHeight(context.Background())
+	beforeHeight, err := tm.BBNConsumerClient.QueryLatestBlock(context.Background())
+	require.NotNil(t, beforeHeight)
 	require.NoError(t, err)
 
 	var afterHeight uint64
 	require.Eventually(t, func() bool {
-		height, err := tm.BBNConsumerClient.QueryLatestBlockHeight(context.Background())
-		if err != nil {
+		block, err := tm.BBNConsumerClient.QueryLatestBlock(context.Background())
+		if block == nil || err != nil {
 			return false
 		}
 
-		if height >= uint64(n)+beforeHeight {
-			afterHeight = height
+		if block.GetHeight() >= uint64(n)+beforeHeight.GetHeight() {
+			afterHeight = block.GetHeight()
 			return true
 		}
 
