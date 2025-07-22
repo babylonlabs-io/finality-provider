@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+
 	"cosmossdk.io/math"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -78,9 +79,6 @@ type BlockQuerier[T types.BlockDescription] interface {
 
 	// QueryLatestBlockHeight queries the tip block height of the consumer chain
 	QueryLatestBlockHeight(ctx context.Context) (uint64, error)
-
-	// QueryActivatedHeight returns the activated height of the consumer chain
-	QueryActivatedHeight(ctx context.Context) (uint64, error)
 
 	// QueryFinalityActivationBlockHeight return the block height when finality voting starts
 	QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error)

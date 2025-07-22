@@ -174,10 +174,10 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 			allowedErr := fmt.Sprintf("failed to query Finality Voting Power at Height %d: rpc error: code = Unknown desc = %s: unknown request",
 				currentHeight, finalitytypes.ErrVotingPowerTableNotUpdated.Wrapf("height: %d", currentHeight).Error())
 			mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-			mockConsumerController.EXPECT().QueryActivatedHeight(gomock.Any()).Return(uint64(0), errors.New(allowedErr)).AnyTimes()
+			mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(uint64(0), errors.New(allowedErr)).AnyTimes()
 		} else {
 			mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
-			mockConsumerController.EXPECT().QueryActivatedHeight(gomock.Any()).Return(currentHeight, nil).AnyTimes()
+			mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(currentHeight, nil).AnyTimes()
 		}
 		mockConsumerController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any(), gomock.Any()).Return(uint64(0), nil).AnyTimes()
 		var isSlashedOrJailed int
@@ -260,7 +260,6 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		// set voting power to be positive so that the fp should eventually become ACTIVE
 		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryActivatedHeight(gomock.Any()).Return(uint64(1), nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(&api.FinalityProviderStatusResponse{
 			Slashed: false,
 			Jailed:  true,

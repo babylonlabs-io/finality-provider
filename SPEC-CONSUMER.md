@@ -9,10 +9,14 @@
 - [Types of Integration](#types-of-integration)
 - [Specification](#specification)
   - [**Expected behavior of the Finality Provider Adapter:**](#expected-behavior-of-the-finality-provider-adapter)
+  - [**Start Height Determination Logic:**](#start-height-determination-logic)
 - [Implementation status](#implementation-status)
 
 ## Changelog
 
+- 15-01-2025: Updated interface signatures to match actual implementation,
+  clarified start height determination algorithm, updated method names to align
+  with codebase
 - 05-06-2025: Initial draft.
 
 ## Abstract
@@ -44,13 +48,14 @@ and [OP Stack integration
 
 ### The role of the finality provider
 
-The finality provider is a fundamental component in the architecture of Babylon's
-Bitcoin staking protocol. It is responsible for providing finality signatures
-for blocks in the Babylon chain and other BSNs, based on the BTC stake delegated
-to it by BTC stakers. The finality provider's role includes:
+The finality provider is a fundamental component in the architecture of
+Babylon's Bitcoin staking protocol. It is responsible for providing finality
+signatures for blocks in the Babylon chain and other BSNs, based on the BTC
+stake delegated to it by BTC stakers. The finality provider's role includes:
 
 1. Generating public randomness commitments for the BTC stake it holds.
-2. Submitting finality signatures for blocks in the Babylon chain and other BSNs.
+2. Submitting finality signatures for blocks in the Babylon chain and other
+   BSNs.
 
 ## Keywords
 
@@ -71,15 +76,15 @@ provider program:
 2. **Cosmos-based chains**: Cosmos-based chains, such as Osmosis, Neutron, and
    others, can implement the finality provider program to generate public
    randomness commitments and submit finality signatures for blocks in their
-   respective chains.
-   In this case, the finality provider program will interact with the Staking
-   integration module. That is, by integrating the babylon module (i.e. the
-   `babylon-sdk`) into their stack.
+   respective chains. In this case, the finality provider program will interact
+   with the Staking integration module. That is, by integrating the babylon
+   module (i.e. the `babylon-sdk`) into their stack.
 3. **Ethereum rollups**: Ethereum rollups, such as OP Stack and Arbitrum Orbit,
    can implement the finality provider program to generate public randomness
    commitments and submit finality signatures for blocks in their respective
    rollups. These commitments and signatures will be stored in the Babylon chain
-   through rollup finality contracts (implemented using variants of [`rollup-bsn-contracts`](https://github.com/babylonlabs-io/rollup-bsn-contracts).
+   through rollup finality contracts (implemented using variants of
+   [`rollup-bsn-contracts`](https://github.com/babylonlabs-io/rollup-bsn-contracts).
    See `SPEC.md` in that repository for details), and used to provide finality
    for the rollup blocks.
 
@@ -96,6 +101,15 @@ components that are relevant to its architecture.
 The specification distinguishes between required ("MUST") and recommended
 ("SHOULD") components.
 
+**Block Abstraction:** The interfaces use `types.BlockDescription` as an
+abstraction for blocks, allowing different consumer chains to implement their
+own block representations while maintaining a consistent interface. This
+abstraction supports:
+
+- Different block formats across chain types (Cosmos, Ethereum rollups, etc.)
+- Consistent block processing logic in the finality provider core
+- Extensibility for future blockchain architectures
+
 ```go
 /*
     The following functions are used for submitting messages to the Consumer chain
@@ -104,19 +118,17 @@ type ConsumerController interface {
     // MUST: Core messages
     // CommitPubRandList commits a list of EOTS public randomness to the consumer chain.
     // It returns tx hash and error
-    CommitPubRandList(fpPk *btcec.PublicKey, startHeight uint64, numPubRand uint64, commitment []byte, sig *schnorr.Signature) (*types.TxResponse, error)
+    CommitPubRandList(ctx context.Context, req *CommitPubRandListRequest) (*types.TxResponse, error)
 
-    // MUST: Core messages
-    // SubmitFinalitySig submits the finality signature to the consumer chain
-    SubmitFinalitySig(fpPk *btcec.PublicKey, block *types.BlockInfo, pubRand *btcec.FieldVal, proof []byte, sig *btcec.ModNScalar) (*types.TxResponse, error)
-
-    // SHOULD: Convenience messages
     // SubmitBatchFinalitySigs submit a batch of finality signatures to the consumer chain
-    SubmitBatchFinalitySigs(fpPk *btcec.PublicKey, blocks []*types.BlockInfo, pubRandList []*btcec.FieldVal, proofList [][]byte, sigs []*btcec.ModNScalar) (*types.TxResponse, error)
+    SubmitBatchFinalitySigs(ctx context.Context, req *SubmitBatchFinalitySigsRequest) (*types.TxResponse, error)
+
+    // Close closes the connection to the consumer chain
+    Close() error
 
     // SHOULD: Core messages
     // UnjailFinalityProvider sends an unjail transaction to the consumer chain
-    UnjailFinalityProvider(fpPk *btcec.PublicKey) (*types.TxResponse, error)
+    UnjailFinalityProvider(ctx context.Context, fpPk *btcec.PublicKey) (*types.TxResponse, error)
 }
 
 /*
@@ -126,51 +138,41 @@ type ConsumerQueries interface {
     // MUST: Core finality queries
     // QueryFinalityProviderHasPower queries whether the finality provider has
     // voting power at a given height
-    QueryFinalityProviderHasPower(fpPk *btcec.PublicKey, blockHeight uint64) (bool, error)
+    QueryFinalityProviderHasPower(ctx context.Context, req *QueryFinalityProviderHasPowerRequest) (bool, error)
 
-    // MUST: Core finality queries
     // QueryLatestFinalizedBlock returns the latest finalized block.
     // Note: nil will be returned if the finalized block does not exist
-    QueryLatestFinalizedBlock() (*types.BlockInfo, error)
+    QueryLatestFinalizedBlock(ctx context.Context) (types.BlockDescription, error)
 
-    // MUST: Core finality queries
     // QueryFinalityProviderHighestVotedHeight queries the highest voted height 
     // of the given finality provider
-    QueryFinalityProviderHighestVotedHeight(fpPk *btcec.PublicKey) (uint64, error)
+    QueryFinalityProviderHighestVotedHeight(ctx context.Context, fpPk *btcec.PublicKey) (uint64, error)
 
-    // MUST: Core finality queries
     // QueryLastPublicRandCommit returns the last public randomness commitment
-    QueryLastPublicRandCommit(fpPk *btcec.PublicKey) (*types.PubRandCommit, error)
+    QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*types.PubRandCommit, error)
 
-    // MUST: Core finality queries
     // QueryBlock queries the block at the given height
-    QueryBlock(height uint64) (*types.BlockInfo, error)
+    QueryBlock(ctx context.Context, height uint64) (types.BlockDescription, error)
 
-    // MUST: Core finality queries
     // QueryLatestBlockHeight queries the tip block height of the consumer chain
-    QueryLatestBlockHeight() (uint64, error)
+    QueryLatestBlockHeight(ctx context.Context) (uint64, error)
 
-    // MUST: Core finality queries
-    // QueryActivatedHeight returns the activated height of the consumer chain.
+    // QueryFinalityActivationBlockHeight returns the finality activation height of the consumer chain.
+    // This is the minimum height from which the finality provider can start voting.
     // Error will be returned if the consumer chain has not been activated.
     // If the consumer chain wants to accept finality voting at any block
     // height, zero should be returned.
-    QueryActivatedHeight() (uint64, error)
+    QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error)
 
     // SHOULD: Convenience finality queries
-    // QueryFinalityProviderSlashedOrJailed queries if the finality provider is
-    // slashed or jailed.
-    // Note: If the FP wants to get the information from the Consumer chain
-    // directly, they should add this interface.
-    QueryFinalityProviderSlashedOrJailed(fpPk *btcec.PublicKey) (slashed bool, jailed bool, err error)
+    // QueryFinalityProviderStatus queries the status of the finality provider
+    QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*FinalityProviderStatusResponse, error)
 
-    // SHOULD: Convenience finality queries
     // QueryIsBlockFinalized queries if the block at the given height is finalized
-    QueryIsBlockFinalized(height uint64) (bool, error)
+    QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error)
 
-    // SHOULD: Convenience finality queries
     // QueryBlocks returns a list of blocks from startHeight to endHeight
-    QueryBlocks(startHeight, endHeight uint64, limit uint32) ([]*types.BlockInfo, error)
+    QueryBlocks(ctx context.Context, req *QueryBlocksRequest) ([]types.BlockDescription, error)
 }
 ```
 
@@ -183,43 +185,81 @@ chain. The adapter should handle the following behaviors:
 1. **Commit public randomness**: The adapter should be able to commit a list of
    public randomness values to the Consumer chain, which are used for validating
    finality signatures.
-2. **Submit finality signatures**: The adapter should be able to submit
-   finality signatures for blocks in the Consumer chain, which are used to
-   finalize blocks and provide economic security.
+2. **Submit finality signatures**: The adapter should be able to submit finality
+   signatures for blocks in the Consumer chain, which are used to finalize
+   blocks and provide economic security.
 3. **Unjail finality provider**: The adapter should be able to send an unjail
    transaction to the Consumer chain, allowing the finality provider to resume
    its operations after being jailed.
 4. **Query finality provider status**: The adapter should be able to query the
    status of the finality provider, including whether it has voting power, if it
    is slashed or jailed, and its highest voted height.
-5. **Query last finalized block**: The adapter should be able to query the
-   last finalized block in the Consumer chain.
+5. **Query last finalized block**: The adapter should be able to query the last
+   finalized block in the Consumer chain.
 6. **Query last public randomness commitment**: The adapter should be able to
    query the last public randomness commitment made by the finality provider.
 7. **Query blocks and block finality**: The adapter should be able to query
    blocks in the Consumer chain, including their finality status, and the latest
    block height.
-8. **Query activated height**: The adapter should be able to query the
-   activated height of the Consumer chain, which is used to determine when the
-   finality provider can start voting on blocks.
+8. **Query finality activation height**: The adapter should be able to query the
+   finality activation height of the Consumer chain, which is used to determine
+   when the finality provider can start voting on blocks.
+
+### **Start Height Determination Logic:**
+
+The finality provider must implement a deterministic algorithm to calculate the
+appropriate starting height for block processing. This logic ensures the
+finality provider resumes from the correct position after restarts and respects
+chain activation constraints.
+
+**Algorithm:**
+1. Query the following heights from the consumer chain:
+   - `finalityActivationHeight`: The minimum height from which finality voting
+     is allowed
+   - `highestVotedHeight`: The highest block height this finality provider has
+     voted on (from chain state)
+   - `lastFinalizedHeight`: The height of the most recently finalized block
+2. Retrieve the local `lastVotedHeight` from the finality provider's internal
+   state
+3. Calculate the start height as: `max(max(lastVotedHeight, highestVotedHeight,
+   lastFinalizedHeight) + 1, finalityActivationHeight)`
+
+**Rationale:**
+- The finality provider must not vote below the finality activation height
+- The finality provider must not re-vote on blocks it has already processed
+- Starting from `lastFinalizedHeight + 1` ensures no finalized blocks are
+  re-processed
+- The `+ 1` ensures the next block to be processed (not the last processed
+  block)
+
+**Implementation Notes:**
+- This logic must be implemented consistently across all consumer chain adapters
+- The algorithm handles edge cases where heights may be uninitialized (typically
+  0)
+- Proper error handling is required when queries fail or return invalid heights
 
 ## Implementation status
 
 As of this writing, there are three finality provider adapter implementations:
 
-1. **Babylon Finality Provider Adapter** - Under [clientcontroller/babylon](https://github.com/babylonlabs-io/finality-provider/tree/main/clientcontroller/babylon)
+1. **Babylon Finality Provider Adapter** - Under
+    [clientcontroller/babylon](https://github.com/babylonlabs-io/finality-provider/tree/main/clientcontroller/babylon)
     This is the main implementation that integrates with the Babylon chain, and
     provides the finality provider functionality for Babylon itself.
-2. **CosmWasm Finality Provider Adapter** - Under [clientcontroller/cosmwasm](https://github.com/babylonlabs-io/finality-provider/tree/main/clientcontroller/cosmwasm)
+2. **CosmWasm Finality Provider Adapter** - Under
+    [clientcontroller/cosmwasm](https://github.com/babylonlabs-io/finality-provider/tree/main/clientcontroller/cosmwasm)
     This implementation is designed for Cosmos-based chains, allowing them to
     leverage the finality provider functionality by integrating with the Cosmos
-    chain through CosmWasm smart contracts (the [`cosmos-bsn-contracts`](https://github.com/babylonlabs-io/cosmos-bsn-contracts)
-    repository) and a thin integration layer (the [`babylon-sdk`](https://github.com/babylonlabs-io/babylon-sdk)
-    repository).
-3. **Rollup BSN Finality Provider Adapter** - Under [bsn/rollup-finality-provider/clientcontroller](https://github.com/babylonlabs-io/finality-provider/tree/main/bsn/rollup-finality-provider/clientcontroller)
+    chain through CosmWasm smart contracts (the
+    [`cosmos-bsn-contracts`](https://github.com/babylonlabs-io/cosmos-bsn-contracts)
+    repository) and a thin integration layer (the
+    [`babylon-sdk`](https://github.com/babylonlabs-io/babylon-sdk) repository).
+3. **Rollup BSN Finality Provider Adapter** - Under
+    [bsn/rollup-finality-provider/clientcontroller](https://github.com/babylonlabs-io/finality-provider/tree/main/bsn/rollup-finality-provider/clientcontroller)
     This implementation is tailored for OP Stack rollups, specifically designed
-    to work with rollup finality contracts, which are finality provider contracts
-    that run on Babylon (based on the [`rollup-bsn-contracts`](https://github.com/babylonlabs-io/rollup-bsn-contracts)
+    to work with rollup finality contracts, which are finality provider
+    contracts that run on Babylon (based on the
+    [`rollup-bsn-contracts`](https://github.com/babylonlabs-io/rollup-bsn-contracts)
     repository), and complements the OP Stack architecture.
 
 <!-- TODO: add other potential or existing finality provider adapters -->
