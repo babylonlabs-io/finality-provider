@@ -55,7 +55,8 @@ func NewStartHeightDeterminer(consumerCon ccapi.ConsumerController, cfg *config.
 func (bt *StartHeightDeterminer) DetermineStartHeight(
 	ctx context.Context,
 	btcPk *bbntypes.BIP340PubKey,
-	lastVotedHeightFunc types.LastVotedHeightProvider) (uint64, error) {
+	lastVotedHeightFunc types.LastVotedHeightProvider,
+) (uint64, error) {
 	if btcPk == nil {
 		return 0, fmt.Errorf("BIP340 public key cannot be nil")
 	}

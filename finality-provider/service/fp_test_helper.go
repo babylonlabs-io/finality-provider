@@ -11,6 +11,7 @@ import (
 	"github.com/gogo/protobuf/jsonpb"
 	"go.uber.org/zap"
 	"strings"
+	"testing"
 )
 
 // FinalityProviderTestHelper provides testing utilities for FinalityProviderInstance
@@ -148,7 +149,7 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 	// send finality signature to the consumer chain
 	res, err := th.fp.consumerCon.SubmitBatchFinalitySigs(ctx, &ccapi.SubmitBatchFinalitySigsRequest{
 		FpPk:        th.fp.GetBtcPk(),
-		Blocks:      []*types.BlockInfo{b},
+		Blocks:      []types.BlockDescription{b},
 		PubRandList: []*btcec.FieldVal{pubRand},
 		ProofList:   [][]byte{proofBytes},
 		Sigs:        []*btcec.ModNScalar{eotsSig.ToModNScalar()},
@@ -187,4 +188,22 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 // This can be useful for accessing other methods or properties if needed
 func (th *FinalityProviderTestHelper) GetFinalityProviderInstance() *FinalityProviderInstance {
 	return th.fp
+}
+
+func (th *FinalityProviderTestHelper) SubmitBatchFinalitySignatures(t *testing.T, blocks []types.BlockDescription) (*types.TxResponse, error) {
+	t.Helper()
+
+	res, err := th.fp.finalitySubmitter.SubmitBatchFinalitySignatures(context.Background(), blocks)
+	if err != nil {
+		return nil, fmt.Errorf("failed to submit batch finality signatures: %w", err)
+	}
+
+	return res, nil
+}
+
+func (th *FinalityProviderTestHelper) MustUpdateStateAfterFinalitySigSubmission(t *testing.T, height uint64) {
+	t.Helper()
+	if err := th.fp.fpState.SetLastVotedHeight(height); err != nil {
+		t.Fatalf("failed to update state after finality sig submission: %s", err.Error())
+	}
 }

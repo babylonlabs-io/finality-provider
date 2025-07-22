@@ -79,3 +79,14 @@ func NewRootLoggerWithFile(logFile string, level string) (*zap.Logger, error) {
 
 	return logger, nil
 }
+
+func NewDevLogger() (*zap.Logger, error) {
+	loggerConfig := zap.NewDevelopmentConfig()
+	loggerConfig.Level = zap.NewAtomicLevelAt(zap.ErrorLevel)
+	logger, err := loggerConfig.Build()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create development logger: %w", err)
+	}
+
+	return logger, nil
+}

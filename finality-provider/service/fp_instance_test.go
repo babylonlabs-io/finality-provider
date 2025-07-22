@@ -3,7 +3,6 @@ package service_test
 import (
 	"context"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -11,18 +10,19 @@ import (
 
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/require"
-
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/testutil"
+	"github.com/babylonlabs-io/finality-provider/testutil/mocks"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func FuzzCommitPubRandList(f *testing.F) {
@@ -59,7 +59,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		startingBlock := types.NewBlockInfo(randomStartingHeight, testutil.GenRandomByteArray(r, 32), false)
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
-		mockConsumerController.EXPECT().QueryLatestBlockHeight(context.Background()).Return(uint64(0), nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlock(context.Background()).Return(types.NewBlockInfo(0, testutil.GenRandomByteArray(r, 32), false), nil).AnyTimes()
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
 
@@ -76,7 +76,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		}
 		mockConsumerController.EXPECT().QueryLastPublicRandCommit(context.Background(), gomock.Any()).Return(lastCommittedPubRand, nil).AnyTimes()
 		// mock voting power and commit pub rand
-		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(fpIns.GetBtcPk(), gomock.Any()).
+		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(context.Background(), gomock.Any()).
 			Return(true, nil).AnyTimes()
 
 		// submit finality sig
@@ -85,7 +85,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		mockConsumerController.EXPECT().
 			SubmitBatchFinalitySigs(context.Background(), gomock.Any()).
 			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
-		providerRes, err := fpIns.SubmitBatchFinalitySignatures([]types.BlockDescription{nextBlock})
+		providerRes, err := fpIns.NewTestHelper().SubmitBatchFinalitySignatures(t, []types.BlockDescription{nextBlock})
 		require.NoError(t, err)
 		require.Equal(t, expectedTxHash, providerRes.TxHash)
 
@@ -107,28 +107,32 @@ func FuzzDetermineStartHeight(f *testing.F) {
 		lastFinalizedHeight := uint64(r.Int63n(1000) + 1)
 
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
-		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
-		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
+
+		ctl := gomock.NewController(t)
+		mockConsumerController := mocks.NewMockConsumerController(ctl)
 
 		// setup mocks
-		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(context.Background()).Return(finalityActivationHeight, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(finalityActivationHeight, nil).AnyTimes()
 		mockConsumerController.EXPECT().
-			QueryFinalityProviderHighestVotedHeight(context.Background(), gomock.Any()).
+			QueryFinalityProviderHighestVotedHeight(gomock.Any(), gomock.Any()).
 			Return(highestVotedHeight, nil).
 			AnyTimes()
 
 		finalizedBlock := types.NewBlockInfo(lastFinalizedHeight, testutil.GenRandomByteArray(r, 32), false)
-		mockConsumerController.EXPECT().QueryLatestFinalizedBlock(context.Background()).Return(finalizedBlock, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestFinalizedBlock(gomock.Any()).Return(finalizedBlock, nil).AnyTimes()
 
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, false, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
-		fpIns.MustUpdateStateAfterFinalitySigSubmission(lastVotedHeight)
+		fpIns.NewTestHelper().MustUpdateStateAfterFinalitySigSubmission(t, lastVotedHeight)
 
 		startHeight, err := fpIns.DetermineStartHeight(context.Background())
 		require.NoError(t, err)
 
-		require.Equal(t, startHeight, max(finalityActivationHeight, highestVotedHeight+1, lastFinalizedHeight+1, lastVotedHeight+1))
+		actualLastVotedHeight := fpIns.GetLastVotedHeight()
+		expectedStartHeight := max(max(actualLastVotedHeight, highestVotedHeight, lastFinalizedHeight)+1, finalityActivationHeight)
+
+		require.Equal(t, expectedStartHeight, startHeight)
 	})
 }
 
@@ -168,8 +172,14 @@ func startFinalityProviderAppWithRegisteredFp(
 		service.NewPubRandState(pubRandStore), consumerCon, em, logger, fpMetrics)
 
 	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, fpCfg.PollerConfig, logger)
+	fsCfg := service.NewDefaultFinalitySubmitterConfig(
+		fpCfg.MaxSubmissionRetries,
+		fpCfg.ContextSigningHeight,
+		fpCfg.SubmissionRetryInterval,
+	)
+	finalitySubmitter := service.NewDefaultFinalitySubmitter(consumerCon, em, rndCommitter.GetPubRandProofList, fsCfg, logger, fpMetrics)
 
-	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, fpMetrics, db, logger)
+	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, db, logger)
 	require.NoError(t, err)
 	err = app.Start()
 	require.NoError(t, err)
@@ -205,7 +215,22 @@ func startFinalityProviderAppWithRegisteredFp(
 	)
 	require.NoError(t, err)
 	m := metrics.NewFpMetrics()
-	fpIns, err := service.NewFinalityProviderInstance(eotsPk, &fpCfg, fpStore, pubRandProofStore, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, m, make(chan *service.CriticalError), logger)
+	fpIns, err := service.NewFinalityProviderInstance(
+		eotsPk,
+		&fpCfg,
+		fpStore,
+		pubRandProofStore,
+		cc,
+		consumerCon,
+		em,
+		poller,
+		rndCommitter,
+		heightDeterminer,
+		finalitySubmitter,
+		m,
+		make(chan *service.CriticalError),
+		logger,
+	)
 	require.NoError(t, err)
 
 	cleanUp := func() {
