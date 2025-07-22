@@ -26,7 +26,5 @@ type RandomnessCommitter interface {
 	// GetPubRandProofList retrieves a list of public randomness proofs for the given height.
 	GetPubRandProofList(height uint64, numPubRand uint64) ([][]byte, error)
 
-	SetBtcPk(btcPk *types.BIP340PubKey)
-
-	SetChainID(chainID []byte)
+	Init(btcPk *types.BIP340PubKey, chainID []byte) error
 }

@@ -112,8 +112,9 @@ func newFinalityProviderInstanceFromStore(
 	btcPk := bbntypes.NewBIP340PubKeyFromBTCPK(sfp.BtcPk)
 	fpState := NewFpState(sfp, s, logger, metrics)
 
-	rndCommitter.SetBtcPk(btcPk)
-	rndCommitter.SetChainID([]byte(sfp.ChainID))
+	if err := rndCommitter.Init(btcPk, []byte(sfp.ChainID)); err != nil {
+		return nil, fmt.Errorf("failed to initialize randomness committer: %w", err)
+	}
 	if err := finalitySubmitter.InitState(fpState); err != nil {
 		return nil, fmt.Errorf("failed to initialize finality submitter state: %w", err)
 	}
