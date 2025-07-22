@@ -260,7 +260,6 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		// set voting power to be positive so that the fp should eventually become ACTIVE
 		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(uint64(0), nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(uint64(1), nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryFinalityProviderStatus(gomock.Any(), gomock.Any()).Return(&api.FinalityProviderStatusResponse{
 			Slashed: false,
 			Jailed:  true,
