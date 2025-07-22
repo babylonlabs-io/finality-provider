@@ -48,10 +48,13 @@ const (
 // vote submission -> block finalization
 func TestFinalityProviderLifeCycle(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	n := 2
 	tm, fps := StartManagerWithFinalityProvider(t, n, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	// check the public randomness is committed
 	tm.WaitForFpPubRandTimestamped(t, fps[0])
@@ -85,9 +88,12 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 // eots manager
 func TestSkippingDoubleSignError(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -134,9 +140,12 @@ func TestSkippingDoubleSignError(t *testing.T) {
 // in this case, the BTC private key should be extracted by Babylon
 func TestDoubleSigning(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -194,9 +203,12 @@ func TestDoubleSigning(t *testing.T) {
 // TestCatchingUp tests if a fp can catch up after restarted
 func TestCatchingUp(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -243,9 +255,11 @@ func TestCatchingUp(t *testing.T) {
 func TestFinalityProviderEditCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -322,9 +336,11 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 func TestFinalityProviderCreateCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -390,9 +406,11 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 func TestRemoveMerkleProofsCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -420,10 +438,12 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 func TestPrintEotsCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	tm := StartManager(t, ctx, "", "")
 	r := rand.New(rand.NewSource(time.Now().Unix()))
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	expected := make(map[string]string)
 	for i := 0; i < r.Intn(10); i++ {
@@ -462,9 +482,12 @@ func TestPrintEotsCmd(t *testing.T) {
 
 func TestRecoverRandProofCmd(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -529,9 +552,12 @@ func TestRecoverRandProofCmd(t *testing.T) {
 
 func TestSigHeightOutdated(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -810,9 +836,12 @@ func TestEotsdUnlockCmd(t *testing.T) {
 
 func TestUnsafeCommitPubRandCmd(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 

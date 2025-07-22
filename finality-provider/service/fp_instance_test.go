@@ -177,7 +177,8 @@ func startFinalityProviderAppWithRegisteredFp(
 
 	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, db, logger)
 	require.NoError(t, err)
-	err = app.Start(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	err = app.Start(ctx)
 	require.NoError(t, err)
 
 	// create registered finality-provider
@@ -230,6 +231,7 @@ func startFinalityProviderAppWithRegisteredFp(
 	require.NoError(t, err)
 
 	cleanUp := func() {
+		cancel()
 		err = app.Stop()
 		require.NoError(t, err)
 		err = eotsdb.Close()

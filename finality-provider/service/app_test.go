@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.uber.org/zap/zaptest"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -178,6 +179,8 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
+		ctx, cancel := context.WithCancel(context.Background())
+
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
@@ -230,8 +233,11 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		fpCfg.SubmissionRetryInterval = time.Minute * 10
 
 		// Create fp app
-		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockBabylonController, mockConsumerController)
-		defer cleanup()
+		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, ctx, r, fpHomeDir, &fpCfg, mockBabylonController, mockConsumerController)
+		defer func() {
+			cancel()
+			cleanup()
+		}()
 
 		fpInfo, err := app.GetFinalityProviderInfo(fpPk)
 		require.NoError(t, err)
@@ -285,14 +291,19 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 			Jailed:  true,
 		}, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any(), gomock.Any()).Return(uint64(0), nil).AnyTimes()
+		ctx, cancel := context.WithCancel(context.Background())
 
 		// Create fp app
-		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, r, fpHomeDir, &fpCfg, mockBabylonController, mockConsumerController)
-		defer cleanup()
+		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, ctx, r, fpHomeDir, &fpCfg, mockBabylonController, mockConsumerController)
+		defer func() {
+			cancel()
+			cleanup()
+		}()
 
 		expectedTxHash := datagen.GenRandomHexStr(r, 32)
 		mockConsumerController.EXPECT().UnjailFinalityProvider(gomock.Any(), fpPk.MustToBTCPK()).Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
-		err := app.StartFinalityProvider(context.Background(), fpPk)
+		err := app.StartFinalityProvider(ctx, fpPk)
+
 		require.NoError(t, err)
 		fpIns, err := app.GetFinalityProviderInstance()
 		require.NoError(t, err)
@@ -438,8 +449,8 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 	})
 }
 
-func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg *config.Config, cc api.ClientController, consumerCon api.ConsumerController) (*service.FinalityProviderApp, *bbntypes.BIP340PubKey, func()) {
-	logger := testutil.GetTestLogger(t)
+func startFPAppWithRegisteredFp(t *testing.T, ctx context.Context, r *rand.Rand, homePath string, cfg *config.Config, cc api.ClientController, consumerCon api.ConsumerController) (*service.FinalityProviderApp, *bbntypes.BIP340PubKey, func()) {
+	logger := zaptest.NewLogger(t)
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
 	eotsCfg := eotscfg.DefaultConfigWithHomePath(eotsHomeDir)
@@ -515,12 +526,10 @@ func startFPAppWithRegisteredFp(t *testing.T, r *rand.Rand, homePath string, cfg
 		chainID,
 	)
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
 	err = app.Start(ctx)
 	require.NoError(t, err)
 
 	cleanUp := func() {
-		cancel()
 		err = app.Stop()
 		require.NoError(t, err)
 		err = eotsdb.Close()

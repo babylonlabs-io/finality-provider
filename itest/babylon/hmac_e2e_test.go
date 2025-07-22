@@ -4,7 +4,6 @@
 package e2etest_babylon
 
 import (
-	"context"
 	"testing"
 
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -26,13 +25,16 @@ func NewDescription(moniker string) *stakingtypes.Description {
 // results in authentication failures and prevents operations
 func TestHMACMismatch(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	eotsHmacKey := "server-hmac-key-for-testing"
 	fpHmacKey := "client-hmac-key-for-testing-different"
 
 	tm := StartManager(t, ctx, eotsHmacKey, fpHmacKey)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	require.Equal(t, eotsHmacKey, tm.EOTSServerHandler.Config().HMACKey, "HMAC key should be set in the server config")
 	require.Equal(t, fpHmacKey, tm.FpConfig.HMACKey, "HMAC key should be set in the FP config")
@@ -43,7 +45,7 @@ func TestHMACMismatch(t *testing.T) {
 
 	msgToSign := []byte("test message for signing that is")
 	tm.EOTSServerHandler.Config().HMACKey = fpHmacKey // use wrong key
-	
+
 	eotsClient := NewEOTSManagerGrpcClientWithRetry(t, tm.EOTSServerHandler.Config())
 	_, err = eotsClient.SignSchnorrSig(eotsPkBytes, msgToSign)
 	require.Error(t, err, "SignSchnorrSig should fail with mismatched HMAC keys")

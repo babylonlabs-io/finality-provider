@@ -192,7 +192,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, wcc, eotsCli, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, fpdb, logger)
 	require.NoError(t, err)
-	err = fpApp.Start(context.Background())
+	err = fpApp.Start(ctx)
 	require.NoError(t, err)
 
 	ctm := &BcdTestManager{

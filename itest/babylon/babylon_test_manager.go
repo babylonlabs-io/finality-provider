@@ -248,7 +248,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, eotsCli, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, fpdb, tm.logger)
 	require.NoError(t, err)
-	err = fpApp.Start(context.Background())
+	err = fpApp.Start(ctx)
 	require.NoError(t, err)
 
 	// Create and register the finality provider
@@ -256,13 +256,13 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	commission := testutil.ZeroCommissionRate()
 	desc := newDescription(testMoniker)
 
-	_, err = fpApp.CreateFinalityProvider(context.Background(), cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
+	_, err = fpApp.CreateFinalityProvider(ctx, cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
 	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	err = fpApp.StartFinalityProvider(context.Background(), eotsPk)
+	err = fpApp.StartFinalityProvider(ctx, eotsPk)
 	require.NoError(t, err)
 
 	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb)
