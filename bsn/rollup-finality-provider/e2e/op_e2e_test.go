@@ -19,6 +19,7 @@ import (
 )
 
 func TestPubRandCommitment(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
@@ -56,6 +57,8 @@ func TestPubRandCommitment(t *testing.T) {
 // TestFinalitySigSubmission tests the consumer controller's function:
 // - SubmitBatchFinalitySigs
 func TestFinalitySigSubmission(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
@@ -123,6 +126,8 @@ func TestFinalitySigSubmission(t *testing.T) {
 // TestFinalityProviderHasPower tests the consumer controller's function:
 // - QueryFinalityProviderHasPower
 func TestFinalityProviderHasPower(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {

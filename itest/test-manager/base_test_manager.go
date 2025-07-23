@@ -586,11 +586,14 @@ func StartEotsManagers(
 	for i := 0; i < len(fpCfgs); i++ {
 		eotsCfg := eotsconfig.DefaultConfigWithHomePathAndPorts(
 			eotsHomeDirs[i],
-			eotsconfig.DefaultRPCPort+i,
-			metrics.DefaultEotsConfig().Port+i,
+			testutil.AllocateUniquePort(t),
+			testutil.AllocateUniquePort(t),
 		)
 		eotsConfigs[i] = eotsCfg
 	}
+
+	babylonFpCfg.EOTSManagerAddress = eotsConfigs[0].RPCListener
+	consumerFpCfg.EOTSManagerAddress = eotsConfigs[1].RPCListener
 
 	eh := e2eutils.NewEOTSServerHandler(t, eotsConfigs[0], eotsHomeDirs[0])
 	eh.Start(ctx)
@@ -602,7 +605,8 @@ func StartEotsManagers(
 		var eotsCli *eotsclient.EOTSManagerGRpcClient
 		var err error
 		require.Eventually(t, func() bool {
-			eotsCli, err = eotsclient.NewEOTSManagerGRpcClient(fpCfgs[i].EOTSManagerAddress, fpCfgs[i].HMACKey)
+			// we use only one server and two clients
+			eotsCli, err = eotsclient.NewEOTSManagerGRpcClient(fpCfgs[0].EOTSManagerAddress, fpCfgs[0].HMACKey)
 			if err != nil {
 				t.Logf("Error creating EOTS client: %v", err)
 
