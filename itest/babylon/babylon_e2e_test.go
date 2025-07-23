@@ -128,7 +128,7 @@ func TestSkippingDoubleSignError(t *testing.T) {
 	require.NoError(t, err)
 
 	// restart the fp to see if it will skip sending the height
-	err = fpIns.Start(context.Background())
+	err = fpIns.Start(ctx)
 	require.NoError(t, err)
 
 	// assert that the fp voting continues
@@ -239,7 +239,7 @@ func TestCatchingUp(t *testing.T) {
 
 	var n uint = 3
 	// stop the finality-provider for a few blocks then restart to trigger the fast sync
-	tm.StopAndRestartFpAfterNBlocks(t, int(n), fpIns)
+	tm.StopAndRestartFpAfterNBlocks(ctx, t, int(n), fpIns)
 
 	// check there are n+1 blocks finalized
 	finalizedBlock := tm.WaitForNFinalizedBlocks(t, n+1)

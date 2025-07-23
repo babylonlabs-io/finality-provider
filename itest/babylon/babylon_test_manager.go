@@ -394,15 +394,15 @@ func (tm *TestManager) WaitForFpVoteCastAtHeight(t *testing.T, fpIns *service.Fi
 	t.Logf("the fp voted at height %d", lastVotedHeight)
 }
 
-func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
-	blockBeforeStop, err := tm.BBNConsumerClient.QueryLatestBlock(context.Background())
+func (tm *TestManager) StopAndRestartFpAfterNBlocks(ctx context.Context, t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
+	blockBeforeStop, err := tm.BBNConsumerClient.QueryLatestBlock(ctx)
 	require.NotNil(t, blockBeforeStop)
 	require.NoError(t, err)
 	err = fpIns.Stop()
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		headerAfterStop, err := tm.BBNConsumerClient.QueryLatestBlock(context.Background())
+		headerAfterStop, err := tm.BBNConsumerClient.QueryLatestBlock(ctx)
 		if headerAfterStop == nil || err != nil {
 			return false
 		}
@@ -412,7 +412,7 @@ func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *
 
 	t.Log("restarting the finality-provider instance")
 
-	err = fpIns.Start(context.Background())
+	err = fpIns.Start(ctx)
 	require.NoError(t, err)
 }
 
