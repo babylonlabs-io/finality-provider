@@ -384,12 +384,9 @@ func (fp *FinalityProviderInstance) reportCriticalErr(ctx context.Context, err e
 		err:     err,
 		fpBtcPk: fp.GetBtcPkBIP340(),
 	}:
-		// Successfully sent
 	case <-ctx.Done():
-		// Context cancelled, don't block
 		fp.logger.Debug("skipping error report due to context cancellation", zap.Error(err))
 	default:
-		// Channel is full, log instead
 		fp.logger.Error("failed to report critical error (channel full)", zap.Error(err))
 	}
 }
