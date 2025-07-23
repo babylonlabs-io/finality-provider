@@ -4,10 +4,10 @@
 package e2etest_babylon
 
 import (
-	"testing"
-
+	"context"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 // NewDescription creates a new validator description

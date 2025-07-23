@@ -230,7 +230,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		fpCfg.SubmissionRetryInterval = time.Minute * 10
 
 		// Create fp app
-		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, ctx, r, fpHomeDir, &fpCfg, mockBabylonController, mockConsumerController)
+		app, fpPk, cleanup := startFPAppWithRegisteredFp(ctx, t, r, fpHomeDir, &fpCfg, mockBabylonController, mockConsumerController)
 		defer func() {
 			cancel()
 			cleanup()
@@ -290,7 +290,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		ctx, cancel := context.WithCancel(context.Background())
 
 		// Create fp app
-		app, fpPk, cleanup := startFPAppWithRegisteredFp(t, ctx, r, fpHomeDir, &fpCfg, mockBabylonController, mockConsumerController)
+		app, fpPk, cleanup := startFPAppWithRegisteredFp(ctx, t, r, fpHomeDir, &fpCfg, mockBabylonController, mockConsumerController)
 		defer func() {
 			cancel()
 			cleanup()
@@ -445,7 +445,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 	})
 }
 
-func startFPAppWithRegisteredFp(t *testing.T, ctx context.Context, r *rand.Rand, homePath string, cfg *config.Config, cc api.ClientController, consumerCon api.ConsumerController) (*service.FinalityProviderApp, *bbntypes.BIP340PubKey, func()) {
+func startFPAppWithRegisteredFp(ctx context.Context, t *testing.T, r *rand.Rand, homePath string, cfg *config.Config, cc api.ClientController, consumerCon api.ConsumerController) (*service.FinalityProviderApp, *bbntypes.BIP340PubKey, func()) {
 	logger := zaptest.NewLogger(t)
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
