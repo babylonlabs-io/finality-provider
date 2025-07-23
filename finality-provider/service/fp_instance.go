@@ -333,11 +333,6 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop(ctx context.Context
 	for {
 		select {
 		case <-ticker.C:
-			if ctx.Err() != nil {
-				fp.logger.Info("context cancelled, exiting randomness commitment loop")
-
-				return
-			}
 			fp.processRandomnessCommitment(ctx)
 		case <-fp.quit:
 			fp.logger.Info("the randomness commitment loop is closing")
