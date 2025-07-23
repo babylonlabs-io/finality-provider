@@ -19,7 +19,7 @@ ldflags := $(LDFLAGS) -X github.com/babylonlabs-io/finality-provider/version.ver
 build_tags := $(BUILD_TAGS)
 build_args := $(BUILD_ARGS)
 
-PACKAGES_E2E=$(shell go list ./... | grep '/itest')
+PACKAGES_E2E=$(shell go list -tags=e2e_babylon ./... | grep '/itest')
 # need to specify the full path to fix issue where logs won't stream to stdout
 # due to multiple packages found
 # context: https://github.com/golang/go/issues/24929
