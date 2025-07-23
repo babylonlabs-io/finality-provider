@@ -1,3 +1,5 @@
+//go:build e2e_babylon
+
 package e2etest_babylon
 
 import (
