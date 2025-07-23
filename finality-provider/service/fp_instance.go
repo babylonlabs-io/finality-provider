@@ -43,8 +43,7 @@ type FinalityProviderInstance struct {
 
 	isStarted *atomic.Bool
 
-	wg   sync.WaitGroup
-	quit chan struct{}
+	wg sync.WaitGroup
 }
 
 // NewFinalityProviderInstance returns a FinalityProviderInstance instance with the given Babylon public key
@@ -160,8 +159,6 @@ func (fp *FinalityProviderInstance) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to start the poller with start height %d: %w", startHeight, err)
 	}
 
-	fp.quit = make(chan struct{})
-
 	fp.wg.Add(2)
 	go fp.finalitySigSubmissionLoop(ctx)
 	go fp.randomnessCommitmentLoop(ctx)
@@ -180,7 +177,6 @@ func (fp *FinalityProviderInstance) Stop() error {
 
 	fp.logger.Info("stopping finality-provider instance", zap.String("pk", fp.GetBtcPkHex()))
 
-	close(fp.quit)
 	fp.wg.Wait()
 
 	fp.logger.Info("the finality-provider instance is successfully stopped", zap.String("pk", fp.GetBtcPkHex()))
@@ -237,7 +233,6 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop(ctx context.Contex
 		select {
 		case <-ticker.C:
 			fp.processAndSubmitSignatures(ctx)
-		case <-fp.quit:
 		case <-ctx.Done():
 			fp.logger.Info("the finality signature submission loop is closing")
 
@@ -336,7 +331,6 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop(ctx context.Context
 		select {
 		case <-ticker.C:
 			fp.processRandomnessCommitment(ctx)
-		case <-fp.quit:
 		case <-ctx.Done():
 			fp.logger.Info("the randomness commitment loop is closing")
 

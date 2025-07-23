@@ -70,7 +70,6 @@ func (app *FinalityProviderApp) monitorCriticalErr(ctx context.Context) {
 			}
 			app.logger.Fatal(instanceTerminatingMsg,
 				zap.String("pk", criticalErr.fpBtcPk.MarshalHex()), zap.Error(criticalErr.err))
-		case <-app.quit:
 		case <-ctx.Done():
 			app.logger.Info("exiting monitor critical error loop")
 
@@ -85,9 +84,8 @@ func (app *FinalityProviderApp) registrationLoop(ctx context.Context) {
 	for {
 		select {
 		case req := <-app.createFinalityProviderRequestChan:
-			// we won't do any retries here to not block the loop for more important messages.
+			// We won't do any retries here to not block the loop for more important messages.
 			// Most probably it fails due so some user error so we just return the error to the user.
-			// TODO: need to start passing context here to be able to cancel the request in case of app quiting
 			popBytes, err := req.pop.Marshal()
 			if err != nil {
 				req.errResponse <- err
@@ -132,7 +130,6 @@ func (app *FinalityProviderApp) registrationLoop(ctx context.Context) {
 			req.successResponse <- &RegisterFinalityProviderResponse{
 				txHash: res.TxHash,
 			}
-		case <-app.quit:
 		case <-ctx.Done():
 			app.logger.Info("exiting registration loop")
 
@@ -191,7 +188,6 @@ func (app *FinalityProviderApp) unjailFpLoop(ctx context.Context) {
 			req.successResponse <- &UnjailFinalityProviderResponse{
 				TxHash: res.TxHash,
 			}
-		case <-app.quit:
 		case <-ctx.Done():
 			app.logger.Info("exiting unjailing fp loop")
 
@@ -221,7 +217,6 @@ func (app *FinalityProviderApp) metricsUpdateLoop(ctx context.Context) {
 				}
 			}
 			app.fpInsMu.RUnlock()
-		case <-app.quit:
 		case <-ctx.Done():
 			app.logger.Info("exiting metrics update loop")
 

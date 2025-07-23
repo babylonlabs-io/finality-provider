@@ -32,7 +32,6 @@ type FinalityProviderApp struct {
 	startOnce sync.Once
 	stopOnce  sync.Once
 	wg        sync.WaitGroup
-	quit      chan struct{}
 
 	cc                ccapi.ClientController
 	consumerCon       ccapi.ConsumerController
@@ -158,7 +157,6 @@ func NewFinalityProviderApp(
 		heightDeterminer:                  heightDeterminer,
 		finalitySubmitter:                 finalitySubmitter,
 		metrics:                           metrics,
-		quit:                              make(chan struct{}),
 		unjailFinalityProviderRequestChan: make(chan *UnjailFinalityProviderRequest),
 		createFinalityProviderRequestChan: make(chan *CreateFinalityProviderRequest),
 		criticalErrChan:                   make(chan *CriticalError),
@@ -354,7 +352,6 @@ func (app *FinalityProviderApp) Stop() error {
 	app.stopOnce.Do(func() {
 		app.logger.Info("Stopping FinalityProviderApp")
 
-		close(app.quit)
 		app.wg.Wait()
 
 		if app.fpIns != nil && app.fpIns.IsRunning() {
@@ -486,13 +483,13 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 			FpInfo: storedFp.ToFinalityProviderInfo(),
 			TxHash: successResponse.txHash,
 		}, nil
-	case <-app.quit:
-		return nil, fmt.Errorf("finality-provider app is shutting down")
+	case <-ctx.Done():
+		return nil, fmt.Errorf("finality-provider app is shutting down: %w", ctx.Err())
 	}
 }
 
 // UnjailFinalityProvider sends a transaction to unjail a finality-provider
-func (app *FinalityProviderApp) UnjailFinalityProvider(fpPk *bbntypes.BIP340PubKey) (*UnjailFinalityProviderResponse, error) {
+func (app *FinalityProviderApp) UnjailFinalityProvider(ctx context.Context, fpPk *bbntypes.BIP340PubKey) (*UnjailFinalityProviderResponse, error) {
 	// send request to the loop to avoid blocking the main thread
 	request := &UnjailFinalityProviderRequest{
 		btcPubKey:       fpPk,
@@ -522,8 +519,8 @@ func (app *FinalityProviderApp) UnjailFinalityProvider(fpPk *bbntypes.BIP340PubK
 		app.metrics.RecordFpStatus(fpPk.MarshalHex(), proto.FinalityProviderStatus_INACTIVE)
 
 		return successResponse, nil
-	case <-app.quit:
-		return nil, fmt.Errorf("finality-provider app is shutting down")
+	case <-ctx.Done():
+		return nil, fmt.Errorf("finality-provider app is shutting down: %w", ctx.Err())
 	}
 }
 

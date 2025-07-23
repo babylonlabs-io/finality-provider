@@ -304,7 +304,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		fpIns, err := app.GetFinalityProviderInstance()
 		require.NoError(t, err)
 		require.True(t, fpIns.IsJailed())
-		res, err := app.UnjailFinalityProvider(fpPk)
+		res, err := app.UnjailFinalityProvider(ctx, fpPk)
 		require.NoError(t, err)
 		require.Equal(t, expectedTxHash, res.TxHash)
 		require.Eventually(t, func() bool {
