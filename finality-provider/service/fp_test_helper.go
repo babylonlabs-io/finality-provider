@@ -3,6 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
+	"testing"
+
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	ftypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
@@ -10,8 +13,6 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/gogo/protobuf/jsonpb"
 	"go.uber.org/zap"
-	"strings"
-	"testing"
 )
 
 // FinalityProviderTestHelper provides testing utilities for FinalityProviderInstance
@@ -146,6 +147,8 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 		return nil, nil, err
 	}
 
+	fmt.Println("DEBUG: Test Signature", eotsSig)
+
 	// send finality signature to the consumer chain
 	res, err := th.fp.consumerCon.SubmitBatchFinalitySigs(ctx, &ccapi.SubmitBatchFinalitySigsRequest{
 		FpPk:        th.fp.GetBtcPk(),
@@ -154,6 +157,7 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 		ProofList:   [][]byte{proofBytes},
 		Sigs:        []*btcec.ModNScalar{eotsSig.ToModNScalar()},
 	})
+	fmt.Println("DEBUG: Response in SubmitFinalitySignatureAndExtractPrivKey", res, err)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to send finality signature to the consumer chain: %w", err)
 	}
@@ -165,6 +169,7 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 	// try to extract the private key
 	var privKey *btcec.PrivateKey
 	for _, ev := range res.Events {
+		fmt.Println("DEBUG: Event", ev)
 		if strings.Contains(ev.EventType, "EventSlashedFinalityProvider") {
 			evidenceStr := ev.Attributes["evidence"]
 			th.fp.logger.Debug("found slashing evidence")

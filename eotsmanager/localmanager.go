@@ -216,7 +216,7 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 }
 
 func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, height uint64) (*btcec.ModNScalar, error) {
-	fmt.Println("Signing EOTS", height)
+	// fmt.Println("Signing EOTS", height)
 	record, found, err := lm.es.GetSignRecord(eotsPk, chainID, height)
 	if err != nil {
 		return nil, fmt.Errorf("error getting sign record: %w", err)

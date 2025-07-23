@@ -13,7 +13,6 @@ import (
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
-	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
@@ -28,6 +27,13 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"go.uber.org/zap"
+)
+
+// BSN rollup contract error definitions - these must match the actual Rust contract error messages
+var (
+	// From op-finality-gadget/contracts/finality/src/error.rs:
+	// "Duplicated finality signature for finality provider {0} at height {1}"
+	ErrBSNDuplicatedFinalitySig = sdkErr.Register("bsn_rollup", 1001, "Duplicated finality signature")
 )
 
 var _ api.ConsumerController = &RollupBSNController{}
@@ -134,10 +140,13 @@ func (cc *RollupBSNController) reliablySendMsgs(ctx context.Context, msgs []sdk.
 		unrecoverableErrs,
 	)
 	if err != nil {
+		fmt.Println("DEBUG: Error in reliablySendMsgs", err)
 		return nil, fmt.Errorf("failed to reliably send messages: %w", err)
 	}
 
-	return types.NewBabylonTxResponse(resp), nil
+	fmt.Println("DEBUG: Response in reliablySendMsgs", resp)
+
+	return resp, nil
 }
 
 func (cc *RollupBSNController) GetFpRandCommitContext() string {
@@ -226,14 +235,31 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 	}
 
 	expectedErrs := []*sdkErr.Error{
-		finalitytypes.ErrDuplicatedFinalitySig,
-		finalitytypes.ErrSigHeightOutdated,
+		// BSN rollup contract returns "Duplicated finality signature for finality provider..."
+		// We need a substring that matches this, not Babylon's "duplicated finality vote"
+		ErrBSNDuplicatedFinalitySig,
 	}
 
 	res, err := cc.reliablySendMsgs(ctx, msgs, expectedErrs, nil)
+	fmt.Println("DEBUG: Response/ERROR in SubmitBatchFinalitySigs", res, err)
 	if err != nil {
+		fmt.Println("DEBUG: Error in SubmitBatchFinalitySigs", err)
 		return nil, fmt.Errorf("failed to send finality signature messages: %w", err)
 	}
+
+	fmt.Println("DEBUG: Response in SubmitBatchFinalitySigs", res)
+
+	// Handle expected errors case where res is nil (e.g., duplicate signatures)
+	if res == nil {
+		cc.logger.Debug(
+			"Finality signature submission handled as expected error (e.g., duplicate)",
+			zap.String("fp_pk_hex", fpPkHex),
+			zap.Uint64("start_height", req.Blocks[0].GetHeight()),
+			zap.Uint64("end_height", req.Blocks[len(req.Blocks)-1].GetHeight()),
+		)
+		return &types.TxResponse{}, nil
+	}
+
 	cc.logger.Debug(
 		"Successfully submitted finality signatures in a batch",
 		zap.String("fp_pk_hex", fpPkHex),
@@ -241,7 +267,7 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 		zap.Uint64("end_height", req.Blocks[len(req.Blocks)-1].GetHeight()),
 	)
 
-	return &types.TxResponse{TxHash: res.TxHash}, nil
+	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }
 
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height

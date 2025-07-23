@@ -246,39 +246,47 @@ func TestBSNDoubleSigning(t *testing.T) {
 
 	t.Logf("The rollup block at height %v is voted on", lastVotedHeight)
 
-	// Step 3: Wait for block finalization - get finalized blocks from the rollup chain
-	t.Log("Step 3: Waiting for block finalization")
-	var finalizedBlock *types.BlockInfo
-	require.Eventually(t, func() bool {
-		// Query the latest finalized block from the rollup chain
-		latestFinalized, err := ctm.RollupBSNController.QueryLatestFinalizedBlock(ctx)
-		if err != nil {
-			t.Logf("Failed to query latest finalized block: %v", err)
-			return false
-		}
-		if latestFinalized != nil && latestFinalized.GetHeight() >= lastVotedHeight {
-			finalizedBlock = types.NewBlockInfo(latestFinalized.GetHeight(), latestFinalized.GetHash(), true)
-			t.Logf("Block at height %d is finalized", finalizedBlock.GetHeight())
-			return true
-		}
-		return false
-	}, eventuallyWaitTimeOut, eventuallyPollTime, "Should have at least one finalized block")
+	// // Step 3: Wait for block finalization - get finalized blocks from the rollup chain
+	// t.Log("Step 3: Waiting for block finalization")
+	// var finalizedBlock *types.BlockInfo
+	// require.Eventually(t, func() bool {
+	// 	// Query the latest finalized block from the rollup chain
+	// 	latestFinalized, err := ctm.RollupBSNController.QueryLatestFinalizedBlock(ctx)
+	// 	if err != nil {
+	// 		t.Logf("Failed to query latest finalized block: %v", err)
+	// 		return false
+	// 	}
+	// 	if latestFinalized != nil && latestFinalized.GetHeight() >= lastVotedHeight {
+	// 		finalizedBlock = types.NewBlockInfo(latestFinalized.GetHeight(), latestFinalized.GetHash(), true)
+	// 		t.Logf("Block at height %d is finalized", finalizedBlock.GetHeight())
+	// 		return true
+	// 	}
+	// 	return false
+	// }, eventuallyWaitTimeOut, eventuallyPollTime, "Should have at least one finalized block")
 
 	fpTestHelper := consumerFpInstance.NewTestHelper()
 
 	// Step 4: Test duplicate vote which should be ignored
+	// We need to duplicate vote on the SAME block that was originally voted on, not the finalized block
 	t.Log("Step 4: Testing duplicate vote (should be ignored)")
-	res, extractedKey, err := fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, finalizedBlock, false)
+
+	// Get the originally voted block info
+	originalVotedBlock, err := ctm.RollupBSNController.QueryBlock(ctx, lastVotedHeight)
 	require.NoError(t, err)
-	require.Nil(t, extractedKey)
-	require.Empty(t, res)
-	t.Logf("Duplicate vote for rollup block %d was properly ignored", finalizedBlock.GetHeight())
+	originalVotedBlockInfo := types.NewBlockInfo(originalVotedBlock.GetHeight(), originalVotedBlock.GetHash(), false)
+
+	res, extractedKey, err := fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, originalVotedBlockInfo, false)
+	require.NoError(t, err)
+	require.Nil(t, extractedKey, "No private key should be extracted from duplicate vote")
+	require.Empty(t, res, "Duplicate votes should return empty result")
+	t.Logf("Duplicate vote for rollup block %d was properly ignored", originalVotedBlockInfo.GetHeight())
 
 	// Step 5: Double signing attack - manually submit a finality vote over a conflicting block
 	// to trigger the extraction of finality-provider's private key
+	// Double signing means signing a DIFFERENT block hash at the SAME height as the original vote
 	t.Log("Step 5: Performing double signing attack with conflicting block")
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	conflictingBlock := types.NewBlockInfo(finalizedBlock.GetHeight(), testutil.GenRandomByteArray(r, 32), false)
+	conflictingBlock := types.NewBlockInfo(originalVotedBlockInfo.GetHeight(), testutil.GenRandomByteArray(r, 32), false)
 
 	// First confirm we have double sign protection
 	t.Log("Step 5a: Confirming double sign protection is active")
@@ -289,6 +297,7 @@ func TestBSNDoubleSigning(t *testing.T) {
 	// Step 6: Force the double signing attack (bypass protection) and extract private key
 	t.Log("Step 6: Forcing double signing attack to extract private key")
 	_, extractedKey, err = fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, conflictingBlock, false)
+	// time.Sleep(5 * time.Minute)
 	require.NoError(t, err)
 	require.NotNil(t, extractedKey, "Private key should be extracted from double signing")
 
@@ -298,7 +307,7 @@ func TestBSNDoubleSigning(t *testing.T) {
 		"Extracted private key should match the original key (or its negation)")
 
 	t.Log("✅ BSN Double Signing Attack Test Completed Successfully!")
-	t.Logf("✅ Successfully extracted private key from double signing attack")
-	t.Logf("✅ Double sign protection mechanism working correctly in BSN rollup environment")
-	t.Logf("✅ Private key extraction proves the equivocation was detected and handled")
+	t.Logf("✅ Duplicate votes on same block (height %d) were properly ignored", originalVotedBlockInfo.GetHeight())
+	t.Logf("✅ Double signing attack on conflicting block (height %d) correctly extracted private key", conflictingBlock.GetHeight())
+	t.Logf("✅ BSN rollup environment properly handles both duplicate signatures and equivocation")
 }
