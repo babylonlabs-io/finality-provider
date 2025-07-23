@@ -32,6 +32,7 @@ type FinalityProviderApp struct {
 	startOnce sync.Once
 	stopOnce  sync.Once
 	wg        sync.WaitGroup
+	quit      chan struct{}
 
 	cc                ccapi.ClientController
 	consumerCon       ccapi.ConsumerController
@@ -160,6 +161,7 @@ func NewFinalityProviderApp(
 		unjailFinalityProviderRequestChan: make(chan *UnjailFinalityProviderRequest),
 		createFinalityProviderRequestChan: make(chan *CreateFinalityProviderRequest),
 		criticalErrChan:                   make(chan *CriticalError),
+		quit:                              make(chan struct{}),
 	}, nil
 }
 
@@ -483,7 +485,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 			FpInfo: storedFp.ToFinalityProviderInfo(),
 			TxHash: successResponse.txHash,
 		}, nil
-	case <-ctx.Done():
+	case <-app.quit:
 		return nil, fmt.Errorf("finality-provider app is shutting down: %w", ctx.Err())
 	}
 }

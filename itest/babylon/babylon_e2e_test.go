@@ -1,5 +1,4 @@
 //go:build e2e_babylon
-// +build e2e_babylon
 
 package e2etest_babylon
 
@@ -765,7 +764,9 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	eotsCfg.KeyringBackend = keyring.BackendFile
 	eotsCfg.HMACKey = "some-hmac-key"
 
-	t.Setenv("HMAC_KEY", eotsCfg.HMACKey)
+	// antipattern to set env in parallel tests but we only do it here
+	err := os.Setenv("HMAC_KEY", eotsCfg.HMACKey)
+	require.NoError(t, err)
 
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)

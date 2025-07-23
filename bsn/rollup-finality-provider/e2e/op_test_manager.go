@@ -225,7 +225,7 @@ func createBabylonFpConfig(
 		keyDir, // This is the path inside docker container
 		fpHomeDir,
 		fpcfg.DefaultRPCPort,
-		metrics.DefaultFpConfig().Port,
+		testutil.AllocateUniquePort(t),
 		eotsconfig.DefaultRPCPort,
 	)
 
@@ -249,7 +249,7 @@ func createRollupFpConfig(
 		fpHomeDir, // This is the path inside docker container
 		fpHomeDir,
 		fpcfg.DefaultRPCPort,
-		metrics.DefaultFpConfig().Port,
+		testutil.AllocateUniquePort(t),
 		eotsconfig.DefaultRPCPort,
 	)
 
