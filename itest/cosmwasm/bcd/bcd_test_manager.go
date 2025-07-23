@@ -192,7 +192,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, wcc, eotsCli, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, fpdb, logger)
 	require.NoError(t, err)
-	err = fpApp.Start()
+	err = fpApp.Start(ctx)
 	require.NoError(t, err)
 
 	ctm := &BcdTestManager{
@@ -279,7 +279,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	err = app.StartFinalityProvider(eotsPubKey)
+	err = app.StartFinalityProvider(context.Background(), eotsPubKey)
 	require.NoError(t, err)
 
 	fpIns, err := app.GetFinalityProviderInstance()

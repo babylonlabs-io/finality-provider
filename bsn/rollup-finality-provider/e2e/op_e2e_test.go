@@ -20,9 +20,11 @@ import (
 
 func TestPubRandCommitment(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	ctm := StartRollupTestManager(t, ctx)
-	defer ctm.Stop(t)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
 
 	// create and register Babylon FP and rollup BSN FP
 	fps := ctm.setupBabylonAndConsumerFp(t)
@@ -55,9 +57,11 @@ func TestPubRandCommitment(t *testing.T) {
 // - SubmitBatchFinalitySigs
 func TestFinalitySigSubmission(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	ctm := StartRollupTestManager(t, ctx)
-	defer ctm.Stop(t)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
 
 	// create and register Babylon FP and rollup BSN FP
 	fps := ctm.setupBabylonAndConsumerFp(t)
@@ -120,9 +124,11 @@ func TestFinalitySigSubmission(t *testing.T) {
 // - QueryFinalityProviderHasPower
 func TestFinalityProviderHasPower(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	ctm := StartRollupTestManager(t, ctx)
-	defer ctm.Stop(t)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
 
 	// create and register Babylon FP and rollup BSN FP
 	fps := ctm.setupBabylonAndConsumerFp(t)

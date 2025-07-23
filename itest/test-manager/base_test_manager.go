@@ -619,6 +619,7 @@ func StartEotsManagers(
 
 func CreateAndStartFpApp(
 	t *testing.T,
+	ctx context.Context,
 	logger *zap.Logger,
 	cfg *fpcfg.Config,
 	cc api.ConsumerController,
@@ -649,7 +650,7 @@ func CreateAndStartFpApp(
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, fpdb, logger)
 	require.NoError(t, err)
 
-	err = fpApp.Start()
+	err = fpApp.Start(ctx)
 	require.NoError(t, err)
 
 	return fpApp

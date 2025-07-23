@@ -248,7 +248,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, eotsCli, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, fpdb, tm.logger)
 	require.NoError(t, err)
-	err = fpApp.Start()
+	err = fpApp.Start(ctx)
 	require.NoError(t, err)
 
 	// Create and register the finality provider
@@ -256,13 +256,13 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	commission := testutil.ZeroCommissionRate()
 	desc := newDescription(testMoniker)
 
-	_, err = fpApp.CreateFinalityProvider(context.Background(), cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
+	_, err = fpApp.CreateFinalityProvider(ctx, cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
 	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	err = fpApp.StartFinalityProvider(eotsPk)
+	err = fpApp.StartFinalityProvider(ctx, eotsPk)
 	require.NoError(t, err)
 
 	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb)
@@ -394,15 +394,15 @@ func (tm *TestManager) WaitForFpVoteCastAtHeight(t *testing.T, fpIns *service.Fi
 	t.Logf("the fp voted at height %d", lastVotedHeight)
 }
 
-func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
-	blockBeforeStop, err := tm.BBNConsumerClient.QueryLatestBlock(context.Background())
+func (tm *TestManager) StopAndRestartFpAfterNBlocks(ctx context.Context, t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
+	blockBeforeStop, err := tm.BBNConsumerClient.QueryLatestBlock(ctx)
 	require.NotNil(t, blockBeforeStop)
 	require.NoError(t, err)
 	err = fpIns.Stop()
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		headerAfterStop, err := tm.BBNConsumerClient.QueryLatestBlock(context.Background())
+		headerAfterStop, err := tm.BBNConsumerClient.QueryLatestBlock(ctx)
 		if headerAfterStop == nil || err != nil {
 			return false
 		}
@@ -412,7 +412,7 @@ func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *
 
 	t.Log("restarting the finality-provider instance")
 
-	err = fpIns.Start()
+	err = fpIns.Start(ctx)
 	require.NoError(t, err)
 }
 

@@ -46,7 +46,7 @@ type UnjailFinalityProviderResponse struct {
 }
 
 // event loop for critical errors
-func (app *FinalityProviderApp) monitorCriticalErr() {
+func (app *FinalityProviderApp) monitorCriticalErr(ctx context.Context) {
 	defer app.wg.Done()
 
 	var criticalErr *CriticalError
@@ -70,7 +70,7 @@ func (app *FinalityProviderApp) monitorCriticalErr() {
 			}
 			app.logger.Fatal(instanceTerminatingMsg,
 				zap.String("pk", criticalErr.fpBtcPk.MarshalHex()), zap.Error(criticalErr.err))
-		case <-app.quit:
+		case <-ctx.Done():
 			app.logger.Info("exiting monitor critical error loop")
 
 			return
@@ -79,14 +79,13 @@ func (app *FinalityProviderApp) monitorCriticalErr() {
 }
 
 // event loop for handling fp registration
-func (app *FinalityProviderApp) registrationLoop() {
+func (app *FinalityProviderApp) registrationLoop(ctx context.Context) {
 	defer app.wg.Done()
 	for {
 		select {
 		case req := <-app.createFinalityProviderRequestChan:
-			// we won't do any retries here to not block the loop for more important messages.
+			// We won't do any retries here to not block the loop for more important messages.
 			// Most probably it fails due so some user error so we just return the error to the user.
-			// TODO: need to start passing context here to be able to cancel the request in case of app quiting
 			popBytes, err := req.pop.Marshal()
 			if err != nil {
 				req.errResponse <- err
@@ -131,7 +130,7 @@ func (app *FinalityProviderApp) registrationLoop() {
 			req.successResponse <- &RegisterFinalityProviderResponse{
 				txHash: res.TxHash,
 			}
-		case <-app.quit:
+		case <-ctx.Done():
 			app.logger.Info("exiting registration loop")
 
 			return
@@ -140,13 +139,13 @@ func (app *FinalityProviderApp) registrationLoop() {
 }
 
 // event loop for unjailing fp
-func (app *FinalityProviderApp) unjailFpLoop() {
+func (app *FinalityProviderApp) unjailFpLoop(ctx context.Context) {
 	defer app.wg.Done()
 	for {
 		select {
 		case req := <-app.unjailFinalityProviderRequestChan:
 			pkHex := req.btcPubKey.MarshalHex()
-			status, err := app.consumerCon.QueryFinalityProviderStatus(context.Background(), req.btcPubKey.MustToBTCPK())
+			status, err := app.consumerCon.QueryFinalityProviderStatus(ctx, req.btcPubKey.MustToBTCPK())
 			if err != nil {
 				req.errResponse <- fmt.Errorf("failed to query jailing status of the finality provider %s: %w", pkHex, err)
 
@@ -163,11 +162,7 @@ func (app *FinalityProviderApp) unjailFpLoop() {
 				continue
 			}
 
-			res, err := app.consumerCon.UnjailFinalityProvider(
-				context.Background(),
-				req.btcPubKey.MustToBTCPK(),
-			)
-
+			res, err := app.consumerCon.UnjailFinalityProvider(ctx, req.btcPubKey.MustToBTCPK())
 			if err != nil {
 				app.logger.Error(
 					"failed to unjail finality-provider",
@@ -193,7 +188,7 @@ func (app *FinalityProviderApp) unjailFpLoop() {
 			req.successResponse <- &UnjailFinalityProviderResponse{
 				TxHash: res.TxHash,
 			}
-		case <-app.quit:
+		case <-ctx.Done():
 			app.logger.Info("exiting unjailing fp loop")
 
 			return
@@ -202,7 +197,7 @@ func (app *FinalityProviderApp) unjailFpLoop() {
 }
 
 // event loop for metrics update
-func (app *FinalityProviderApp) metricsUpdateLoop() {
+func (app *FinalityProviderApp) metricsUpdateLoop(ctx context.Context) {
 	defer app.wg.Done()
 
 	interval := app.config.Metrics.UpdateInterval
@@ -222,7 +217,7 @@ func (app *FinalityProviderApp) metricsUpdateLoop() {
 				}
 			}
 			app.fpInsMu.RUnlock()
-		case <-app.quit:
+		case <-ctx.Done():
 			app.logger.Info("exiting metrics update loop")
 
 			return

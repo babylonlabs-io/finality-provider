@@ -35,9 +35,11 @@ import (
 func TestConsumerFpLifecycle(t *testing.T) {
 	t.Skipf("Skipping until we upgrade wasmd to v0.60")
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	ctm := StartBcdTestManager(t, ctx)
-	defer ctm.Stop(t)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
 
 	// store babylon contract
 	babylonContractPath := "../../bytecode/babylon_contract.wasm"
