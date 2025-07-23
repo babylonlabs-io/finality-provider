@@ -144,7 +144,7 @@ func (cc *RollupBSNController) reliablySendMsgs(ctx context.Context, msgs []sdk.
 		return nil, fmt.Errorf("failed to reliably send messages: %w", err)
 	}
 
-	fmt.Println("DEBUG: Response in reliablySendMsgs", resp)
+	// fmt.Println("DEBUG: Response in reliablySendMsgs", resp)
 
 	return resp, nil
 }
@@ -241,13 +241,10 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 	}
 
 	res, err := cc.reliablySendMsgs(ctx, msgs, expectedErrs, nil)
-	fmt.Println("DEBUG: Response/ERROR in SubmitBatchFinalitySigs", res, err)
 	if err != nil {
 		fmt.Println("DEBUG: Error in SubmitBatchFinalitySigs", err)
 		return nil, fmt.Errorf("failed to send finality signature messages: %w", err)
 	}
-
-	fmt.Println("DEBUG: Response in SubmitBatchFinalitySigs", res)
 
 	// Handle expected errors case where res is nil (e.g., duplicate signatures)
 	if res == nil {
@@ -260,7 +257,7 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 		return &types.TxResponse{}, nil
 	}
 
-	cc.logger.Debug(
+	cc.logger.Warn(
 		"Successfully submitted finality signatures in a batch",
 		zap.String("fp_pk_hex", fpPkHex),
 		zap.Uint64("start_height", req.Blocks[0].GetHeight()),

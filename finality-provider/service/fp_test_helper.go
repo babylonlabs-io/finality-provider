@@ -169,7 +169,7 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 	// try to extract the private key
 	var privKey *btcec.PrivateKey
 	for _, ev := range res.Events {
-		fmt.Println("DEBUG: Event", ev)
+		// fmt.Println("DEBUG: Event", ev)
 		if strings.Contains(ev.EventType, "EventSlashedFinalityProvider") {
 			evidenceStr := ev.Attributes["evidence"]
 			th.fp.logger.Debug("found slashing evidence")

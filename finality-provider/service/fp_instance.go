@@ -176,19 +176,19 @@ func (fp *FinalityProviderInstance) Start() error {
 }
 
 func (fp *FinalityProviderInstance) Stop() error {
-	// fmt.Println("Stopping finality provider instance", fp.GetBtcPkHex())
-	// if !fp.isStarted.Swap(false) {
-	// 	return fmt.Errorf("the finality-provider %s has already stopped", fp.GetBtcPkHex())
-	// }
+	fmt.Println("Stopping finality provider instance", fp.GetBtcPkHex())
+	if !fp.isStarted.Swap(false) {
+		return fmt.Errorf("the finality-provider %s has already stopped", fp.GetBtcPkHex())
+	}
 
-	// if err := fp.poller.Stop(); err != nil {
-	// 	return fmt.Errorf("failed to stop the poller: %w", err)
-	// }
+	if err := fp.poller.Stop(); err != nil {
+		return fmt.Errorf("failed to stop the poller: %w", err)
+	}
 
-	// fp.logger.Info("stopping finality-provider instance", zap.String("pk", fp.GetBtcPkHex()))
+	fp.logger.Info("stopping finality-provider instance", zap.String("pk", fp.GetBtcPkHex()))
 
-	// close(fp.quit)
-	// fp.wg.Wait()
+	close(fp.quit)
+	fp.wg.Wait()
 
 	fp.logger.Info("the finality-provider instance is successfully stopped", zap.String("pk", fp.GetBtcPkHex()))
 

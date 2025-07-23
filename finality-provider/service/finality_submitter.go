@@ -167,10 +167,6 @@ func (ds *DefaultFinalitySubmitter) filterBlocksForVoting(ctx context.Context, b
 //  1. the input blocks should be in the ascending order of height
 //  2. the returned response could be nil due to no transactions might be made in the end
 func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Context, blocks []types.BlockDescription) (*types.TxResponse, error) {
-	fmt.Println("DEBUG: Submitting finality signature to the consumer chain")
-	// print length of blocks
-	fmt.Println("DEBUG: Length of blocks", len(blocks))
-
 	if len(blocks) == 0 {
 		return nil, fmt.Errorf("cannot send signatures for empty blocks")
 	}
@@ -196,10 +192,10 @@ func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 	// Retry loop with internal retry logic
 	for {
 		// Attempt submission
-		fmt.Println("DEBUG: Attempting submission")
+		// fmt.Println("DEBUG: Attempting submission")
 		// print first and last block height
-		fmt.Println("DEBUG: First block height", blocks[0].GetHeight())
-		fmt.Println("DEBUG: Last block height", blocks[len(blocks)-1].GetHeight())
+		// fmt.Println("DEBUG: First block height", blocks[0].GetHeight())
+		// fmt.Println("DEBUG: Last block height", blocks[len(blocks)-1].GetHeight())
 		res, err := ds.submitBatchFinalitySignaturesOnce(ctx, blocks)
 		if err != nil {
 			fmt.Println("DEBUG: Error", err)
@@ -292,6 +288,12 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	validPrList := make([]*btcec.FieldVal, 0, len(blocks))
 	validProofList := make([][]byte, 0, len(blocks))
 	validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
+
+	// print num of blocks
+	fmt.Println("DEBUG: Number of blocks", len(blocks))
+	// print first and last block height
+	fmt.Println("DEBUG: First block height", blocks[0].GetHeight())
+	fmt.Println("DEBUG: Last block height", blocks[len(blocks)-1].GetHeight())
 
 	// Process each block and collect only valid items
 	for i, b := range blocks {
