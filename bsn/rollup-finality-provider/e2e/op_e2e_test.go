@@ -311,3 +311,136 @@ func TestBSNDoubleSigning(t *testing.T) {
 	t.Logf("✅ Double signing attack on conflicting block (height %d) correctly extracted private key", conflictingBlock.GetHeight())
 	t.Logf("✅ BSN rollup environment properly handles both duplicate signatures and equivocation")
 }
+
+// TestRollupBSNCatchingUp tests if a rollup BSN finality provider can catch up after being restarted
+// This is the rollup BSN equivalent of the Babylon TestCatchingUp test
+func TestRollupBSNCatchingUp(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctm := StartRollupTestManager(t, ctx)
+	defer ctm.Stop(t)
+
+	// Step 1: Setup FPs and activation - similar to original test
+	t.Log("Step 1: Setting up finality providers and BTC delegation")
+	fps := ctm.setupBabylonAndConsumerFp(t)
+	babylonFpPk := fps[0]
+	consumerFpPk := fps[1]
+
+	// Add consumer FP to contract allowlist
+	ctm.addFpToContractAllowlist(t, ctx, consumerFpPk)
+	ctm.delegateBTCAndWaitForActivation(t, babylonFpPk, consumerFpPk)
+
+	// Step 2: Start FP instance and establish normal operation
+	t.Log("Step 2: Starting FP instance and establishing normal operation")
+	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
+	err := consumerFpInstance.Start()
+	require.NoError(t, err)
+
+	// Wait for FP to commit randomness and get it timestamped
+	ctm.WaitForFpPubRandTimestamped(t, consumerFpInstance)
+
+	// Wait for FP to vote on at least one rollup block
+	var lastVotedHeight uint64
+	require.Eventually(t, func() bool {
+		if consumerFpInstance.GetLastVotedHeight() > 0 {
+			lastVotedHeight = consumerFpInstance.GetLastVotedHeight()
+			t.Logf("FP voted on rollup block at height: %d", lastVotedHeight)
+			return true
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime, "FP should vote on at least one rollup block")
+
+	t.Logf("Initial voting completed - FP voted on block at height %v", lastVotedHeight)
+
+	// Step 3: Simulate downtime - stop FP for n blocks
+	t.Log("Step 3: Simulating FP downtime - stopping FP for several blocks")
+	var n uint = 3
+
+	// Stop the finality provider
+	err = consumerFpInstance.Stop()
+	require.NoError(t, err)
+	t.Logf("FP stopped. Current last voted height: %d", lastVotedHeight)
+
+	// Wait for the rollup chain to produce n more blocks while FP is offline
+	afterDowntimeHeight := ctm.WaitForNRollupBlocks(t, int(n))
+	t.Logf("Rollup chain produced %d blocks during FP downtime: last voted %d -> current %d",
+		n, lastVotedHeight, afterDowntimeHeight)
+
+	// Step 4: Restart FP and trigger catch-up/fast sync
+	t.Log("Step 4: Restarting FP to trigger catch-up/fast sync")
+
+	// Restart the FP
+	err = consumerFpInstance.Start()
+	require.NoError(t, err)
+
+	// Clean up - ensure we stop the FP instance when test ends
+	t.Cleanup(func() {
+		_ = consumerFpInstance.Stop()
+	})
+
+	// Step 5: Verify FP catches up and continues voting
+	t.Log("Step 5: Verifying FP catches up and resumes normal operation")
+
+	// Wait for FP to catch up and vote on new blocks
+	var finalVotedHeight uint64
+	require.Eventually(t, func() bool {
+		if !consumerFpInstance.IsRunning() {
+			t.Logf("❌ FP stopped running - this indicates a problem with catch-up")
+			return false
+		}
+
+		currentVotedHeight := consumerFpInstance.GetLastVotedHeight()
+
+		// FP should catch up and vote on blocks beyond its pre-downtime state
+		if currentVotedHeight > lastVotedHeight {
+			finalVotedHeight = currentVotedHeight
+			t.Logf("✅ FP successfully caught up and voted on height %d (previously %d)",
+				finalVotedHeight, lastVotedHeight)
+			return true
+		}
+
+		t.Logf("FP catching up, current voted height: %d (previously %d)",
+			currentVotedHeight, lastVotedHeight)
+		return false
+	}, 2*eventuallyWaitTimeOut, eventuallyPollTime, // Give extra time for catch-up
+		"FP should catch up and vote on blocks after restart")
+
+	// Step 6: Verify fast sync efficiency - ensure gap is reasonable
+	t.Log("Step 6: Verifying fast sync efficiency")
+
+	// Check that the FP didn't fall too far behind
+	currentRollupHeight, err := ctm.RollupBSNController.QueryLatestBlock(ctx)
+	require.NoError(t, err)
+
+	// The gap between current rollup height and FP's voted height should be reasonable
+	// This verifies the fast sync worked efficiently
+	gap := currentRollupHeight.GetHeight() - finalVotedHeight
+	t.Logf("Current rollup height: %d, FP voted height: %d, gap: %d",
+		currentRollupHeight.GetHeight(), finalVotedHeight, gap)
+
+	// Similar to original test - ensure gap is not too large (allowing some buffer for processing)
+	require.True(t, gap <= uint64(n)+1,
+		"Fast sync should be efficient - gap (%d) should not exceed downtime blocks + buffer (%d)",
+		gap, n+1)
+
+	// Step 7: Verify continued operation - FP should continue voting
+	t.Log("Step 7: Verifying continued operation after catch-up")
+
+	// Wait for additional blocks to ensure FP continues operating normally
+	ctm.WaitForNRollupBlocks(t, 2)
+
+	// Verify FP continues voting on new blocks
+	require.Eventually(t, func() bool {
+		newVotedHeight := consumerFpInstance.GetLastVotedHeight()
+		return newVotedHeight > finalVotedHeight
+	}, eventuallyWaitTimeOut, eventuallyPollTime,
+		"FP should continue voting on new blocks after catch-up")
+
+	t.Log("✅ Rollup BSN Catching Up Test Completed Successfully!")
+	t.Logf("✅ FP successfully caught up after %d blocks of downtime", n)
+	t.Logf("✅ Pre-downtime voted height: %d", lastVotedHeight)
+	t.Logf("✅ Post-catchup voted height: %d", finalVotedHeight)
+	t.Logf("✅ Fast sync was efficient with gap: %d blocks", gap)
+	t.Logf("✅ FP continues normal operation after catch-up")
+}
