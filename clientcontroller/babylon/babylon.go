@@ -11,7 +11,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 
 	sdkErr "cosmossdk.io/errors"
-	sdkmath "cosmossdk.io/math"
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	btcctypes "github.com/babylonlabs-io/babylon/v3/x/btccheckpoint/types"
@@ -36,7 +35,6 @@ var _ api.ClientController = &BabylonController{}
 
 var emptyErrs = []*sdkErr.Error{}
 
-//nolint:revive
 type BabylonController struct {
 	bbnClient *bbnclient.Client
 	cfg       *fpcfg.BBNConfig
@@ -100,13 +98,13 @@ func (bc *BabylonController) GetKeyAddress() sdk.AccAddress {
 	return addr
 }
 
-func (bc *BabylonController) reliablySendMsg(msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
-	return bc.reliablySendMsgs([]sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
+func (bc *BabylonController) reliablySendMsg(ctx context.Context, msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+	return bc.reliablySendMsgs(ctx, []sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
-func (bc *BabylonController) reliablySendMsgs(msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+func (bc *BabylonController) reliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	resp, err := bc.bbnClient.ReliablySendMsgs(
-		context.Background(),
+		ctx,
 		msgs,
 		expectedErrs,
 		unrecoverableErrs,
@@ -126,33 +124,29 @@ func (bc *BabylonController) GetFpPopContextV0() string {
 // it returns tx hash and error
 // If chainID is empty, then it means the FP is a Babylon FP
 func (bc *BabylonController) RegisterFinalityProvider(
-	chainID string,
-	fpPk *btcec.PublicKey,
-	pop []byte,
-	commission btcstakingtypes.CommissionRates,
-	description []byte,
+	ctx context.Context, req *api.RegisterFinalityProviderRequest,
 ) (*types.TxResponse, error) {
 	var bbnPop btcstakingtypes.ProofOfPossessionBTC
-	if err := bbnPop.Unmarshal(pop); err != nil {
+	if err := bbnPop.Unmarshal(req.Pop); err != nil {
 		return nil, fmt.Errorf("invalid proof-of-possession: %w", err)
 	}
 
 	var sdkDescription sttypes.Description
-	if err := sdkDescription.Unmarshal(description); err != nil {
+	if err := sdkDescription.Unmarshal(req.Description); err != nil {
 		return nil, fmt.Errorf("invalid description: %w", err)
 	}
 
 	fpAddr := bc.MustGetTxSigner()
 	msg := &btcstakingtypes.MsgCreateFinalityProvider{
 		Addr:        fpAddr,
-		BtcPk:       bbntypes.NewBIP340PubKeyFromBTCPK(fpPk),
+		BtcPk:       bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk),
 		Pop:         &bbnPop,
-		Commission:  commission,
+		Commission:  req.Commission,
 		Description: &sdkDescription,
-		BsnId:       chainID,
+		BsnId:       req.ChainID,
 	}
 
-	res, err := bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
+	res, err := bc.reliablySendMsg(ctx, msg, emptyErrs, emptyErrs)
 	if err != nil {
 		return nil, err
 	}
@@ -160,15 +154,17 @@ func (bc *BabylonController) RegisterFinalityProvider(
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
-	rate *sdkmath.LegacyDec, description []byte) (*btcstakingtypes.MsgEditFinalityProvider, error) {
+func (bc *BabylonController) EditFinalityProvider(
+	ctx context.Context,
+	req *api.EditFinalityProviderRequest,
+) (*btcstakingtypes.MsgEditFinalityProvider, error) {
 	var reqDesc proto.Description
-	if err := protobuf.Unmarshal(description, &reqDesc); err != nil {
+	if err := protobuf.Unmarshal(req.Description, &reqDesc); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal description: %w", err)
 	}
-	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk)
 
-	fpRes, err := bc.QueryFinalityProvider(fpPk)
+	fpRes, err := bc.QueryFinalityProvider(ctx, req.FpPk)
 	if err != nil {
 		return nil, err
 	}
@@ -202,19 +198,19 @@ func (bc *BabylonController) EditFinalityProvider(fpPk *btcec.PublicKey,
 		Description: desc,
 	}
 
-	if rate != nil {
-		msg.Commission = rate
+	if req.Commission != nil {
+		msg.Commission = req.Commission
 	}
 
-	_, err = bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
+	_, err = bc.reliablySendMsg(ctx, msg, emptyErrs, emptyErrs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query the finality provider %s: %w", fpPk.SerializeCompressed(), err)
+		return nil, fmt.Errorf("failed to query the finality provider %s: %w", req.FpPk.SerializeCompressed(), err)
 	}
 
 	return msg, nil
 }
 
-func (bc *BabylonController) QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error) {
+func (bc *BabylonController) QueryFinalityProvider(_ context.Context, fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
@@ -286,7 +282,7 @@ func (bc *BabylonController) CreateBTCDelegation(
 		DelegatorUnbondingSlashingSig: delUnbondingSlashingSig,
 	}
 
-	res, err := bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
+	res, err := bc.reliablySendMsg(context.Background(), msg, emptyErrs, emptyErrs)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +296,7 @@ func (bc *BabylonController) InsertBtcBlockHeaders(headers []bbntypes.BTCHeaderB
 		Headers: headers,
 	}
 
-	res, err := bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
+	res, err := bc.reliablySendMsg(context.Background(), msg, emptyErrs, emptyErrs)
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +304,7 @@ func (bc *BabylonController) InsertBtcBlockHeaders(headers []bbntypes.BTCHeaderB
 	return res, nil
 }
 
-// TODO: only used in test. this should not be put here. it causes confusion that this is a method
+// QueryFinalityProviders - TODO: only used in test. this should not be put here. it causes confusion that this is a method
 // that will be used when FP runs. in that's the case, it implies it should work all all consumer
 // types. but `bbnClient.QueryClient.FinalityProviders` doesn't work for consumer chains
 func (bc *BabylonController) QueryFinalityProviders() ([]*btcstakingtypes.FinalityProviderResponse, error) {
@@ -459,7 +455,7 @@ func (bc *BabylonController) SubmitCovenantSigs(
 		SlashingUnbondingTxSigs: unbondingSlashingSigs,
 	}
 
-	res, err := bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
+	res, err := bc.reliablySendMsg(context.Background(), msg, emptyErrs, emptyErrs)
 	if err != nil {
 		return nil, err
 	}
@@ -473,7 +469,7 @@ func (bc *BabylonController) InsertSpvProofs(submitter string, proofs []*btcctyp
 		Proofs:    proofs,
 	}
 
-	res, err := bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
+	res, err := bc.reliablySendMsg(context.Background(), msg, emptyErrs, emptyErrs)
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +487,7 @@ func (bc *BabylonController) RegisterConsumerChain(id, name, description, ethL2F
 		RollupFinalityContractAddress: ethL2FinalityContractAddress,
 	}
 
-	res, err := bc.reliablySendMsg(msg, emptyErrs, emptyErrs)
+	res, err := bc.reliablySendMsg(context.Background(), msg, emptyErrs, emptyErrs)
 	if err != nil {
 		return nil, err
 	}
