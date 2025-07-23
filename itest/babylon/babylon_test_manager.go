@@ -1,11 +1,9 @@
-//go:build e2e_babylon
-// +build e2e_babylon
-
 package e2etest_babylon
 
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap/zaptest"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -71,6 +69,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 	loggerConfig := zap.NewDevelopmentConfig()
 	loggerConfig.Level = zap.NewAtomicLevelAt(zap.ErrorLevel)
 	logger, err := loggerConfig.Build()
+	logger = zaptest.NewLogger(t)
 	require.NoError(t, err)
 
 	// 1. generate covenant committee

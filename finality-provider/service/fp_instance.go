@@ -277,7 +277,7 @@ func (fp *FinalityProviderInstance) processAndSubmitSignatures(ctx context.Conte
 		}
 
 		if !errors.Is(err, ErrFinalityProviderShutDown) {
-			fp.reportCriticalErr(err)
+			fp.reportCriticalErr(ctx, err)
 		}
 
 		return
@@ -330,6 +330,11 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop(ctx context.Context
 	for {
 		select {
 		case <-ticker.C:
+			if ctx.Err() != nil { // Check context before processing
+				fp.logger.Info("context cancelled, exiting randomness commitment loop")
+
+				return
+			}
 			fp.processRandomnessCommitment(ctx)
 		case <-ctx.Done():
 			fp.logger.Info("the randomness commitment loop is closing")
@@ -344,7 +349,7 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop(ctx context.Context
 func (fp *FinalityProviderInstance) processRandomnessCommitment(ctx context.Context) {
 	should, startHeight, err := fp.rndCommitter.ShouldCommit(ctx)
 	if err != nil {
-		fp.reportCriticalErr(err)
+		fp.reportCriticalErr(ctx, err)
 
 		return
 	}
@@ -356,7 +361,7 @@ func (fp *FinalityProviderInstance) processRandomnessCommitment(ctx context.Cont
 	txRes, err := fp.rndCommitter.Commit(ctx, startHeight)
 	if err != nil {
 		fp.metrics.IncrementFpTotalFailedRandomness(fp.GetBtcPkHex())
-		fp.reportCriticalErr(err)
+		fp.reportCriticalErr(ctx, err)
 
 		return
 	}
@@ -373,10 +378,19 @@ func (fp *FinalityProviderInstance) processRandomnessCommitment(ctx context.Cont
 }
 
 // reportCriticalErr reports a critical error by sending it to the criticalErrChan for further handling.
-func (fp *FinalityProviderInstance) reportCriticalErr(err error) {
-	fp.criticalErrChan <- &CriticalError{
+func (fp *FinalityProviderInstance) reportCriticalErr(ctx context.Context, err error) {
+	select {
+	case fp.criticalErrChan <- &CriticalError{
 		err:     err,
 		fpBtcPk: fp.GetBtcPkBIP340(),
+	}:
+		// Successfully sent
+	case <-ctx.Done():
+		// Context cancelled, don't block
+		fp.logger.Debug("skipping error report due to context cancellation", zap.Error(err))
+	default:
+		// Channel is full, log instead
+		fp.logger.Error("failed to report critical error (channel full)", zap.Error(err))
 	}
 }
 
