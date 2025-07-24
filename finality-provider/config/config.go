@@ -70,9 +70,6 @@ type Config struct {
 
 	BabylonConfig *BBNConfig `group:"babylon" namespace:"babylon"`
 
-	// TODO: move to the Cosmos BSN FP config
-	CosmwasmConfig *CosmwasmConfig `group:"wasm" namespace:"wasm"`
-
 	RPCListener string `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
 
 	Metrics *metrics.Config `group:"metrics" namespace:"metrics"`

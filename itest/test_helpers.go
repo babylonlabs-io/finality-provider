@@ -1,6 +1,7 @@
 package e2e_utils
 
 import (
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
 	"math/rand"
 	"testing"
 	"time"
@@ -11,7 +12,6 @@ import (
 	bbn "github.com/babylonlabs-io/babylon/v3/types"
 	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
 	ftypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
-	"github.com/babylonlabs-io/finality-provider/clientcontroller/cosmwasm"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/require"
 
@@ -21,7 +21,7 @@ import (
 	"github.com/cometbft/cometbft/crypto/merkle"
 )
 
-func GenBtcStakingExecMsg(fpHex string) cosmwasm.ExecMsg {
+func GenBtcStakingExecMsg(fpHex string) clientcontroller.ExecMsg {
 	// generate random delegation and finality provider
 	_, newDel := genRandomBtcDelegation()
 	newFp := genRandomFinalityProvider()
@@ -31,19 +31,19 @@ func GenBtcStakingExecMsg(fpHex string) cosmwasm.ExecMsg {
 	newDel.FpBtcPkList = []string{fpHex}
 
 	// create the ExecMsg instance with BtcStaking set
-	executeMessage := cosmwasm.ExecMsg{
-		BtcStaking: &cosmwasm.BtcStaking{
-			NewFP:       []cosmwasm.NewFinalityProvider{newFp},
-			ActiveDel:   []cosmwasm.ActiveBtcDelegation{newDel},
-			SlashedDel:  []cosmwasm.SlashedBtcDelegation{},
-			UnbondedDel: []cosmwasm.UnbondedBtcDelegation{},
+	executeMessage := clientcontroller.ExecMsg{
+		BtcStaking: &clientcontroller.BtcStaking{
+			NewFP:       []clientcontroller.NewFinalityProvider{newFp},
+			ActiveDel:   []clientcontroller.ActiveBtcDelegation{newDel},
+			SlashedDel:  []clientcontroller.SlashedBtcDelegation{},
+			UnbondedDel: []clientcontroller.UnbondedBtcDelegation{},
 		},
 	}
 
 	return executeMessage
 }
 
-func GenBtcStakingFpExecMsg(fpPKHex string) cosmwasm.ExecMsg {
+func GenBtcStakingFpExecMsg(fpPKHex string) clientcontroller.ExecMsg {
 	// generate random finality provider
 	newFp := genRandomFinalityProvider()
 
@@ -51,19 +51,19 @@ func GenBtcStakingFpExecMsg(fpPKHex string) cosmwasm.ExecMsg {
 	newFp.BTCPKHex = fpPKHex
 
 	// create the ExecMsg instance with BtcStaking set for NewFP
-	executeMessage := cosmwasm.ExecMsg{
-		BtcStaking: &cosmwasm.BtcStaking{
-			NewFP:       []cosmwasm.NewFinalityProvider{newFp},
-			ActiveDel:   []cosmwasm.ActiveBtcDelegation{},
-			SlashedDel:  []cosmwasm.SlashedBtcDelegation{},
-			UnbondedDel: []cosmwasm.UnbondedBtcDelegation{},
+	executeMessage := clientcontroller.ExecMsg{
+		BtcStaking: &clientcontroller.BtcStaking{
+			NewFP:       []clientcontroller.NewFinalityProvider{newFp},
+			ActiveDel:   []clientcontroller.ActiveBtcDelegation{},
+			SlashedDel:  []clientcontroller.SlashedBtcDelegation{},
+			UnbondedDel: []clientcontroller.UnbondedBtcDelegation{},
 		},
 	}
 
 	return executeMessage
 }
 
-func GenBtcStakingDelExecMsg(fpHex string) cosmwasm.ExecMsg {
+func GenBtcStakingDelExecMsg(fpHex string) clientcontroller.ExecMsg {
 	// generate random delegation
 	_, newDel := genRandomBtcDelegation()
 
@@ -71,22 +71,22 @@ func GenBtcStakingDelExecMsg(fpHex string) cosmwasm.ExecMsg {
 	newDel.FpBtcPkList = []string{fpHex}
 
 	// create the ExecMsg instance with BtcStaking set for ActiveDel
-	executeMessage := cosmwasm.ExecMsg{
-		BtcStaking: &cosmwasm.BtcStaking{
-			NewFP:       []cosmwasm.NewFinalityProvider{},
-			ActiveDel:   []cosmwasm.ActiveBtcDelegation{newDel},
-			SlashedDel:  []cosmwasm.SlashedBtcDelegation{},
-			UnbondedDel: []cosmwasm.UnbondedBtcDelegation{},
+	executeMessage := clientcontroller.ExecMsg{
+		BtcStaking: &clientcontroller.BtcStaking{
+			NewFP:       []clientcontroller.NewFinalityProvider{},
+			ActiveDel:   []clientcontroller.ActiveBtcDelegation{newDel},
+			SlashedDel:  []clientcontroller.SlashedBtcDelegation{},
+			UnbondedDel: []clientcontroller.UnbondedBtcDelegation{},
 		},
 	}
 
 	return executeMessage
 }
 
-func GenPubRandomnessExecMsg(fpHex string, commitment, sig []byte, startHeight, numPubRand uint64) cosmwasm.ExecMsg {
+func GenPubRandomnessExecMsg(fpHex string, commitment, sig []byte, startHeight, numPubRand uint64) clientcontroller.ExecMsg {
 	// create the ExecMsg instance with CommitPublicRandomness set
-	executeMessage := cosmwasm.ExecMsg{
-		CommitPublicRandomness: &cosmwasm.CommitPublicRandomness{
+	executeMessage := clientcontroller.ExecMsg{
+		CommitPublicRandomness: &clientcontroller.CommitPublicRandomness{
 			FPPubKeyHex: fpHex,
 			StartHeight: startHeight,
 			NumPubRand:  numPubRand,
@@ -98,10 +98,10 @@ func GenPubRandomnessExecMsg(fpHex string, commitment, sig []byte, startHeight, 
 	return executeMessage
 }
 
-func GenFinalitySigExecMsg(startHeight, blockHeight uint64, randListInfo *datagen.RandListInfo, sk *btcec.PrivateKey) cosmwasm.ExecMsg {
+func GenFinalitySigExecMsg(startHeight, blockHeight uint64, randListInfo *datagen.RandListInfo, sk *btcec.PrivateKey) clientcontroller.ExecMsg {
 	fmsg := genAddFinalitySig(startHeight, blockHeight, randListInfo, sk)
-	msg := cosmwasm.ExecMsg{
-		SubmitFinalitySignature: &cosmwasm.SubmitFinalitySignature{
+	msg := clientcontroller.ExecMsg{
+		SubmitFinalitySignature: &clientcontroller.SubmitFinalitySignature{
 			FpPubkeyHex: fmsg.FpBtcPk.MarshalHex(),
 			Height:      fmsg.BlockHeight,
 			PubRand:     fmsg.PubRand.MustMarshal(),
@@ -114,9 +114,9 @@ func GenFinalitySigExecMsg(startHeight, blockHeight uint64, randListInfo *datage
 	return msg
 }
 
-func genRandomFinalityProvider() cosmwasm.NewFinalityProvider {
-	return cosmwasm.NewFinalityProvider{
-		Description: &cosmwasm.FinalityProviderDescription{
+func genRandomFinalityProvider() clientcontroller.NewFinalityProvider {
+	return clientcontroller.NewFinalityProvider{
+		Description: &clientcontroller.FinalityProviderDescription{
 			Moniker:         "fp1",
 			Identity:        "Finality Provider 1",
 			Website:         "https://fp1.com",
@@ -126,7 +126,7 @@ func genRandomFinalityProvider() cosmwasm.NewFinalityProvider {
 		Commission: "0.05",
 		Addr:       datagen.GenRandomAccount().Address,
 		BTCPKHex:   "1",
-		Pop: &cosmwasm.ProofOfPossessionBtc{
+		Pop: &clientcontroller.ProofOfPossessionBtc{
 			BTCSigType: 0,
 			BTCSig:     []byte("mock_btc_sig"),
 		},
@@ -134,7 +134,7 @@ func genRandomFinalityProvider() cosmwasm.NewFinalityProvider {
 	}
 }
 
-func genRandomBtcDelegation() (*bstypes.Params, cosmwasm.ActiveBtcDelegation) {
+func genRandomBtcDelegation() (*bstypes.Params, clientcontroller.ActiveBtcDelegation) {
 	var net = &chaincfg.RegressionNetParams
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	t := &testing.T{}
@@ -200,37 +200,37 @@ func genRandomBtcDelegation() (*bstypes.Params, cosmwasm.ActiveBtcDelegation) {
 	return bsParams, activeDel
 }
 
-func convertBTCDelegationToActiveBtcDelegation(mockDel *bstypes.BTCDelegation) cosmwasm.ActiveBtcDelegation {
+func convertBTCDelegationToActiveBtcDelegation(mockDel *bstypes.BTCDelegation) clientcontroller.ActiveBtcDelegation {
 	var fpBtcPkList []string
 	for _, pk := range mockDel.FpBtcPkList {
 		fpBtcPkList = append(fpBtcPkList, pk.MarshalHex())
 	}
 
-	var covenantSigs []cosmwasm.CovenantAdaptorSignatures
+	var covenantSigs []clientcontroller.CovenantAdaptorSignatures
 	for _, cs := range mockDel.CovenantSigs {
-		covenantSigs = append(covenantSigs, cosmwasm.CovenantAdaptorSignatures{
+		covenantSigs = append(covenantSigs, clientcontroller.CovenantAdaptorSignatures{
 			CovPK:       cs.CovPk.MustMarshal(),
 			AdaptorSigs: cs.AdaptorSigs,
 		})
 	}
 
-	var covenantUnbondingSigs []cosmwasm.SignatureInfo
+	var covenantUnbondingSigs []clientcontroller.SignatureInfo
 	for _, sigInfo := range mockDel.BtcUndelegation.CovenantUnbondingSigList {
-		covenantUnbondingSigs = append(covenantUnbondingSigs, cosmwasm.SignatureInfo{
+		covenantUnbondingSigs = append(covenantUnbondingSigs, clientcontroller.SignatureInfo{
 			PK:  sigInfo.Pk.MustMarshal(),
 			Sig: sigInfo.Sig.MustMarshal(),
 		})
 	}
 
-	var covenantSlashingSigs []cosmwasm.CovenantAdaptorSignatures
+	var covenantSlashingSigs []clientcontroller.CovenantAdaptorSignatures
 	for _, cs := range mockDel.BtcUndelegation.CovenantSlashingSigs {
-		covenantSlashingSigs = append(covenantSlashingSigs, cosmwasm.CovenantAdaptorSignatures{
+		covenantSlashingSigs = append(covenantSlashingSigs, clientcontroller.CovenantAdaptorSignatures{
 			CovPK:       cs.CovPk.MustMarshal(),
 			AdaptorSigs: cs.AdaptorSigs,
 		})
 	}
 
-	undelegationInfo := cosmwasm.BtcUndelegationInfo{
+	undelegationInfo := clientcontroller.BtcUndelegationInfo{
 		UnbondingTx:           mockDel.BtcUndelegation.UnbondingTx,
 		SlashingTx:            mockDel.BtcUndelegation.SlashingTx.MustMarshal(),
 		DelegatorSlashingSig:  mockDel.BtcUndelegation.DelegatorSlashingSig.MustMarshal(),
@@ -239,7 +239,7 @@ func convertBTCDelegationToActiveBtcDelegation(mockDel *bstypes.BTCDelegation) c
 		CovenantSlashingSigs:  covenantSlashingSigs,
 	}
 
-	return cosmwasm.ActiveBtcDelegation{
+	return clientcontroller.ActiveBtcDelegation{
 		StakerAddr:           mockDel.StakerAddr,
 		BTCPkHex:             mockDel.BtcPk.MarshalHex(),
 		FpBtcPkList:          fpBtcPkList,

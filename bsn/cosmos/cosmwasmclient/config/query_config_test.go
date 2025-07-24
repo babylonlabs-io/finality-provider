@@ -1,9 +1,9 @@
 package config_test
 
 import (
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
 	"testing"
 
-	"github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
 	"github.com/stretchr/testify/require"
 )
 

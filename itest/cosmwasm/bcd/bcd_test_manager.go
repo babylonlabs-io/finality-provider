@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
+	cwcc "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasm"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"os"
 	"path/filepath"
@@ -34,7 +36,6 @@ import (
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
-	cwcc "github.com/babylonlabs-io/finality-provider/clientcontroller/cosmwasm"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -131,7 +132,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	wh := NewBcdNodeHandler(t)
 	err = wh.Start()
 	require.NoError(t, err)
-	cfg.CosmwasmConfig = fpcfg.DefaultCosmwasmConfig()
+	cfg.CosmwasmConfig = config.DefaultCosmwasmConfig()
 	cfg.CosmwasmConfig.KeyDirectory = wh.dataDir
 	// make random contract address for now to avoid validation errors, later we will update it with the correct address in the test
 	cfg.CosmwasmConfig.BtcStakingContractAddress = datagen.GenRandomAccount().GetAddress().String()

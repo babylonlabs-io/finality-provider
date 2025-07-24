@@ -2,12 +2,9 @@ package clientcontroller
 
 import (
 	"fmt"
-
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
-	"github.com/babylonlabs-io/finality-provider/clientcontroller/cosmwasm"
-	cosmwasmcfg "github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"go.uber.org/zap"
 )
@@ -46,12 +43,6 @@ func NewConsumerController(config *fpcfg.Config, logger *zap.Logger) (api.Consum
 		ccc, err = babylon.NewBabylonConsumerController(config.BabylonConfig, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Babylon rpc client: %w", err)
-		}
-	case WasmConsumerChainType:
-		wasmEncodingCfg := cosmwasmcfg.GetWasmdEncodingConfig()
-		ccc, err = cosmwasm.NewCosmwasmConsumerController(config.CosmwasmConfig, wasmEncodingCfg, logger)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create Wasm rpc client: %w", err)
 		}
 	default:
 		return nil, fmt.Errorf("unsupported consumer chain")
