@@ -141,6 +141,7 @@ func (m *Manager) RunAnvilResource(t *testing.T) (*dockertest.Resource, error) {
 			ExposedPorts: []string{
 				"8545/tcp", // Ethereum JSON-RPC port
 			},
+			Env: []string{"BLOCK_TIME=8"}, // Set block time to 8 seconds to avoid out of gas errors
 			// Don't override Cmd - let the wrapper.sh handle it
 		},
 		func(config *docker.HostConfig) {
