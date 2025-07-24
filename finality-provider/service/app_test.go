@@ -442,7 +442,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 	})
 }
 
-func startFPAppWithRegisteredFp(ctx context.Context, t *testing.T, r *rand.Rand, homePath string, cfg *config.Config, cc api.ClientController, consumerCon api.ConsumerController) (*service.FinalityProviderApp, *bbntypes.BIP340PubKey, func()) {
+func startFPAppWithRegisteredFp(ctx context.Context, t *testing.T, r *rand.Rand, homePath string, cfg *config.Config, cc api.BabylonController, consumerCon api.ConsumerController) (*service.FinalityProviderApp, *bbntypes.BIP340PubKey, func()) {
 	logger := zaptest.NewLogger(t)
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")

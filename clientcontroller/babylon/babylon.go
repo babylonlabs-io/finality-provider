@@ -31,12 +31,21 @@ import (
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
-var _ api.ClientController = &BabylonController{}
+var _ api.BabylonController = &ClientWrapper{}
 
 var emptyErrs = []*sdkErr.Error{}
 
-// nolint:revive
-type BabylonController struct {
+// ClientWrapper - wrapper around the `bbnclient.Client` that implements
+// the api.BabylonController interface. It serves as the primary interface for finality
+// providers to interact with the Babylon Genesis.
+//
+// The wrapper handles:
+// - Finality provider registration and management
+// - BTC delegation operations and covenant signatures
+// - Blockchain queries for staking parameters and epoch information
+// - BTC light client operations and header management
+// - Consumer chain registration and queries
+type ClientWrapper struct {
 	bbnClient *bbnclient.Client
 	cfg       *fpcfg.BBNConfig
 	logger    *zap.Logger
@@ -46,15 +55,15 @@ func NewBabylonController(
 	bbnClient *bbnclient.Client,
 	cfg *fpcfg.BBNConfig,
 	logger *zap.Logger,
-) (*BabylonController, error) {
-	return &BabylonController{
+) (*ClientWrapper, error) {
+	return &ClientWrapper{
 		bbnClient,
 		cfg,
 		logger,
 	}, nil
 }
 
-func (bc *BabylonController) Start() error {
+func (bc *ClientWrapper) Start() error {
 	// makes sure that the key in config really exists and is a valid bech32 addr
 	// to allow using mustGetTxSigner
 	if _, err := bc.bbnClient.GetAddr(); err != nil {
@@ -73,18 +82,18 @@ func (bc *BabylonController) Start() error {
 	return nil
 }
 
-func (bc *BabylonController) MustGetTxSigner() string {
+func (bc *ClientWrapper) MustGetTxSigner() string {
 	signer := bc.GetKeyAddress()
 	prefix := bc.cfg.AccountPrefix
 
 	return sdk.MustBech32ifyAddressBytes(prefix, signer)
 }
 
-func (bc *BabylonController) GetKeyAddress() sdk.AccAddress {
+func (bc *ClientWrapper) GetKeyAddress() sdk.AccAddress {
 	// get key address, retrieves address based on the key name which is configured in
 	// cfg *stakercfg.BBNConfig. If this fails, it means we have a misconfiguration problem
 	// and we should panic.
-	// This is checked at the start of BabylonController, so if it fails something is really wrong
+	// This is checked at the start of ClientWrapper, so if it fails something is really wrong
 
 	keyRec, err := bc.bbnClient.GetKeyring().Key(bc.cfg.Key)
 	if err != nil {
@@ -99,11 +108,11 @@ func (bc *BabylonController) GetKeyAddress() sdk.AccAddress {
 	return addr
 }
 
-func (bc *BabylonController) reliablySendMsg(ctx context.Context, msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+func (bc *ClientWrapper) reliablySendMsg(ctx context.Context, msg sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	return bc.reliablySendMsgs(ctx, []sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
-func (bc *BabylonController) reliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
+func (bc *ClientWrapper) reliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedErrs []*sdkErr.Error, unrecoverableErrs []*sdkErr.Error) (*babylonclient.RelayerTxResponse, error) {
 	resp, err := bc.bbnClient.ReliablySendMsgs(
 		ctx,
 		msgs,
@@ -117,14 +126,14 @@ func (bc *BabylonController) reliablySendMsgs(ctx context.Context, msgs []sdk.Ms
 	return resp, nil
 }
 
-func (bc *BabylonController) GetFpPopContextV0() string {
+func (bc *ClientWrapper) GetFpPopContextV0() string {
 	return signingcontext.FpPopContextV0(bc.cfg.ChainID, signingcontext.AccBTCStaking.String())
 }
 
 // RegisterFinalityProvider registers a finality provider via a MsgCreateFinalityProvider to Babylon
 // it returns tx hash and error
 // If chainID is empty, then it means the FP is a Babylon FP
-func (bc *BabylonController) RegisterFinalityProvider(
+func (bc *ClientWrapper) RegisterFinalityProvider(
 	ctx context.Context, req *api.RegisterFinalityProviderRequest,
 ) (*types.TxResponse, error) {
 	var bbnPop btcstakingtypes.ProofOfPossessionBTC
@@ -155,7 +164,7 @@ func (bc *BabylonController) RegisterFinalityProvider(
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-func (bc *BabylonController) EditFinalityProvider(
+func (bc *ClientWrapper) EditFinalityProvider(
 	ctx context.Context,
 	req *api.EditFinalityProviderRequest,
 ) (*btcstakingtypes.MsgEditFinalityProvider, error) {
@@ -211,7 +220,7 @@ func (bc *BabylonController) EditFinalityProvider(
 	return msg, nil
 }
 
-func (bc *BabylonController) QueryFinalityProvider(_ context.Context, fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error) {
+func (bc *ClientWrapper) QueryFinalityProvider(_ context.Context, fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
@@ -221,7 +230,7 @@ func (bc *BabylonController) QueryFinalityProvider(_ context.Context, fpPk *btce
 	return res, nil
 }
 
-func (bc *BabylonController) NodeTxIndexEnabled() (bool, error) {
+func (bc *ClientWrapper) NodeTxIndexEnabled() (bool, error) {
 	res, err := bc.bbnClient.GetStatus()
 	if err != nil {
 		return false, fmt.Errorf("failed to query node status: %w", err)
@@ -230,7 +239,7 @@ func (bc *BabylonController) NodeTxIndexEnabled() (bool, error) {
 	return res.TxIndexEnabled(), nil
 }
 
-func (bc *BabylonController) Close() error {
+func (bc *ClientWrapper) Close() error {
 	if !bc.bbnClient.IsRunning() {
 		return nil
 	}
@@ -246,7 +255,7 @@ func (bc *BabylonController) Close() error {
 	Implementations for e2e tests only
 */
 
-func (bc *BabylonController) CreateBTCDelegation(
+func (bc *ClientWrapper) CreateBTCDelegation(
 	delBtcPk *bbntypes.BIP340PubKey,
 	fpPks []*btcec.PublicKey,
 	pop *btcstakingtypes.ProofOfPossessionBTC,
@@ -291,7 +300,7 @@ func (bc *BabylonController) CreateBTCDelegation(
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-func (bc *BabylonController) InsertBtcBlockHeaders(headers []bbntypes.BTCHeaderBytes) (*babylonclient.RelayerTxResponse, error) {
+func (bc *ClientWrapper) InsertBtcBlockHeaders(headers []bbntypes.BTCHeaderBytes) (*babylonclient.RelayerTxResponse, error) {
 	msg := &btclctypes.MsgInsertHeaders{
 		Signer:  bc.MustGetTxSigner(),
 		Headers: headers,
@@ -308,7 +317,7 @@ func (bc *BabylonController) InsertBtcBlockHeaders(headers []bbntypes.BTCHeaderB
 // QueryFinalityProviders - TODO: only used in test. this should not be put here. it causes confusion that this is a method
 // that will be used when FP runs. in that's the case, it implies it should work all all consumer
 // types. but `bbnClient.QueryClient.FinalityProviders` doesn't work for consumer chains
-func (bc *BabylonController) QueryFinalityProviders() ([]*btcstakingtypes.FinalityProviderResponse, error) {
+func (bc *ClientWrapper) QueryFinalityProviders() ([]*btcstakingtypes.FinalityProviderResponse, error) {
 	var fps []*btcstakingtypes.FinalityProviderResponse
 	pagination := &sdkquery.PageRequest{
 		Limit: 100,
@@ -331,7 +340,7 @@ func (bc *BabylonController) QueryFinalityProviders() ([]*btcstakingtypes.Finali
 	return fps, nil
 }
 
-func (bc *BabylonController) QueryConsumerFinalityProviders(bsnID string) ([]*btcstakingtypes.FinalityProviderResponse, error) {
+func (bc *ClientWrapper) QueryConsumerFinalityProviders(bsnID string) ([]*btcstakingtypes.FinalityProviderResponse, error) {
 	var fps []*btcstakingtypes.FinalityProviderResponse
 	pagination := &sdkquery.PageRequest{
 		Limit: 100,
@@ -353,7 +362,7 @@ func (bc *BabylonController) QueryConsumerFinalityProviders(bsnID string) ([]*bt
 	return fps, nil
 }
 
-func (bc *BabylonController) QueryBtcLightClientTip() (*btclctypes.BTCHeaderInfoResponse, error) {
+func (bc *ClientWrapper) QueryBtcLightClientTip() (*btclctypes.BTCHeaderInfoResponse, error) {
 	res, err := bc.bbnClient.QueryClient.BTCHeaderChainTip()
 	if err != nil {
 		return nil, fmt.Errorf("failed to query BTC tip: %w", err)
@@ -362,7 +371,7 @@ func (bc *BabylonController) QueryBtcLightClientTip() (*btclctypes.BTCHeaderInfo
 	return res.Header, nil
 }
 
-func (bc *BabylonController) QueryCurrentEpoch() (uint64, error) {
+func (bc *ClientWrapper) QueryCurrentEpoch() (uint64, error) {
 	res, err := bc.bbnClient.QueryClient.CurrentEpoch()
 	if err != nil {
 		return 0, fmt.Errorf("failed to query BTC tip: %w", err)
@@ -371,7 +380,7 @@ func (bc *BabylonController) QueryCurrentEpoch() (uint64, error) {
 	return res.CurrentEpoch, nil
 }
 
-func (bc *BabylonController) QueryVotesAtHeight(height uint64) ([]bbntypes.BIP340PubKey, error) {
+func (bc *ClientWrapper) QueryVotesAtHeight(height uint64) ([]bbntypes.BIP340PubKey, error) {
 	res, err := bc.bbnClient.QueryClient.VotesAtHeight(height)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query BTC delegations: %w", err)
@@ -380,18 +389,18 @@ func (bc *BabylonController) QueryVotesAtHeight(height uint64) ([]bbntypes.BIP34
 	return res.BtcPks, nil
 }
 
-func (bc *BabylonController) QueryPendingDelegations(limit uint64) ([]*btcstakingtypes.BTCDelegationResponse, error) {
+func (bc *ClientWrapper) QueryPendingDelegations(limit uint64) ([]*btcstakingtypes.BTCDelegationResponse, error) {
 	return bc.queryDelegationsWithStatus(btcstakingtypes.BTCDelegationStatus_PENDING, limit)
 }
 
-func (bc *BabylonController) QueryActiveDelegations(limit uint64) ([]*btcstakingtypes.BTCDelegationResponse, error) {
+func (bc *ClientWrapper) QueryActiveDelegations(limit uint64) ([]*btcstakingtypes.BTCDelegationResponse, error) {
 	return bc.queryDelegationsWithStatus(btcstakingtypes.BTCDelegationStatus_ACTIVE, limit)
 }
 
 // queryDelegationsWithStatus queries BTC delegations
 // with the given status (either pending or unbonding)
 // it is only used when the program is running in Covenant mode
-func (bc *BabylonController) queryDelegationsWithStatus(status btcstakingtypes.BTCDelegationStatus, limit uint64) ([]*btcstakingtypes.BTCDelegationResponse, error) {
+func (bc *ClientWrapper) queryDelegationsWithStatus(status btcstakingtypes.BTCDelegationStatus, limit uint64) ([]*btcstakingtypes.BTCDelegationResponse, error) {
 	pagination := &sdkquery.PageRequest{
 		Limit: limit,
 	}
@@ -404,7 +413,7 @@ func (bc *BabylonController) queryDelegationsWithStatus(status btcstakingtypes.B
 	return res.BtcDelegations, nil
 }
 
-func (bc *BabylonController) QueryStakingParams() (*types.StakingParams, error) {
+func (bc *ClientWrapper) QueryStakingParams() (*types.StakingParams, error) {
 	// query btc checkpoint params
 	ckptParamRes, err := bc.bbnClient.QueryClient.BTCCheckpointParams()
 	if err != nil {
@@ -438,7 +447,7 @@ func (bc *BabylonController) QueryStakingParams() (*types.StakingParams, error) 
 	}, nil
 }
 
-func (bc *BabylonController) SubmitCovenantSigs(
+func (bc *ClientWrapper) SubmitCovenantSigs(
 	covPk *btcec.PublicKey,
 	stakingTxHash string,
 	slashingSigs [][]byte,
@@ -464,7 +473,7 @@ func (bc *BabylonController) SubmitCovenantSigs(
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-func (bc *BabylonController) InsertSpvProofs(submitter string, proofs []*btcctypes.BTCSpvProof) (*babylonclient.RelayerTxResponse, error) {
+func (bc *ClientWrapper) InsertSpvProofs(submitter string, proofs []*btcctypes.BTCSpvProof) (*babylonclient.RelayerTxResponse, error) {
 	msg := &btcctypes.MsgInsertBTCSpvProof{
 		Submitter: submitter,
 		Proofs:    proofs,
@@ -479,7 +488,7 @@ func (bc *BabylonController) InsertSpvProofs(submitter string, proofs []*btcctyp
 }
 
 // RegisterConsumerChain registers a consumer chain via a MsgRegisterChain to Babylon
-func (bc *BabylonController) RegisterConsumerChain(id, name, description, ethL2FinalityContractAddress string) (*types.TxResponse, error) {
+func (bc *ClientWrapper) RegisterConsumerChain(id, name, description, ethL2FinalityContractAddress string) (*types.TxResponse, error) {
 	msg := &bsctypes.MsgRegisterConsumer{
 		Signer:                        bc.MustGetTxSigner(),
 		ConsumerId:                    id,
@@ -496,6 +505,6 @@ func (bc *BabylonController) RegisterConsumerChain(id, name, description, ethL2F
 	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
-func (bc *BabylonController) GetBBNClient() *bbnclient.Client {
+func (bc *ClientWrapper) GetBBNClient() *bbnclient.Client {
 	return bc.bbnClient
 }

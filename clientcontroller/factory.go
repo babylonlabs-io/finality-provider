@@ -18,7 +18,7 @@ const (
 	WasmConsumerChainType      = "wasm"
 )
 
-func NewBabylonController(bbnConfig *fpcfg.BBNConfig, logger *zap.Logger) (api.ClientController, error) {
+func NewBabylonController(bbnConfig *fpcfg.BBNConfig, logger *zap.Logger) (api.BabylonController, error) {
 	bbnCfg := bbnConfig.ToBabylonConfig()
 	bbnClient, err := bbnclient.New(
 		&bbnCfg,

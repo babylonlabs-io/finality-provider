@@ -178,12 +178,12 @@ func waitForBabylonNodeStart(
 	logger *zap.Logger,
 	manager *container.Manager,
 	babylond *dockertest.Resource,
-) (*bbncc.BabylonController, *types.StakingParams) {
+) (*bbncc.ClientWrapper, *types.StakingParams) {
 	// create Babylon FP config
 	babylonFpCfg := createBabylonFpConfig(t, keyDir, testDir, manager, babylond)
 
 	// create Babylon controller
-	var babylonController *bbncc.BabylonController
+	var babylonController *bbncc.ClientWrapper
 	require.Eventually(t, func() bool {
 		var err error
 		bc, err := fpcc.NewBabylonController(babylonFpCfg.BabylonConfig, logger)
@@ -191,7 +191,7 @@ func waitForBabylonNodeStart(
 			t.Logf("Failed to create Babylon controller: %v", err)
 			return false
 		}
-		babylonController = bc.(*bbncc.BabylonController)
+		babylonController = bc.(*bbncc.ClientWrapper)
 		return true
 	}, 30*time.Second, 1*time.Second)
 

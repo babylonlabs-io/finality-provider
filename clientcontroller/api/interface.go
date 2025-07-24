@@ -14,9 +14,9 @@ import (
 //nolint:revive,unused
 const babylonConsumerChainType = "babylon"
 
-// ClientController defines the interface for interacting with the Babylon blockchain
+// BabylonController defines the interface for interacting with the Babylon blockchain
 // for finality provider operations
-type ClientController interface {
+type BabylonController interface {
 	// Start initializes the client connection
 	Start() error
 

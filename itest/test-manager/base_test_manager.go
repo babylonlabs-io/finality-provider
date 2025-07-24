@@ -44,7 +44,7 @@ import (
 )
 
 type BaseTestManager struct {
-	BabylonController *bbncc.BabylonController
+	BabylonController *bbncc.ClientWrapper
 	CovenantPrivKeys  []*btcec.PrivateKey
 }
 

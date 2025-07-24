@@ -20,7 +20,7 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockClientController is a mock of ClientController interface.
+// MockClientController is a mock of BabylonController interface.
 type MockClientController struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientControllerMockRecorder

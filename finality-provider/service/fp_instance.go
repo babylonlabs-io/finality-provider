@@ -31,7 +31,7 @@ type FinalityProviderInstance struct {
 
 	logger            *zap.Logger
 	em                eotsmanager.EOTSManager
-	cc                ccapi.ClientController
+	cc                ccapi.BabylonController
 	consumerCon       ccapi.ConsumerController
 	poller            types.BlockPoller[types.BlockDescription]
 	rndCommitter      types.RandomnessCommitter
@@ -53,7 +53,7 @@ func NewFinalityProviderInstance(
 	cfg *fpcfg.Config,
 	s *store.FinalityProviderStore,
 	prStore *store.PubRandProofStore,
-	cc ccapi.ClientController,
+	cc ccapi.BabylonController,
 	consumerCon ccapi.ConsumerController,
 	em eotsmanager.EOTSManager,
 	poller types.BlockPoller[types.BlockDescription],
@@ -97,7 +97,7 @@ func newFinalityProviderInstanceFromStore(
 	cfg *fpcfg.Config,
 	s *store.FinalityProviderStore,
 	prStore *store.PubRandProofStore,
-	cc ccapi.ClientController,
+	cc ccapi.BabylonController,
 	consumerCon ccapi.ConsumerController,
 	em eotsmanager.EOTSManager,
 	poller types.BlockPoller[types.BlockDescription],
