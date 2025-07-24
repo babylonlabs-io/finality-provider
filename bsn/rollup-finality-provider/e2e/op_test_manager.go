@@ -19,9 +19,12 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"math/rand"
+
 	ckpttypes "github.com/babylonlabs-io/babylon/v3/x/checkpointing/types"
 	rollupfpcontroller "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/clientcontroller"
 	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
+	rollupservice "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/service"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
@@ -600,6 +603,151 @@ func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
 	if ctm.ConsumerFpApp != nil {
 		ctm.ConsumerFpApp.Stop()
 	}
+}
+
+// StartRollupManagerWithFinalityProvider starts the rollup test manager with actual daemon processes
+// This makes CLI tests possible by providing real RPC endpoints that CLI commands can connect to
+func StartRollupManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context) (*OpL2ConsumerTestManager, []*service.FinalityProviderInstance) {
+	// Start the base rollup test manager
+	ctm := StartRollupTestManager(t, ctx)
+
+	var runningFps []*service.FinalityProviderInstance
+	for i := 0; i < n; i++ {
+		fpIns := ctm.AddRollupFinalityProvider(t, ctx)
+		runningFps = append(runningFps, fpIns)
+	}
+
+	// Verify finality providers are registered
+	require.Eventually(t, func() bool {
+		fps, err := ctm.BabylonController.QueryFinalityProviders()
+		if err != nil {
+			t.Logf("failed to query finality providers from Babylon %s", err.Error())
+			return false
+		}
+		return len(fps) >= n
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	t.Logf("the rollup test manager is running with %d finality provider daemon(s)", n)
+
+	return ctm, runningFps
+}
+
+// AddRollupFinalityProvider creates a rollup finality provider with actual daemon process
+// This follows the same pattern as Babylon's AddFinalityProvider method
+func (ctm *OpL2ConsumerTestManager) AddRollupFinalityProvider(t *testing.T, ctx context.Context) *service.FinalityProviderInstance {
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+
+	// Create EOTS key for this FP
+	eotsKeyName := fmt.Sprintf("rollup-eots-key-%s", fmt.Sprintf("%d", r.Intn(10000)))
+	eotsPkBz, err := ctm.EOTSServerHandler.CreateKey(eotsKeyName, "")
+	require.NoError(t, err)
+	eotsPk, err := bbntypes.NewBIP340PubKey(eotsPkBz)
+	require.NoError(t, err)
+
+	t.Logf("Created rollup EOTS key: %s", eotsPk.MarshalHex())
+
+	// Create unique FP home directory and config (like Babylon does)
+	fpKeyName := fmt.Sprintf("rollup-fp-key-%s", fmt.Sprintf("%d", r.Intn(10000)))
+	fpHomeDir := filepath.Join(ctm.BaseDir, fmt.Sprintf("rollup-fp-%s", fmt.Sprintf("%d", r.Intn(10000))))
+
+	// Create a NEW config with unique database paths (like Babylon does)
+	uniqueFpConfig := e2eutils.DefaultFpConfig(ctm.BaseDir, fpHomeDir)
+	uniqueFpConfig.BabylonConfig.Key = fpKeyName
+	uniqueFpConfig.BabylonConfig.RPCAddr = ctm.ConsumerFpApp.GetConfig().BabylonConfig.RPCAddr
+	uniqueFpConfig.BabylonConfig.GRPCAddr = ctm.ConsumerFpApp.GetConfig().BabylonConfig.GRPCAddr
+	uniqueFpConfig.BabylonConfig.ChainID = ctm.ConsumerFpApp.GetConfig().BabylonConfig.ChainID
+	uniqueFpConfig.BabylonConfig.KeyDirectory = ctm.ConsumerFpApp.GetConfig().BabylonConfig.KeyDirectory
+	uniqueFpConfig.BabylonConfig.KeyringBackend = ctm.ConsumerFpApp.GetConfig().BabylonConfig.KeyringBackend
+	uniqueFpConfig.EOTSManagerAddress = ctm.ConsumerFpApp.GetConfig().EOTSManagerAddress
+
+	// Create rollup FP config with the unique common config
+	rollupCfg := &rollupfpconfig.RollupFPConfig{
+		RollupNodeRPCAddress:    ctm.RollupBSNController.Cfg.RollupNodeRPCAddress,
+		FinalityContractAddress: ctm.RollupBSNController.Cfg.FinalityContractAddress,
+		Common:                  uniqueFpConfig, // ← Now uses unique config!
+	}
+
+	// Assign unique ports for this FP daemon
+	rollupCfg.Common.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
+	rollupCfg.Common.Metrics.Port = testutil.AllocateUniquePort(t)
+
+	// Create Babylon key for this FP
+	fpBbnKeyInfo, err := testutil.CreateChainKey(
+		rollupCfg.Common.BabylonConfig.KeyDirectory,
+		rollupCfg.Common.BabylonConfig.ChainID,
+		rollupCfg.Common.BabylonConfig.Key,
+		rollupCfg.Common.BabylonConfig.KeyringBackend,
+		passphrase,
+		hdPath,
+		"",
+	)
+	require.NoError(t, err)
+
+	t.Logf("Created rollup Babylon key: %s", fpBbnKeyInfo.AccAddress.String())
+
+	// Fund the FP address
+	_, _, err = ctm.manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), fmt.Sprintf("%dubbn", bbnAddrTopUpAmount), "node0")
+	require.NoError(t, err)
+
+	// Wait for funding to be confirmed
+	require.Eventually(t, func() bool {
+		out, _, err := ctm.manager.ExecBabylondCmd(t, []string{"query", "bank", "balances", fpBbnKeyInfo.AccAddress.String(), "--output=json"})
+		if err != nil {
+			return false
+		}
+		var balances struct {
+			Balances []struct {
+				Denom  string `json:"denom"`
+				Amount string `json:"amount"`
+			} `json:"balances"`
+		}
+		if err := json.Unmarshal(out.Bytes(), &balances); err != nil {
+			return false
+		}
+		for _, bal := range balances.Balances {
+			if bal.Denom == "ubbn" && bal.Amount == fmt.Sprintf("%d", bbnAddrTopUpAmount) {
+				return true
+			}
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	// Create rollup BSN finality provider app using the service constructor
+	fpdb, err := rollupCfg.Common.DatabaseConfig.GetDBBackend()
+	require.NoError(t, err)
+
+	rollupFpApp, err := rollupservice.NewRollupBSNFinalityProviderAppFromConfig(rollupCfg, fpdb, ctm.logger)
+	require.NoError(t, err)
+
+	// Start the app
+	err = rollupFpApp.Start()
+	require.NoError(t, err)
+
+	// Create and register the finality provider
+	commission := testutil.ZeroCommissionRate()
+	desc := e2eutils.NewDescription(fmt.Sprintf("rollup-fp-%s", eotsPk.MarshalHex()[:8]))
+
+	_, err = rollupFpApp.CreateFinalityProvider(ctx, fpKeyName, rollupBSNID, eotsPk, desc, commission)
+	require.NoError(t, err)
+
+	// Start the specific finality provider instance
+	err = rollupFpApp.StartFinalityProvider(eotsPk)
+	require.NoError(t, err)
+
+	// **CRUCIAL**: Start the actual daemon server (like Babylon does)
+	fpServer := service.NewFinalityProviderServer(rollupCfg.Common, ctm.logger, rollupFpApp, fpdb)
+	go func() {
+		err := fpServer.RunUntilShutdown(ctx)
+		require.NoError(t, err)
+	}()
+
+	t.Logf("Started rollup FP daemon listening on: %s", rollupCfg.Common.RPCListener)
+
+	// Get the finality provider instance
+	fpIns, err := rollupFpApp.GetFinalityProviderInstance()
+	require.NoError(t, err)
+
+	return fpIns
 }
 
 // WaitForFpPubRandTimestamped waits for the FP to commit public randomness and get it timestamped
