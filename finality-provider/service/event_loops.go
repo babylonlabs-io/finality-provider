@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"time"
 
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -100,11 +101,14 @@ func (app *FinalityProviderApp) registrationLoop(ctx context.Context) {
 				continue
 			}
 			res, err := app.cc.RegisterFinalityProvider(
-				req.chainID,
-				req.btcPubKey.MustToBTCPK(),
-				popBytes,
-				req.commission,
-				desBytes,
+				ctx,
+				&api.RegisterFinalityProviderRequest{
+					ChainID:     req.chainID,
+					FpPk:        req.btcPubKey.MustToBTCPK(),
+					Pop:         popBytes,
+					Commission:  req.commission,
+					Description: desBytes,
+				},
 			)
 
 			if err != nil {

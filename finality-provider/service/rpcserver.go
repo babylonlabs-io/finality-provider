@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"go.uber.org/zap"
 	"sync"
 	"sync/atomic"
@@ -200,7 +201,7 @@ func (r *rpcServer) QueryFinalityProvider(_ context.Context, req *proto.QueryFin
 	return &proto.QueryFinalityProviderResponse{FinalityProvider: fp}, nil
 }
 
-func (r *rpcServer) EditFinalityProvider(_ context.Context, req *proto.EditFinalityProviderRequest) (*proto.EmptyResponse, error) {
+func (r *rpcServer) EditFinalityProvider(ctx context.Context, req *proto.EditFinalityProviderRequest) (*proto.EmptyResponse, error) {
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(req.BtcPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse BTC public key: %w", err)
@@ -222,7 +223,14 @@ func (r *rpcServer) EditFinalityProvider(_ context.Context, req *proto.EditFinal
 	}
 
 	fpPub := fpPk.MustToBTCPK()
-	updatedMsg, err := r.app.cc.EditFinalityProvider(fpPub, rate, descBytes)
+	updatedMsg, err := r.app.cc.EditFinalityProvider(
+		ctx,
+		&api.EditFinalityProviderRequest{
+			FpPk:        fpPub,
+			Commission:  rate,
+			Description: descBytes,
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to edit finality provider: %w", err)
 	}

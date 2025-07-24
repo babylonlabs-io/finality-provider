@@ -139,7 +139,7 @@ func FuzzDetermineStartHeight(f *testing.F) {
 func startFinalityProviderAppWithRegisteredFp(
 	t *testing.T,
 	r *rand.Rand,
-	cc api.ClientController,
+	cc api.BabylonController,
 	consumerCon api.ConsumerController,
 	isStaticStartHeight bool,
 	startingHeight uint64,

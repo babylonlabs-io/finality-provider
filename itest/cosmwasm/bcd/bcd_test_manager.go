@@ -106,7 +106,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	cfg.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
 
-	var bc ccapi.ClientController
+	var bc ccapi.BabylonController
 	require.Eventually(t, func() bool {
 		bbnCfg := cfg.BabylonConfig.ToBabylonConfig()
 		bbnCl, err := bbnclient.New(&bbnCfg, logger)
@@ -197,7 +197,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	ctm := &BcdTestManager{
 		BaseTestManager: &base_test_manager.BaseTestManager{
-			BabylonController: bc.(*bbncc.BabylonController),
+			BabylonController: bc.(*bbncc.ClientWrapper),
 			CovenantPrivKeys:  covenantPrivKeys,
 		},
 		manager:           manager,

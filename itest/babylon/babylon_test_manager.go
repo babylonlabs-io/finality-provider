@@ -98,7 +98,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", babylond.GetPort("9090/tcp"))
 
-	var bc ccapi.ClientController
+	var bc ccapi.BabylonController
 	var bcc ccapi.ConsumerController
 
 	// Increase timeout and polling interval for CI environments
@@ -162,7 +162,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 
 	tm := &TestManager{
 		BaseTestManager: &base_test_manager.BaseTestManager{
-			BabylonController: bc.(*bbncc.BabylonController),
+			BabylonController: bc.(*bbncc.ClientWrapper),
 			CovenantPrivKeys:  covenantPrivKeys,
 		},
 		EOTSServerHandler: eh,

@@ -299,7 +299,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
-	gotFp, err := tm.BabylonController.QueryFinalityProvider(fpIns.GetBtcPk())
+	gotFp, err := tm.BabylonController.QueryFinalityProvider(ctx, fpIns.GetBtcPk())
 	require.NoError(t, err)
 
 	require.Equal(t, gotFp.FinalityProvider.Description.Moniker, moniker)
@@ -321,7 +321,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	err = cmd.Execute()
 	require.NoError(t, err)
 
-	updatedFp, err := tm.BabylonController.QueryFinalityProvider(fpIns.GetBtcPk())
+	updatedFp, err := tm.BabylonController.QueryFinalityProvider(ctx, fpIns.GetBtcPk())
 	require.NoError(t, err)
 
 	updateFpDesc := updatedFp.FinalityProvider.Description
@@ -399,7 +399,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 	err = cmd.Execute()
 	require.NoError(t, err)
 
-	fp, err := tm.BabylonController.QueryFinalityProvider(eotsPk.MustToBTCPK())
+	fp, err := tm.BabylonController.QueryFinalityProvider(ctx, eotsPk.MustToBTCPK())
 	require.NoError(t, err)
 	require.NotNil(t, fp)
 }

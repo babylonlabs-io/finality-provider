@@ -34,7 +34,7 @@ type FinalityProviderApp struct {
 	wg        sync.WaitGroup
 	quit      chan struct{}
 
-	cc                ccapi.ClientController
+	cc                ccapi.BabylonController
 	consumerCon       ccapi.ConsumerController
 	kr                keyring.Keyring
 	fps               *store.FinalityProviderStore
@@ -115,7 +115,7 @@ func NewFinalityProviderAppFromConfig(
 
 func NewFinalityProviderApp(
 	config *fpcfg.Config,
-	cc ccapi.ClientController,
+	cc ccapi.BabylonController,
 	consumerCon ccapi.ConsumerController,
 	em eotsmanager.EOTSManager,
 	poller types.BlockPoller[types.BlockDescription],
@@ -169,7 +169,7 @@ func (app *FinalityProviderApp) GetConfig() *fpcfg.Config {
 	return app.config
 }
 
-func (app *FinalityProviderApp) GetBabylonController() ccapi.ClientController {
+func (app *FinalityProviderApp) GetBabylonController() ccapi.BabylonController {
 	return app.cc
 }
 
@@ -414,7 +414,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 	// Query the consumer chain to check if the fp is already registered
 	// if true, update db with the fp info from the consumer chain
 	// otherwise, proceed registration
-	resp, err := app.cc.QueryFinalityProvider(eotsPk.MustToBTCPK())
+	resp, err := app.cc.QueryFinalityProvider(ctx, eotsPk.MustToBTCPK())
 	if err != nil {
 		if !strings.Contains(err.Error(), "the finality provider is not found") {
 			return nil, fmt.Errorf("err getting finality provider: %w", err)

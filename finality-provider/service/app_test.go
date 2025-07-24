@@ -153,13 +153,10 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		txHash := testutil.GenRandomHexStr(r, 32)
 		mockBabylonController.EXPECT().
 			RegisterFinalityProvider(
-				chainID,
-				eotsPk.MustToBTCPK(),
-				gomock.Any(),
-				testutil.ZeroCommissionRate(),
+				ctx,
 				gomock.Any(),
 			).Return(&types.TxResponse{TxHash: txHash}, nil).AnyTimes()
-		mockBabylonController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(nil, nil).AnyTimes()
+		mockBabylonController.EXPECT().QueryFinalityProvider(ctx, gomock.Any()).Return(nil, nil).AnyTimes()
 		res, err := app.CreateFinalityProvider(ctx, keyName, chainID, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
 		require.NoError(t, err)
 		require.Equal(t, txHash, res.TxHash)
@@ -433,7 +430,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 			CommissionInfo:       rndFp.CommissionInfo,
 		}}
 
-		mockBabylonController.EXPECT().QueryFinalityProvider(gomock.Any()).Return(fpRes, nil).AnyTimes()
+		mockBabylonController.EXPECT().QueryFinalityProvider(ctx, gomock.Any()).Return(fpRes, nil).AnyTimes()
 
 		res, err := app.CreateFinalityProvider(ctx, keyName, chainID, eotsPk, testutil.RandomDescription(r), testutil.ZeroCommissionRate())
 		require.NoError(t, err)
@@ -445,7 +442,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 	})
 }
 
-func startFPAppWithRegisteredFp(ctx context.Context, t *testing.T, r *rand.Rand, homePath string, cfg *config.Config, cc api.ClientController, consumerCon api.ConsumerController) (*service.FinalityProviderApp, *bbntypes.BIP340PubKey, func()) {
+func startFPAppWithRegisteredFp(ctx context.Context, t *testing.T, r *rand.Rand, homePath string, cfg *config.Config, cc api.BabylonController, consumerCon api.ConsumerController) (*service.FinalityProviderApp, *bbntypes.BIP340PubKey, func()) {
 	logger := zaptest.NewLogger(t)
 	// create an EOTS manager
 	eotsHomeDir := filepath.Join(t.TempDir(), "eots-home")
