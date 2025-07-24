@@ -46,11 +46,6 @@ type RegisterFinalityProviderRequest struct {
 	Description []byte                          `json:"description"`
 }
 
-// QueryFinalityProviderRequest contains parameters for querying a finality provider
-type QueryFinalityProviderRequest struct {
-	FpPk *btcec.PublicKey `json:"fp_pk"`
-}
-
 // EditFinalityProviderRequest contains parameters for editing a finality provider
 type EditFinalityProviderRequest struct {
 	FpPk        *btcec.PublicKey `json:"fp_pk"`
