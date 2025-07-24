@@ -1,5 +1,4 @@
 //go:build e2e_bcd
-// +build e2e_bcd
 
 package e2etest_bcd
 
@@ -7,8 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	cwcc "github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
-	cwcc "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasm"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"os"
 	"path/filepath"
@@ -132,15 +131,15 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	wh := NewBcdNodeHandler(t)
 	err = wh.Start()
 	require.NoError(t, err)
-	cfg.CosmwasmConfig = config.DefaultCosmwasmConfig()
-	cfg.CosmwasmConfig.KeyDirectory = wh.dataDir
+	cosmwasmConfig := config.DefaultCosmwasmConfig()
+	cosmwasmConfig.KeyDirectory = wh.dataDir
 	// make random contract address for now to avoid validation errors, later we will update it with the correct address in the test
-	cfg.CosmwasmConfig.BtcStakingContractAddress = datagen.GenRandomAccount().GetAddress().String()
-	cfg.CosmwasmConfig.BtcFinalityContractAddress = datagen.GenRandomAccount().GetAddress().String()
+	cosmwasmConfig.BtcStakingContractAddress = datagen.GenRandomAccount().GetAddress().String()
+	cosmwasmConfig.BtcFinalityContractAddress = datagen.GenRandomAccount().GetAddress().String()
 	cfg.ChainType = fpcc.WasmConsumerChainType
-	cfg.CosmwasmConfig.AccountPrefix = "bbnc"
-	cfg.CosmwasmConfig.ChainID = bcdChainID
-	cfg.CosmwasmConfig.RPCAddr = fmt.Sprintf("http://localhost:%d", bcdRpcPort)
+	cosmwasmConfig.AccountPrefix = "bbnc"
+	cosmwasmConfig.ChainID = bcdChainID
+	cosmwasmConfig.RPCAddr = fmt.Sprintf("http://localhost:%d", bcdRpcPort)
 	// tempApp := bcdapp.NewTmpApp() // TODO: investigate why wasmapp works and bcdapp doesn't
 	tempApp := wasmapp.NewWasmApp(sdklogs.NewNopLogger(), dbm.NewMemDB(), nil, false, simtestutil.NewAppOptionsWithFlagHome(t.TempDir()), []wasmkeeper.Option{})
 	encodingCfg := wasmparams.EncodingConfig{
@@ -153,7 +152,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	var wcc *cwcc.CosmwasmConsumerController
 	require.Eventually(t, func() bool {
-		wcc, err = cwcc.NewCosmwasmConsumerController(cfg.CosmwasmConfig, encodingCfg, logger)
+		wcc, err = cwcc.NewCosmwasmConsumerController(cosmwasmConfig, encodingCfg, logger)
 		if err != nil {
 			t.Logf("failed to create Cosmwasm consumer controller: %v", err)
 			return false

@@ -23,7 +23,7 @@ type CosmosFPConfig struct {
 }
 
 func (cfg *CosmosFPConfig) Validate() error {
-	if err := cfg.Validate(); err != nil {
+	if err := cfg.Cosmwasm.Validate(); err != nil {
 		return fmt.Errorf("rollup-node-rpc-address is required")
 	}
 
