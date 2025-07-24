@@ -414,7 +414,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 	// Query the consumer chain to check if the fp is already registered
 	// if true, update db with the fp info from the consumer chain
 	// otherwise, proceed registration
-	resp, err := app.cc.QueryFinalityProvider(eotsPk.MustToBTCPK())
+	resp, err := app.cc.QueryFinalityProvider(ctx, eotsPk.MustToBTCPK())
 	if err != nil {
 		if !strings.Contains(err.Error(), "the finality provider is not found") {
 			return nil, fmt.Errorf("err getting finality provider: %w", err)

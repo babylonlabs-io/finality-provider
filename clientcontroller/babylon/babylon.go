@@ -35,6 +35,7 @@ var _ api.ClientController = &BabylonController{}
 
 var emptyErrs = []*sdkErr.Error{}
 
+// nolint:revive
 type BabylonController struct {
 	bbnClient *bbnclient.Client
 	cfg       *fpcfg.BBNConfig
