@@ -8,7 +8,7 @@ import (
 	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
 )
 
-// CosmwasmConfig defines configuration for the Babylon client
+// CosmwasmConfig defines configuration for the CosmWasm client
 // adapted from https://github.com/strangelove-ventures/lens/blob/v0.5.1/client/config.go
 type CosmwasmConfig struct {
 	Key              string        `mapstructure:"key"`

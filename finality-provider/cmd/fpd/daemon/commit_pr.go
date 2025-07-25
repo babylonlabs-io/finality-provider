@@ -107,7 +107,7 @@ func RunCommandCommitPubRandWithConfig(_ client.Context, cmd *cobra.Command, hom
 	}
 	consumerCon, err := babylon.NewBabylonConsumerController(cfg.BabylonConfig, logger)
 	if err != nil {
-		return fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
+		return fmt.Errorf("failed to create rpc client for the consumer chain: %w", err)
 	}
 	em, err := eotsclient.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress, cfg.HMACKey)
 	if err != nil {

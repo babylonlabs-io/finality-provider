@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	cosmosfpdaemon "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cmd/cosmos-fpd/daemon"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/version"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -17,14 +17,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const BinaryName = "fpd"
+const BinaryName = "cosmos-fpd"
 
 // NewRootCmd creates a new root command for fpd. It is called once in the main function.
 func NewRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:               BinaryName,
-		Short:             fmt.Sprintf("%s - Finality Provider Daemon (%s).", BinaryName, BinaryName),
-		Long:              fmt.Sprintf(`%s is the daemon to create and manage finality providers.`, BinaryName),
+		Short:             fmt.Sprintf("%s - Finality Provider Daemon for Cosmos BSNs.", BinaryName),
+		Long:              fmt.Sprintf(`%s is the daemon to create and manage finality providers for Cosmos BSNs.`, BinaryName),
 		SilenceErrors:     false,
 		PersistentPreRunE: clientctx.PersistClientCtx(client.Context{}),
 	}
@@ -45,20 +45,20 @@ func main() {
 	// add version commands
 	version.AddVersionCommands(cmd, BinaryName)
 
-	// add the rest of commands that are specific to Babylon finality provider
+	// add the rest of commands that are specific to cosmos finality provider
 	cmd.AddCommand(
-		daemon.CommandInit(BinaryName),
-		daemon.CommandStart(BinaryName),
-		daemon.CommandCreateFP(BinaryName),
-		daemon.CommandCommitPubRand(BinaryName),
-		daemon.CommandRecoverProof(BinaryName),
+		cosmosfpdaemon.CommandInit(BinaryName),
+		cosmosfpdaemon.CommandStart(BinaryName),
+		cosmosfpdaemon.CommandCreateFP(BinaryName),
+		cosmosfpdaemon.CommandCommitPubRand(BinaryName),
+		cosmosfpdaemon.CommandRecoverProof(BinaryName),
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Whoops. There was an error while executing your %s CLI '%s'", BinaryName, err)
+		_, _ = fmt.Fprintf(os.Stderr, "Whoops. There was an error while executing your fpd CLI '%s'", err)
 		os.Exit(1) //nolint:gocritic
 	}
 }

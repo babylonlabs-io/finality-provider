@@ -2,9 +2,9 @@ package service
 
 import (
 	"fmt"
-
-	rollupfpcc "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/clientcontroller"
-	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
+	cosmwasmcfg "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
@@ -13,9 +13,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// NewRollupBSNFinalityProviderAppFromConfig creates a new FinalityProviderApp instance from the given configuration for rollup BSN.
-func NewRollupBSNFinalityProviderAppFromConfig(
-	cfg *rollupfpcfg.RollupFPConfig,
+// NewCosmosBSNFinalityProviderAppFromConfig creates a new FinalityProviderApp instance from the given configuration for cosmos BSN.
+func NewCosmosBSNFinalityProviderAppFromConfig(
+	cfg *config.CosmosFPConfig,
 	db kvdb.Backend,
 	logger *zap.Logger,
 ) (*service.FinalityProviderApp, error) {
@@ -27,9 +27,10 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 		return nil, fmt.Errorf("failed to start rpc client for the Babylon chain: %w", err)
 	}
 
-	consumerCon, err := rollupfpcc.NewRollupBSNController(cfg, logger)
+	wasmEncodingCfg := cosmwasmcfg.GetWasmdEncodingConfig()
+	consumerCon, err := clientcontroller.NewCosmwasmConsumerController(cfg.Cosmwasm, wasmEncodingCfg, logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create rpc client for the consumer chain rollup: %w", err)
+		return nil, fmt.Errorf("failed to create rpc client for the consumer chain cosmos: %w", err)
 	}
 
 	// if the EOTSManagerAddress is empty, run a local EOTS manager;

@@ -2,9 +2,9 @@ package query
 
 import (
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
 	"time"
 
-	"github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
 )

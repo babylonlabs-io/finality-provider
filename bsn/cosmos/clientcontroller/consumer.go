@@ -1,10 +1,11 @@
-package cosmwasm
+package clientcontroller
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-
+	fpcfg "github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
+	cwcclient "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/client"
 	"sort"
 	"strings"
 
@@ -15,8 +16,6 @@ import (
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
-	cwcclient "github.com/babylonlabs-io/finality-provider/cosmwasmclient/client"
-	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	fptypes "github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"

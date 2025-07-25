@@ -1,4 +1,4 @@
-package cosmwasm
+package clientcontroller
 
 import cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 

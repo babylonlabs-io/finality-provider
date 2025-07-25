@@ -2,14 +2,14 @@ package client
 
 import (
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/query"
 	"sync"
 	"time"
 
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
 	"github.com/babylonlabs-io/babylon/v3/app/params"
 	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
-	"github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
-	"github.com/babylonlabs-io/finality-provider/cosmwasmclient/query"
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	"go.uber.org/zap"
 )
