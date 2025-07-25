@@ -17,14 +17,15 @@ const (
 )
 
 type CosmosFPConfig struct {
+	// CosmwasmConfig contains the configuration for the Cosmwasm client
 	Cosmwasm *CosmwasmConfig `group:"wasm" namespace:"wasm"`
-	// Below configurations are needed for the Babylon client
+	// Common contains configuration options for all other operational aspects of the fpd
 	Common *fpcfg.Config
 }
 
 func (cfg *CosmosFPConfig) Validate() error {
 	if err := cfg.Cosmwasm.Validate(); err != nil {
-		return fmt.Errorf("rollup-node-rpc-address is required")
+		return fmt.Errorf("err validating CosmwasmConfig: %w", err)
 	}
 
 	if cfg.Common == nil {
@@ -47,7 +48,7 @@ func (cfg *CosmosFPConfig) GetBabylonConfig() config.BabylonConfig {
 // The configuration proceeds as follows:
 //  1. Start with a default config with sane settings
 //  2. Pre-parse the command line to check for an alternative config file
-//  3. Load configuration file overwriting defaults with any specified options
+//  3. Load the configuration file overwriting defaults with any specified options
 //  4. Parse CLI options and overwrite/add any specified options
 func LoadConfig(homePath string) (*CosmosFPConfig, error) {
 	// The home directory is required to have a configuration file with a specific name
@@ -78,8 +79,8 @@ func DefaultConfigWithHome(homePath string) CosmosFPConfig {
 	cfg := fpcfg.DefaultConfigWithHome(homePath)
 
 	return CosmosFPConfig{
-		Common: &cfg,
-		// TODO: default values for the rollup-fpd config
+		Common:   &cfg,
+		Cosmwasm: DefaultCosmwasmConfig(),
 	}
 }
 
