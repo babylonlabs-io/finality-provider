@@ -22,9 +22,9 @@ import (
 	"math/rand"
 
 	ckpttypes "github.com/babylonlabs-io/babylon/v3/x/checkpointing/types"
-	rollupfpcontroller "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/clientcontroller"
-	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
-	rollupservice "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/service"
+	rollupfpcontroller "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
+	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup/config"
+	rollupservice "github.com/babylonlabs-io/finality-provider/bsn/rollup/service"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"

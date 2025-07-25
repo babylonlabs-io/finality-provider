@@ -594,7 +594,7 @@ func StartEotsManagers(
 	}
 
 	babylonFpCfg.EOTSManagerAddress = eotsConfigs[0].RPCListener
-	consumerFpCfg.EOTSManagerAddress = eotsConfigs[1].RPCListener
+	consumerFpCfg.EOTSManagerAddress = eotsConfigs[0].RPCListener
 
 	eh := e2eutils.NewEOTSServerHandler(t, eotsConfigs[0], eotsHomeDirs[0])
 	eh.Start(ctx)

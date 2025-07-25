@@ -13,7 +13,7 @@ import (
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
-	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
+	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup/config"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/types"

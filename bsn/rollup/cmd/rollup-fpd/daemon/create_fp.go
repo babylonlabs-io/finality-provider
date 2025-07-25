@@ -3,7 +3,7 @@ package daemon
 import (
 	"fmt"
 
-	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
+	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup/config"
 	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpdaemon "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"

@@ -3,8 +3,8 @@ package service
 import (
 	"fmt"
 
-	rollupfpcc "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/clientcontroller"
-	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
+	rollupfpcc "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
+	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup/config"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
