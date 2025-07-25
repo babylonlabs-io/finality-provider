@@ -169,7 +169,6 @@ func (fp *FinalityProviderInstance) Start(ctx context.Context) error {
 }
 
 func (fp *FinalityProviderInstance) Stop() error {
-	fmt.Println("Stopping finality provider instance", fp.GetBtcPkHex())
 	if !fp.isStarted.Swap(false) {
 		return fmt.Errorf("the finality-provider %s has already stopped", fp.GetBtcPkHex())
 	}

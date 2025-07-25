@@ -139,11 +139,8 @@ func (cc *RollupBSNController) reliablySendMsgs(ctx context.Context, msgs []sdk.
 		unrecoverableErrs,
 	)
 	if err != nil {
-		fmt.Println("DEBUG: Error in reliablySendMsgs", err)
 		return nil, fmt.Errorf("failed to reliably send messages: %w", err)
 	}
-
-	// fmt.Println("DEBUG: Response in reliablySendMsgs", resp)
 
 	return resp, nil
 }
@@ -241,7 +238,6 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 
 	res, err := cc.reliablySendMsgs(ctx, msgs, expectedErrs, nil)
 	if err != nil {
-		fmt.Println("DEBUG: Error in SubmitBatchFinalitySigs", err)
 		return nil, fmt.Errorf("failed to send finality signature messages: %w", err)
 	}
 
@@ -277,7 +273,6 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 		return false, fmt.Errorf("failed to check finality signature eligibility: %w", err)
 	}
 	if !eligible {
-		// fmt.Println("DEBUG: FP is not eligible for finality signature")
 		return false, nil
 	}
 
