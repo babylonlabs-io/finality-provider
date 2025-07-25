@@ -44,7 +44,7 @@ import (
 )
 
 type BaseTestManager struct {
-	BabylonController *bbncc.BabylonController
+	BabylonController *bbncc.ClientWrapper
 	CovenantPrivKeys  []*btcec.PrivateKey
 }
 
@@ -586,11 +586,14 @@ func StartEotsManagers(
 	for i := 0; i < len(fpCfgs); i++ {
 		eotsCfg := eotsconfig.DefaultConfigWithHomePathAndPorts(
 			eotsHomeDirs[i],
-			eotsconfig.DefaultRPCPort+i,
-			metrics.DefaultEotsConfig().Port+i,
+			testutil.AllocateUniquePort(t),
+			testutil.AllocateUniquePort(t),
 		)
 		eotsConfigs[i] = eotsCfg
 	}
+
+	babylonFpCfg.EOTSManagerAddress = eotsConfigs[0].RPCListener
+	consumerFpCfg.EOTSManagerAddress = eotsConfigs[1].RPCListener
 
 	eh := e2eutils.NewEOTSServerHandler(t, eotsConfigs[0], eotsHomeDirs[0])
 	eh.Start(ctx)
@@ -602,7 +605,8 @@ func StartEotsManagers(
 		var eotsCli *eotsclient.EOTSManagerGRpcClient
 		var err error
 		require.Eventually(t, func() bool {
-			eotsCli, err = eotsclient.NewEOTSManagerGRpcClient(fpCfgs[i].EOTSManagerAddress, fpCfgs[i].HMACKey)
+			// we use only one server and two clients
+			eotsCli, err = eotsclient.NewEOTSManagerGRpcClient(fpCfgs[0].EOTSManagerAddress, fpCfgs[0].HMACKey)
 			if err != nil {
 				t.Logf("Error creating EOTS client: %v", err)
 
@@ -619,6 +623,7 @@ func StartEotsManagers(
 
 func CreateAndStartFpApp(
 	t *testing.T,
+	ctx context.Context,
 	logger *zap.Logger,
 	cfg *fpcfg.Config,
 	cc api.ConsumerController,
@@ -649,7 +654,7 @@ func CreateAndStartFpApp(
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, cc, eotsCli, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, fpdb, logger)
 	require.NoError(t, err)
 
-	err = fpApp.Start()
+	err = fpApp.Start(ctx)
 	require.NoError(t, err)
 
 	return fpApp

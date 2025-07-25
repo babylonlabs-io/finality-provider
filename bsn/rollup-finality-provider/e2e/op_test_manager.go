@@ -121,7 +121,7 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 	require.NoError(t, err)
 
 	// create and start Babylon FP app
-	babylonFpApp := base_test_manager.CreateAndStartFpApp(t, logger, babylonFpCfg, babylonConsumerController, EOTSClients[0])
+	babylonFpApp := base_test_manager.CreateAndStartFpApp(t, ctx, logger, babylonFpCfg, babylonConsumerController, EOTSClients[0])
 	t.Log(log.Prefix("Started Babylon FP App"))
 
 	// create rollup BSN controller
@@ -129,7 +129,7 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 	require.NoError(t, err)
 
 	// create and start BSN FP app
-	consumerFpApp := base_test_manager.CreateAndStartFpApp(t, logger, rollupFpCfg.Common, rollupBSNController, EOTSClients[1])
+	consumerFpApp := base_test_manager.CreateAndStartFpApp(t, ctx, logger, rollupFpCfg.Common, rollupBSNController, EOTSClients[1])
 	t.Log(log.Prefix("Started BSN FP App"))
 
 	ctm := &OpL2ConsumerTestManager{
@@ -187,12 +187,12 @@ func waitForBabylonNodeStart(
 	logger *zap.Logger,
 	manager *container.Manager,
 	babylond *dockertest.Resource,
-) (*bbncc.BabylonController, *types.StakingParams) {
+) (*bbncc.ClientWrapper, *types.StakingParams) {
 	// create Babylon FP config
 	babylonFpCfg := createBabylonFpConfig(t, keyDir, testDir, manager, babylond)
 
 	// create Babylon controller
-	var babylonController *bbncc.BabylonController
+	var babylonController *bbncc.ClientWrapper
 	require.Eventually(t, func() bool {
 		var err error
 		bc, err := fpcc.NewBabylonController(babylonFpCfg.BabylonConfig, logger)
@@ -200,7 +200,7 @@ func waitForBabylonNodeStart(
 			t.Logf("Failed to create Babylon controller: %v", err)
 			return false
 		}
-		babylonController = bc.(*bbncc.BabylonController)
+		babylonController = bc.(*bbncc.ClientWrapper)
 		return true
 	}, 30*time.Second, 1*time.Second)
 
@@ -234,7 +234,7 @@ func createBabylonFpConfig(
 		keyDir, // This is the path inside docker container
 		fpHomeDir,
 		fpcfg.DefaultRPCPort,
-		metrics.DefaultFpConfig().Port,
+		testutil.AllocateUniquePort(t),
 		eotsconfig.DefaultRPCPort,
 	)
 
@@ -259,7 +259,7 @@ func createRollupFpConfig(
 		fpHomeDir, // This is the path inside docker container
 		fpHomeDir,
 		fpcfg.DefaultRPCPort,
-		metrics.DefaultFpConfig().Port,
+		testutil.AllocateUniquePort(t),
 		eotsconfig.DefaultRPCPort,
 	)
 

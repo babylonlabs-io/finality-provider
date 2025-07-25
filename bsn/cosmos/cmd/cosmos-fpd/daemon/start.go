@@ -2,12 +2,12 @@ package daemon
 
 import (
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
+	cosmosservice "github.com/babylonlabs-io/finality-provider/bsn/cosmos/service"
 	"net"
 	"path/filepath"
 
-	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
-	rollupservice "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/service"
-	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpdaemon "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
@@ -43,7 +43,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read flag %s: %w", commoncmd.RPCListenerFlag, err)
 	}
 
-	cfg, err := rollupfpcfg.LoadConfig(homePath)
+	cfg, err := config.LoadConfig(homePath)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -60,7 +60,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		cfg.Common.RPCListener = rpcListener
 	}
 
-	logger, err := log.NewRootLoggerWithFile(rollupfpcfg.LogFile(homePath), cfg.Common.LogLevel)
+	logger, err := log.NewRootLoggerWithFile(config.LogFile(homePath), cfg.Common.LogLevel)
 	if err != nil {
 		return fmt.Errorf("failed to initialize the logger: %w", err)
 	}
@@ -70,7 +70,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to create db backend: %w", err)
 	}
 
-	fpApp, err := rollupservice.NewRollupBSNFinalityProviderAppFromConfig(cfg, dbBackend, logger)
+	fpApp, err := cosmosservice.NewCosmosBSNFinalityProviderAppFromConfig(cfg, dbBackend, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create finality-provider app: %w", err)
 	}

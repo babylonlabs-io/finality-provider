@@ -2,11 +2,11 @@ package config
 
 import (
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/babylonlabs-io/finality-provider/cosmwasmclient/config"
 	"github.com/cosmos/btcutil/bech32"
 )
 

@@ -1,5 +1,4 @@
 //go:build e2e_bcd
-// +build e2e_bcd
 
 package e2etest_bcd
 
@@ -35,12 +34,14 @@ import (
 func TestConsumerFpLifecycle(t *testing.T) {
 	t.Skipf("Skipping until we upgrade wasmd to v0.60")
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	ctm := StartBcdTestManager(t, ctx)
-	defer ctm.Stop(t)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
 
 	// store babylon contract
-	babylonContractPath := "../../bytecode/babylon_contract.wasm"
+	babylonContractPath := "./bytecode/babylon_contract.wasm"
 	err := ctm.BcdConsumerClient.StoreWasmCode(babylonContractPath)
 	require.NoError(t, err)
 	babylonContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
@@ -48,7 +49,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.Equal(t, uint64(1), babylonContractWasmId)
 
 	// store btc staking contract
-	btcStakingContractPath := "../../bytecode/btc_staking.wasm"
+	btcStakingContractPath := "./bytecode/btc_staking.wasm"
 	err = ctm.BcdConsumerClient.StoreWasmCode(btcStakingContractPath)
 	require.NoError(t, err)
 	btcStakingContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
@@ -56,7 +57,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.Equal(t, uint64(2), btcStakingContractWasmId)
 
 	// store btc finality contract
-	btcFinalityContractPath := "../../bytecode/btc_finality.wasm"
+	btcFinalityContractPath := "./bytecode/btc_finality.wasm"
 	err = ctm.BcdConsumerClient.StoreWasmCode(btcFinalityContractPath)
 	require.NoError(t, err)
 	btcFinalityContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()

@@ -22,9 +22,11 @@ import (
 func TestRollupFinalityProviderLifeCycle(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	ctm := StartRollupTestManager(t, ctx)
-	defer ctm.Stop(t)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
 
 	// Step 1: Create and register both Babylon FP and rollup BSN FP
 	t.Log("Step 1: Creating and registering finality providers")
@@ -94,9 +96,11 @@ func TestRollupFinalityProviderLifeCycle(t *testing.T) {
 func TestBSNSkippingDoubleSignError(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	ctm := StartRollupTestManager(t, ctx)
-	defer ctm.Stop(t)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
 
 	// Step 1: Setup FPs and activation
 	t.Log("Step 1: Setting up finality providers and BTC delegation")
@@ -207,9 +211,11 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 func TestBSNDoubleSigning(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	ctm := StartRollupTestManager(t, ctx)
-	defer ctm.Stop(t)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
 
 	// Step 1: Setup FPs and activation
 	t.Log("Step 1: Setting up finality providers and BTC delegation")

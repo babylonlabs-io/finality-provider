@@ -1,3 +1,5 @@
+//go:build e2e_babylon
+
 package e2etest_babylon
 
 import (
@@ -45,10 +47,13 @@ const (
 // vote submission -> block finalization
 func TestFinalityProviderLifeCycle(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	n := 2
 	tm, fps := StartManagerWithFinalityProvider(t, n, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	// check the public randomness is committed
 	tm.WaitForFpPubRandTimestamped(t, fps[0])
@@ -82,9 +87,12 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 // eots manager
 func TestSkippingDoubleSignError(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -119,7 +127,7 @@ func TestSkippingDoubleSignError(t *testing.T) {
 	require.NoError(t, err)
 
 	// restart the fp to see if it will skip sending the height
-	err = fpIns.Start()
+	err = fpIns.Start(ctx)
 	require.NoError(t, err)
 
 	// assert that the fp voting continues
@@ -131,9 +139,12 @@ func TestSkippingDoubleSignError(t *testing.T) {
 // in this case, the BTC private key should be extracted by Babylon
 func TestDoubleSigning(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -191,9 +202,12 @@ func TestDoubleSigning(t *testing.T) {
 // TestCatchingUp tests if a fp can catch up after restarted
 func TestCatchingUp(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -224,7 +238,7 @@ func TestCatchingUp(t *testing.T) {
 
 	var n uint = 3
 	// stop the finality-provider for a few blocks then restart to trigger the fast sync
-	tm.StopAndRestartFpAfterNBlocks(t, int(n), fpIns)
+	tm.StopAndRestartFpAfterNBlocks(ctx, t, int(n), fpIns)
 
 	// check there are n+1 blocks finalized
 	finalizedBlock := tm.WaitForNFinalizedBlocks(t, n+1)
@@ -242,9 +256,11 @@ func TestCatchingUp(t *testing.T) {
 func TestFinalityProviderEditCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -283,7 +299,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
-	gotFp, err := tm.BabylonController.QueryFinalityProvider(fpIns.GetBtcPk())
+	gotFp, err := tm.BabylonController.QueryFinalityProvider(ctx, fpIns.GetBtcPk())
 	require.NoError(t, err)
 
 	require.Equal(t, gotFp.FinalityProvider.Description.Moniker, moniker)
@@ -305,7 +321,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 	err = cmd.Execute()
 	require.NoError(t, err)
 
-	updatedFp, err := tm.BabylonController.QueryFinalityProvider(fpIns.GetBtcPk())
+	updatedFp, err := tm.BabylonController.QueryFinalityProvider(ctx, fpIns.GetBtcPk())
 	require.NoError(t, err)
 
 	updateFpDesc := updatedFp.FinalityProvider.Description
@@ -321,9 +337,11 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 func TestFinalityProviderCreateCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -381,7 +399,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 	err = cmd.Execute()
 	require.NoError(t, err)
 
-	fp, err := tm.BabylonController.QueryFinalityProvider(eotsPk.MustToBTCPK())
+	fp, err := tm.BabylonController.QueryFinalityProvider(ctx, eotsPk.MustToBTCPK())
 	require.NoError(t, err)
 	require.NotNil(t, fp)
 }
@@ -389,9 +407,11 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 func TestRemoveMerkleProofsCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -419,10 +439,12 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 func TestPrintEotsCmd(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	tm := StartManager(t, ctx, "", "")
 	r := rand.New(rand.NewSource(time.Now().Unix()))
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	expected := make(map[string]string)
 	for i := 0; i < r.Intn(10); i++ {
@@ -461,9 +483,12 @@ func TestPrintEotsCmd(t *testing.T) {
 
 func TestRecoverRandProofCmd(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -528,9 +553,12 @@ func TestRecoverRandProofCmd(t *testing.T) {
 
 func TestSigHeightOutdated(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 
@@ -736,7 +764,9 @@ func TestEotsdUnlockCmd(t *testing.T) {
 	eotsCfg.KeyringBackend = keyring.BackendFile
 	eotsCfg.HMACKey = "some-hmac-key"
 
-	t.Setenv("HMAC_KEY", eotsCfg.HMACKey)
+	// antipattern to set env in parallel tests but we only do it here
+	err := os.Setenv("HMAC_KEY", eotsCfg.HMACKey)
+	require.NoError(t, err)
 
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
@@ -809,9 +839,12 @@ func TestEotsdUnlockCmd(t *testing.T) {
 
 func TestUnsafeCommitPubRandCmd(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
-	defer tm.Stop(t)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
 
 	fpIns := fps[0]
 

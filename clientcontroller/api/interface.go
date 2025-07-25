@@ -14,33 +14,43 @@ import (
 //nolint:revive,unused
 const babylonConsumerChainType = "babylon"
 
-type ClientController interface {
-	// Start - starts the client controller
+// BabylonController defines the interface for interacting with the Babylon blockchain
+// for finality provider operations
+type BabylonController interface {
+	// Start initializes the client connection
 	Start() error
 
 	// GetFpPopContextV0 returns the signing context for proof-of-possession
 	GetFpPopContextV0() string
 
 	// RegisterFinalityProvider registers a finality provider to the consumer chain
-	// it returns tx hash and error. The address of the finality provider will be
-	// the signer of the msg.
-	RegisterFinalityProvider(
-		chainID string,
-		fpPk *btcec.PublicKey,
-		pop []byte,
-		commission btcstakingtypes.CommissionRates,
-		description []byte,
-	) (*types.TxResponse, error)
+	RegisterFinalityProvider(ctx context.Context, req *RegisterFinalityProviderRequest) (*types.TxResponse, error)
 
-	// QueryFinalityProvider queries the finality provider by pk
-	QueryFinalityProvider(fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error)
-
+	// QueryFinalityProvider queries the finality provider by public key
 	// Note: the following queries are only for PoC
+	QueryFinalityProvider(ctx context.Context, fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error)
 
 	// EditFinalityProvider edits description and commission of a finality provider
-	EditFinalityProvider(fpPk *btcec.PublicKey, commission *math.LegacyDec, description []byte) (*btcstakingtypes.MsgEditFinalityProvider, error)
+	EditFinalityProvider(ctx context.Context, req *EditFinalityProviderRequest) (*btcstakingtypes.MsgEditFinalityProvider, error)
 
+	// Close cleanly shuts down the client
 	Close() error
+}
+
+// RegisterFinalityProviderRequest contains parameters for registering a finality provider
+type RegisterFinalityProviderRequest struct {
+	ChainID     string                          `json:"chain_id"`
+	FpPk        *btcec.PublicKey                `json:"fp_pk"`
+	Pop         []byte                          `json:"pop"`
+	Commission  btcstakingtypes.CommissionRates `json:"commission"`
+	Description []byte                          `json:"description"`
+}
+
+// EditFinalityProviderRequest contains parameters for editing a finality provider
+type EditFinalityProviderRequest struct {
+	FpPk        *btcec.PublicKey `json:"fp_pk"`
+	Commission  *math.LegacyDec  `json:"commission,omitempty"`
+	Description []byte           `json:"description,omitempty"`
 }
 
 type ConsumerController interface {

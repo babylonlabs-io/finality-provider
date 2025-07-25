@@ -1,9 +1,13 @@
+//go:build e2e_bcd
+
 package e2etest_bcd
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	cwcc "github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"os"
 	"path/filepath"
@@ -28,10 +32,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
-	cwcc "github.com/babylonlabs-io/finality-provider/clientcontroller/cosmwasm"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -103,7 +105,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	cfg.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
 
-	var bc ccapi.ClientController
+	var bc ccapi.BabylonController
 	require.Eventually(t, func() bool {
 		bbnCfg := cfg.BabylonConfig.ToBabylonConfig()
 		bbnCl, err := bbnclient.New(&bbnCfg, logger)
@@ -128,15 +130,14 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	wh := NewBcdNodeHandler(t)
 	err = wh.Start()
 	require.NoError(t, err)
-	cfg.CosmwasmConfig = fpcfg.DefaultCosmwasmConfig()
-	cfg.CosmwasmConfig.KeyDirectory = wh.dataDir
+	cosmwasmConfig := config.DefaultCosmwasmConfig()
+	cosmwasmConfig.KeyDirectory = wh.dataDir
 	// make random contract address for now to avoid validation errors, later we will update it with the correct address in the test
-	cfg.CosmwasmConfig.BtcStakingContractAddress = datagen.GenRandomAccount().GetAddress().String()
-	cfg.CosmwasmConfig.BtcFinalityContractAddress = datagen.GenRandomAccount().GetAddress().String()
-	cfg.ChainType = fpcc.WasmConsumerChainType
-	cfg.CosmwasmConfig.AccountPrefix = "bbnc"
-	cfg.CosmwasmConfig.ChainID = bcdChainID
-	cfg.CosmwasmConfig.RPCAddr = fmt.Sprintf("http://localhost:%d", bcdRpcPort)
+	cosmwasmConfig.BtcStakingContractAddress = datagen.GenRandomAccount().GetAddress().String()
+	cosmwasmConfig.BtcFinalityContractAddress = datagen.GenRandomAccount().GetAddress().String()
+	cosmwasmConfig.AccountPrefix = "bbnc"
+	cosmwasmConfig.ChainID = bcdChainID
+	cosmwasmConfig.RPCAddr = fmt.Sprintf("http://localhost:%d", bcdRpcPort)
 	// tempApp := bcdapp.NewTmpApp() // TODO: investigate why wasmapp works and bcdapp doesn't
 	tempApp := wasmapp.NewWasmApp(sdklogs.NewNopLogger(), dbm.NewMemDB(), nil, false, simtestutil.NewAppOptionsWithFlagHome(t.TempDir()), []wasmkeeper.Option{})
 	encodingCfg := wasmparams.EncodingConfig{
@@ -149,7 +150,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	var wcc *cwcc.CosmwasmConsumerController
 	require.Eventually(t, func() bool {
-		wcc, err = cwcc.NewCosmwasmConsumerController(cfg.CosmwasmConfig, encodingCfg, logger)
+		wcc, err = cwcc.NewCosmwasmConsumerController(cosmwasmConfig, encodingCfg, logger)
 		if err != nil {
 			t.Logf("failed to create Cosmwasm consumer controller: %v", err)
 			return false
@@ -189,12 +190,12 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	fpApp, err := service.NewFinalityProviderApp(cfg, bc, wcc, eotsCli, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, fpdb, logger)
 	require.NoError(t, err)
-	err = fpApp.Start()
+	err = fpApp.Start(ctx)
 	require.NoError(t, err)
 
 	ctm := &BcdTestManager{
 		BaseTestManager: &base_test_manager.BaseTestManager{
-			BabylonController: bc.(*bbncc.BabylonController),
+			BabylonController: bc.(*bbncc.ClientWrapper),
 			CovenantPrivKeys:  covenantPrivKeys,
 		},
 		manager:           manager,
@@ -276,7 +277,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	err = app.StartFinalityProvider(eotsPubKey)
+	err = app.StartFinalityProvider(context.Background(), eotsPubKey)
 	require.NoError(t, err)
 
 	fpIns, err := app.GetFinalityProviderInstance()

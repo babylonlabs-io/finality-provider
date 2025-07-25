@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"path/filepath"
@@ -90,7 +91,7 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to create finality-provider app: %w", err)
 	}
 
-	if err := StartApp(fpApp, fpStr); err != nil {
+	if err := StartApp(cmd.Context(), fpApp, fpStr); err != nil {
 		return fmt.Errorf("failed to start app: %w", err)
 	}
 
@@ -105,13 +106,14 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 
 // StartApp starts the app and the handle of finality providers if needed based on flags.
 func StartApp(
+	ctx context.Context,
 	fpApp *service.FinalityProviderApp,
 	fpPkStr string,
 ) error {
 	// only start the app without starting any finality provider instance
 	// this is needed for new finality provider registration or unjailing
 	// finality providers
-	if err := fpApp.Start(); err != nil {
+	if err := fpApp.Start(ctx); err != nil {
 		return fmt.Errorf("failed to start the finality provider app: %w", err)
 	}
 
@@ -123,7 +125,7 @@ func StartApp(
 			return fmt.Errorf("invalid finality provider public key %s: %w", fpPkStr, err)
 		}
 
-		if err := fpApp.StartFinalityProvider(fpPk); err != nil {
+		if err := fpApp.StartFinalityProvider(ctx, fpPk); err != nil {
 			return fmt.Errorf("failed to start finality provider: %w", err)
 		}
 
@@ -136,7 +138,7 @@ func StartApp(
 	}
 
 	if len(storedFps) == 1 {
-		if err := fpApp.StartFinalityProvider(types.NewBIP340PubKeyFromBTCPK(storedFps[0].BtcPk)); err != nil {
+		if err := fpApp.StartFinalityProvider(ctx, types.NewBIP340PubKeyFromBTCPK(storedFps[0].BtcPk)); err != nil {
 			return fmt.Errorf("failed to start finality provider: %w", err)
 		}
 
