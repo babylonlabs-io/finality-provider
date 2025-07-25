@@ -63,6 +63,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#554](https://github.com/babylonlabs-io/finality-provider/pull/554) chore: rollup e2e parallel
 * [#555](https://github.com/babylonlabs-io/finality-provider/pull/555) chore: babylon controller use ctx
 * [#558](https://github.com/babylonlabs-io/finality-provider/pull/558) chore: creates cosmos-fpd bsn
+* [#551](https://github.com/babylonlabs-io/finality-provider/pull/551)
+  chore(rollup): add more tests for rollup bsn
 
 ## v1.1.0-rc.1
 
