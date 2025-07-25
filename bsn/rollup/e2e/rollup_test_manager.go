@@ -83,7 +83,10 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 	require.NoError(t, err)
 
 	// start Babylon node
-	manager, babylond, anvil, covenantPrivKeys, keyDir := startBabylonNode(t)
+	manager, babylond, covenantPrivKeys, keyDir := startBabylonNode(t)
+
+	// start Anvil node (simulated rollup chain)
+	anvil := startAnvilNode(t, manager)
 
 	// wait for Babylon node starts b/c we will fund the FP address with babylon node
 	babylonController, _ := waitForBabylonNodeStart(t, keyDir, testDir, logger, manager, babylond)
@@ -151,7 +154,7 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 	return ctm
 }
 
-func startBabylonNode(t *testing.T) (*container.Manager, *dockertest.Resource, *dockertest.Resource, []*secp256k1.PrivateKey, string) {
+func startBabylonNode(t *testing.T) (*container.Manager, *dockertest.Resource, []*secp256k1.PrivateKey, string) {
 	// generate covenant committee
 	covenantQuorum := 2
 	numCovenants := 3
@@ -169,14 +172,18 @@ func startBabylonNode(t *testing.T) (*container.Manager, *dockertest.Resource, *
 	babylond, err := manager.RunBabylondResource(t, babylonDir, covenantQuorum, covenantPubKeys)
 	require.NoError(t, err)
 
+	keyDir := filepath.Join(babylonDir, "node0", "babylond")
+
+	return manager, babylond, covenantPrivKeys, keyDir
+}
+
+func startAnvilNode(t *testing.T, manager *container.Manager) *dockertest.Resource {
 	// Start anvil node in docker
 	anvil, err := manager.RunAnvilResource(t)
 	require.NoError(t, err)
 	t.Logf("Started Anvil node on port %s", anvil.GetPort("8545/tcp"))
 
-	keyDir := filepath.Join(babylonDir, "node0", "babylond")
-
-	return manager, babylond, anvil, covenantPrivKeys, keyDir
+	return anvil
 }
 
 func waitForBabylonNodeStart(
