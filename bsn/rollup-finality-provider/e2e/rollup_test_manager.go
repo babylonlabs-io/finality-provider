@@ -722,7 +722,7 @@ func (ctm *OpL2ConsumerTestManager) AddRollupFinalityProvider(t *testing.T, ctx 
 	require.NoError(t, err)
 
 	// Start the app
-	err = rollupFpApp.Start()
+	err = rollupFpApp.Start(ctx)
 	require.NoError(t, err)
 
 	// Create and register the finality provider

@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
 	"time"
+
+	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
 
 	"github.com/babylonlabs-io/babylon/v3/btcstaking"
 	txformat "github.com/babylonlabs-io/babylon/v3/btctxformatter"
