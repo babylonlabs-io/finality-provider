@@ -137,7 +137,7 @@ func TestRollupFpdCreateFPCmd(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify the finality provider was created by querying Babylon
-	fp, err := ctm.BabylonController.QueryFinalityProvider(eotsPk.MustToBTCPK())
+	fp, err := ctm.BabylonController.QueryFinalityProvider(ctx, eotsPk.MustToBTCPK())
 	require.NoError(t, err)
 	require.NotNil(t, fp)
 
@@ -231,7 +231,7 @@ func TestRollupFpdRecoverProofCmd(t *testing.T) {
 
 	// Get consumer FP instance and start it
 	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
-	err := consumerFpInstance.Start()
+	err := consumerFpInstance.Start(ctx)
 	require.NoError(t, err)
 
 	// Wait for randomness commitment and voting

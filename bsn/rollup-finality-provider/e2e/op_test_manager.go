@@ -733,7 +733,7 @@ func (ctm *OpL2ConsumerTestManager) AddRollupFinalityProvider(t *testing.T, ctx 
 	require.NoError(t, err)
 
 	// Start the specific finality provider instance
-	err = rollupFpApp.StartFinalityProvider(eotsPk)
+	err = rollupFpApp.StartFinalityProvider(ctx, eotsPk)
 	require.NoError(t, err)
 
 	// **CRUCIAL**: Start the actual daemon server (like Babylon does)

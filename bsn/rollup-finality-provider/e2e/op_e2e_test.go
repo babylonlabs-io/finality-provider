@@ -62,7 +62,7 @@ func TestRollupFinalityProviderLifeCycle(t *testing.T) {
 	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
 
 	// Start the FP instance - this will automatically start randomness commitment and voting loops
-	err := consumerFpInstance.Start()
+	err := consumerFpInstance.Start(ctx)
 	require.NoError(t, err)
 
 	// Step 4: Wait for FP to automatically commit public randomness and get it timestamped
@@ -114,7 +114,7 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 	// Step 2: Start FP instance and wait for initial operations
 	t.Log("Step 2: Starting FP instance and waiting for initial vote")
 	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
-	err := consumerFpInstance.Start()
+	err := consumerFpInstance.Start(ctx)
 	require.NoError(t, err)
 
 	// Wait for FP to commit randomness and get it timestamped
@@ -162,7 +162,7 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 	t.Log("Step 4: Restarting FP and verifying it skips the manually signed height")
 
 	// Restart the FP
-	err = consumerFpInstance.Start()
+	err = consumerFpInstance.Start(ctx)
 	require.NoError(t, err)
 
 	// Clean up - ensure we stop the FP instance when test ends
@@ -230,7 +230,7 @@ func TestBSNDoubleSigning(t *testing.T) {
 	// Step 2: Start FP instance and wait for initial operations
 	t.Log("Step 2: Starting FP instance and waiting for operations")
 	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
-	err := consumerFpInstance.Start()
+	err := consumerFpInstance.Start(ctx)
 	require.NoError(t, err)
 
 	// Clean up - ensure we stop the FP instance when test ends
@@ -342,7 +342,7 @@ func TestRollupBSNCatchingUp(t *testing.T) {
 	// Step 2: Start FP instance and establish normal operation
 	t.Log("Step 2: Starting FP instance and establishing normal operation")
 	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
-	err := consumerFpInstance.Start()
+	err := consumerFpInstance.Start(ctx)
 	require.NoError(t, err)
 
 	// Wait for FP to commit randomness and get it timestamped
@@ -379,7 +379,7 @@ func TestRollupBSNCatchingUp(t *testing.T) {
 	t.Log("Step 4: Restarting FP to trigger catch-up/fast sync")
 
 	// Restart the FP
-	err = consumerFpInstance.Start()
+	err = consumerFpInstance.Start(ctx)
 	require.NoError(t, err)
 
 	// Step 5: Verify FP catches up and continues voting
