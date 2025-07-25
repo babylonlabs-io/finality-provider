@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"strings"
 	"sync"
 
@@ -71,9 +72,9 @@ func NewFinalityProviderAppFromConfig(
 		return nil, fmt.Errorf("failed to start rpc client for the Babylon chain: %w", err)
 	}
 
-	consumerCon, err := fpcc.NewConsumerController(cfg, logger)
+	consumerCon, err := babylon.NewBabylonConsumerController(cfg.BabylonConfig, logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
+		return nil, fmt.Errorf("failed to create rpc client for the consumer chain babylon: %w", err)
 	}
 
 	// if the EOTSManagerAddress is empty, run a local EOTS manager;

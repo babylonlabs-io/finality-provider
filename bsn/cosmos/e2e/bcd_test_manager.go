@@ -32,7 +32,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
@@ -136,7 +135,6 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	// make random contract address for now to avoid validation errors, later we will update it with the correct address in the test
 	cosmwasmConfig.BtcStakingContractAddress = datagen.GenRandomAccount().GetAddress().String()
 	cosmwasmConfig.BtcFinalityContractAddress = datagen.GenRandomAccount().GetAddress().String()
-	cfg.ChainType = fpcc.WasmConsumerChainType
 	cosmwasmConfig.AccountPrefix = "bbnc"
 	cosmwasmConfig.ChainID = bcdChainID
 	cosmwasmConfig.RPCAddr = fmt.Sprintf("http://localhost:%d", bcdRpcPort)

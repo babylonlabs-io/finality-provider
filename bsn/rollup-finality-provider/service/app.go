@@ -29,7 +29,7 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 
 	consumerCon, err := rollupfpcc.NewRollupBSNController(cfg, logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.Common.ChainType, err)
+		return nil, fmt.Errorf("failed to create rpc client for the consumer chain rollup: %w", err)
 	}
 
 	// if the EOTSManagerAddress is empty, run a local EOTS manager;

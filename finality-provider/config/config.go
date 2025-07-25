@@ -50,9 +50,6 @@ var (
 type Config struct {
 	LogLevel string `long:"loglevel" description:"Logging level for all subsystems" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal"`
 
-	// TODO: move to the BSN FP config
-	ChainType string `long:"chaintype" description:"the type of the consumer chain" choice:"babylon" choice:"wasm"`
-
 	NumPubRand                  uint32        `long:"numPubRand" description:"The number of Schnorr public randomness for each commitment"`
 	NumPubRandMax               uint32        `long:"numpubrandmax" description:"The upper bound of the number of Schnorr public randomness for each commitment"`
 	TimestampingDelayBlocks     uint32        `long:"timestampingdelayblocks" description:"The delay, measured in blocks, between a randomness commit submission and the randomness is BTC-timestamped"`
@@ -83,7 +80,6 @@ func DefaultConfigWithHome(homePath string) Config {
 	bbnCfg.KeyDirectory = homePath
 	pollerCfg := DefaultChainPollerConfig()
 	cfg := Config{
-		ChainType:                   defaultChainType,
 		LogLevel:                    defaultLogLevel.String(),
 		DatabaseConfig:              DefaultDBConfigWithHomePath(homePath),
 		BabylonConfig:               &bbnCfg,
