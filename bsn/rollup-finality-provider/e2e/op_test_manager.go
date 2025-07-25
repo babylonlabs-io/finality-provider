@@ -41,13 +41,15 @@ import (
 )
 
 const (
-	rollupBSNID                = "op-stack-l2-706114"
+	rollupBSNID                = "rollup-bsn"
 	bbnAddrTopUpAmount         = 100000000
 	eventuallyWaitTimeOut      = 5 * time.Minute
 	eventuallyPollTime         = 500 * time.Millisecond
 	passphrase                 = "testpass"
 	hdPath                     = ""
 	rollupFinalityContractPath = "./bytecode/finality.wasm"
+	// finalitySignatureInterval is the interval at which finality signatures are allowed
+	finalitySignatureInterval = uint64(5)
 )
 
 type BaseTestManager = base_test_manager.BaseTestManager
@@ -287,13 +289,13 @@ func createRollupFpConfig(
 
 	// fund the consumer FP address
 	t.Logf(log.Prefix("Funding %dubbn to %s"), bbnAddrTopUpAmount, fpBbnKeyInfo.AccAddress.String())
-	txOut, _, err := manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), fmt.Sprintf("%dubbn", bbnAddrTopUpAmount), "node0")
+	_, _, err = manager.BabylondTxBankSend(t, fpBbnKeyInfo.AccAddress.String(), fmt.Sprintf("%dubbn", bbnAddrTopUpAmount), "node0")
 	if err != nil {
 		t.Logf("❌ Funding transaction failed: %v", err)
-		t.Logf("📋 Transaction output: %s", txOut.String())
+		// t.Logf("📋 Transaction output: %s", txOut.String())
 	} else {
 		t.Logf("✅ Funding transaction submitted successfully")
-		t.Logf("📋 Transaction output: %s", txOut.String())
+		// t.Logf("📋 Transaction output: %s", txOut.String())
 	}
 	require.NoError(t, err)
 
@@ -314,7 +316,7 @@ func createRollupFpConfig(
 			t.Logf("❌ Failed to unmarshal balance response: %v", err)
 			return false
 		}
-		t.Logf("📊 Current balances: %+v", balances.Balances)
+		// t.Logf("📊 Current balances: %+v", balances.Balances)
 		for _, bal := range balances.Balances {
 			if bal.Denom == "ubbn" && bal.Amount == fmt.Sprintf("%d", bbnAddrTopUpAmount) {
 				t.Logf("✅ Expected balance found: %s %s", bal.Amount, bal.Denom)
@@ -356,11 +358,11 @@ func deployCwContract(t *testing.T, bbnClient *bbnclient.Client, ctx context.Con
 		"admin":                       bbnClient.MustGetAddr(),
 		"bsn_id":                      rollupBSNID,
 		"min_pub_rand":                100,
-		"rate_limiting_interval":      10000, // test value
-		"max_msgs_per_interval":       100,   // test value
-		"bsn_activation_height":       0,     // immediate activation for tests
-		"finality_signature_interval": 1,     // allow signatures every block for tests
-		"allowed_finality_providers":  nil,   // allow all by default
+		"rate_limiting_interval":      10000,                     // test value
+		"max_msgs_per_interval":       100,                       // test value
+		"bsn_activation_height":       0,                         // immediate activation for tests
+		"finality_signature_interval": finalitySignatureInterval, // allow signatures every block for tests
+		"allowed_finality_providers":  nil,                       // allow none by default
 	}
 	opFinalityGadgetInitMsgBytes, err := json.Marshal(opFinalityGadgetInitMsg)
 	require.NoError(t, err)

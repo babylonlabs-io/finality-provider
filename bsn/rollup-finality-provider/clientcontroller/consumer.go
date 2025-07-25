@@ -105,10 +105,9 @@ func (cc *RollupBSNController) ReliablySendMsg(ctx context.Context, msg sdk.Msg,
 }
 
 // queryContractConfig queries the finality contract for its config
-// nolint:unused
-func (cc *RollupBSNController) queryContractConfig(ctx context.Context) (*Config, error) {
+func (cc *RollupBSNController) queryContractConfig(ctx context.Context) (*ContractConfig, error) {
 	query := QueryMsg{
-		Config: &Config{},
+		Config: &ContractConfig{},
 	}
 	jsonData, err := json.Marshal(query)
 	if err != nil {
@@ -123,7 +122,7 @@ func (cc *RollupBSNController) queryContractConfig(ctx context.Context) (*Config
 		return nil, fmt.Errorf("no config found")
 	}
 
-	var resp *Config
+	var resp *ContractConfig
 	err = json.Unmarshal(stateResp.Data, &resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config response: %w", err)
@@ -257,7 +256,7 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 		return &types.TxResponse{}, nil
 	}
 
-	cc.logger.Warn(
+	cc.logger.Debug(
 		"Successfully submitted finality signatures in a batch",
 		zap.String("fp_pk_hex", fpPkHex),
 		zap.Uint64("start_height", req.Blocks[0].GetHeight()),
@@ -272,6 +271,16 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 	ctx context.Context,
 	req *api.QueryFinalityProviderHasPowerRequest,
 ) (bool, error) {
+	// Check if finality signatures are allowed for this height based on contract config
+	eligible, err := cc.isEligibleForFinalitySignature(ctx, req.BlockHeight)
+	if err != nil {
+		return false, fmt.Errorf("failed to check finality signature eligibility: %w", err)
+	}
+	if !eligible {
+		// fmt.Println("DEBUG: FP is not eligible for finality signature")
+		return false, nil
+	}
+
 	pubRand, err := cc.QueryLastPublicRandCommit(ctx, req.FpPk)
 	if err != nil {
 		return false, fmt.Errorf("failed to query last public rand commit: %w", err)
@@ -496,6 +505,38 @@ func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fp
 	}
 
 	return resp, nil
+}
+
+// isEligibleForFinalitySignature checks if finality signatures are allowed for the given height
+// based on the contract's BSN activation and interval requirements
+func (cc *RollupBSNController) isEligibleForFinalitySignature(ctx context.Context, height uint64) (bool, error) {
+	config, err := cc.queryContractConfig(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to query contract config: %w", err)
+	}
+
+	// Check BSN activation
+	if height < config.BsnActivationHeight {
+		cc.logger.Debug(
+			"Block height is before BSN activation",
+			zap.Uint64("height", height),
+			zap.Uint64("bsn_activation_height", config.BsnActivationHeight),
+		)
+		return false, nil
+	}
+
+	// Check finality signature interval
+	if (height-config.BsnActivationHeight)%config.FinalitySignatureInterval != 0 {
+		cc.logger.Debug(
+			"Block height is not at scheduled finality signature interval",
+			zap.Uint64("height", height),
+			zap.Uint64("bsn_activation_height", config.BsnActivationHeight),
+			zap.Uint64("finality_signature_interval", config.FinalitySignatureInterval),
+		)
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (cc *RollupBSNController) QueryFinalityActivationBlockHeight(_ context.Context) (uint64, error) {

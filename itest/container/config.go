@@ -38,6 +38,6 @@ func NewImageConfig(t *testing.T) ImageConfig {
 		BabylonVersion:    babylondVersion,
 		AnvilRepository:   dockerAnvilRepository,
 		AnvilVersion:      "v1.2.3",
-		AnvilBlockTime:    "8", // Default block time for Anvil
+		AnvilBlockTime:    "1", // Default block time for Anvil
 	}
 }
