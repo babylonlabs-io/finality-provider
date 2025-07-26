@@ -103,11 +103,11 @@ func WaitForFpPubRandCommitted(t *testing.T, fpIns *service.FinalityProviderInst
 func DefaultFpConfig(keyringDir, homeDir string) *config.Config {
 	cfg := config.DefaultConfigWithHome(homeDir)
 
-	cfg.NumPubRand = 1000
-	cfg.NumPubRandMax = 1000
+	cfg.NumPubRand = 50000
+	cfg.NumPubRandMax = 100000
 	cfg.TimestampingDelayBlocks = 0
 
-	cfg.PollerConfig.PollInterval = 1 * time.Millisecond
+	cfg.PollerConfig.PollInterval = 1 * time.Second
 	cfg.PollerConfig.AutoChainScanningMode = false
 
 	// babylon configs for sending transactions

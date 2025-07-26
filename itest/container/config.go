@@ -13,10 +13,14 @@ import (
 type ImageConfig struct {
 	BabylonRepository string
 	BabylonVersion    string
+	AnvilRepository   string
+	AnvilVersion      string
+	AnvilBlockTime    string // Block time in seconds for Anvil
 }
 
 const (
 	dockerBabylondRepository = "babylonlabs/babylond"
+	dockerAnvilRepository    = "ghcr.io/foundry-rs/foundry"
 )
 
 // NewImageConfig returns ImageConfig needed for running e2e test.
@@ -32,5 +36,8 @@ func NewImageConfig(t *testing.T) ImageConfig {
 	return ImageConfig{
 		BabylonRepository: dockerBabylondRepository,
 		BabylonVersion:    babylondVersion,
+		AnvilRepository:   dockerAnvilRepository,
+		AnvilVersion:      "v1.2.3",
+		AnvilBlockTime:    "1", // Default block time for Anvil
 	}
 }

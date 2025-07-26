@@ -5,6 +5,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
+	"strings"
+	"time"
+
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
@@ -15,9 +19,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"go.uber.org/zap"
-	"math"
-	"strings"
-	"time"
 )
 
 var _ types.FinalitySignatureSubmitter = (*DefaultFinalitySubmitter)(nil)
@@ -190,9 +191,9 @@ func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 
 	// Retry loop with internal retry logic
 	for {
-		// Attempt submission
 		res, err := ds.submitBatchFinalitySignaturesOnce(ctx, blocks)
 		if err != nil {
+			fmt.Println("DEBUG: Error", err)
 			ds.logger.Debug(
 				"failed to submit finality signature to the consumer chain",
 				zap.String("pk", ds.getBtcPkHex()),
@@ -260,21 +261,27 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 		return nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
 	}
 
-	// get public randomness list
-	numPubRand := len(blocks)
-	// #nosec G115 -- performed the conversion check above
-	prList, err := ds.GetPubRandList(blocks[0].GetHeight(), uint32(numPubRand))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get public randomness list: %w", err)
-	}
+	// Get proofs and public randomness for each block
+	var proofBytesList [][]byte
+	var prList []*btcec.FieldVal
 
-	// get proof list
-	proofBytesList, err := ds.proofListGetterFunc(
-		blocks[0].GetHeight(),
-		uint64(numPubRand),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w\nplease recover the randomness proof from db", err)
+	for _, block := range blocks {
+		// Get public randomness for this specific height
+		pr, err := ds.GetPubRandList(block.GetHeight(), 1)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get public randomness for height %d: %w", block.GetHeight(), err)
+		}
+		prList = append(prList, pr[0])
+
+		// Get proof for this specific height
+		proofs, err := ds.proofListGetterFunc(block.GetHeight(), 1)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get public randomness inclusion proof for height %d: %w\nplease recover the randomness proof from db", block.GetHeight(), err)
+		}
+		if len(proofs) != 1 {
+			return nil, fmt.Errorf("expected exactly one proof for height %d, got %d", block.GetHeight(), len(proofs))
+		}
+		proofBytesList = append(proofBytesList, proofs[0])
 	}
 
 	// Create slices to store only the valid items
@@ -282,6 +289,12 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	validPrList := make([]*btcec.FieldVal, 0, len(blocks))
 	validProofList := make([][]byte, 0, len(blocks))
 	validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
+
+	// print num of blocks
+	fmt.Println("DEBUG: Number of blocks", len(blocks))
+	// print first and last block height
+	fmt.Println("DEBUG: First block height", blocks[0].GetHeight())
+	fmt.Println("DEBUG: Last block height", blocks[len(blocks)-1].GetHeight())
 
 	// Process each block and collect only valid items
 	for i, b := range blocks {

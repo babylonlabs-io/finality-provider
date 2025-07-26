@@ -5,8 +5,8 @@ import (
 	"net"
 	"path/filepath"
 
-	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
-	rollupservice "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/service"
+	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup/config"
+	rollupservice "github.com/babylonlabs-io/finality-provider/bsn/rollup/service"
 	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpdaemon "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"

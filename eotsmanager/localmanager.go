@@ -226,13 +226,13 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 			var s btcec.ModNScalar
 			s.SetByteSlice(record.Signature)
 
-			lm.logger.Info(
-				"duplicate sign requested",
-				zap.String("eots_pk", hex.EncodeToString(eotsPk)),
-				zap.String("hash", hex.EncodeToString(msg)),
-				zap.Uint64("height", height),
-				zap.String("chainID", string(chainID)),
-			)
+			// lm.logger.Info(
+			// 	"duplicate sign requested",
+			// 	zap.String("eots_pk", hex.EncodeToString(eotsPk)),
+			// 	zap.String("hash", hex.EncodeToString(msg)),
+			// 	zap.Uint64("height", height),
+			// 	zap.String("chainID", string(chainID)),
+			// )
 
 			return &s, nil
 		}
