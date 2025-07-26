@@ -241,14 +241,7 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 		return nil, fmt.Errorf("failed to send finality signature messages: %w", err)
 	}
 
-	// Handle expected errors case where res is nil (e.g., duplicate signatures)
 	if res == nil {
-		cc.logger.Debug(
-			"Finality signature submission handled as expected error (e.g., duplicate)",
-			zap.String("fp_pk_hex", fpPkHex),
-			zap.Uint64("start_height", req.Blocks[0].GetHeight()),
-			zap.Uint64("end_height", req.Blocks[len(req.Blocks)-1].GetHeight()),
-		)
 		return &types.TxResponse{}, nil
 	}
 
