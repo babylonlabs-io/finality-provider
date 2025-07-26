@@ -29,10 +29,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// BSN rollup contract error definitions - these must match the actual Rust contract error messages
 var (
-	// From op-finality-gadget/contracts/finality/src/error.rs:
-	// "Duplicated finality signature for finality provider {0} at height {1}"
+	// ref: https://github.com/babylonlabs-io/rollup-bsn-contracts/blob/main/contracts/finality/src/error.rs#L87
 	ErrBSNDuplicatedFinalitySig = sdkErr.Register("bsn_rollup", 1001, "Duplicated finality signature")
 )
 
@@ -231,8 +229,6 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 	}
 
 	expectedErrs := []*sdkErr.Error{
-		// BSN rollup contract returns "Duplicated finality signature for finality provider..."
-		// We need a substring that matches this, not Babylon's "duplicated finality vote"
 		ErrBSNDuplicatedFinalitySig,
 	}
 
