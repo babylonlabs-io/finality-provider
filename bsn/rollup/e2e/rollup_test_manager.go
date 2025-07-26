@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -528,7 +529,7 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 		heightDeterminer,
 		finalitySubmitter,
 		fpMetrics,
-		make(chan<- *service.CriticalError),
+		make(chan<- *service.CriticalError, 100),
 		ctm.logger,
 	)
 	require.NoError(t, err)
@@ -579,17 +580,35 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 }
 
 func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
-	if ctm.manager != nil {
-		ctm.manager.ClearResources()
+	// Stop all FP apps with error handling
+	if ctm.BabylonFpApp != nil {
+		err := ctm.BabylonFpApp.Stop()
+		if err != nil {
+			t.Logf("Warning: Error stopping finality provider: %v", err)
+		}
 	}
+	if ctm.ConsumerFpApp != nil {
+		err := ctm.ConsumerFpApp.Stop()
+		if err != nil {
+			t.Logf("Warning: Error stopping finality provider: %v", err)
+		}
+	}
+
+	// Stop EOTS server handler
 	if ctm.EOTSServerHandler != nil {
 		ctm.EOTSServerHandler.Stop()
 	}
-	if ctm.BabylonFpApp != nil {
-		ctm.BabylonFpApp.Stop()
+
+	// Clear Docker resources with error handling
+	err := ctm.manager.ClearResources()
+	if err != nil {
+		t.Logf("Warning: Error clearing Docker resources: %v", err)
 	}
-	if ctm.ConsumerFpApp != nil {
-		ctm.ConsumerFpApp.Stop()
+
+	// Clean up temp directory
+	err = os.RemoveAll(ctm.BaseDir)
+	if err != nil {
+		t.Logf("Warning: Error removing temporary directory: %v", err)
 	}
 }
 

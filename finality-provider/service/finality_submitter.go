@@ -291,10 +291,10 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
 
 	// print num of blocks
-	fmt.Println("DEBUG: Number of blocks", len(blocks))
-	// print first and last block height
-	fmt.Println("DEBUG: First block height", blocks[0].GetHeight())
-	fmt.Println("DEBUG: Last block height", blocks[len(blocks)-1].GetHeight())
+	// fmt.Println("DEBUG: Number of blocks", len(blocks))
+	// // print first and last block height
+	// fmt.Println("DEBUG: First block height", blocks[0].GetHeight())
+	// fmt.Println("DEBUG: Last block height", blocks[len(blocks)-1].GetHeight())
 
 	// Process each block and collect only valid items
 	for i, b := range blocks {
