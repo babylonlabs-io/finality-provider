@@ -167,11 +167,6 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 	err = consumerFpInstance.Start(ctx)
 	require.NoError(t, err)
 
-	// // Clean up - ensure we stop the FP instance when test ends
-	// t.Cleanup(func() {
-	// 	_ = consumerFpInstance.Stop()
-	// })
-
 	// The FP needs to work through duplicate signatures from where it stopped (64)
 	// to where the blockchain is now (140+), then vote on fresh heights
 	initialVotedHeight := consumerFpInstance.GetLastVotedHeight()
@@ -211,7 +206,6 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 // sends a finality vote over a conflicting block in the rollup BSN environment
 // In this case, the BTC private key should be extracted by the system
 func TestBSNDoubleSigning(t *testing.T) {
-	// t.Skip("Skipping this test for now")
 	//t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	ctm := StartRollupTestManager(t, ctx)
@@ -256,24 +250,6 @@ func TestBSNDoubleSigning(t *testing.T) {
 	}, eventuallyWaitTimeOut, eventuallyPollTime, "FP should vote on at least one rollup block")
 
 	t.Logf("The rollup block at height %v is voted on", lastVotedHeight)
-
-	// // Step 3: Wait for block finalization - get finalized blocks from the rollup chain
-	// t.Log("Step 3: Waiting for block finalization")
-	// var finalizedBlock *types.BlockInfo
-	// require.Eventually(t, func() bool {
-	// 	// Query the latest finalized block from the rollup chain
-	// 	latestFinalized, err := ctm.RollupBSNController.QueryLatestFinalizedBlock(ctx)
-	// 	if err != nil {
-	// 		t.Logf("Failed to query latest finalized block: %v", err)
-	// 		return false
-	// 	}
-	// 	if latestFinalized != nil && latestFinalized.GetHeight() >= lastVotedHeight {
-	// 		finalizedBlock = types.NewBlockInfo(latestFinalized.GetHeight(), latestFinalized.GetHash(), true)
-	// 		t.Logf("Block at height %d is finalized", finalizedBlock.GetHeight())
-	// 		return true
-	// 	}
-	// 	return false
-	// }, eventuallyWaitTimeOut, eventuallyPollTime, "Should have at least one finalized block")
 
 	fpTestHelper := consumerFpInstance.NewTestHelper()
 
@@ -326,7 +302,6 @@ func TestBSNDoubleSigning(t *testing.T) {
 // TestRollupBSNCatchingUp tests if a rollup BSN finality provider can catch up after being restarted
 // This is the rollup BSN equivalent of the Babylon TestCatchingUp test
 func TestRollupBSNCatchingUp(t *testing.T) {
-	//t.Skip("Skipping this test for now")
 	//t.Parallel()
 
 	// Add a test timeout to prevent hanging
