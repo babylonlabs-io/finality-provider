@@ -22,7 +22,7 @@ import (
 // 5. Contract state verification throughout the lifecycle
 // 6. Block finalization verification
 func TestRollupFinalityProviderLifeCycle(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
@@ -96,7 +96,7 @@ func TestRollupFinalityProviderLifeCycle(t *testing.T) {
 // should skip the block when encountering a double sign request from the EOTS manager
 // This is critical for preventing accidental slashing during restart scenarios
 func TestBSNSkippingDoubleSignError(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
@@ -167,10 +167,10 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 	err = consumerFpInstance.Start(ctx)
 	require.NoError(t, err)
 
-	// Clean up - ensure we stop the FP instance when test ends
-	t.Cleanup(func() {
-		_ = consumerFpInstance.Stop()
-	})
+	// // Clean up - ensure we stop the FP instance when test ends
+	// t.Cleanup(func() {
+	// 	_ = consumerFpInstance.Stop()
+	// })
 
 	// The FP needs to work through duplicate signatures from where it stopped (64)
 	// to where the blockchain is now (140+), then vote on fresh heights
@@ -211,7 +211,8 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 // sends a finality vote over a conflicting block in the rollup BSN environment
 // In this case, the BTC private key should be extracted by the system
 func TestBSNDoubleSigning(t *testing.T) {
-	t.Parallel()
+	// t.Skip("Skipping this test for now")
+	//t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
@@ -325,7 +326,8 @@ func TestBSNDoubleSigning(t *testing.T) {
 // TestRollupBSNCatchingUp tests if a rollup BSN finality provider can catch up after being restarted
 // This is the rollup BSN equivalent of the Babylon TestCatchingUp test
 func TestRollupBSNCatchingUp(t *testing.T) {
-	t.Parallel()
+	//t.Skip("Skipping this test for now")
+	//t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ctm := StartRollupTestManager(t, ctx)
