@@ -13,6 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TODO: t.Parallel() is commented out due to conflict in ports/addresses
+// https://github.com/babylonlabs-io/finality-provider/issues/519
+
 // TestRollupFinalityProviderLifeCycle tests the complete lifecycle of a rollup BSN finality provider
 // This test covers:
 // 1. FP creation and registration on both Babylon and rollup BSN
