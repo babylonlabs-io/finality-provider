@@ -506,6 +506,7 @@ func (cc *RollupBSNController) isEligibleForFinalitySignature(ctx context.Contex
 			zap.Uint64("height", height),
 			zap.Uint64("bsn_activation_height", config.BsnActivationHeight),
 		)
+
 		return false, nil
 	}
 
@@ -517,6 +518,7 @@ func (cc *RollupBSNController) isEligibleForFinalitySignature(ctx context.Contex
 			zap.Uint64("bsn_activation_height", config.BsnActivationHeight),
 			zap.Uint64("finality_signature_interval", config.FinalitySignatureInterval),
 		)
+		
 		return false, nil
 	}
 
