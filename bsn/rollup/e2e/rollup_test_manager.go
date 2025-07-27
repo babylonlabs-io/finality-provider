@@ -614,12 +614,12 @@ func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
 
 // WaitForFpPubRandTimestamped waits for the FP to commit public randomness and get it timestamped
 // This is a rollup-specific version that works with the rollup controller
-func (ctm *OpL2ConsumerTestManager) WaitForFpPubRandTimestamped(t *testing.T, fpIns *service.FinalityProviderInstance) {
+func (ctm *OpL2ConsumerTestManager) WaitForFpPubRandTimestamped(t *testing.T, ctx context.Context, fpIns *service.FinalityProviderInstance) {
 	var lastCommittedHeight uint64
 	var err error
 
 	require.Eventually(t, func() bool {
-		lastCommittedHeight, err = fpIns.GetLastCommittedHeight(context.Background())
+		lastCommittedHeight, err = fpIns.GetLastCommittedHeight(ctx)
 		if err != nil {
 			return false
 		}
@@ -643,13 +643,13 @@ func (ctm *OpL2ConsumerTestManager) WaitForFpPubRandTimestamped(t *testing.T, fp
 
 // WaitForNRollupBlocks waits for the rollup chain to produce N more blocks
 // This is the BSN equivalent of the Babylon test's WaitForNBlocks function
-func (ctm *OpL2ConsumerTestManager) WaitForNRollupBlocks(t *testing.T, n int) uint64 {
-	beforeHeight, err := ctm.RollupBSNController.QueryLatestBlock(context.Background())
+func (ctm *OpL2ConsumerTestManager) WaitForNRollupBlocks(t *testing.T, ctx context.Context, n int) uint64 {
+	beforeHeight, err := ctm.RollupBSNController.QueryLatestBlock(ctx)
 	require.NoError(t, err)
 
 	var afterHeight uint64
 	require.Eventually(t, func() bool {
-		height, err := ctm.RollupBSNController.QueryLatestBlock(context.Background())
+		height, err := ctm.RollupBSNController.QueryLatestBlock(ctx)
 		if err != nil {
 			t.Logf("Failed to query latest rollup block height: %v", err)
 			return false

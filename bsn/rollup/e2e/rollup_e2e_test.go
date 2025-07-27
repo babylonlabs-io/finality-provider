@@ -23,7 +23,7 @@ import (
 // 6. Block finalization verification
 func TestRollupFinalityProviderLifeCycle(t *testing.T) {
 	//t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
 		cancel()
@@ -69,7 +69,7 @@ func TestRollupFinalityProviderLifeCycle(t *testing.T) {
 
 	// Step 4: Wait for FP to automatically commit public randomness and get it timestamped
 	t.Log("Step 4: Waiting for FP to automatically commit public randomness and get it timestamped")
-	ctm.WaitForFpPubRandTimestamped(t, consumerFpInstance)
+	ctm.WaitForFpPubRandTimestamped(t, ctx, consumerFpInstance)
 
 	// Step 5: Wait for FP to automatically detect and vote on rollup blocks
 	t.Log("Step 5: Waiting for FP to automatically vote on rollup blocks")
@@ -97,7 +97,7 @@ func TestRollupFinalityProviderLifeCycle(t *testing.T) {
 // This is critical for preventing accidental slashing during restart scenarios
 func TestBSNSkippingDoubleSignError(t *testing.T) {
 	//t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
 		cancel()
@@ -120,7 +120,7 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for FP to commit randomness and get it timestamped
-	ctm.WaitForFpPubRandTimestamped(t, consumerFpInstance)
+	ctm.WaitForFpPubRandTimestamped(t, ctx, consumerFpInstance)
 
 	// Wait for FP to vote on at least one rollup block
 	var lastVotedHeight uint64
@@ -142,7 +142,7 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 
 	// Wait for the rollup chain to produce new blocks - this gives the FP time to fully stop
 	// while ensuring we get a fresh height that the FP hasn't processed yet
-	currentHeight := ctm.WaitForNRollupBlocks(t, 1)
+	currentHeight := ctm.WaitForNRollupBlocks(t, ctx, 1)
 
 	// Make sure we use a height that's a multiple of the finality signature interval
 	remainder := currentHeight % finalitySignatureInterval
@@ -213,7 +213,7 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 func TestBSNDoubleSigning(t *testing.T) {
 	// t.Skip("Skipping this test for now")
 	//t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
 		cancel()
@@ -242,7 +242,7 @@ func TestBSNDoubleSigning(t *testing.T) {
 	})
 
 	// Wait for FP to commit randomness and get it timestamped
-	ctm.WaitForFpPubRandTimestamped(t, consumerFpInstance)
+	ctm.WaitForFpPubRandTimestamped(t, ctx, consumerFpInstance)
 
 	// Wait for FP to vote on at least one rollup block and for finalization
 	var lastVotedHeight uint64
@@ -328,10 +328,14 @@ func TestBSNDoubleSigning(t *testing.T) {
 func TestRollupBSNCatchingUp(t *testing.T) {
 	//t.Skip("Skipping this test for now")
 	//t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+
+	// Add a test timeout to prevent hanging
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	ctm := StartRollupTestManager(t, ctx)
-	defer ctm.Stop(t)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
 
 	// Step 1: Setup FPs and activation - similar to original test
 	t.Log("Step 1: Setting up finality providers and BTC delegation")
@@ -350,7 +354,7 @@ func TestRollupBSNCatchingUp(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for FP to commit randomness and get it timestamped
-	ctm.WaitForFpPubRandTimestamped(t, consumerFpInstance)
+	ctm.WaitForFpPubRandTimestamped(t, ctx, consumerFpInstance)
 
 	// Wait for FP to vote on at least one rollup block
 	var lastVotedHeight uint64
@@ -375,7 +379,7 @@ func TestRollupBSNCatchingUp(t *testing.T) {
 	t.Logf("FP stopped. Current last voted height: %d", lastVotedHeight)
 
 	// Wait for the rollup chain to produce n more blocks while FP is offline
-	afterDowntimeHeight := ctm.WaitForNRollupBlocks(t, int(n))
+	afterDowntimeHeight := ctm.WaitForNRollupBlocks(t, ctx, int(n))
 	t.Logf("Rollup chain produced %d blocks during FP downtime: last voted %d -> current %d",
 		n, lastVotedHeight, afterDowntimeHeight)
 
@@ -418,4 +422,7 @@ func TestRollupBSNCatchingUp(t *testing.T) {
 	t.Logf("✅ Pre-downtime voted height: %d", lastVotedHeight)
 	t.Logf("✅ Post-catchup voted height: %d", finalVotedHeight)
 	t.Logf("✅ FP continues normal operation after catch-up")
+
+	// Additional logging for debugging cleanup
+	t.Log("🔄 Starting test cleanup...")
 }
