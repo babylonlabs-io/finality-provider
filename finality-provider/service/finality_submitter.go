@@ -193,7 +193,6 @@ func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 	for {
 		res, err := ds.submitBatchFinalitySignaturesOnce(ctx, blocks)
 		if err != nil {
-			fmt.Println("DEBUG: Error", err)
 			ds.logger.Debug(
 				"failed to submit finality signature to the consumer chain",
 				zap.String("pk", ds.getBtcPkHex()),
@@ -289,12 +288,6 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	validPrList := make([]*btcec.FieldVal, 0, len(blocks))
 	validProofList := make([][]byte, 0, len(blocks))
 	validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
-
-	// print num of blocks
-	// fmt.Println("DEBUG: Number of blocks", len(blocks))
-	// // print first and last block height
-	// fmt.Println("DEBUG: First block height", blocks[0].GetHeight())
-	// fmt.Println("DEBUG: Last block height", blocks[len(blocks)-1].GetHeight())
 
 	// Process each block and collect only valid items
 	for i, b := range blocks {
