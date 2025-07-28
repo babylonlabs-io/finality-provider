@@ -415,7 +415,7 @@ func (tm *TestManager) StopAndRestartFpAfterNBlocks(ctx context.Context, t *test
 	require.NoError(t, err)
 
 	// Add sleep to allow database to initialize
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 }
 
 func (tm *TestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
