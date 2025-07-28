@@ -1,16 +1,15 @@
-//go:build e2e_bcd
-
 package e2etest_bcd
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"testing"
 
 	"cosmossdk.io/errors"
 	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
-	"github.com/babylonlabs-io/babylon-sdk/x/babylon/client/cli"
 	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
@@ -32,7 +31,6 @@ import (
 // NOTE: the delegation is injected after ensuring pub randomness loop in fp daemon has started
 // this order is necessary otherwise pub randomness loop takes time to start and due to this blocks won't get finalized.
 func TestConsumerFpLifecycle(t *testing.T) {
-	t.Skipf("Skipping until we upgrade wasmd to v0.60")
 	ctx, cancel := context.WithCancel(context.Background())
 	ctm := StartBcdTestManager(t, ctx)
 	defer func() {
@@ -64,29 +62,57 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(3), btcFinalityContractWasmId)
 
-	initMsg, err := cli.ParseInstantiateArgs(
-		[]string{
-			fmt.Sprintf("%d", babylonContractWasmId),
-			fmt.Sprintf("%d", btcStakingContractWasmId),
-			fmt.Sprintf("%d", btcFinalityContractWasmId),
-			"regtest",
-			"01020304",
-			"1",
-			"2",
-			"false",
-			fmt.Sprintf(`{"admin":"%s"}`, ctm.BcdConsumerClient.MustGetValidatorAddress()),
-			fmt.Sprintf(`{"admin":"%s"}`, ctm.BcdConsumerClient.MustGetValidatorAddress()),
-			"test-consumer",
-			"test-consumer-description",
-		},
-		"",
-		ctm.BcdConsumerClient.MustGetValidatorAddress(),
-		ctm.BcdConsumerClient.MustGetValidatorAddress(),
-	)
+	btcLightClientPath := "./bytecode/btc_light_client.wasm"
+	err = ctm.BcdConsumerClient.StoreWasmCode(btcLightClientPath)
 	require.NoError(t, err)
-	emptyErrs := []*errors.Error{}
-	_, err = ctm.BcdConsumerClient.GetClient().ReliablySendMsg(ctx, initMsg, emptyErrs, emptyErrs)
+	btcLightClientWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
 	require.NoError(t, err)
+	require.Equal(t, uint64(4), btcLightClientWasmId)
+
+	network := "regtest"
+	btcConfirmationDepth := 1
+	btcFinalizationTimeout := 2
+	admin := ctm.BcdConsumerClient.MustGetValidatorAddress()
+	btcLightClientInitMsg := fmt.Sprintf(`{"network":"%s","btc_confirmation_depth":%d,"checkpoint_finalization_timeout":%d}`,
+		network, btcConfirmationDepth, btcFinalizationTimeout)
+	btcFinalityInitMsg := fmt.Sprintf(`{"admin":"%s"}`, admin)
+	btcStakingInitMsg := fmt.Sprintf(`{"admin":"%s"}`, admin)
+	btcLightClientInitMsgBz := base64.StdEncoding.EncodeToString([]byte(btcLightClientInitMsg))
+	btcFinalityInitMsgBz := base64.StdEncoding.EncodeToString([]byte(btcFinalityInitMsg))
+	btcStakingInitMsgBz := base64.StdEncoding.EncodeToString([]byte(btcStakingInitMsg))
+
+	babylonInitMsg := map[string]interface{}{
+		"network":                         network,
+		"babylon_tag":                     "01020304",
+		"btc_confirmation_depth":          btcConfirmationDepth,
+		"checkpoint_finalization_timeout": btcFinalizationTimeout,
+		"notify_cosmos_zone":              false,
+		"btc_light_client_code_id":        btcLightClientWasmId,
+		"btc_light_client_msg":            btcLightClientInitMsgBz,
+		"btc_staking_code_id":             btcStakingContractWasmId,
+		"btc_staking_msg":                 btcStakingInitMsgBz,
+		"btc_finality_code_id":            btcFinalityContractWasmId,
+		"btc_finality_msg":                btcFinalityInitMsgBz,
+		"consumer_name":                   "test-consumer",
+		"consumer_description":            "test-consumer-description",
+		"btc_light_client_initial_header": "",
+		"initial_header":                  "",
+	}
+	babylonInitMsgBz, err := json.Marshal(babylonInitMsg)
+	require.NoError(t, err)
+
+	msg := &wasmdtypes.MsgInstantiateContract{
+		Sender: ctm.BcdConsumerClient.MustGetValidatorAddress(),
+		Admin:  ctm.BcdConsumerClient.MustGetValidatorAddress(),
+		CodeID: babylonContractWasmId,
+		Label:  "cw",
+		Msg:    babylonInitMsgBz,
+		Funds:  nil,
+	}
+
+	instResp, err := ctm.BcdConsumerClient.GetClient().ReliablySendMsg(ctx, msg, []*errors.Error{}, []*errors.Error{})
+	require.NoError(t, err)
+	require.NotNil(t, instResp)
 
 	// get btc staking contract address
 	resp, err := ctm.BcdConsumerClient.ListContractsByCode(btcStakingContractWasmId, &sdkquerytypes.PageRequest{})
