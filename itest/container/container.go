@@ -142,7 +142,7 @@ func (m *Manager) RunAnvilResource(t *testing.T) (*dockertest.Resource, error) {
 				"8545/tcp", // Ethereum JSON-RPC port
 			},
 			Entrypoint: []string{"anvil"},
-			Cmd:        []string{"--host", "0.0.0.0", "--block-time", m.cfg.AnvilBlockTime},
+			Cmd:        []string{"--host", "0.0.0.0", "--block-time", m.cfg.AnvilBlockTimeSeconds},
 		},
 		func(config *docker.HostConfig) {
 			config.PortBindings = map[docker.Port][]docker.PortBinding{
