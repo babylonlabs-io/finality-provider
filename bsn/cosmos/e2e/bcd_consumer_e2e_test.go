@@ -95,8 +95,6 @@ func TestConsumerFpLifecycle(t *testing.T) {
 		"btc_finality_msg":                btcFinalityInitMsgBz,
 		"consumer_name":                   "test-consumer",
 		"consumer_description":            "test-consumer-description",
-		"btc_light_client_initial_header": "",
-		"initial_header":                  "",
 	}
 	babylonInitMsgBz, err := json.Marshal(babylonInitMsg)
 	require.NoError(t, err)
