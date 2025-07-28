@@ -264,6 +264,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	var proofBytesList [][]byte
 	var prList []*btcec.FieldVal
 
+	// TODO: https://github.com/babylonlabs-io/finality-provider/issues/560
 	for _, block := range blocks {
 		// Get public randomness for this specific height
 		pr, err := ds.GetPubRandList(block.GetHeight(), 1)
