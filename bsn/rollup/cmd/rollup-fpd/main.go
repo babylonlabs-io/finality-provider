@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	rollupfpdaemon "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/cmd/rollup-fpd/daemon"
+	rollupfpdaemon "github.com/babylonlabs-io/finality-provider/bsn/rollup/cmd/rollup-fpd/daemon"
 	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"

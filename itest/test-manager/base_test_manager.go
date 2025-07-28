@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
 	"time"
+
+	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
 
 	"github.com/babylonlabs-io/babylon/v3/btcstaking"
 	txformat "github.com/babylonlabs-io/babylon/v3/btctxformatter"
@@ -593,7 +594,7 @@ func StartEotsManagers(
 	}
 
 	babylonFpCfg.EOTSManagerAddress = eotsConfigs[0].RPCListener
-	consumerFpCfg.EOTSManagerAddress = eotsConfigs[1].RPCListener
+	consumerFpCfg.EOTSManagerAddress = eotsConfigs[0].RPCListener
 
 	eh := e2eutils.NewEOTSServerHandler(t, eotsConfigs[0], eotsHomeDirs[0])
 	eh.Start(ctx)

@@ -13,8 +13,7 @@ import (
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
-	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
-	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
+	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup/config"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -28,6 +27,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"go.uber.org/zap"
+)
+
+var (
+	// ref: https://github.com/babylonlabs-io/rollup-bsn-contracts/blob/main/contracts/finality/src/error.rs#L87
+	ErrBSNDuplicatedFinalitySig = sdkErr.Register("bsn_rollup", 1001, "Duplicated finality signature")
 )
 
 var _ api.ConsumerController = &RollupBSNController{}
@@ -99,10 +103,9 @@ func (cc *RollupBSNController) ReliablySendMsg(ctx context.Context, msg sdk.Msg,
 }
 
 // queryContractConfig queries the finality contract for its config
-// nolint:unused
-func (cc *RollupBSNController) queryContractConfig(ctx context.Context) (*Config, error) {
+func (cc *RollupBSNController) queryContractConfig(ctx context.Context) (*ContractConfig, error) {
 	query := QueryMsg{
-		Config: &Config{},
+		Config: &ContractConfig{},
 	}
 	jsonData, err := json.Marshal(query)
 	if err != nil {
@@ -117,7 +120,7 @@ func (cc *RollupBSNController) queryContractConfig(ctx context.Context) (*Config
 		return nil, fmt.Errorf("no config found")
 	}
 
-	var resp *Config
+	var resp *ContractConfig
 	err = json.Unmarshal(stateResp.Data, &resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config response: %w", err)
@@ -137,7 +140,7 @@ func (cc *RollupBSNController) reliablySendMsgs(ctx context.Context, msgs []sdk.
 		return nil, fmt.Errorf("failed to reliably send messages: %w", err)
 	}
 
-	return types.NewBabylonTxResponse(resp), nil
+	return resp, nil
 }
 
 func (cc *RollupBSNController) GetFpRandCommitContext() string {
@@ -226,14 +229,18 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 	}
 
 	expectedErrs := []*sdkErr.Error{
-		finalitytypes.ErrDuplicatedFinalitySig,
-		finalitytypes.ErrSigHeightOutdated,
+		ErrBSNDuplicatedFinalitySig,
 	}
 
 	res, err := cc.reliablySendMsgs(ctx, msgs, expectedErrs, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send finality signature messages: %w", err)
 	}
+
+	if res == nil {
+		return &types.TxResponse{}, nil
+	}
+
 	cc.logger.Debug(
 		"Successfully submitted finality signatures in a batch",
 		zap.String("fp_pk_hex", fpPkHex),
@@ -241,7 +248,7 @@ func (cc *RollupBSNController) SubmitBatchFinalitySigs(
 		zap.Uint64("end_height", req.Blocks[len(req.Blocks)-1].GetHeight()),
 	)
 
-	return &types.TxResponse{TxHash: res.TxHash}, nil
+	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }
 
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
@@ -249,6 +256,15 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 	ctx context.Context,
 	req *api.QueryFinalityProviderHasPowerRequest,
 ) (bool, error) {
+	// Check if finality signatures are allowed for this height based on contract config
+	eligible, err := cc.isEligibleForFinalitySignature(ctx, req.BlockHeight)
+	if err != nil {
+		return false, fmt.Errorf("failed to check finality signature eligibility: %w", err)
+	}
+	if !eligible {
+		return false, nil
+	}
+
 	pubRand, err := cc.QueryLastPublicRandCommit(ctx, req.FpPk)
 	if err != nil {
 		return false, fmt.Errorf("failed to query last public rand commit: %w", err)
@@ -475,6 +491,40 @@ func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fp
 	return resp, nil
 }
 
+// isEligibleForFinalitySignature checks if finality signatures are allowed for the given height
+// based on the contract's BSN activation and interval requirements
+func (cc *RollupBSNController) isEligibleForFinalitySignature(ctx context.Context, height uint64) (bool, error) {
+	config, err := cc.queryContractConfig(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to query contract config: %w", err)
+	}
+
+	// Check BSN activation
+	if height < config.BsnActivationHeight {
+		cc.logger.Debug(
+			"Block height is before BSN activation",
+			zap.Uint64("height", height),
+			zap.Uint64("bsn_activation_height", config.BsnActivationHeight),
+		)
+
+		return false, nil
+	}
+
+	// Check finality signature interval
+	if (height-config.BsnActivationHeight)%config.FinalitySignatureInterval != 0 {
+		cc.logger.Debug(
+			"Block height is not at scheduled finality signature interval",
+			zap.Uint64("height", height),
+			zap.Uint64("bsn_activation_height", config.BsnActivationHeight),
+			zap.Uint64("finality_signature_interval", config.FinalitySignatureInterval),
+		)
+		
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func (cc *RollupBSNController) QueryFinalityActivationBlockHeight(_ context.Context) (uint64, error) {
 	// TODO: implement finality activation feature in OP stack L2
 	return 0, nil
@@ -509,6 +559,10 @@ func convertProof(cmtProof cmtcrypto.Proof) Proof {
 
 func (cc *RollupBSNController) Close() error {
 	cc.ethClient.Close()
+
+	if !cc.bbnClient.IsRunning() {
+		return nil
+	}
 
 	if err := cc.bbnClient.Stop(); err != nil {
 		return fmt.Errorf("failed to stop Babylon client: %w", err)

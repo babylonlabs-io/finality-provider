@@ -3,6 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
+	"testing"
+
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	ftypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
@@ -10,8 +13,6 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/gogo/protobuf/jsonpb"
 	"go.uber.org/zap"
-	"strings"
-	"testing"
 )
 
 // FinalityProviderTestHelper provides testing utilities for FinalityProviderInstance
