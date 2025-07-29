@@ -90,7 +90,7 @@ with the following command:
 eotsd init --home <path>
 ```
 
-If the home directly already exists, `init` will not succeed.
+If the home directory already exists, `init` will not succeed.
 > ⚡ Specifying `--force` to `init` will overwrite `eotsd.conf` with default
 > config values if the home directory already exists.
 > Please backup `eotsd.conf` before you run `init` with `--force`.
