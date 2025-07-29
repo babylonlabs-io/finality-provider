@@ -32,14 +32,20 @@ gain an overall understanding of the finality provider.
    7. [Jailing and Unjailing](#57-jailing-and-unjailing)
    8. [Slashing](#58-slashing-and-anti-slashing)
    9. [Prometheus Metrics](#59-prometheus-metrics)
+6. [Additional Resources](#6-additional-resources)
 
 
 ## 1. Prerequisites
 
-Before proceeding, you must complete the EOTS daemon setup as detailed in 
-[EOTS Daemon Setup](./eots-daemon.md). This ensures that the finality 
-provider toolset is installed, your EOTS daemon is initialized, and your 
-home directory is configured.
+Before proceeding with this guide, you must complete the EOTS daemon setup 
+process described in [EOTS Daemon Setup](./eots-daemon.md). This includes:
+
+* Installing the finality provider toolset (`fpd` and `eotsd` binaries)
+* Initializing and configuring the EOTS daemon
+* Adding your EOTS key to the daemon
+* Starting the EOTS daemon service
+
+> ⚠️ **Critical**: The EOTS daemon must be running and accessible before you can operate a finality provider.
 
 ## 2. System Requirements
 
@@ -715,3 +721,8 @@ For a complete list of available metrics, see:
 * Finality Provider metrics: [fp_collectors.go](../metrics/fp_collectors.go)
 * EOTS metrics: [eots_collectors.go](../metrics/eots_collectors.go)
 
+---
+
+## 6. Additional Resources
+
+For information about backing up your critical assets and recovering from data loss, please refer to the [Recovery and Backup Guide](./recovery-backup.md).
