@@ -1,6 +1,8 @@
 # EOTS Daemon Setup
 
-This guide covers the installation and setup of the EOTS (Extractable One-Time Signature) daemon, which is a core component of the finality provider stack responsible for managing your EOTS keys and producing EOTS signatures.
+This guide covers the installation and setup of the EOTS (Extractable One-Time
+Signature) daemon, which is a core component of the finality provider stack
+responsible for managing your EOTS keys and producing EOTS signatures.
 
 ## Table of Contents
 
@@ -16,10 +18,10 @@ This guide covers the installation and setup of the EOTS (Extractable One-Time S
 
 ## 1. Install Finality Provider Toolset
 
-The finality provider toolset requires [Golang 1.23](https://go.dev/dl)
-to be installed.
-Please follow the installation instructions [here](https://go.dev/dl).
-You can verify the installation with the following command:
+The finality provider toolset requires [Golang 1.23](https://go.dev/dl) to be
+installed. Please follow the installation instructions
+[here](https://go.dev/dl). You can verify the installation with the following
+command:
 
 ```shell
 go version
@@ -39,8 +41,8 @@ git checkout <version>
 
 ### 1.2. Install Finality Provider Toolset Binaries
 
-Run the following command to build the binaries and
-install them to your `$GOPATH/bin` directory:
+Run the following command to build the binaries and install them to your
+`$GOPATH/bin` directory:
 
 ```shell
 make install
@@ -76,15 +78,15 @@ source ~/.profile
 
 ## 2. Setting up the EOTS Daemon
 
-The EOTS manager daemon is a core component of the finality provider
-stack responsible for managing your EOTS keys and producing EOTS signatures
-to be used for votes. In this section, we are going to go through
-its setup and key generation process.
+The EOTS manager daemon is a core component of the finality provider stack
+responsible for managing your EOTS keys and producing EOTS signatures to be used
+for votes. In this section, we are going to go through its setup and key
+generation process.
 
 ### 2.1. Initialize the EOTS Daemon
 
-If you haven't already, initialize a home directory for the EOTS Manager
-with the following command:
+If you haven't already, initialize a home directory for the EOTS Manager with
+the following command:
 
 ```shell
 eotsd init --home <path>
@@ -92,8 +94,8 @@ eotsd init --home <path>
 
 If the home directory already exists, `init` will not succeed.
 > ⚡ Specifying `--force` to `init` will overwrite `eotsd.conf` with default
-> config values if the home directory already exists.
-> Please backup `eotsd.conf` before you run `init` with `--force`.
+> config values if the home directory already exists. Please backup `eotsd.conf`
+> before you run `init` with `--force`.
 
 Parameters:
 
@@ -117,13 +119,13 @@ Parameters:
     └── eotsd.log       # Log file for the EOTS manager daemon
 ```
 
-* **eotsd.conf**
-  This configuration file controls the core settings of the EOTS daemon.
-  It uses the Cosmos SDK keyring system to securely store and manage EOTS keys.
-  The file configures how the daemon interacts with its database, manages keys
-  through the keyring backend, and exposes its RPC interface. Essential
-  settings include database paths, keyring backend selection (test/file/os),
-  RPC listener address, logging levels, and metrics configuration.
+* **eotsd.conf** This configuration file controls the core settings of the EOTS
+  daemon. It uses the Cosmos SDK keyring system to securely store and manage
+  EOTS keys. The file configures how the daemon interacts with its database,
+  manages keys through the keyring backend, and exposes its RPC interface.
+  Essential settings include database paths, keyring backend selection
+  (test/file/os), RPC listener address, logging levels, and metrics
+  configuration.
 
 * **eotsd.db**:
   * EOTS key to key name mappings
@@ -132,8 +134,8 @@ Parameters:
 * **keyring-directory***:
   * EOTS private keys are securely stored using Cosmos SDK's keyring system
   * `test` keyring-backend should only be used for test environments.
-  * `file` keyring-backend is used for production environments but requires call to `Unlock` command. 
-  See the section [Unlock file-based keyring](#232-unlock-file-based-keyring)
+  * `file` keyring-backend is used for production environments but requires call
+  to `Unlock` command. See the section [Unlock file-based keyring](#232-unlock-file-based-keyring)
   * Keys are used for EOTS signatures
 
 * **eotsd.log**:
@@ -146,21 +148,18 @@ Parameters:
 
 This section explains the process of creating EOTS keys using the EOTS manager.
 
-The EOTS manager uses [Cosmos SDK](https://docs.cosmos.network/v0.50/user/run-node/keyring)
-backends for key storage.
-Since this key is accessed by an automated daemon process, it must be stored
-unencrypted on disk and associated with the `test` keyring backend.
-This ensures that we can access the eots keys when requested to promptly submit
+The EOTS manager uses [Cosmos
+SDK](https://docs.cosmos.network/v0.50/user/run-node/keyring) backends for key
+storage. Since this key is accessed by an automated daemon process, it must be
+stored unencrypted on disk and associated with the `test` keyring backend. This
+ensures that we can access the eots keys when requested to promptly submit
 transactions, such as block votes and public randomness submissions that are
 essential for its liveness and earning of rewards.
 
-If you already have an existing key from Phase-1, proceed to
-[Import an existing EOTS key](#222-import-an-existing-eots-key)
-
 #### 2.2.1. Create an EOTS key
 
-If you have not created an EOTS key,
-use the following command to create a new one:
+If you have not created an EOTS key, use the following command to create a new
+one:
 
 ``` shell
 eotsd keys add <key-name> --home <path> --keyring-backend test
@@ -168,8 +167,8 @@ eotsd keys add <key-name> --home <path> --keyring-backend test
 
 Parameters:
 
-* `<key-name>`: Name for your EOTS key (e.g., "eots-key-1"). We do not allow
-the same `keyname` for an existing keyname.
+* `<key-name>`: Name for your EOTS key (e.g., "eots-key-1"). We do not allow the
+same `keyname` for an existing keyname.
 * `--home`: Path to your EOTS daemon home directory (e.g., "~/.eotsHome")
 * `--keyring-backend`: Type of keyring storage (`test`)
 
@@ -186,14 +185,14 @@ The command will return a JSON response containing your EOTS key details:
 }
 ```
 
-> **🔒 Security Tip**: The mnemonic phrase must be stored securely and kept private.
-> It is the only way to recover your EOTS key if you lose access to it and
-> if lost it can be used by third parties to get access to your key.
+> **🔒 Security Tip**: The mnemonic phrase must be stored securely and kept
+> private. It is the only way to recover your EOTS key if you lose access to it
+> and if lost it can be used by third parties to get access to your key.
 
 #### 2.2.2. Import an existing EOTS key
 
-> ⚡ This section is for Finality Providers who already possess an EOTS key.
-> If you don't have keys or want to create new ones, you can skip this section.
+> ⚡ This section is for Finality Providers who already possess an EOTS key. If
+> you don't have keys or want to create new ones, you can skip this section.
 
 There are 2 supported methods of loading your existing EOTS keys:
 
@@ -216,9 +215,9 @@ You'll be prompted to enter:
 1. Your BIP39 mnemonic phrase (24 words)
 2. HD path (optional - press Enter to use the default)
 
-> ⚡ The HD path is optional. If you used the default path when creating your key,
-you can skip this by pressing `Enter` , which by default uses your original private
-key.
+> ⚡ The HD path is optional. If you used the default path when creating your
+key, you can skip this by pressing `Enter` , which by default uses your original
+private key.
 
 #### Option 2: Using your `.asc` file
 
@@ -259,10 +258,9 @@ Parameters:
 You should see your EOTS key listed with the correct details if the import is
 successful.
 
-> ⚠️ **Important**:
-> If you are a finality provider transitioning your stack from Phase-1,
-> make sure that you are using the same EOTS key that you
-> registered in Phase-1.
+> ⚠️ **Important**: If you are a finality provider transitioning your stack from
+> Phase-1, make sure that you are using the same EOTS key that you registered in
+> Phase-1.
 
 ### 2.3. Starting the EOTS Daemon
 
@@ -286,24 +284,26 @@ EOTS Manager Daemon is fully active!
 
 #### 2.3.1. Migration guide test to file keyring backend
 
-You will first need to stop eotsd and export your private EOTS key in hex format by executing the following command:
+You will first need to stop eotsd and export your private EOTS key in hex format
+by executing the following command:
 
 ```shell
 eotsd keys export <name> --keyring-backend=test --unsafe --unarmored-hex --home <path>
 ```
 
-As a result of the `export` command, you will receive the EOTS key as a hex string,
-which you can use to import the key into the `file` keyring backend.
+As a result of the `export` command, you will receive the EOTS key as a hex
+string, which you can use to import the key into the `file` keyring backend.
 
-Keyring backed `file` requires a setting up a password, this password will be used in the `unlock` command. You can then import the
-key into the `file` keyring backend using the following command:
+Keyring backed `file` requires a setting up a password, this password will be
+used in the `unlock` command. You can then import the key into the `file`
+keyring backend using the following command:
 
 ```shell
 eotsd keys import-hex <name> <hexstring> --keyring-backend=file --home <path>
 ```
 
-To confirm that you have successfully imported your EOTS key to the `file` keyring backend,
-you can run the following command:
+To confirm that you have successfully imported your EOTS key to the `file`
+keyring backend, you can run the following command:
 
 ```shell
 eotsd keys show <name> --home <path> --keyring-backend file
@@ -315,44 +315,51 @@ In the `eots.conf` change the `keyring-backend` to `file`:
 + KeyringBackend = file
 - KeyringBackend = test
 ```
-After you have changed the keyring backend to `file`, you can start the eotsd and run the unlock command.
+After you have changed the keyring backend to `file`, you can start the eotsd
+and run the unlock command.
 
-In order to run eotsd with the `file` keyring, please read the [Unlock file-based keyring](#232-unlock-file-based-keyring) section below.
+In order to run eotsd with the `file` keyring, please read the [Unlock
+file-based keyring](#232-unlock-file-based-keyring) section below.
 
 #### 2.3.2. Unlock file-based keyring
 
 ⚠️⚠️⚠️ Mandatory step for file-based keyring backend ⚠️⚠️⚠️
 
-If you are using a `file` based keyring-backend, you need to unlock the keyring by executing the `unlock` command.
-Unlock is required after the eotsd daemon is started, otherwise if the unlock command is not run the daemon will error and not be able to sign.
-This only applies to the `file` keyring backend, if you are using the `test` keyring backend, you can skip this step.
+If you are using a `file` based keyring-backend, you need to unlock the keyring
+by executing the `unlock` command. Unlock is required after the eotsd daemon is
+started, otherwise if the unlock command is not run the daemon will error and
+not be able to sign. This only applies to the `file` keyring backend, if you are
+using the `test` keyring backend, you can skip this step.
 
 ```shell
 eotsd unlock --eots-pk <eots-pk> --rpc-client <eotsd-address>
 ```
 
-You will be prompted to enter the password for the keyring. After which the signing operations will be available and eotsd can
-run uninterrupted.
+You will be prompted to enter the password for the keyring. After which the
+signing operations will be available and eotsd can run uninterrupted.
 
-An alternative to providing the password as an input is specifying the password with the environment variable `EOTS_KEYRING_PASSWORD`:
+An alternative to providing the password as an input is specifying the password
+with the environment variable `EOTS_KEYRING_PASSWORD`:
 
 ```shell
 export EOTSD_KEYRING_PASSWORD=<your-password>
 ```
 
-If you have HMAC security enabled, you can also specify the HMAC key either with:
+If you have HMAC security enabled, you can also specify the HMAC key either
+with:
 * `HMAC_KEY` environment variable, or
-* providing the `--home` path to the eotsd home directory which contains the config file with hmac key set up.
+* providing the `--home` path to the eotsd home directory which contains the
+  config file with hmac key set up.
 
 ---
 >**🔒 Security Tip**:
 >
 > * `eotsd` holds your private keys which are used for signing
-> * operate the daemon in a separate machine or network segment
->   with enhanced security
-> * only allow access to the RPC server specified by the `RPCListener`
->   port to trusted sources. You can edit the `EOTSManagerAddress` in
->   the configuration file of the finality provider to
->   reference the address of the machine where `eotsd` is running
-> * setup HMAC to secure the communication between `eotsd` and `fpd`. See
->   [HMAC Security](./hmac-security.md). 
+> * operate the daemon in a separate machine or network segment with enhanced
+>   security
+> * only allow access to the RPC server specified by the `RPCListener` port to
+>   trusted sources. You can edit the `EOTSManagerAddress` in the configuration
+>   file of the finality provider to reference the address of the machine where
+>   `eotsd` is running
+> * setup HMAC to secure the communication between `eotsd` and `fpd`. 
+>   See [HMAC Security](./hmac-security.md). 
