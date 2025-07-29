@@ -87,7 +87,7 @@ type StoredFinalityProvider struct {
 
 It can be recovered by downloading the finality provider's info from Babylon 
 Genesis. Specifically, this can be achieved by repeating the 
-[creation process](./babylon-genesis-provider-operation.md#51-create-finality-provider). 
+[creation process](./finality-provider-operation.md#51-create-finality-provider). 
 The `create-finality-provider` cmd will download the info of the finality provider 
 locally if it is already registered on Babylon.
 
