@@ -2,11 +2,19 @@ package e2etest_bcd
 
 import (
 	"context"
+	sdkErr "cosmossdk.io/errors"
 	"encoding/json"
 	"fmt"
 	cwcc "github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -56,6 +64,7 @@ type BcdTestManager struct {
 	EOTSClient        *client.EOTSManagerGRpcClient
 	baseDir           string
 	logger            *zap.Logger
+	cfg               *config.CosmwasmConfig
 }
 
 func createLogger(t *testing.T, level zapcore.Level) *zap.Logger {
@@ -206,6 +215,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 		EOTSClient:        eotsCli,
 		baseDir:           testDir,
 		logger:            logger,
+		cfg:               cosmwasmConfig,
 	}
 
 	ctm.WaitForServicesStart(t)
@@ -305,4 +315,103 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	t.Logf("the consumer test manager is running with %v finality-provider(s)", 1)
 
 	return fpIns
+}
+
+func (ctm *BcdTestManager) createGrpcConnection() (*grpc.ClientConn, error) {
+	parsedUrl, err := url.Parse(ctm.cfg.GRPCAddr)
+	if err != nil {
+		return nil, fmt.Errorf("grpc-address is not correctly formatted: %w", err)
+	}
+	endpoint := fmt.Sprintf("%s:%s", parsedUrl.Hostname(), parsedUrl.Port())
+	grpcConn, err := grpc.NewClient(
+		endpoint,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(nil).GRPCCodec())),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return grpcConn, nil
+}
+
+func (ctm *BcdTestManager) submitGovProp(ctx context.Context, t *testing.T, msgs []sdk.Msg, title, summary string) uint64 {
+	t.Helper()
+	grpcConn, err := ctm.createGrpcConnection()
+	require.NoError(t, err)
+	defer grpcConn.Close()
+
+	govClient := govtypes.NewQueryClient(grpcConn)
+	paramsResp, err := govClient.Params(ctx, &govtypes.QueryParamsRequest{ParamsType: "deposit"})
+	require.NoError(t, err)
+
+	minDeposit := paramsResp.Params.MinDeposit
+	proposer := ctm.BcdConsumerClient.GetClient().MustGetAddr()
+	govMsg, err := govtypes.NewMsgSubmitProposal(msgs, minDeposit, proposer, "", title, summary, false)
+	require.NoError(t, err)
+
+	_, err = ctm.BcdConsumerClient.GetClient().ReliablySendMsgs(ctx, []sdk.Msg{govMsg}, []*sdkErr.Error{}, []*sdkErr.Error{})
+	require.NoError(t, err)
+
+	proposalsResp, err := govClient.Proposals(ctx, &govtypes.QueryProposalsRequest{
+		Depositor: proposer,
+	})
+	require.NoError(t, err)
+	require.Len(t, proposalsResp.Proposals, 1, "Expected exactly one proposal to be returned, got %d", len(proposalsResp.Proposals))
+
+	maxID := proposalsResp.Proposals[0].Id
+	for _, p := range proposalsResp.Proposals {
+		if p.Id > maxID {
+			maxID = p.Id
+		}
+	}
+
+	return maxID
+}
+
+func (ctm *BcdTestManager) voteGovProp(ctx context.Context, t *testing.T, proposalID uint64, option govtypes.VoteOption) {
+	t.Helper()
+	voter := ctm.BcdConsumerClient.GetClient().MustGetAddr()
+	voterAddr, err := sdk.AccAddressFromBech32(voter)
+	require.NoError(t, err)
+
+	voteMsg := govtypes.NewMsgVote(voterAddr, proposalID, option, "")
+	_, err = ctm.BcdConsumerClient.GetClient().ReliablySendMsgs(ctx, []sdk.Msg{voteMsg}, []*sdkErr.Error{}, []*sdkErr.Error{})
+	require.NoError(t, err)
+}
+
+func (ctm *BcdTestManager) queryProposalStatus(ctx context.Context, t *testing.T, proposalID uint64) (govtypes.ProposalStatus, error) {
+	t.Helper()
+	grpcConn, err := ctm.createGrpcConnection()
+	require.NoError(t, err)
+	defer grpcConn.Close()
+
+	govClient := govtypes.NewQueryClient(grpcConn)
+	proposalResp, err := govClient.Proposal(ctx, &govtypes.QueryProposalRequest{ProposalId: proposalID})
+	if err != nil {
+		return govtypes.ProposalStatus_PROPOSAL_STATUS_UNSPECIFIED, err
+	}
+
+	return proposalResp.Proposal.Status, nil
+}
+
+func (ctm *BcdTestManager) submitAndVoteGovProp(ctx context.Context, t *testing.T, msg sdk.Msg) {
+	t.Helper()
+	proposalID := ctm.submitGovProp(ctx, t, []sdk.Msg{msg}, "Set BSN Contracts", "Set contract addresses for Babylon system")
+	t.Logf("proposalID: %d", proposalID)
+
+	ctm.voteGovProp(ctx, t, proposalID, govtypes.OptionYes)
+	t.Logf("voted on proposal %d with YES option", proposalID)
+
+	require.Eventually(t, func() bool {
+		status, err := ctm.queryProposalStatus(ctx, t, proposalID)
+		if err != nil {
+			t.Logf("Error querying proposal status: %v", err)
+
+			return false
+		}
+
+		return status == govtypes.ProposalStatus_PROPOSAL_STATUS_PASSED
+
+	}, 2*time.Minute, 5*time.Second, "proposal did not pass in time")
 }

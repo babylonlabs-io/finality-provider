@@ -154,7 +154,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 		},
 	}
 
-	_ = msgSet
+	ctm.submitAndVoteGovProp(ctx, t, msgSet)
 
 	// register consumer to babylon
 	_, err = ctm.BabylonController.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
