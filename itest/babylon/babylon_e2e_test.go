@@ -41,9 +41,6 @@ const (
 	BinaryName = "fpd"
 )
 
-// TODO(regression): t.Parallel() is commented out due to conflict in ports/addresses
-// https://github.com/babylonlabs-io/finality-provider/issues/519
-
 // TestFinalityProviderLifeCycle tests the whole life cycle of a finality-provider
 // creation -> registration -> randomness commitment ->
 // activation with BTC delegation and Covenant sig ->
