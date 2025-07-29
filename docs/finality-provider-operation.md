@@ -16,58 +16,40 @@ gain an overall understanding of the finality provider.
 
 ## Table of Contents
 
-1. [A note about Phase-1 Finality Providers](#1-a-note-about-phase-1-finality-providers)
-2. [System Requirements](#2-system-requirements)
-3. [Keys Involved in Finality Provider Operation](#3-keys-involved-in-finality-provider-operation)
-4. [Install Finality Provider Toolset](#4-install-finality-provider-toolset)
-5. [Setting up the EOTS Daemon](#5-setting-up-the-eots-daemon)
-   1. [Initialize the EOTS Daemon](#51-initialize-the-eots-daemon)
-   2. [Add an EOTS Key](#52-add-an-eots-key)
-      1. [Create an EOTS key](#521-create-an-eots-key)
-      2. [Import an existing EOTS key](#522-import-an-existing-eots-key)
-   3. [Starting the EOTS Daemon](#53-starting-the-eots-daemon)
-       1. [Migrating from test to file keyring](#531-Migration-guide-test-to-file-keyring-backend)
-       2. [Unlock file-based keyring](#532-unlock-file-based-keyring)
-6. [Setting up the Finality Provider](#6-setting-up-the-finality-provider)
-   1. [Initialize the Finality Provider Daemon](#61-initialize-the-finality-provider-daemon)
-   2. [Add key for the Babylon Genesis account](#62-add-key-for-the-babylon-genesis-account)
-   3. [Configure Your Finality Provider](#63-configure-your-finality-provider)
-   4. [Starting the Finality Provider Daemon](#64-starting-the-finality-provider-daemon)
-7. [Finality Provider Operation](#7-finality-provider-operations)
-   1. [Create Finality Provider](#71-create-finality-provider)
-   2. [Rewards](#72-rewards)
-   3. [Set Up Operation Key](#73-set-up-operation-key)
-   4. [Start Finality Provider](#74-start-finality-provider)
-   5. [Status of Finality Provider](#75-status-of-finality-provider)
-   6. [Edit finality provider](#76-edit-finality-provider)
-   7. [Jailing and Unjailing](#77-jailing-and-unjailing)
-   8. [Slashing](#78-slashing-and-anti-slashing)
-   9. [Prometheus Metrics](#79-prometheus-metrics)
-8. [Recovery and backup](#8-recovery-and-backup)
-   1. [Critical assets](#81-critical-assets)
-   2. [Backup recommendations](#82-backup-recommendations)
-   3. [Recover finality-provider db](#83-recover-finality-provider-db)
-      1. [Recover local status of a finality provider](#831-recover-local-status-of-a-finality-provider)
-      2. [Recover public randomness proof](#832-recover-public-randomness-proof)
+1. [System Requirements](#1-system-requirements)
+2. [Keys Involved in Finality Provider Operation](#2-keys-involved-in-finality-provider-operation)
+3. [Install Finality Provider Toolset](#3-install-finality-provider-toolset)
+4. [Setting up the EOTS Daemon](#4-setting-up-the-eots-daemon)
+   1. [Initialize the EOTS Daemon](#41-initialize-the-eots-daemon)
+   2. [Add an EOTS Key](#42-add-an-eots-key)
+      1. [Create an EOTS key](#421-create-an-eots-key)
+      2. [Import an existing EOTS key](#422-import-an-existing-eots-key)
+   3. [Starting the EOTS Daemon](#43-starting-the-eots-daemon)
+       1. [Migration guide test to file keyring backend](#431-migration-guide-test-to-file-keyring-backend)
+       2. [Unlock file-based keyring](#432-unlock-file-based-keyring)
+5. [Setting up the Finality Provider](#5-setting-up-the-finality-provider)
+   1. [Initialize the Finality Provider Daemon](#51-initialize-the-finality-provider-daemon)
+   2. [Add key for the Babylon Genesis account](#52-add-key-for-the-babylon-genesis-account)
+   3. [Configure Your Finality Provider](#53-configure-your-finality-provider)
+   4. [Starting the Finality Provider Daemon](#54-starting-the-finality-provider-daemon)
+6. [Finality Provider Operation](#6-finality-provider-operations)
+   1. [Create Finality Provider](#61-create-finality-provider)
+   2. [Rewards](#62-rewards)
+   3. [Set Up Operation Key](#63-set-up-operation-key)
+   4. [Start Finality Provider](#64-start-finality-provider)
+   5. [Status of Finality Provider](#65-status-of-finality-provider)
+   6. [Edit finality provider](#66-edit-finality-provider)
+   7. [Jailing and Unjailing](#67-jailing-and-unjailing)
+   8. [Slashing](#68-slashing-and-anti-slashing)
+   9. [Prometheus Metrics](#69-prometheus-metrics)
+7. [Recovery and backup](#7-recovery-and-backup)
+   1. [Critical assets](#71-critical-assets)
+   2. [Backup recommendations](#72-backup-recommendations)
+   3. [Recover finality-provider db](#73-recover-finality-provider-db)
+      1. [Recover local status of a finality provider](#731-recover-local-status-of-a-finality-provider)
+      2. [Recover public randomness proof](#732-recover-public-randomness-proof)
 
-## 1. A note about Phase-1 Finality Providers
-
-This note is for you if you have participated in Phase-1 of Babylon
-Genesis to help you transition to Phase-2.
-
-Finality providers that received delegations in Phase-1
-are required to register their finality providers on Babylon Genesis
-using the same EOTS key that they used and registered with during Phase-1.
-The usage of a different key corresponds to setting up an entirely
-different finality provider which will not inherit the Phase-1 delegations.
-If you don't register your Phase-1 finality provider on Babylon Genesis, all the
-received Phase-1 delegations will not be able to register on Babylon Genesis.
-
-If you already have set up a key during Phase-1, you can proceed to
-[Import an existing EOTS key](#522-import-an-existing-eots-key) to import
-your Phase-1 key to the EOTS manager.
-
-## 2. System Requirements
+## 1. System Requirements
 
 Recommended specifications for running a Finality Provider:
 
@@ -88,7 +70,7 @@ For security tips of running a finality provider, please refer to
 [HMAC Security](./hmac-security.md),
 and [8. Recovery and Backup](#8-recovery-and-backup).
 
-## 3. Keys Involved in Finality Provider Operation
+## 2. Keys Involved in Finality Provider Operation
 
 Operating a finality provider involves managing multiple keys, each serving distinct purposes. Understanding these keys, their relationships, and security implications is crucial for secure operation.
 
@@ -103,11 +85,11 @@ Operating a finality provider involves managing multiple keys, each serving dist
 
 Instructions of setting up the three keys can be found in the following places:
 
-- [5.2. Add an EOTS Key](#52-add-an-eots-key).
-- [6.2. Add key for the Babylon Genesis account](#62-add-key-for-the-babylon-genesis-account).
-- [7.3. Set Up Operation Key](#73-set-up-operation-key).
+- [4.2. Add an EOTS Key](#42-add-an-eots-key).
+- [5.2. Add key for the Babylon Genesis account](#52-add-key-for-the-babylon-genesis-account).
+- [6.3. Set Up Operation Key](#63-set-up-operation-key).
 
-## 4. Install Finality Provider Toolset
+## 3. Install Finality Provider Toolset
 
 The finality provider toolset requires [Golang 1.23](https://go.dev/dl)
 to be installed.
@@ -118,7 +100,7 @@ You can verify the installation with the following command:
 go version
 ```
 
-### 4.1. Clone the Finality Provider Repository
+### 3.1. Clone the Finality Provider Repository
 
 Subsequently, clone the finality provider
 [repository](https://github.com/babylonlabs-io/finality-provider) and checkout
@@ -130,7 +112,7 @@ cd finality-provider
 git checkout <version>
 ```
 
-### 4.2. Install Finality Provider Toolset Binaries
+### 3.2. Install Finality Provider Toolset Binaries
 
 Run the following command to build the binaries and
 install them to your `$GOPATH/bin` directory:
@@ -147,7 +129,7 @@ This command will:
   * `fpd`: Finality provider daemon.
 * Make commands globally accessible from your terminal.
 
-### 4.3. Verify Installation
+### 3.3. Verify Installation
 
 Run the following command to verify the installation:
 
@@ -167,14 +149,14 @@ echo 'export PATH=$HOME/go/bin:$PATH' >> ~/.profile
 source ~/.profile
 ```
 
-## 5. Setting up the EOTS Daemon
+## 4. Setting up the EOTS Daemon
 
 The EOTS manager daemon is a core component of the finality provider
 stack responsible for managing your EOTS keys and producing EOTS signatures
 to be used for votes. In this section, we are going to go through
 its setup and key generation process.
 
-### 5.1. Initialize the EOTS Daemon
+### 4.1. Initialize the EOTS Daemon
 
 If you haven't already, initialize a home directory for the EOTS Manager
 with the following command:
@@ -235,7 +217,7 @@ Parameters:
   * Error messages and debugging information
   * Service status updates
 
-### 5.2. Add an EOTS Key
+### 4.2. Add an EOTS Key
 
 This section explains the process of creating EOTS keys using the EOTS manager.
 
@@ -250,7 +232,7 @@ essential for its liveness and earning of rewards.
 If you already have an existing key from Phase-1, proceed to
 [Import an existing EOTS key](#522-import-an-existing-eots-key)
 
-#### 5.2.1. Create an EOTS key
+#### 4.2.1. Create an EOTS key
 
 If you have not created an EOTS key,
 use the following command to create a new one:
@@ -283,7 +265,7 @@ The command will return a JSON response containing your EOTS key details:
 > It is the only way to recover your EOTS key if you lose access to it and
 > if lost it can be used by third parties to get access to your key.
 
-#### 5.2.2. Import an existing EOTS key
+#### 4.2.2. Import an existing EOTS key
 
 > ⚡ This section is for Finality Providers who already possess an EOTS key.
 > If you don't have keys or want to create new ones, you can skip this section.
@@ -357,7 +339,7 @@ successful.
 > make sure that you are using the same EOTS key that you
 > registered in Phase-1.
 
-### 5.3. Starting the EOTS Daemon
+### 4.3. Starting the EOTS Daemon
 
 To start the EOTS daemon, use the following command:
 
@@ -377,7 +359,7 @@ this value by specifying a custom address with the `--rpc-listener` flag.
 EOTS Manager Daemon is fully active!
 ```
 
-#### 5.3.1. Migration guide test to file keyring backend
+#### 4.3.1. Migration guide test to file keyring backend
 
 You will first need to stop eotsd and export your private EOTS key in hex format by executing the following command:
 
@@ -412,7 +394,7 @@ After you have changed the keyring backend to `file`, you can start the eotsd an
 
 In order to run eotsd with the `file` keyring, please read the [Unlock file-based keyring](#532-unlock-file-based-keyring) section below.
 
-#### 5.3.2. Unlock file-based keyring
+#### 4.3.2. Unlock file-based keyring
 
 ⚠️⚠️⚠️ Mandatory step for file-based keyring backend ⚠️⚠️⚠️
 
@@ -450,9 +432,9 @@ If you have HMAC security enabled, you can also specify the HMAC key either with
 > * setup HMAC to secure the communication between `eotsd` and `fpd`. See
 >   [HMAC Security](./hmac-security.md).
 
-## 6. Setting up the Finality Provider
+## 5. Setting up the Finality Provider
 
-### 6.1. Initialize the Finality Provider Daemon
+### 5.1. Initialize the Finality Provider Daemon
 
 To initialize the finality provider daemon home directory,
 use the following command:
@@ -505,7 +487,7 @@ If the home directory already exists, `init` will not succeed.
   * Error messages and debugging information
   * Service status updates
 
-### 6.2. Add key for the Babylon Genesis account
+### 5.2. Add key for the Babylon Genesis account
 
 Each finality provider maintains a Babylon Genesis keyring containing
 an account used to receive BTC Staking reward commissions and pay fees for
@@ -552,7 +534,7 @@ The output should look similar to the one below:
 }
 ```
 
-### 6.3. Configure Your Finality Provider
+### 5.3. Configure Your Finality Provider
 
 Edit the `fpd.conf` file in your finality provider home directory with the
 following parameters:
@@ -602,7 +584,7 @@ Larger values can be set to tolerate longer downtime with larger size of
 merkle proofs for each randomness, resulting in higher gas fees when submitting
 future finality signatures and larger storage requirements.
 
-### 6.4. Starting the Finality Provider Daemon
+### 5.4. Starting the Finality Provider Daemon
 
 The finality provider daemon (FPD) needs to be running before proceeding with
 registration or voting participation.
@@ -682,9 +664,9 @@ providing the EOTS public key `fpd start --eots-pk <hex-string-of-eots-public-ke
 Note that a single finality provider daemon can only run with a single
 finality provider instance at a time.
 
-## 7. Finality Provider Operations
+## 6. Finality Provider Operations
 
-### 7.1. Create Finality Provider
+### 6.1. Create Finality Provider
 
 The `create-finality-provider` command initializes a new finality provider,
 submits `MsgCreateFinalityProvider` to register it on Babylon Genesis, and
@@ -797,14 +779,14 @@ The response includes:
   transaction, which you can use to verify the success of the transaction
   on Babylon Genesis.
 
-### 7.2. Rewards
+### 6.2. Rewards
 
 Rewards are accumulated in a reward gauge, and a finality provider becomes
 eligible for rewards if it has participated sending finality votes.
 The distribution of rewards is based on the provider's voting power portion
 relative to other voters.
 
-#### 7.2.1. Querying Rewards
+#### 6.2.1. Querying Rewards
 
 To query rewards of a given stakeholder address, use the following command.
 
@@ -818,7 +800,7 @@ Parameters:
 * `--node <babylon-genesis-rpc-address>`: <host>:<port> to Babylon Genesis
 RPC interface for this chain (default `tcp://localhost:26657`)
 
-#### 7.2.2. Withdraw Rewards
+#### 6.2.2. Withdraw Rewards
 
 The `fpd withdraw-reward` command will withdraw all accumulated rewards of the
 given finality provider. The finality provider must first be active and have
@@ -864,7 +846,7 @@ This will withdraw **ALL** accumulated rewards to the address you set in the
 the rewards will be withdrawn to the finality provider's `BABY` address used
 in registration.
 
-#### 7.2.3. Set Withdraw Address
+#### 6.2.3. Set Withdraw Address
 
 The default beneficiary is the address that corresponds to the registration key.
 To change the beneficiary address, use the following command:
@@ -896,7 +878,7 @@ This command should ask to
 `confirm transaction before signing and broadcasting [y/N]:` and output the
 transaction hash.
 
-### 7.3. Set Up Operation Key
+### 6.3. Set Up Operation Key
 
 Finality providers consume gas for operations with Babylon Genesis.
 Given that the cost of sending finality signatures is refunded automatically
@@ -927,7 +909,7 @@ You may follow the following procedure to set up the operation key.
 > commit. Therefore, reserving `5-10 BABY` for operations should be enough for a
 > long time.
 
-### 7.4. Start Finality Provider
+### 6.4. Start Finality Provider
 
 After successful registration and properly set up the operation key,
 you may start the finality provider instance by running:
@@ -940,7 +922,7 @@ If `--eots-pk` is not specified, the command will start the finality provider
 if it is the only one stored in the database. If multiple finality providers
 are in the database, specifying `--eots-pk` is required.
 
-### 7.5. Status of Finality Provider
+### 6.5. Status of Finality Provider
 
 Once the finality provider has been created, it will have the `REGISTERED` status.
 
@@ -970,7 +952,7 @@ finality provider.
 For more information on status transition, please refer to diagram in the core
 documentation[fp-core](fp-core.md).
 
-### 7.6. Edit Finality Provider
+### 6.6. Edit Finality Provider
 
 If you need to edit your finality provider's information, you can use the
 following command:
@@ -1004,7 +986,7 @@ edited successfully:
 fpd finality-provider-info <hex-string-of-eots-public-key>
 ```
 
-### 7.7. Jailing and Unjailing
+### 6.7. Jailing and Unjailing
 
 When jailed, the following happens to a finality provider:
 
@@ -1034,7 +1016,7 @@ Parameters:
 If unjailing is successful, you may start running the finality provider by
 `fpd start --eots-pk <hex-string-of-eots-public-key>`.
 
-### 7.8. Slashing and Anti-slashing
+### 6.8. Slashing and Anti-slashing
 
 **Slashing occurs** when a finality provider **double signs**, meaning that the
 finality provider signs conflicting blocks at the same height. This results in
@@ -1051,7 +1033,7 @@ Therefore, a proper slashing protection mechanism is required.
 For details about how our built-in anti-slashing works, please refer to
 our technical document [Slashing Protection](../docs/slashing-protection.md).
 
-### 7.9. Prometheus Metrics
+### 6.9. Prometheus Metrics
 
 The finality provider exposes Prometheus metrics for monitoring your
 finality provider. The metrics endpoint is configurable in `fpd.conf`:
@@ -1084,9 +1066,9 @@ For a complete list of available metrics, see:
 * Finality Provider metrics: [fp_collectors.go](../metrics/fp_collectors.go)
 * EOTS metrics: [eots_collectors.go](../metrics/eots_collectors.go)
 
-## 8. Recovery and Backup
+## 7. Recovery and Backup
 
-### 8.1. Critical Assets
+### 7.1. Critical Assets
 
 The following assets **must** be backed up frequently to prevent loss of service or funds:
 
@@ -1113,7 +1095,7 @@ For Finality Provider:
   * State info of the finality provider
   * Loss of anti-slashing protection
 
-### 8.2. Backup Recommendations
+### 7.2. Backup Recommendations
 
 1. Regular Backups:
    * Daily backup of keyring directories
@@ -1136,13 +1118,13 @@ For Finality Provider:
 > keys in the keyring directories is **irrecoverable** and will result in
 > permanent loss of your finality provider position and accumulated rewards.
 
-### 8.3. Recover finality-provider db
+### 7.3. Recover finality-provider db
 
 The `finality-provider.db` file contains both the finality provider's running
 status and the public randomness merkle proof. Either information loss
 compromised will lead to service halt, but they are recoverable.
 
-#### 8.3.1. Recover local status of a finality provider
+#### 7.3.1. Recover local status of a finality provider
 
 The local status of a finality provider is defined as follows:
 
@@ -1163,7 +1145,7 @@ It can be recovered by downloading the finality provider's info from Babylon Gen
 cmd will download the info of the finality provider locally if it is already
 registered on Babylon.
 
-#### 8.3.2. Recover public randomness proof
+#### 7.3.2. Recover public randomness proof
 
 Every finality vote must contain the public randomness proof to prove that the
 randomness used in the signature is already committed on Babylon. Loss of
