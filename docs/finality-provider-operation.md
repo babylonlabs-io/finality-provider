@@ -36,9 +36,9 @@ gain an overall understanding of the finality provider.
 
 ## 1. Prerequisites
 
-Before proceeding, you must complete the EOTS daemon setup as detailed in  
-[EOTS Daemon Setup](./eots-daemon.md). This ensures that the finality  
-provider toolset is installed, your EOTS daemon is initialized, and your  
+Before proceeding, you must complete the EOTS daemon setup as detailed in 
+[EOTS Daemon Setup](./eots-daemon.md). This ensures that the finality 
+provider toolset is installed, your EOTS daemon is initialized, and your 
 home directory is configured.
 
 ## 2. System Requirements
