@@ -42,6 +42,7 @@ func NewBcdNodeHandler(t *testing.T) *BcdNodeHandler {
 	setupBcd(t, testDir)
 	cmd := bcdStartCmd(t, testDir)
 	fmt.Println("Starting bcd with command:", cmd.String())
+	fmt.Println("Test directory:", testDir)
 	return &BcdNodeHandler{
 		cmd:     cmd,
 		pidFile: "", // empty for now, will be set after start
@@ -140,12 +141,11 @@ func bcdInit(homeDir string) error {
 	_, err := common.RunCommand("bcd", "init", "--home", homeDir, "--chain-id", bcdChainID, common.WasmMoniker)
 	return err
 }
-
 func bcdUpdateGenesisFile(homeDir string) error {
 	genesisPath := filepath.Join(homeDir, "config", "genesis.json")
 	fmt.Println("Home directory path:", homeDir)
 
-	// Update "stake" placeholder
+	// Update "stake" placeholder (keep your existing sed)
 	sedCmd1 := fmt.Sprintf("sed -i. 's/\"stake\"/\"%s\"/' %s", common.WasmStake, genesisPath)
 	fmt.Println("Executing command:", sedCmd1)
 	_, err := common.RunCommand("sh", "-c", sedCmd1)
@@ -153,23 +153,25 @@ func bcdUpdateGenesisFile(homeDir string) error {
 		return fmt.Errorf("failed to update stake in genesis.json: %w", err)
 	}
 
-	// Add: Set voting period to 30 seconds for E2E tests
-	//sedCmd2 := fmt.Sprintf("sed -i. 's/\"voting_period\": \".*\"/\"voting_period\": \"60s\"/' %s", genesisPath)
-	//_, err = common.RunCommand("sh", "-c", sedCmd2)
-	//if err != nil {
-	//	return fmt.Errorf("failed to update voting period in genesis.json: %w", err)
-	//}
+	// Use jq to update governance periods
+	jqCmd := fmt.Sprintf("jq '.app_state.gov.params.voting_period = \"30s\" | .app_state.gov.params.max_deposit_period = \"10s\" | .app_state.gov.params.expedited_voting_period = \"15s\"' %s > %s.tmp && mv %s.tmp %s",
+		genesisPath, genesisPath, genesisPath, genesisPath)
+	fmt.Println("Executing jq command:", jqCmd)
+	_, err = common.RunCommand("sh", "-c", jqCmd)
+	if err != nil {
+		return fmt.Errorf("failed to update governance periods: %w", err)
+	}
 
-	// Read and print the updated genesis.json to verify changes
+	// Your existing verification code...
 	content, err := os.ReadFile(genesisPath)
 	if err != nil {
 		return fmt.Errorf("failed to read updated genesis.json: %w", err)
 	}
 
-	fmt.Println("Updated genesis.json content:")
+	fmt.Printf("Updated genesis.json: %s", content)
 	lines := strings.Split(string(content), "\n")
 	for _, line := range lines {
-		if strings.Contains(line, "babylon_contract_address") || strings.Contains(line, "btc_staking_contract_address") {
+		if strings.Contains(line, "voting_period") || strings.Contains(line, "max_deposit_period") {
 			fmt.Println(line)
 		}
 	}
@@ -198,8 +200,21 @@ func bcdVersion() error {
 }
 
 func bcdGentxValidator(homeDir string) error {
-	_, err := common.RunCommand("bcd", "genesis", "gentx", "validator", fmt.Sprintf("250000000%s", common.WasmStake), "--chain-id="+bcdChainID, "--amount="+fmt.Sprintf("250000000%s", common.WasmStake), "--home", homeDir, "--keyring-backend=test")
-	return err
+	cmd := exec.Command("bcd", "genesis", "gentx", "validator",
+		fmt.Sprintf("250000000%s", common.WasmStake),
+		"--chain-id="+bcdChainID,
+		"--amount="+fmt.Sprintf("250000000%s", common.WasmStake),
+		"--home", homeDir,
+		"--keyring-backend=test")
+
+	fmt.Printf("Running gentx command: %s\n", cmd.String())
+	output, err := cmd.CombinedOutput()
+	fmt.Printf("Gentx output: %s\n", string(output))
+
+	if err != nil {
+		return fmt.Errorf("gentx failed: %w", err)
+	}
+	return nil
 }
 
 func bcdCollectGentxs(homeDir string) error {
