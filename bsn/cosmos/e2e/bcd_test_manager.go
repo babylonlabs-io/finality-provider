@@ -65,6 +65,7 @@ type BcdTestManager struct {
 	baseDir           string
 	logger            *zap.Logger
 	cfg               *config.CosmwasmConfig
+	encodingCfg       wasmparams.EncodingConfig
 }
 
 func createLogger(t *testing.T, level zapcore.Level) *zap.Logger {
@@ -145,6 +146,9 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	cosmwasmConfig.AccountPrefix = "bbnc"
 	cosmwasmConfig.ChainID = bcdChainID
 	cosmwasmConfig.RPCAddr = fmt.Sprintf("http://localhost:%d", bcdRpcPort)
+	cosmwasmConfig.GasPrices = "0.01ustake"
+	cosmwasmConfig.GasAdjustment = 2.0
+
 	// tempApp := bcdapp.NewTmpApp() // TODO: investigate why wasmapp works and bcdapp doesn't
 	tempApp := wasmapp.NewWasmApp(sdklogs.NewNopLogger(), dbm.NewMemDB(), nil, false, simtestutil.NewAppOptionsWithFlagHome(t.TempDir()), []wasmkeeper.Option{})
 	encodingCfg := wasmparams.EncodingConfig{
@@ -216,6 +220,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 		baseDir:           testDir,
 		logger:            logger,
 		cfg:               cosmwasmConfig,
+		encodingCfg:       encodingCfg,
 	}
 
 	ctm.WaitForServicesStart(t)
@@ -395,6 +400,21 @@ func (ctm *BcdTestManager) queryProposalStatus(ctx context.Context, t *testing.T
 	return proposalResp.Proposal.Status, nil
 }
 
+func (ctm *BcdTestManager) QueryProposalDetails(ctx context.Context, proposalID uint64) (*govtypes.Proposal, error) {
+	grpcConn, err := ctm.createGrpcConnection()
+	if err != nil {
+		return nil, err
+	}
+	defer grpcConn.Close()
+	govClient := govtypes.NewQueryClient(grpcConn)
+	resp, err := govClient.Proposal(ctx, &govtypes.QueryProposalRequest{ProposalId: proposalID})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Proposal, nil
+}
+
 func (ctm *BcdTestManager) submitAndVoteGovProp(ctx context.Context, t *testing.T, msg sdk.Msg) {
 	t.Helper()
 	proposalID := ctm.submitGovProp(ctx, t, []sdk.Msg{msg}, "Set BSN Contracts", "Set contract addresses for Babylon system")
@@ -409,6 +429,20 @@ func (ctm *BcdTestManager) submitAndVoteGovProp(ctx context.Context, t *testing.
 			t.Logf("Error querying proposal status: %v", err)
 
 			return false
+		}
+
+		if status == govtypes.ProposalStatus_PROPOSAL_STATUS_FAILED ||
+			status == govtypes.ProposalStatus_PROPOSAL_STATUS_REJECTED {
+
+			// Query final proposal details
+			finalProposal, err := ctm.QueryProposalDetails(ctx, proposalID)
+			if err == nil {
+				t.Logf("=== Final Proposal Details ===")
+				t.Logf("Final Status: %s", finalProposal.Status.String())
+				t.Logf("Failed Reason: %s", finalProposal.FailedReason)
+			}
+
+			t.Fatalf("Proposal %d failed with status: %s", proposalID, status.String())
 		}
 
 		return status == govtypes.ProposalStatus_PROPOSAL_STATUS_PASSED

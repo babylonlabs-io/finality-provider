@@ -43,7 +43,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/aws/aws-sdk-go v1.44.312 // indirect
 	github.com/babylonlabs-io/babylon-sdk/tests/e2e v0.0.0-20250729072250-670cf013d1be // indirect
-	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250407051200-a5d652116d6d // indirect
+	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250723095925-43a61e06a978 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bgentry/speakeasy v0.2.0 // indirect

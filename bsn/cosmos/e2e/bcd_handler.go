@@ -153,6 +153,13 @@ func bcdUpdateGenesisFile(homeDir string) error {
 		return fmt.Errorf("failed to update stake in genesis.json: %w", err)
 	}
 
+	// Add: Set voting period to 30 seconds for E2E tests
+	//sedCmd2 := fmt.Sprintf("sed -i. 's/\"voting_period\": \".*\"/\"voting_period\": \"60s\"/' %s", genesisPath)
+	//_, err = common.RunCommand("sh", "-c", sedCmd2)
+	//if err != nil {
+	//	return fmt.Errorf("failed to update voting period in genesis.json: %w", err)
+	//}
+
 	// Read and print the updated genesis.json to verify changes
 	content, err := os.ReadFile(genesisPath)
 	if err != nil {

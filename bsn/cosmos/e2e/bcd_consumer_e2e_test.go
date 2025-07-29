@@ -143,14 +143,41 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	btcFinalityContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcFinalityContractAddr)
 	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddrStr)
 
-	authority := authtypes.NewModuleAddress("gov").String()
+	var babylonAddr2, btcLightClientAddr2, btcStakingAddr2, btcFinalityAddr2 string
+	for _, event := range instResp.Events {
+		if event.EventType == "instantiate" {
+			addr := event.Attributes["_contract_address"]
+			if addr == "" {
+				addr = event.Attributes["contract_address"]
+			}
+			codeID := event.Attributes["code_id"]
+			switch codeID {
+			case fmt.Sprintf("%d", babylonContractWasmId):
+				babylonAddr2 = addr
+			case fmt.Sprintf("%d", btcLightClientWasmId):
+				btcLightClientAddr2 = addr
+			case fmt.Sprintf("%d", btcStakingContractWasmId):
+				btcStakingAddr2 = addr
+			case fmt.Sprintf("%d", btcFinalityContractWasmId):
+				btcFinalityAddr2 = addr
+			}
+		}
+	}
+
+	fmt.Printf("babylon contract address: %s, %s\n", babylonAddr2, babylonContractAddr.String())
+	fmt.Printf("btc light client contract address: %s, %s\n", btcLightClientAddr2, btcLightClientAddr.String())
+	fmt.Printf("btc staking contract address: %s, %s\n", btcStakingAddr2, btcStakingContractAddrStr)
+	fmt.Printf("btc finality contract address: %s, %s\n", btcFinalityContractAddrStr, btcFinalityContractAddr.String())
+
+	authorityBbnc := sdk.MustBech32ifyAddressBytes("bbnc", authtypes.NewModuleAddress("gov"))
+
 	msgSet := &types.MsgSetBSNContracts{
-		Authority: authority,
+		Authority: authorityBbnc,
 		Contracts: &types.BSNContracts{
-			BabylonContract:        babylonContractAddr.String(),
-			BtcLightClientContract: btcLightClientAddr.String(),
-			BtcStakingContract:     btcStakingContractAddr.String(),
-			BtcFinalityContract:    btcFinalityContractAddr.String(),
+			BabylonContract:        babylonAddr2,
+			BtcLightClientContract: btcLightClientAddr2,
+			BtcStakingContract:     btcStakingAddr2,
+			BtcFinalityContract:    btcFinalityAddr2,
 		},
 	}
 
