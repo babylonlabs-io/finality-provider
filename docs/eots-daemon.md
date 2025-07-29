@@ -195,12 +195,12 @@ The command will return a JSON response containing your EOTS key details:
 > ⚡ This section is for Finality Providers who already possess an EOTS key.
 > If you don't have keys or want to create new ones, you can skip this section.
 
-There are 3 supported methods of loading your existing EOTS keys:
+There are 2 supported methods of loading your existing EOTS keys:
 
 1. using a mnemonic phrase
 2. importing the `.asc` file
 
-We have outlined each of these three paths for you below.
+We have outlined each of these two paths for you below.
 
 #### Option 1: Using your mnemonic phrase
 
