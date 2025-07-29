@@ -332,8 +332,8 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 }
 
 // QueryLatestFinalizedBlock returns the finalized L2 block from a RPC call
-// TODO: return the BTC finalized L2 block, it is tricky b/c it's not recorded anywhere so we can
-// use some exponential strategy to search
+// NOTE: fp program cannot know if block is btc finalized or not, so assume the
+// latest rollup block is finalized.
 func (cc *RollupBSNController) QueryLatestFinalizedBlock(ctx context.Context) (types.BlockDescription, error) {
 	l2Block, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(ethrpc.FinalizedBlockNumber.Int64()))
 	if err != nil {
@@ -518,7 +518,7 @@ func (cc *RollupBSNController) isEligibleForFinalitySignature(ctx context.Contex
 			zap.Uint64("bsn_activation_height", config.BsnActivationHeight),
 			zap.Uint64("finality_signature_interval", config.FinalitySignatureInterval),
 		)
-		
+
 		return false, nil
 	}
 
@@ -535,16 +535,21 @@ func (cc *RollupBSNController) QueryFinalityProviderHighestVotedHeight(_ context
 	return 0, nil
 }
 
-func (cc *RollupBSNController) QueryFinalityProviderStatus(_ context.Context, _ *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
-	// TODO: implement slashed or jailed feature in OP stack L2
-	return &api.FinalityProviderStatusResponse{
-		Slashed: false,
-		Jailed:  false,
-	}, nil
+func (cc *RollupBSNController) QueryFinalityProviderStatus(_ context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
+    fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+    res, err := cc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+    if err != nil {
+        return nil, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
+    }
+
+    return api.NewFinalityProviderStatusResponse(
+        res.FinalityProvider.SlashedBtcHeight > 0,
+        false, // always return false, there is no jail/unjail feature in rollup BSN
+    ), nil
 }
 
 func (cc *RollupBSNController) UnjailFinalityProvider(_ context.Context, _ *btcec.PublicKey) (*types.TxResponse, error) {
-	// TODO: implement unjail feature in OP stack L2
+	// always return nil, there is no jail/unjail feature in rollup BSN
 	return nil, nil
 }
 

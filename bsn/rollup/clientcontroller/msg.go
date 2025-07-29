@@ -40,6 +40,7 @@ type QueryMsg struct {
 	FirstPubRandCommit *PubRandCommit  `json:"first_pub_rand_commit,omitempty"`
 	LastPubRandCommit  *PubRandCommit  `json:"last_pub_rand_commit,omitempty"`
 }
+
 // ContractConfig represents the full configuration from the finality contract
 type ContractConfig struct {
 	BsnID                     string             `json:"bsn_id"`
