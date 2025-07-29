@@ -531,7 +531,10 @@ func (cc *RollupBSNController) QueryFinalityActivationBlockHeight(_ context.Cont
 }
 
 func (cc *RollupBSNController) QueryFinalityProviderHighestVotedHeight(_ context.Context, _ *btcec.PublicKey) (uint64, error) {
-	// TODO: implement highest voted height feature in OP stack L2
+	// TODO: This needs a new query in rollup BSN contract to return the highest
+	// voted height the contract storage stores (height, fp_pk) -> [signatures]
+	// so this query will be O(n), as we need to iterate and find the highest
+	// voted height
 	return 0, nil
 }
 
