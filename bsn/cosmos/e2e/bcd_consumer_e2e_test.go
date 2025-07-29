@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	"github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"testing"
 
 	"cosmossdk.io/errors"
@@ -126,9 +128,33 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, resp.Contracts, 1)
 	btcFinalityContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+
+	resp, err = ctm.BcdConsumerClient.ListContractsByCode(babylonContractWasmId, &sdkquerytypes.PageRequest{})
+	require.NoError(t, err)
+	require.Len(t, resp.Contracts, 1)
+	babylonContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+
+	resp, err = ctm.BcdConsumerClient.ListContractsByCode(btcLightClientWasmId, &sdkquerytypes.PageRequest{})
+	require.NoError(t, err)
+	require.Len(t, resp.Contracts, 1)
+	btcLightClientAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+
 	// update the contract address
 	btcFinalityContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcFinalityContractAddr)
 	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddrStr)
+
+	authority := authtypes.NewModuleAddress("gov").String()
+	msgSet := &types.MsgSetBSNContracts{
+		Authority: authority,
+		Contracts: &types.BSNContracts{
+			BabylonContract:        babylonContractAddr.String(),
+			BtcLightClientContract: btcLightClientAddr.String(),
+			BtcStakingContract:     btcStakingContractAddr.String(),
+			BtcFinalityContract:    btcFinalityContractAddr.String(),
+		},
+	}
+
+	_ = msgSet
 
 	// register consumer to babylon
 	_, err = ctm.BabylonController.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
