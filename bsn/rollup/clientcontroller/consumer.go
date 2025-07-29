@@ -525,9 +525,13 @@ func (cc *RollupBSNController) isEligibleForFinalitySignature(ctx context.Contex
 	return true, nil
 }
 
-func (cc *RollupBSNController) QueryFinalityActivationBlockHeight(_ context.Context) (uint64, error) {
-	// TODO: implement finality activation feature in OP stack L2
-	return 0, nil
+func (cc *RollupBSNController) QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error) {
+    config, err := cc.queryContractConfig(ctx)
+    if err != nil {
+        return 0, fmt.Errorf("failed to query contract config: %w", err)
+    }
+
+    return config.BsnActivationHeight, nil
 }
 
 func (cc *RollupBSNController) QueryFinalityProviderHighestVotedHeight(_ context.Context, _ *btcec.PublicKey) (uint64, error) {
