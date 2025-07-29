@@ -13,9 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TODO: t.Parallel() is commented out due to conflict in ports/addresses
-// https://github.com/babylonlabs-io/finality-provider/issues/519
-
 // TestRollupFinalityProviderLifeCycle tests the complete lifecycle of a rollup BSN finality provider
 // This test covers:
 // 1. FP creation and registration on both Babylon and rollup BSN
@@ -25,7 +22,7 @@ import (
 // 5. Contract state verification throughout the lifecycle
 // 6. Block finalization verification
 func TestRollupFinalityProviderLifeCycle(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
@@ -99,7 +96,7 @@ func TestRollupFinalityProviderLifeCycle(t *testing.T) {
 // should skip the block when encountering a double sign request from the EOTS manager
 // This is critical for preventing accidental slashing during restart scenarios
 func TestBSNSkippingDoubleSignError(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
@@ -209,7 +206,7 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 // sends a finality vote over a conflicting block in the rollup BSN environment
 // In this case, the BTC private key should be extracted by the system
 func TestBSNDoubleSigning(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
@@ -305,7 +302,7 @@ func TestBSNDoubleSigning(t *testing.T) {
 // TestRollupBSNCatchingUp tests if a rollup BSN finality provider can catch up after being restarted
 // This is the rollup BSN equivalent of the Babylon TestCatchingUp test
 func TestRollupBSNCatchingUp(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {

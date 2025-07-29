@@ -65,6 +65,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#558](https://github.com/babylonlabs-io/finality-provider/pull/558) chore: creates cosmos-fpd bsn
 * [#551](https://github.com/babylonlabs-io/finality-provider/pull/551)
   chore(rollup): add more tests for rollup bsn
+* [#561](https://github.com/babylonlabs-io/finality-provider/pull/561) chore: run e2e in parallel
 * [#563](https://github.com/babylonlabs-io/finality-provider/pull/563)
   chore(rollup): add missing fns in controller
 
