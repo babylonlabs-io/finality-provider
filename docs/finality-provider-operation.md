@@ -25,7 +25,7 @@ gain an overall understanding of the finality provider.
       1. [Create an EOTS key](#421-create-an-eots-key)
       2. [Import an existing EOTS key](#422-import-an-existing-eots-key)
    3. [Starting the EOTS Daemon](#43-starting-the-eots-daemon)
-       1. [Migrating from test to file keyring](#431-Migration-guide-test-to-file-keyring-backend)
+       1. [Migration guide test to file keyring backend](#431-migration-guide-test-to-file-keyring-backend)
        2. [Unlock file-based keyring](#432-unlock-file-based-keyring)
 5. [Setting up the Finality Provider](#5-setting-up-the-finality-provider)
    1. [Initialize the Finality Provider Daemon](#51-initialize-the-finality-provider-daemon)
