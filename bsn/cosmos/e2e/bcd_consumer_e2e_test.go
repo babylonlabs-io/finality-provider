@@ -2,20 +2,19 @@ package e2etest_bcd
 
 import (
 	"context"
+	"cosmossdk.io/errors"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	"github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"testing"
-
-	"cosmossdk.io/errors"
 	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
+	"github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
 	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/stretchr/testify/require"
+	"testing"
 
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 )
@@ -183,9 +182,18 @@ func TestConsumerFpLifecycle(t *testing.T) {
 
 	ctm.submitAndVoteGovProp(ctx, t, msgSet)
 
+	// setup relayer
+	ctm.BcdHandler.SetContractAddress(babylonContractAddr.String())
+	ctm.BcdHandler.SetBabylonConfig("chain-test", ctm.FpConfig.BabylonConfig.RPCAddr, ctm.babylonKeyDir)
+
+	err = ctm.BcdHandler.StartRelayer(t)
+	require.NoError(t, err)
+
 	// register consumer to babylon
 	_, err = ctm.BabylonController.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
 	require.NoError(t, err)
+
+	// register consumer to babylon
 
 	// register consumer fps to babylon
 	// this will be submitted to babylon once fp daemon starts

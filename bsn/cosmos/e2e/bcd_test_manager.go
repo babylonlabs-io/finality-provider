@@ -66,6 +66,7 @@ type BcdTestManager struct {
 	logger            *zap.Logger
 	cfg               *config.CosmwasmConfig
 	encodingCfg       wasmparams.EncodingConfig
+	babylonKeyDir     string
 }
 
 func createLogger(t *testing.T, level zapcore.Level) *zap.Logger {
@@ -221,6 +222,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 		logger:            logger,
 		cfg:               cosmwasmConfig,
 		encodingCfg:       encodingCfg,
+		babylonKeyDir:     keyDir,
 	}
 
 	ctm.WaitForServicesStart(t)
