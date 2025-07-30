@@ -812,4 +812,3 @@ from the first commit on Babylon, which incurs longer time for recovery.
 The `chain-id` must be specified exactly the same as the `chain-id` used when
 creating the finality provider.
 4. Restart the finality provider
-
