@@ -332,8 +332,8 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 }
 
 // QueryLatestFinalizedBlock returns the finalized L2 block from a RPC call
-// NOTE: fp program cannot know if block is btc finalized or not, so assume the
-// latest rollup block is finalized.
+// NOTE: FP program cannot know if block is btc finalized or not, so it uses the last
+// block that is finalized by Ethereum, which is a stronger notion than BTC staking finalized
 func (cc *RollupBSNController) QueryLatestFinalizedBlock(ctx context.Context) (types.BlockDescription, error) {
 	l2Block, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(ethrpc.FinalizedBlockNumber.Int64()))
 	if err != nil {
