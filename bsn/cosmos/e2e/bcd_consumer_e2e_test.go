@@ -15,6 +15,7 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 )
@@ -200,6 +201,10 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	fp := ctm.CreateConsumerFinalityProviders(t, bcdConsumerID)
 	fpPk := fp.GetBtcPkBIP340()
 
+	res, err := ctm.BcdConsumerClient.QueryFinalityProvidersByPower(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
 	// ensure pub rand is submitted to smart contract
 	require.Eventually(t, func() bool {
 		fpPubRandResp, err := ctm.BcdConsumerClient.QueryLastPublicRandCommit(ctx, fpPk.MustToBTCPK())
@@ -263,7 +268,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 			return false
 		}
 		return true
-	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
+	}, e2eutils.EventuallyWaitTimeOut, 3*time.Second)
 
 	// ensure latest comet block is finalized
 	require.Eventually(t, func() bool {
