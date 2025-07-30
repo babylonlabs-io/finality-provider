@@ -258,10 +258,6 @@ Parameters:
 You should see your EOTS key listed with the correct details if the import is
 successful.
 
-> ⚠️ **Important**: If you are a finality provider transitioning your stack from
-> Phase-1, make sure that you are using the same EOTS key that you registered in
-> Phase-1.
-
 ### 2.3. Starting the EOTS Daemon
 
 To start the EOTS daemon, use the following command:
