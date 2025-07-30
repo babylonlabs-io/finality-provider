@@ -15,6 +15,7 @@ responsible for managing your EOTS keys and producing EOTS signatures.
    3. [Starting the EOTS Daemon](#23-starting-the-eots-daemon)
        1. [Migration guide test to file keyring backend](#231-migration-guide-test-to-file-keyring-backend)
        2. [Unlock file-based keyring](#232-unlock-file-based-keyring)
+3. [Critical Assets](#3-critical-assets)
 
 ## 1. Install Finality Provider Toolset
 
@@ -359,3 +360,18 @@ with:
 >   `eotsd` is running
 > * setup HMAC to secure the communication between `eotsd` and `fpd`. 
 >   See [HMAC Security](./hmac-security.md). 
+
+## 3. Critical Assets
+
+The following assets **must** be backed up frequently to prevent loss of service 
+or funds:
+
+* **keyring-*** directory: Contains your EOTS private keys used for signing. 
+Loss of these keys means:
+  * Unable to sign finality signatures
+  * Unable to recover your finality provider identity
+  * Permanent loss of your finality provider position
+* **eotsd.db**: Contains key mappings and metadata. While less critical, loss means:
+  * Need to re-register key mappings
+  * Temporary service interruption
+  * Loss of anti-slashing protection

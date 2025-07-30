@@ -32,7 +32,12 @@ gain an overall understanding of the finality provider.
    7. [Jailing and Unjailing](#57-jailing-and-unjailing)
    8. [Slashing](#58-slashing-and-anti-slashing)
    9. [Prometheus Metrics](#59-prometheus-metrics)
-6. [Additional Resources](#6-additional-resources)
+6. [Recovery and Backup](#6-recovery-and-backup)
+   1. [Critical Assets](#61-critical-assets)
+   2. [Backup Recommendations](#62-backup-recommendations)
+   3. [Recover finality-provider db](#63-recover-finality-provider-db)
+      1. [Recover local status of a finality provider](#631-recover-local-status-of-a-finality-provider)
+      2. [Recover public randomness proof](#632-recover-public-randomness-proof)
 
 
 ## 1. Prerequisites
@@ -66,7 +71,7 @@ For production environments, you may want to consider using more robust hardware
 For security tips of running a finality provider, please refer to
 [Slashing Protection](./slashing-protection.md),
 [HMAC Security](./hmac-security.md),
-and [Recovery and Backup](./recovery-backup.md).
+and [Recovery and Backup](#6-recovery-and-backup).
 
 ## 3. Keys Involved in Finality Provider Operation
 
@@ -723,6 +728,88 @@ For a complete list of available metrics, see:
 
 ---
 
-## 6. Additional Resources
+## 6. Recovery and Backup
 
-For information about backing up your critical assets and recovering from data loss, please refer to the [Recovery and Backup Guide](./recovery-backup.md).
+### 6.1. Critical Assets
+
+The following assets **must** be backed up frequently to prevent loss of service or funds:
+
+* **keyring-*** directory: Contains your Babylon Genesis account keys used for:
+  * Submitting finality signatures to Babylon
+  * Withdrawing rewards
+  * Managing your finality provider
+  * Loss means inability to operate until restored
+* **finality-provider.db**: Contains operational data including:
+  * Public randomness proofs
+  * State info of the finality provider
+  * Loss of anti-slashing protection
+
+### 6.2. Backup Recommendations
+
+1. Regular Backups:
+   * Daily backup of keyring directories
+   * Weekly backup of full database files
+   * Store backups in encrypted format
+   * Keep multiple backup copies in separate locations
+
+2. Critical Times for Backup:
+   * After initial setup
+   * Before any major updates
+   * After key operations
+   * After configuration changes
+
+3. Recovery Testing:
+   * Regularly test recovery procedures
+   * Maintain documented recovery process
+   * Practice key restoration in test environment
+
+> 🔒 **Security Note**: While database files can be recreated, loss of private
+> keys in the keyring directories is **irrecoverable** and will result in
+> permanent loss of your finality provider position and accumulated rewards.
+
+### 6.3. Recover finality-provider db
+
+The `finality-provider.db` file contains both the finality provider's running
+status and the public randomness merkle proof. Either information loss
+compromised will lead to service halt, but they are recoverable.
+
+#### 6.3.1. Recover local status of a finality provider
+
+The local status of a finality provider is defined as follows:
+
+```go
+type StoredFinalityProvider struct {
+  FPAddr          string
+  BtcPk           *btcec.PublicKey
+  Description     *stakingtypes.Description
+  Commission      *sdkmath.LegacyDec
+  ChainID         string
+  LastVotedHeight uint64
+  Status          proto.FinalityProviderStatus
+}
+```
+
+It can be recovered by downloading the finality provider's info from Babylon Genesis. Specifically, this can be achieved by repeating the
+[creation process](#71-create-finality-provider). The `create-finality-provider`
+cmd will download the info of the finality provider locally if it is already
+registered on Babylon.
+
+#### 6.3.2. Recover public randomness proof
+
+Every finality vote must contain the public randomness proof to prove that the
+randomness used in the signature is already committed on Babylon. Loss of
+public randomness proof leads to direct failure of the vote submission.
+
+To recover the public randomness proof, the following steps should be followed:
+
+1. Ensure the `fpd` is stopped.
+2. Unjail your finality provider if needed.
+3. Run the recovery command
+`fpd recover-rand-proof [eots-pk-hex] --start-height [height-to-recover] --chain-id [chain-id]`
+where `start-height` is the height from which you want to recover from. If
+the `start-height` is not specified, the command will recover all the proofs
+from the first commit on Babylon, which incurs longer time for recovery.
+The `chain-id` must be specified exactly the same as the `chain-id` used when
+creating the finality provider.
+4. Restart the finality provider
+
