@@ -591,13 +591,14 @@ func (cc *RollupBSNController) QueryFinalityProviderInAllowlist(ctx context.Cont
 		if allowedFpPkHex == fpPkHex {
 			cc.logger.Debug("Finality provider found in allowlist",
 				zap.String("fp_pk_hex", fpPkHex))
-				
+
 			return true, nil
 		}
 	}
 
 	cc.logger.Debug("Finality provider not found in allowlist",
 		zap.String("fp_pk_hex", fpPkHex))
+
 	return false, nil
 }
 

@@ -256,6 +256,7 @@ func startFinalityProviderAppWithRegisteredFp(
 }
 
 func TestFinalityProviderInstance_AllowlistBlocking(t *testing.T) {
+	t.Parallel()
 	r := rand.New(rand.NewSource(1))
 
 	randomStartingHeight := uint64(r.Int63n(100) + 1)
