@@ -36,9 +36,10 @@ type SubmitFinalitySignatureResponse struct {
 }
 
 type QueryMsg struct {
-	Config             *ContractConfig `json:"config,omitempty"`
-	FirstPubRandCommit *PubRandCommit  `json:"first_pub_rand_commit,omitempty"`
-	LastPubRandCommit  *PubRandCommit  `json:"last_pub_rand_commit,omitempty"`
+	Config                   *ContractConfig `json:"config,omitempty"`
+	FirstPubRandCommit       *PubRandCommit  `json:"first_pub_rand_commit,omitempty"`
+	LastPubRandCommit        *PubRandCommit  `json:"last_pub_rand_commit,omitempty"`
+	AllowedFinalityProviders *struct{}       `json:"allowed_finality_providers,omitempty"`
 }
 
 // ContractConfig represents the full configuration from the finality contract
@@ -68,3 +69,6 @@ type Proof struct {
 	LeafHash []byte   `json:"leaf_hash"`
 	Aunts    [][]byte `json:"aunts"`
 }
+
+// AllowedFinalityProvidersResponse represents the response from querying allowed finality providers
+type AllowedFinalityProvidersResponse []string

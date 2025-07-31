@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/btcsuite/btcd/btcec/v2"
 	"sync"
 	"time"
+
+	"github.com/btcsuite/btcd/btcec/v2"
 
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -138,8 +139,17 @@ func newFinalityProviderInstanceFromStore(
 }
 
 func (fp *FinalityProviderInstance) Start(ctx context.Context) error {
-	if fp.isStarted.Swap(true) {
+	if fp.isStarted.Load() {
 		return fmt.Errorf("the finality-provider instance %s is already started", fp.GetBtcPkHex())
+	}
+
+	// Check if finality provider is in allowlist
+	allowed, err := fp.consumerCon.QueryFinalityProviderInAllowlist(ctx, fp.btcPk.MustToBTCPK())
+	if err != nil {
+		return fmt.Errorf("failed to check allowlist: %w", err)
+	}
+	if !allowed {
+		return fmt.Errorf("finality provider %s is not in allowlist", fp.GetBtcPkHex())
 	}
 
 	if fp.IsJailed() {
@@ -160,6 +170,11 @@ func (fp *FinalityProviderInstance) Start(ctx context.Context) error {
 	}
 
 	fp.quit = make(chan struct{})
+
+	// Mark as started only after ALL validation and setup is complete
+	if fp.isStarted.Swap(true) {
+		return fmt.Errorf("the finality-provider instance %s is already started", fp.GetBtcPkHex())
+	}
 
 	fp.wg.Add(2)
 	go fp.finalitySigSubmissionLoop(ctx)

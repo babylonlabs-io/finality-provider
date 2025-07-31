@@ -1,4 +1,3 @@
-//go:build e2e_rollup
 
 package e2etest_rollup
 
@@ -297,6 +296,73 @@ func TestBSNDoubleSigning(t *testing.T) {
 	t.Logf("✅ Duplicate votes on same block (height %d) were properly ignored", originalVotedBlockInfo.GetHeight())
 	t.Logf("✅ Double signing attack on conflicting block (height %d) correctly extracted private key", conflictingBlock.GetHeight())
 	t.Logf("✅ BSN rollup environment properly handles both duplicate signatures and equivocation")
+}
+
+// TestFinalityProviderAllowlistBlocking tests that finality providers not in the allowlist cannot start
+// This verifies our allowlist implementation works correctly
+func TestFinalityProviderAllowlistBlocking(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctm := StartRollupTestManager(t, ctx)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
+
+	// Step 1: Create and register finality providers (but don't add to allowlist yet)
+	t.Log("Step 1: Creating and registering finality providers")
+	fps := ctm.setupBabylonAndConsumerFp(t)
+	babylonFpPk := fps[0]
+	consumerFpPk := fps[1]
+
+	// Step 2: Set up BTC delegation (needed for FP to have power)
+	t.Log("Step 2: Setting up BTC delegation")
+	ctm.delegateBTCAndWaitForActivation(t, babylonFpPk, consumerFpPk)
+
+	// Step 3: Try to start FP instance WITHOUT adding to allowlist first
+	t.Log("Step 3: Attempting to start FP instance without allowlist permission (should fail)")
+	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
+
+	// This should fail because the FP is not in the allowlist
+	err := consumerFpInstance.Start(ctx)
+	require.Error(t, err, "FP should fail to start when not in allowlist")
+	require.Contains(t, err.Error(), "not in allowlist", "Error should mention allowlist restriction")
+	require.Contains(t, err.Error(), consumerFpPk.MarshalHex(), "Error should mention the FP public key")
+	
+	t.Logf("✅ FP correctly blocked from starting: %v", err)
+
+	// Step 4: Add FP to allowlist
+	t.Log("Step 4: Adding FP to contract allowlist")
+	ctm.addFpToContractAllowlist(t, ctx, consumerFpPk)
+
+	// Step 5: Now try to start FP instance (should succeed)
+	t.Log("Step 5: Attempting to start FP instance with allowlist permission (should succeed)")
+	err = consumerFpInstance.Start(ctx)
+	require.NoError(t, err, "FP should start successfully when in allowlist")
+	
+	// Verify FP is actually running
+	require.True(t, consumerFpInstance.IsRunning(), "FP should be running after successful start")
+	
+	t.Log("✅ FP successfully started after being added to allowlist")
+
+	// Step 6: Verify FP can perform normal operations
+	t.Log("Step 6: Verifying FP can perform normal operations")
+	
+	// Wait for FP to commit randomness and get it timestamped
+	ctm.WaitForFpPubRandTimestamped(t, ctx, consumerFpInstance)
+	
+	// Wait for FP to vote on at least one rollup block
+	require.Eventually(t, func() bool {
+		return consumerFpInstance.GetLastVotedHeight() > 0
+	}, eventuallyWaitTimeOut, eventuallyPollTime, "FP should vote on rollup blocks after allowlist approval")
+	
+	lastVotedHeight := consumerFpInstance.GetLastVotedHeight()
+	t.Logf("✅ FP voted on rollup block at height: %d", lastVotedHeight)
+
+	t.Log("✅ Finality Provider Allowlist Test Completed Successfully!")
+	t.Logf("✅ Confirmed FP %s is blocked when not in allowlist", consumerFpPk.MarshalHex())
+	t.Logf("✅ Confirmed FP %s starts and operates normally when in allowlist", consumerFpPk.MarshalHex())
+	t.Logf("✅ Allowlist security mechanism is working correctly")
 }
 
 // TestRollupBSNCatchingUp tests if a rollup BSN finality provider can catch up after being restarted

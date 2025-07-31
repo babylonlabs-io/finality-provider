@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	fpcfg "github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
-	cwcclient "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/client"
 	"sort"
 	"strings"
+
+	fpcfg "github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
+	cwcclient "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/client"
 
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
@@ -377,6 +378,13 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderStatus(_ context.Cont
 func (wc *CosmwasmConsumerController) UnjailFinalityProvider(_ context.Context, _ *btcec.PublicKey) (*fptypes.TxResponse, error) {
 	// TODO: implement unjail feature in OP stack L2
 	return nil, nil
+}
+
+// QueryFinalityProviderInAllowlist queries whether the finality provider is in the allowlist
+// For Cosmos BSN, there is no allowlist concept - all finality providers are allowed
+func (wc *CosmwasmConsumerController) QueryFinalityProviderInAllowlist(ctx context.Context, fpPk *btcec.PublicKey) (bool, error) {
+	// No allowlist concept in Cosmos BSN - everyone is allowed
+	return true, nil
 }
 
 func (wc *CosmwasmConsumerController) QueryFinalitySignature(ctx context.Context, fpBtcPkHex string, height uint64) (*FinalitySignatureResponse, error) {

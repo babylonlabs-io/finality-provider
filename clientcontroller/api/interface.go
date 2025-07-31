@@ -112,6 +112,9 @@ type FinalityOperator interface {
 
 	// QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
 	QueryFinalityProviderHighestVotedHeight(ctx context.Context, fpPk *btcec.PublicKey) (uint64, error)
+
+	// QueryFinalityProviderInAllowlist queries whether the finality provider is in the allowlist
+	QueryFinalityProviderInAllowlist(ctx context.Context, fpPk *btcec.PublicKey) (bool, error)
 }
 
 type SubmitBatchFinalitySigsRequest struct {
