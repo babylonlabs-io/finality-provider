@@ -328,7 +328,7 @@ func TestFinalityProviderAllowlistBlocking(t *testing.T) {
 	require.Error(t, err, "FP should fail to start when not in allowlist")
 	require.Contains(t, err.Error(), "not in allowlist", "Error should mention allowlist restriction")
 	require.Contains(t, err.Error(), consumerFpPk.MarshalHex(), "Error should mention the FP public key")
-	
+
 	t.Logf("✅ FP correctly blocked from starting: %v", err)
 
 	// Step 4: Add FP to allowlist
@@ -339,23 +339,23 @@ func TestFinalityProviderAllowlistBlocking(t *testing.T) {
 	t.Log("Step 5: Attempting to start FP instance with allowlist permission (should succeed)")
 	err = consumerFpInstance.Start(ctx)
 	require.NoError(t, err, "FP should start successfully when in allowlist")
-	
+
 	// Verify FP is actually running
 	require.True(t, consumerFpInstance.IsRunning(), "FP should be running after successful start")
-	
+
 	t.Log("✅ FP successfully started after being added to allowlist")
 
 	// Step 6: Verify FP can perform normal operations
 	t.Log("Step 6: Verifying FP can perform normal operations")
-	
+
 	// Wait for FP to commit randomness and get it timestamped
 	ctm.WaitForFpPubRandTimestamped(t, ctx, consumerFpInstance)
-	
+
 	// Wait for FP to vote on at least one rollup block
 	require.Eventually(t, func() bool {
 		return consumerFpInstance.GetLastVotedHeight() > 0
 	}, eventuallyWaitTimeOut, eventuallyPollTime, "FP should vote on rollup blocks after allowlist approval")
-	
+
 	lastVotedHeight := consumerFpInstance.GetLastVotedHeight()
 	t.Logf("✅ FP voted on rollup block at height: %d", lastVotedHeight)
 
