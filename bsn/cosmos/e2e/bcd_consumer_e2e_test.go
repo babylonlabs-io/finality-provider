@@ -270,7 +270,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 		t.Logf("QueryLastBTCTimestampedHeader: height %d, bbn epoch %d", res.Height, res.BabylonEpoch)
 
 		return res.Height > 0
-	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
+	}, e2eutils.EventuallyWaitTimeOut, 5*time.Second)
 
 	// ensure finality signature is submitted to smart contract
 	require.Eventually(t, func() bool {
