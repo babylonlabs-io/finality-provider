@@ -36,14 +36,23 @@ type SubmitFinalitySignatureResponse struct {
 }
 
 type QueryMsg struct {
-	Config             *Config        `json:"config,omitempty"`
-	FirstPubRandCommit *PubRandCommit `json:"first_pub_rand_commit,omitempty"`
-	LastPubRandCommit  *PubRandCommit `json:"last_pub_rand_commit,omitempty"`
+	Config             *ContractConfig `json:"config,omitempty"`
+	FirstPubRandCommit *PubRandCommit  `json:"first_pub_rand_commit,omitempty"`
+	LastPubRandCommit  *PubRandCommit  `json:"last_pub_rand_commit,omitempty"`
 }
 
-type Config struct {
-	BsnID      string `json:"bsn_id"`
-	MinPubRand uint64 `json:"min_pub_rand"`
+// ContractConfig represents the full configuration from the finality contract
+type ContractConfig struct {
+	BsnID                     string             `json:"bsn_id"`
+	MinPubRand                uint64             `json:"min_pub_rand"`
+	RateLimiting              RateLimitingConfig `json:"rate_limiting"`
+	BsnActivationHeight       uint64             `json:"bsn_activation_height"`
+	FinalitySignatureInterval uint64             `json:"finality_signature_interval"`
+}
+
+type RateLimitingConfig struct {
+	MaxMsgsPerInterval uint32 `json:"max_msgs_per_interval"`
+	BlockInterval      uint64 `json:"block_interval"`
 }
 
 type PubRandCommit struct {

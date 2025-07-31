@@ -1,7 +1,6 @@
 //go:build e2e_rollup
-// +build e2e_rollup
 
-package e2e
+package e2etest_rollup
 
 import (
 	"bytes"

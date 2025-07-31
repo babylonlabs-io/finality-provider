@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Bug Fixes
 
 * [#508](https://github.com/babylonlabs-io/finality-provider/pull/508) fix: fixes registration with sign ctx
+* [#568](https://github.com/babylonlabs-io/finality-provider/pull/568) fix: correct logic for ctx signing start
 
 ### Improvements
 
@@ -63,6 +64,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#554](https://github.com/babylonlabs-io/finality-provider/pull/554) chore: rollup e2e parallel
 * [#555](https://github.com/babylonlabs-io/finality-provider/pull/555) chore: babylon controller use ctx
 * [#558](https://github.com/babylonlabs-io/finality-provider/pull/558) chore: creates cosmos-fpd bsn
+* [#551](https://github.com/babylonlabs-io/finality-provider/pull/551)
+  chore(rollup): add more tests for rollup bsn
+* [#561](https://github.com/babylonlabs-io/finality-provider/pull/561) chore: run e2e in parallel
+* [#563](https://github.com/babylonlabs-io/finality-provider/pull/563)
+  chore(rollup): add missing fns in controller
 
 ## v1.1.0-rc.1
 

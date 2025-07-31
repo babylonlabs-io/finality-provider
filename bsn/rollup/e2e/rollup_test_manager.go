@@ -1,7 +1,6 @@
 //go:build e2e_rollup
-// +build e2e_rollup
 
-package e2e
+package e2etest_rollup
 
 import (
 	"context"
@@ -23,8 +22,9 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	rollupfpcontroller "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/clientcontroller"
-	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup-finality-provider/config"
+	ckpttypes "github.com/babylonlabs-io/babylon/v3/x/checkpointing/types"
+	rollupfpcontroller "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
+	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup/config"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
@@ -41,13 +41,15 @@ import (
 )
 
 const (
-	rollupBSNID                = "op-stack-l2-706114"
+	rollupBSNID                = "rollup-bsn"
 	bbnAddrTopUpAmount         = 100000000
 	eventuallyWaitTimeOut      = 5 * time.Minute
 	eventuallyPollTime         = 500 * time.Millisecond
 	passphrase                 = "testpass"
 	hdPath                     = ""
 	rollupFinalityContractPath = "./bytecode/finality.wasm"
+	// finalitySignatureInterval is the interval at which finality signatures are allowed
+	finalitySignatureInterval = uint64(5)
 )
 
 type BaseTestManager = base_test_manager.BaseTestManager
@@ -62,6 +64,7 @@ type OpL2ConsumerTestManager struct {
 	ConsumerFpApp       *service.FinalityProviderApp
 	BabylonEOTSClient   *client.EOTSManagerGRpcClient
 	ConsumerEOTSClient  *client.EOTSManagerGRpcClient
+	AnvilResource       *dockertest.Resource
 	logger              *zap.Logger
 }
 
@@ -76,12 +79,15 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 
 	// setup logger
 	config := zap.NewDevelopmentConfig()
-	config.Level = zap.NewAtomicLevelAt(zapcore.Level(zap.DebugLevel))
+	config.Level = zap.NewAtomicLevelAt(zapcore.Level(zap.WarnLevel))
 	logger, err := config.Build()
 	require.NoError(t, err)
 
 	// start Babylon node
 	manager, babylond, covenantPrivKeys, keyDir := startBabylonNode(t)
+
+	// start Anvil node (simulated rollup chain)
+	anvil := startAnvilNode(t, manager)
 
 	// wait for Babylon node starts b/c we will fund the FP address with babylon node
 	babylonController, _ := waitForBabylonNodeStart(t, keyDir, testDir, logger, manager, babylond)
@@ -91,7 +97,7 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 	t.Logf(log.Prefix("rollup BSN finality contract address: %s"), contractAddress)
 
 	// create cosmwasm client
-	rollupFpCfg := createRollupFpConfig(t, testDir, manager, babylond)
+	rollupFpCfg := createRollupFpConfig(t, testDir, manager, babylond, anvil)
 	rollupFpCfg.FinalityContractAddress = contractAddress
 
 	// register consumer chain to Babylon
@@ -104,11 +110,8 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 	require.NoError(t, err)
 	t.Logf(log.Prefix("Register consumer %s to Babylon"), rollupBSNID)
 
-	rollupFpCfg.Common.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
-
 	// create Babylon FP config
 	babylonFpCfg := createBabylonFpConfig(t, keyDir, testDir, manager, babylond)
-	babylonFpCfg.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
 
 	// create EOTS handler and EOTS gRPC clients for Babylon and consumer
 	eotsHandler, EOTSClients := base_test_manager.StartEotsManagers(t, ctx, logger, testDir, babylonFpCfg, rollupFpCfg.Common)
@@ -142,6 +145,7 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 		ConsumerFpApp:       consumerFpApp,
 		BabylonEOTSClient:   EOTSClients[0],
 		ConsumerEOTSClient:  EOTSClients[1],
+		AnvilResource:       anvil,
 		logger:              logger,
 	}
 
@@ -169,6 +173,15 @@ func startBabylonNode(t *testing.T) (*container.Manager, *dockertest.Resource, [
 	keyDir := filepath.Join(babylonDir, "node0", "babylond")
 
 	return manager, babylond, covenantPrivKeys, keyDir
+}
+
+func startAnvilNode(t *testing.T, manager *container.Manager) *dockertest.Resource {
+	// Start anvil node in docker
+	anvil, err := manager.RunAnvilResource(t)
+	require.NoError(t, err)
+	t.Logf("Started Anvil node on port %s", anvil.GetPort("8545/tcp"))
+
+	return anvil
 }
 
 func waitForBabylonNodeStart(
@@ -241,6 +254,7 @@ func createRollupFpConfig(
 	testDir string,
 	manager *container.Manager,
 	babylond *dockertest.Resource,
+	anvil *dockertest.Resource,
 ) *rollupfpconfig.RollupFPConfig {
 	fpHomeDir := filepath.Join(testDir, "consumer-fp-home")
 	t.Logf(log.Prefix("Consumer FP home dir: %s"), fpHomeDir)
@@ -301,10 +315,12 @@ func createRollupFpConfig(
 	opConsumerCfg := &rollupfpconfig.RollupFPConfig{
 		// it will be updated later
 		FinalityContractAddress: "",
-		// it must be a dialable RPC address checked by NewRollupBSNController
-		RollupNodeRPCAddress: "https://optimism-sepolia.drpc.org",
+		// use local anvil node with dynamically allocated port
+		RollupNodeRPCAddress: fmt.Sprintf("http://localhost:%s", anvil.GetPort("8545/tcp")),
 		Common:               cfg,
 	}
+
+	t.Logf(log.Prefix("Using Anvil RPC address: %s"), opConsumerCfg.RollupNodeRPCAddress)
 
 	return opConsumerCfg
 }
@@ -321,11 +337,16 @@ func deployCwContract(t *testing.T, bbnClient *bbnclient.Client, ctx context.Con
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 	require.Equal(t, uint64(1), codeId, "first deployed contract code_id should be 1")
 
-	// instantiate contract with FG disabled
+	// instantiate contract with all required fields for the new InstantiateMsg
 	opFinalityGadgetInitMsg := map[string]interface{}{
-		"admin":        bbnClient.MustGetAddr(),
-		"bsn_id":       rollupBSNID,
-		"min_pub_rand": 100,
+		"admin":                       bbnClient.MustGetAddr(),
+		"bsn_id":                      rollupBSNID,
+		"min_pub_rand":                100,
+		"rate_limiting_interval":      10000,                     // test value
+		"max_msgs_per_interval":       100,                       // test value
+		"bsn_activation_height":       0,                         // immediate activation for tests
+		"finality_signature_interval": finalitySignatureInterval, // allow signatures every block for tests
+		"allowed_finality_providers":  nil,                       // allow none by default
 	}
 	opFinalityGadgetInitMsgBytes, err := json.Marshal(opFinalityGadgetInitMsg)
 	require.NoError(t, err)
@@ -407,6 +428,66 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	return []*bbntypes.BIP340PubKey{babylonFpPk, consumerFpPk}
 }
 
+func (ctm *OpL2ConsumerTestManager) addFpToContractAllowlist(t *testing.T, ctx context.Context, fpPk *bbntypes.BIP340PubKey) {
+	// Create the AddToAllowlist message following the same pattern as local deployment
+	addToAllowlistMsg := map[string]interface{}{
+		"add_to_allowlist": map[string]interface{}{
+			"fp_pubkey_hex_list": []string{fpPk.MarshalHex()},
+		},
+	}
+
+	addToAllowlistMsgBytes, err := json.Marshal(addToAllowlistMsg)
+	require.NoError(t, err)
+
+	// Execute the contract to add FP to allowlist
+	bbnClient := ctm.BabylonController.GetBBNClient()
+	executeMsg := &wasmtypes.MsgExecuteContract{
+		Sender:   bbnClient.MustGetAddr(),
+		Contract: ctm.RollupBSNController.Cfg.FinalityContractAddress,
+		Msg:      addToAllowlistMsgBytes,
+		Funds:    nil,
+	}
+
+	_, err = bbnClient.ReliablySendMsg(ctx, executeMsg, nil, nil)
+	require.NoError(t, err)
+
+	t.Logf(log.Prefix("Added FP %s to contract allowlist"), fpPk.MarshalHex())
+
+	// Verify FP is now in allowlist
+	require.Eventually(t, func() bool {
+		queryMsg := map[string]interface{}{
+			"allowed_finality_providers": map[string]interface{}{},
+		}
+		queryMsgBytes, err := json.Marshal(queryMsg)
+		if err != nil {
+			return false
+		}
+
+		queryResponse, err := ctm.RollupBSNController.QuerySmartContractState(
+			ctx,
+			ctm.RollupBSNController.Cfg.FinalityContractAddress,
+			string(queryMsgBytes),
+		)
+		if err != nil {
+			return false
+		}
+
+		var allowedFPs []string
+		err = json.Unmarshal(queryResponse.Data, &allowedFPs)
+		if err != nil {
+			return false
+		}
+
+		// Check if our FP is in the list
+		for _, allowedFP := range allowedFPs {
+			if allowedFP == fpPk.MarshalHex() {
+				return true
+			}
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime, "FP should be added to contract allowlist")
+}
+
 func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	t *testing.T,
 	consumerFpPk *bbntypes.BIP340PubKey,
@@ -414,7 +495,9 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	fpCfg := ctm.ConsumerFpApp.GetConfig()
 	fpStore := ctm.ConsumerFpApp.GetFinalityProviderStore()
 	pubRandStore := ctm.ConsumerFpApp.GetPubRandProofStore()
-	bc := ctm.BabylonFpApp.GetBabylonController()
+	// Use the Consumer FP App's own Babylon controller, not the Babylon App's controller
+	// This ensures proper connection lifecycle management
+	bc := ctm.ConsumerFpApp.GetBabylonController()
 
 	fpMetrics := metrics.NewFpMetrics()
 	poller := service.NewChainPoller(ctm.logger, fpCfg.PollerConfig, ctm.RollupBSNController, fpMetrics)
@@ -443,7 +526,7 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 		heightDeterminer,
 		finalitySubmitter,
 		fpMetrics,
-		make(chan<- *service.CriticalError),
+		make(chan<- *service.CriticalError, 100),
 		ctm.logger,
 	)
 	require.NoError(t, err)
@@ -494,14 +577,89 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 }
 
 func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
-	t.Log("Stopping test manager")
-	var err error
-	err = ctm.BabylonFpApp.Stop()
-	require.NoError(t, err)
-	err = ctm.ConsumerFpApp.Stop()
-	require.NoError(t, err)
-	err = ctm.manager.ClearResources()
-	require.NoError(t, err)
+	// Stop all FP apps with error handling
+	if ctm.BabylonFpApp != nil {
+		err := ctm.BabylonFpApp.Stop()
+		if err != nil {
+			t.Logf("Warning: Error stopping finality provider: %v", err)
+		}
+	}
+	if ctm.ConsumerFpApp != nil {
+		err := ctm.ConsumerFpApp.Stop()
+		if err != nil {
+			t.Logf("Warning: Error stopping finality provider: %v", err)
+		}
+	}
+
+	// Stop EOTS server handler
+	if ctm.EOTSServerHandler != nil {
+		ctm.EOTSServerHandler.Stop()
+	}
+
+	// Clear Docker resources with error handling
+	err := ctm.manager.ClearResources()
+	if err != nil {
+		t.Logf("Warning: Error clearing Docker resources: %v", err)
+	}
+
+	// Clean up temp directory
 	err = os.RemoveAll(ctm.BaseDir)
+	if err != nil {
+		t.Logf("Warning: Error removing temporary directory: %v", err)
+	}
+}
+
+// WaitForFpPubRandTimestamped waits for the FP to commit public randomness and get it timestamped
+// This is a rollup-specific version that works with the rollup controller
+func (ctm *OpL2ConsumerTestManager) WaitForFpPubRandTimestamped(t *testing.T, ctx context.Context, fpIns *service.FinalityProviderInstance) {
+	var lastCommittedHeight uint64
+	var err error
+
+	require.Eventually(t, func() bool {
+		lastCommittedHeight, err = fpIns.GetLastCommittedHeight(ctx)
+		if err != nil {
+			return false
+		}
+		return lastCommittedHeight > 0
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	t.Logf("public randomness is successfully committed, last committed height: %d", lastCommittedHeight)
+
+	// wait until the last registered epoch is finalised
+	currentEpoch, err := ctm.BabylonController.QueryCurrentEpoch()
 	require.NoError(t, err)
+
+	ctm.FinalizeUntilEpoch(t, currentEpoch)
+
+	res, err := ctm.BabylonController.GetBBNClient().LatestEpochFromStatus(ckpttypes.Finalized)
+	require.NoError(t, err)
+	t.Logf("last finalized epoch: %d", res.RawCheckpoint.EpochNum)
+
+	t.Logf("public randomness is successfully timestamped, last finalized epoch: %d", currentEpoch)
+}
+
+// WaitForNRollupBlocks waits for the rollup chain to produce N more blocks
+// This is the BSN equivalent of the Babylon test's WaitForNBlocks function
+func (ctm *OpL2ConsumerTestManager) WaitForNRollupBlocks(t *testing.T, ctx context.Context, n int) uint64 {
+	beforeHeight, err := ctm.RollupBSNController.QueryLatestBlock(ctx)
+	require.NoError(t, err)
+
+	var afterHeight uint64
+	require.Eventually(t, func() bool {
+		height, err := ctm.RollupBSNController.QueryLatestBlock(ctx)
+		if err != nil {
+			t.Logf("Failed to query latest rollup block height: %v", err)
+			return false
+		}
+
+		if height.GetHeight() >= uint64(n)+beforeHeight.GetHeight() {
+			afterHeight = height.GetHeight()
+			return true
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime,
+		fmt.Sprintf("rollup chain should produce %d more blocks", n))
+
+	t.Logf("Rollup chain produced %d blocks: %d -> %d", n, beforeHeight, afterHeight)
+	return afterHeight
 }
