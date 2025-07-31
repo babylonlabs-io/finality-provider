@@ -261,6 +261,17 @@ func TestConsumerFpLifecycle(t *testing.T) {
 
 	ctm.BaseTestManager.WaitForFpPubRandTimestamped(t, fp)
 
+	require.Eventually(t, func() bool {
+		res, err := ctm.BcdConsumerClient.QueryLastBTCTimestampedHeader(ctx)
+		if err != nil {
+			t.Logf("failed to query last BTC timestamped header: %s", err.Error())
+			return false
+		}
+		t.Logf("QueryLastBTCTimestampedHeader: height %d, bbn epoch %d", res.Height, res.BabylonEpoch)
+
+		return res.Height > 0
+	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
+
 	// ensure finality signature is submitted to smart contract
 	require.Eventually(t, func() bool {
 		fpSigsResponse, err := ctm.BcdConsumerClient.QueryFinalitySignature(ctx, fpPk.MarshalHex(), uint64(lookupHeight))

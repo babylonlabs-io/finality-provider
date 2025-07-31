@@ -217,3 +217,25 @@ type QueryMsgLastPubRandCommit struct {
 type LastPubRandCommitQuery struct {
 	BtcPkHex string `json:"btc_pk_hex"`
 }
+
+type QueryMsgLastConsumerHeader struct {
+	LastConsumerHeader struct{} `json:"last_consumer_header"`
+}
+
+type ConsumerHeaderResponse struct {
+	ConsumerID          string `json:"consumer_id"`
+	Hash                string `json:"hash"`
+	Height              uint64 `json:"height"`
+	Time                string `json:"time,omitempty"`
+	BabylonHeaderHash   string `json:"babylon_header_hash"`
+	BabylonHeaderHeight uint64 `json:"babylon_header_height"`
+	BabylonEpoch        uint64 `json:"babylon_epoch"`
+	BabylonTxHash       string `json:"babylon_tx_hash"`
+}
+
+type BabylonContracts struct {
+	BabylonContract        string
+	BtcLightClientContract string
+	BtcStakingContract     string
+	BtcFinalityContract    string
+}
