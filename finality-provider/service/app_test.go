@@ -78,6 +78,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		mockConsumerController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
+		mockBabylonController.EXPECT().GetFpPopContextV0().Return("").AnyTimes()
 
 		// Create randomized config
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
