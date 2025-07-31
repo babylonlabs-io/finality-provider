@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Bug Fixes
 
 * [#508](https://github.com/babylonlabs-io/finality-provider/pull/508) fix: fixes registration with sign ctx
+* [#568](https://github.com/babylonlabs-io/finality-provider/pull/568) fix: correct logic for ctx signing start
 
 ### Improvements
 
