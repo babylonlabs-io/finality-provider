@@ -139,7 +139,7 @@ func newFinalityProviderInstanceFromStore(
 }
 
 func (fp *FinalityProviderInstance) Start(ctx context.Context) error {
-	if fp.isStarted.Load() {
+	if fp.isStarted.Swap(true) {
 		return fmt.Errorf("the finality-provider instance %s is already started", fp.GetBtcPkHex())
 	}
 
@@ -170,11 +170,6 @@ func (fp *FinalityProviderInstance) Start(ctx context.Context) error {
 	}
 
 	fp.quit = make(chan struct{})
-
-	// Mark as started only after ALL validation and setup is complete
-	if fp.isStarted.Swap(true) {
-		return fmt.Errorf("the finality-provider instance %s is already started", fp.GetBtcPkHex())
-	}
 
 	fp.wg.Add(2)
 	go fp.finalitySigSubmissionLoop(ctx)
