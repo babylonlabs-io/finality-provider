@@ -39,6 +39,8 @@ func FuzzCommitPubRandList(f *testing.F) {
 		mockConsumerController := testutil.PrepareMockedConsumerControllerWithTxHash(t, r, randomStartingHeight, currentHeight, expectedTxHash)
 		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(), gomock.Any()).
 			Return(false, nil).AnyTimes()
+		mockConsumerController.EXPECT().GetFpRandCommitContext().Return("").AnyTimes()
+		mockConsumerController.EXPECT().GetFpFinVoteContext().Return("").AnyTimes()
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
 

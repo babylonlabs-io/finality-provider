@@ -345,6 +345,10 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 		rndFp, err := datagen.GenRandomFinalityProvider(r, "", "")
 		require.NoError(t, err)
 
+		mockConsumerController.EXPECT().GetFpRandCommitContext().Return("").AnyTimes()
+		mockConsumerController.EXPECT().GetFpFinVoteContext().Return("").AnyTimes()
+		mockBabylonController.EXPECT().GetFpPopContextV0().Return("").AnyTimes()
+		
 		// Create randomized config
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
 		fpCfg := config.DefaultConfigWithHome(fpHomeDir)
