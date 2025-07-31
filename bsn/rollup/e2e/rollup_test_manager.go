@@ -110,8 +110,6 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 	require.NoError(t, err)
 	t.Logf(log.Prefix("Register consumer %s to Babylon"), rollupBSNID)
 
-	rollupFpCfg.Common.ContextSigningHeight = ^uint64(0) // enable context signing height, max uint64 value
-
 	// create Babylon FP config
 	babylonFpCfg := createBabylonFpConfig(t, keyDir, testDir, manager, babylond)
 

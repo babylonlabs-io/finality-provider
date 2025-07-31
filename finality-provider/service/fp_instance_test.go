@@ -60,6 +60,8 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
 		mockConsumerController.EXPECT().QueryLatestBlock(context.Background()).Return(types.NewBlockInfo(0, testutil.GenRandomByteArray(r, 32), false), nil).AnyTimes()
+		mockConsumerController.EXPECT().GetFpRandCommitContext().Return("").AnyTimes()
+		mockConsumerController.EXPECT().GetFpFinVoteContext().Return("").AnyTimes()
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
 
