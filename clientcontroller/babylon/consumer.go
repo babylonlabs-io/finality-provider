@@ -399,9 +399,9 @@ func (bc *BabylonConsumerController) Close() error {
 }
 
 // QueryFinalityProviderInAllowlist queries whether the finality provider is in the allowlist
-// For Babylon, there is no allowlist concept - all finality providers are allowed
+// For Babylon, there is no FP allowlist feature - all FPs are allowed
 func (bc *BabylonConsumerController) QueryFinalityProviderInAllowlist(_ context.Context, _ *btcec.PublicKey) (bool, error) {
-	// No allowlist concept in Babylon - everyone is allowed
+	// No FP allowlist feature in Babylon - all FPs are allowed
 	return true, nil
 }
 
