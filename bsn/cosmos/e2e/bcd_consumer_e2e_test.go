@@ -97,6 +97,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 		"btc_finality_msg":                btcFinalityInitMsgBz,
 		"consumer_name":                   "test-consumer",
 		"consumer_description":            "test-consumer-description",
+		"ics20_channel_id":                "channel-0",
 	}
 	babylonInitMsgBz, err := json.Marshal(babylonInitMsg)
 	require.NoError(t, err)
@@ -256,6 +257,8 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	// TODO: this is a hack as its possible that latest comet height is less than activated height
 	//  and the sigs/finalization can only happen after activated height
 	lookupHeight := wasmdNodeStatus.SyncInfo.LatestBlockHeight + 5
+
+	ctm.BaseTestManager.WaitForFpPubRandTimestamped(t, fp)
 
 	// ensure finality signature is submitted to smart contract
 	require.Eventually(t, func() bool {

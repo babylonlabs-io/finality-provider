@@ -200,6 +200,7 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderHasPower(
 			// this is expected when the FP has no power at the given height
 			return false, nil
 		}
+
 		return false, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
 
@@ -348,11 +349,7 @@ func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight(ctx con
 	if err != nil {
 		return 0, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
-	//if resp.Height == 0 {
-	//	return 0, fmt.Errorf("BTC staking is not activated yet")
-	//}
 
-	// Return the activated height
 	return resp.Height, nil
 }
 
