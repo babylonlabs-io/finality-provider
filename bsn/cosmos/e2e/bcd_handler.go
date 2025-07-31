@@ -158,8 +158,23 @@ func (w *BcdNodeHandler) StartRelayer(t *testing.T) error {
 		return fmt.Errorf("failed to setup relayer: %w", err)
 	}
 
+	if err := w.createClients(); err != nil {
+		return fmt.Errorf("failed to create IBC clients: %w", err)
+	}
+
+	// Wait for clients to be established
+	time.Sleep(10 * time.Second)
+
+	// Step 2: Create IBC connection
+	if err := w.createConnection(); err != nil {
+		return fmt.Errorf("failed to create IBC connection: %w", err)
+	}
+
+	// Wait for connection to be established
+	time.Sleep(5 * time.Second)
+
 	// Create IBC channels
-	if err := w.createIBCChannels(t); err != nil {
+	if err := w.createTransferChannel(t); err != nil {
 		return fmt.Errorf("failed to create IBC channels: %w", err)
 	}
 
@@ -372,22 +387,19 @@ func (w *BcdNodeHandler) restoreKey(chainName, keyName, mnemonic string) error {
 	return nil
 }
 
-func (w *BcdNodeHandler) createIBCChannels(t *testing.T) error {
-	contractPort := fmt.Sprintf("wasm.%s", w.contractAddress)
-
-	// Create zoneconcierge IBC channel
-	fmt.Println("Creating IBC channel for zoneconcierge")
-	if err := w.createChannel("zoneconcierge", contractPort, "ordered", "zoneconcierge-1"); err != nil {
-		return fmt.Errorf("failed to create zoneconcierge channel: %w", err)
+func (w *BcdNodeHandler) createTransferChannel(t *testing.T) error {
+	cmd := exec.Command("relayer", "--home", w.relayerHomeDir, "query", "connections", pathName)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to query connections: %w, output: %s", err, string(output))
 	}
-	fmt.Println("Created zoneconcierge IBC channel successfully!")
+	t.Logf("Available connections: %s", string(output))
 
-	// Create IBC transfer channel
-	fmt.Println("Creating IBC channel for IBC transfer")
-	if err := w.createChannel("transfer", "transfer", "unordered", "ics20-1"); err != nil {
+	t.Log("Creating IBC channel for IBC transfer")
+	if err := w.createChannel(t, "transfer", "transfer", "unordered", "ics20-1"); err != nil {
 		return fmt.Errorf("failed to create transfer channel: %w", err)
 	}
-	fmt.Println("Created IBC transfer channel successfully!")
+	t.Log("Created IBC transfer channel successfully!")
 
 	// Wait for channels to be established
 	time.Sleep(10 * time.Second)
@@ -395,22 +407,33 @@ func (w *BcdNodeHandler) createIBCChannels(t *testing.T) error {
 	return nil
 }
 
-func (w *BcdNodeHandler) createChannel(srcPort, dstPort, order, version string) error {
+func (w *BcdNodeHandler) createZoneConciergeChannel(t *testing.T) error {
+	contractPort := fmt.Sprintf("wasm.%s", w.contractAddress)
+	t.Log("Creating IBC channel for zoneconcierge")
+	if err := w.createChannel(t, "zoneconcierge", contractPort, "ordered", "zoneconcierge-1"); err != nil {
+		return fmt.Errorf("failed to create zoneconcierge channel: %w", err)
+	}
+	t.Log("Created zoneconcierge IBC channel successfully!")
+
+	return nil
+}
+
+func (w *BcdNodeHandler) createChannel(t *testing.T, srcPort, dstPort, order, version string) error {
 	var cmd *exec.Cmd
 
 	// Create context with longer timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
 	if srcPort == "zoneconcierge" {
 		// Use tx link for zoneconcierge
-		cmd = exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "link", pathName,
+		cmd = exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "channel", pathName,
 			"--src-port", srcPort, "--dst-port", dstPort,
 			"--order", order, "--version", version,
 			"--timeout", "120s", "--max-retries", "5",
 			"--debug") // Add debug flag
 
-		fmt.Printf("Running command: %s\n", cmd.String())
+		t.Logf("Running command: %s\n", cmd.String())
 
 	} else {
 		// Use tx channel for transfer
@@ -448,14 +471,66 @@ func (w *BcdNodeHandler) createChannel(srcPort, dstPort, order, version string) 
 		}
 
 		if isSuccessful {
-			fmt.Printf("Operation completed successfully (despite timeout): %s\n", outputStr)
-			return nil // Success!
+			t.Logf("Operation completed successfully (despite timeout): %s\n", outputStr)
+
+			return nil
 		}
 
 		return fmt.Errorf("failed to create channel: %w, output: %s", err, outputStr)
 	}
 
-	fmt.Printf("Channel creation output: %s\n", string(output))
+	t.Logf("Channel creation output: %s\n", string(output))
+
+	return nil
+}
+
+func (w *BcdNodeHandler) createClients() error {
+	fmt.Println("Creating IBC clients...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "clients", pathName, "--debug")
+	output, err := cmd.CombinedOutput()
+
+	// Check for successful client creation even if command timed out
+	if err != nil {
+		outputStr := string(output)
+		if strings.Contains(outputStr, "Clients created") ||
+			strings.Contains(outputStr, "Successful transaction") ||
+			strings.Contains(outputStr, "client_created") {
+			fmt.Printf("Clients created successfully (despite timeout): %s\n", outputStr)
+			return nil
+		}
+		return fmt.Errorf("failed to create clients: %w, output: %s", err, outputStr)
+	}
+
+	fmt.Printf("Clients created: %s\n", string(output))
+	return nil
+}
+
+func (w *BcdNodeHandler) createConnection() error {
+	fmt.Println("Creating IBC connection...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "connection", pathName, "--debug")
+	output, err := cmd.CombinedOutput()
+
+	// Check for successful connection creation even if command timed out
+	if err != nil {
+		outputStr := string(output)
+		if strings.Contains(outputStr, "Found termination condition for connection handshake") ||
+			strings.Contains(outputStr, "Successful transaction") ||
+			strings.Contains(outputStr, "connection_open_confirm") {
+			fmt.Printf("Connection created successfully (despite timeout): %s\n", outputStr)
+			return nil
+		}
+		return fmt.Errorf("failed to create connection: %w, output: %s", err, outputStr)
+	}
+
+	fmt.Printf("Connection created: %s\n", string(output))
 	return nil
 }
 

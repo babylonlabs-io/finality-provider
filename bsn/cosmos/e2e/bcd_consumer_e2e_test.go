@@ -196,6 +196,9 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	_, err = ctm.BabylonController.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
 	require.NoError(t, err)
 
+	err = ctm.BcdHandler.createZoneConciergeChannel(t)
+	require.NoError(t, err)
+
 	// register consumer to babylon
 
 	// register consumer fps to babylon
@@ -295,9 +298,6 @@ func TestConsumerFpLifecycle(t *testing.T) {
 		if idxBlockedResponse == nil {
 			return false
 		}
-		if !idxBlockedResponse.Finalized {
-			return false
-		}
-		return true
+		return idxBlockedResponse.Finalized
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 }
