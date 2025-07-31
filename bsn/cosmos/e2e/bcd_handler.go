@@ -242,8 +242,6 @@ func (w *BcdNodeHandler) initRelayerConfig() error {
 }
 
 func (w *BcdNodeHandler) createRelayerConfig() error {
-	//contractPort := fmt.Sprintf("wasm.%s", w.contractAddress)
-
 	configContent := fmt.Sprintf(`global:
     api-listen-addr: :%d
     max-retries: 20
@@ -320,7 +318,7 @@ func (w *BcdNodeHandler) restoreRelayerKeys(t *testing.T) error {
 		if err := w.restoreKey("bcd", consumerKey, consumerMemo); err != nil {
 			return fmt.Errorf("failed to restore consumer key: %w", err)
 		}
-		fmt.Println("Restored consumer key successfully")
+		t.Log("Restored consumer key successfully")
 	} else {
 		return fmt.Errorf("consumer key seed file not found: %s", consumerKeyPath)
 	}
@@ -337,7 +335,7 @@ func (w *BcdNodeHandler) restoreRelayerKeys(t *testing.T) error {
 			if err := w.restoreKey("babylon", babylonKey, babylonMemo); err != nil {
 				return fmt.Errorf("failed to restore babylon key: %w", err)
 			}
-			fmt.Println("Restored babylon key successfully")
+			t.Log("Restored babylon key successfully")
 		} else {
 			return fmt.Errorf("babylon key seed file not found: %s", babylonKeyPath)
 		}
@@ -503,7 +501,8 @@ func (w *BcdNodeHandler) startRelayer(t *testing.T) error {
 		return fmt.Errorf("failed to close relayer PID file: %w", err)
 	}
 
-	fmt.Printf("Started relayer with PID: %d\n", w.relayerCmd.Process.Pid)
+	t.Logf("Started relayer with PID: %d\n", w.relayerCmd.Process.Pid)
+
 	return nil
 }
 
@@ -622,7 +621,6 @@ func bcdUpdateGenesisFile(homeDir string) error {
 		return fmt.Errorf("failed to update stake in genesis.json: %w", err)
 	}
 
-	// Use jq to update governance periods
 	jqCmd := fmt.Sprintf("jq '.app_state.gov.params.voting_period = \"30s\" | .app_state.gov.params.max_deposit_period = \"10s\" | .app_state.gov.params.expedited_voting_period = \"15s\"' %s > %s.tmp && mv %s.tmp %s",
 		genesisPath, genesisPath, genesisPath, genesisPath)
 	fmt.Println("Executing jq command:", jqCmd)

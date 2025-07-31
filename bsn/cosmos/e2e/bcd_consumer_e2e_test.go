@@ -98,6 +98,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 		"consumer_name":                   "test-consumer",
 		"consumer_description":            "test-consumer-description",
 		"ics20_channel_id":                "channel-0",
+		"destination_module":              "btcstaking",
 	}
 	babylonInitMsgBz, err := json.Marshal(babylonInitMsg)
 	require.NoError(t, err)

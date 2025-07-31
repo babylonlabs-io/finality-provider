@@ -8,8 +8,8 @@ require (
 	cosmossdk.io/errors v1.0.2
 	cosmossdk.io/math v1.5.3
 	github.com/avast/retry-go/v4 v4.5.1
-	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250723095925-43a61e06a978
-	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250723095925-43a61e06a978
+	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250731052809-1c9294dae68a
+	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250731052809-1c9294dae68a
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.5
 	github.com/btcsuite/btcd/btcutil v1.1.6
@@ -53,7 +53,7 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.48.1 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.48.1 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
-	github.com/babylonlabs-io/babylon-sdk/tests/e2e v0.0.0-20250723095925-43a61e06a978 // indirect
+	github.com/babylonlabs-io/babylon-sdk/tests/e2e v0.0.0-20250731052809-1c9294dae68a // indirect
 	github.com/bytedance/sonic v1.13.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
@@ -125,7 +125,7 @@ require (
 	github.com/aead/siphash v1.0.1 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.312 // indirect
-	github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250711
+	github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250724
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bgentry/speakeasy v0.2.0 // indirect
