@@ -710,7 +710,7 @@ func (wc *CosmwasmConsumerController) QueryLastBTCTimestampedHeader(ctx context.
 	}
 	queryMsgBytes, err := json.Marshal(queryMsgStruct)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal query message: %v", err)
+		return nil, fmt.Errorf("failed to marshal query message: %w", err)
 	}
 
 	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.MustQueryBabylonContracts(ctx).BabylonContract, string(queryMsgBytes))

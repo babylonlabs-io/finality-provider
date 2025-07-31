@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	"go.uber.org/zap/zaptest"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -82,8 +83,8 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	require.NoError(t, err)
 
 	loggerConfig := zap.NewDevelopmentConfig()
-	loggerConfig.Level = zap.NewAtomicLevelAt(zap.ErrorLevel)
-	logger, err := loggerConfig.Build()
+	loggerConfig.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	logger := zaptest.NewLogger(t)
 	require.NoError(t, err)
 
 	// 1. generate covenant committee
@@ -263,7 +264,7 @@ func (ctm *BcdTestManager) Stop(t *testing.T) {
 
 // CreateConsumerFinalityProviders creates finality providers for a consumer chain
 // and registers them in Babylon and consumer smart contract
-func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consumerId string) *service.FinalityProviderInstance {
+func (ctm *BcdTestManager) CreateConsumerFinalityProviders(ctx context.Context, t *testing.T, consumerId string) *service.FinalityProviderInstance {
 	app := ctm.Fpa
 	cfg := app.GetConfig()
 	keyName := cfg.BabylonConfig.Key
@@ -282,17 +283,17 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	fpMsg := e2eutils.GenBtcStakingFpExecMsg(eotsPubKey.MarshalHex())
 	fpMsgBytes, err := json.Marshal(fpMsg)
 	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(context.Background(), fpMsgBytes)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, fpMsgBytes)
 	require.NoError(t, err)
 
 	// register fp in Babylon
-	_, err = app.CreateFinalityProvider(context.Background(), keyName, consumerId, eotsPubKey, desc, commission)
+	_, err = app.CreateFinalityProvider(ctx, keyName, consumerId, eotsPubKey, desc, commission)
 	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	err = app.StartFinalityProvider(context.Background(), eotsPubKey)
+	err = app.StartFinalityProvider(ctx, eotsPubKey)
 	require.NoError(t, err)
 
 	fpIns, err := app.GetFinalityProviderInstance()
@@ -301,7 +302,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 
 	// ensure finality providers are registered in smart contract
 	require.Eventually(t, func() bool {
-		consumerFpsResp, err := ctm.BcdConsumerClient.QueryFinalityProviders(context.Background())
+		consumerFpsResp, err := ctm.BcdConsumerClient.QueryFinalityProviders(ctx)
 		if err != nil {
 			t.Logf("failed to query finality providers from consumer contract: %s", err.Error())
 			return false
