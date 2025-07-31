@@ -68,7 +68,7 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 		err  error
 	)
 
-	if fp.cfg.ContextSigningHeight > startHeight {
+	if startHeight >= fp.cfg.ContextSigningHeight {
 		signCtx := fp.consumerCon.GetFpRandCommitContext()
 		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
 		if err != nil {
@@ -93,7 +93,7 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 func (fp *FinalityProviderInstance) SignFinalitySig(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
 	// build proper finality signature request
 	var msgToSign []byte
-	if fp.cfg.ContextSigningHeight > b.GetHeight() {
+	if b.GetHeight() >= fp.cfg.ContextSigningHeight {
 		signCtx := fp.consumerCon.GetFpFinVoteContext()
 		msgToSign = b.MsgToSign(signCtx)
 	} else {

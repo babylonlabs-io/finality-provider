@@ -122,7 +122,7 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 
 	eotsSignerFunc := func(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
 		var msgToSign []byte
-		if th.fp.cfg.ContextSigningHeight > b.GetHeight() {
+		if b.GetHeight() >= th.fp.cfg.ContextSigningHeight {
 			signCtx := th.fp.consumerCon.GetFpFinVoteContext()
 			msgToSign = b.MsgToSign(signCtx)
 		} else {
