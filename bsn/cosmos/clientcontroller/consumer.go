@@ -382,7 +382,7 @@ func (wc *CosmwasmConsumerController) UnjailFinalityProvider(_ context.Context, 
 
 // QueryFinalityProviderInAllowlist queries whether the finality provider is in the allowlist
 // For Cosmos BSN, there is no allowlist concept - all finality providers are allowed
-func (wc *CosmwasmConsumerController) QueryFinalityProviderInAllowlist(ctx context.Context, fpPk *btcec.PublicKey) (bool, error) {
+func (wc *CosmwasmConsumerController) QueryFinalityProviderInAllowlist(_ context.Context, _ *btcec.PublicKey) (bool, error) {
 	// No allowlist concept in Cosmos BSN - everyone is allowed
 	return true, nil
 }

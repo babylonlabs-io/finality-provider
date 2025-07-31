@@ -256,7 +256,6 @@ func startFinalityProviderAppWithRegisteredFp(
 }
 
 func TestFinalityProviderInstance_AllowlistBlocking(t *testing.T) {
-	t.Parallel()
 	r := rand.New(rand.NewSource(1))
 
 	randomStartingHeight := uint64(r.Int63n(100) + 1)
@@ -271,6 +270,8 @@ func TestFinalityProviderInstance_AllowlistBlocking(t *testing.T) {
 
 	// Test case 1: FP not in allowlist - should fail to start
 	t.Run("FP_Not_In_Allowlist_Should_Fail", func(t *testing.T) {
+		t.Parallel()
+
 		// Mock allowlist check to return false (not in allowlist)
 		mockConsumerController.EXPECT().QueryFinalityProviderInAllowlist(gomock.Any(), gomock.Any()).
 			Return(false, nil).Times(1)
@@ -283,13 +284,15 @@ func TestFinalityProviderInstance_AllowlistBlocking(t *testing.T) {
 		require.Error(t, err, "FP should fail to start when not in allowlist")
 		require.Contains(t, err.Error(), "not in allowlist", "Error should mention allowlist restriction")
 		require.Contains(t, err.Error(), fpIns.GetBtcPkHex(), "Error should mention the FP public key")
-		
+
 		// Verify FP is not running
 		require.False(t, fpIns.IsRunning(), "FP should not be running after failed start")
 	})
 
-	// Test case 2: FP in allowlist - should start successfully  
+	// Test case 2: FP in allowlist - should start successfully
 	t.Run("FP_In_Allowlist_Should_Start", func(t *testing.T) {
+		t.Parallel()
+
 		// Mock allowlist check to return true (in allowlist)
 		mockConsumerController.EXPECT().QueryFinalityProviderInAllowlist(gomock.Any(), gomock.Any()).
 			Return(true, nil).Times(1)
@@ -306,10 +309,10 @@ func TestFinalityProviderInstance_AllowlistBlocking(t *testing.T) {
 		// Try to start the FP - should succeed
 		err := fpIns.Start(context.Background())
 		require.NoError(t, err, "FP should start successfully when in allowlist")
-		
+
 		// Verify FP is running
 		require.True(t, fpIns.IsRunning(), "FP should be running after successful start")
-		
+
 		// Clean up by stopping the FP
 		err = fpIns.Stop()
 		require.NoError(t, err)
@@ -317,6 +320,8 @@ func TestFinalityProviderInstance_AllowlistBlocking(t *testing.T) {
 
 	// Test case 3: Allowlist query error - should fail to start
 	t.Run("Allowlist_Query_Error_Should_Fail", func(t *testing.T) {
+		t.Parallel()
+
 		// Mock allowlist check to return an error
 		expectedErr := fmt.Errorf("failed to query contract allowlist")
 		mockConsumerController.EXPECT().QueryFinalityProviderInAllowlist(gomock.Any(), gomock.Any()).
@@ -330,7 +335,7 @@ func TestFinalityProviderInstance_AllowlistBlocking(t *testing.T) {
 		require.Error(t, err, "FP should fail to start when allowlist query fails")
 		require.Contains(t, err.Error(), "failed to check allowlist", "Error should mention allowlist check failure")
 		require.Contains(t, err.Error(), expectedErr.Error(), "Error should contain the underlying error")
-		
+
 		// Verify FP is not running
 		require.False(t, fpIns.IsRunning(), "FP should not be running after failed start")
 	})
