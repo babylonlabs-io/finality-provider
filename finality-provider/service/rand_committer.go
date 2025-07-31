@@ -261,7 +261,7 @@ func (rc *DefaultRandomnessCommitter) signPubRandCommit(startHeight uint64, numP
 		err  error
 	)
 
-	if rc.cfg.ContextSigningHeight > startHeight {
+	if startHeight >= rc.cfg.ContextSigningHeight {
 		signCtx := rc.consumerCon.GetFpRandCommitContext()
 		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
 		if err != nil {

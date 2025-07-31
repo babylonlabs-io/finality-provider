@@ -365,7 +365,7 @@ func (ds *DefaultFinalitySubmitter) checkBlockFinalization(ctx context.Context, 
 func (ds *DefaultFinalitySubmitter) signFinalitySig(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
 	// build proper finality signature request
 	var msgToSign []byte
-	if ds.cfg.ContextSigningHeight > b.GetHeight() {
+	if b.GetHeight() >= ds.cfg.ContextSigningHeight {
 		signCtx := ds.consumerCtrl.GetFpFinVoteContext()
 		msgToSign = b.MsgToSign(signCtx)
 	} else {

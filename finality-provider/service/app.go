@@ -537,8 +537,7 @@ func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntyp
 	hasher := tmhash.New()
 	nextHeight := app.poller.NextHeight()
 	//  nextHeight-1 might underflow if the nextHeight is 0
-	if (nextHeight == 0 && app.config.ContextSigningHeight > 0) ||
-		(nextHeight > 0 && app.config.ContextSigningHeight > nextHeight-1) {
+	if nextHeight >= app.config.ContextSigningHeight {
 		signCtx := app.cc.GetFpPopContextV0()
 		if _, err := hasher.Write([]byte(signCtx)); err != nil {
 			return nil, fmt.Errorf("failed to write signing context to the hash: %w", err)
