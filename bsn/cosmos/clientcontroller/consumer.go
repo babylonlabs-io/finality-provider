@@ -380,13 +380,6 @@ func (wc *CosmwasmConsumerController) UnjailFinalityProvider(_ context.Context, 
 	return nil, nil
 }
 
-// QueryFinalityProviderInAllowlist queries whether the finality provider is in the allowlist
-// For Cosmos BSN, there is no FP allowlist feature - all FPs are allowed
-func (wc *CosmwasmConsumerController) QueryFinalityProviderInAllowlist(_ context.Context, _ *btcec.PublicKey) (bool, error) {
-	// No FP allowlist feature in Cosmos BSN - all FPs are allowed
-	return true, nil
-}
-
 func (wc *CosmwasmConsumerController) QueryFinalitySignature(ctx context.Context, fpBtcPkHex string, height uint64) (*FinalitySignatureResponse, error) {
 	queryMsgStruct := QueryMsgFinalitySignature{
 		FinalitySignature: FinalitySignatureQuery{

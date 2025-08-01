@@ -287,20 +287,7 @@ func (mr *MockConsumerControllerMockRecorder) QueryFinalityProviderHighestVotedH
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderHighestVotedHeight", reflect.TypeOf((*MockConsumerController)(nil).QueryFinalityProviderHighestVotedHeight), ctx, fpPk)
 }
 
-// QueryFinalityProviderInAllowlist mocks base method.
-func (m *MockConsumerController) QueryFinalityProviderInAllowlist(ctx context.Context, fpPk *btcec.PublicKey) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryFinalityProviderInAllowlist", ctx, fpPk)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
 
-// QueryFinalityProviderInAllowlist indicates an expected call of QueryFinalityProviderInAllowlist.
-func (mr *MockConsumerControllerMockRecorder) QueryFinalityProviderInAllowlist(ctx, fpPk any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderInAllowlist", reflect.TypeOf((*MockConsumerController)(nil).QueryFinalityProviderInAllowlist), ctx, fpPk)
-}
 
 // QueryFinalityProviderStatus mocks base method.
 func (m *MockConsumerController) QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
@@ -657,20 +644,7 @@ func (mr *MockFinalityOperatorMockRecorder) QueryFinalityProviderHighestVotedHei
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderHighestVotedHeight", reflect.TypeOf((*MockFinalityOperator)(nil).QueryFinalityProviderHighestVotedHeight), ctx, fpPk)
 }
 
-// QueryFinalityProviderInAllowlist mocks base method.
-func (m *MockFinalityOperator) QueryFinalityProviderInAllowlist(ctx context.Context, fpPk *btcec.PublicKey) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryFinalityProviderInAllowlist", ctx, fpPk)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
 
-// QueryFinalityProviderInAllowlist indicates an expected call of QueryFinalityProviderInAllowlist.
-func (mr *MockFinalityOperatorMockRecorder) QueryFinalityProviderInAllowlist(ctx, fpPk any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderInAllowlist", reflect.TypeOf((*MockFinalityOperator)(nil).QueryFinalityProviderInAllowlist), ctx, fpPk)
-}
 
 // QueryFinalityProviderStatus mocks base method.
 func (m *MockFinalityOperator) QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {

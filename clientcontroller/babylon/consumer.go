@@ -398,13 +398,6 @@ func (bc *BabylonConsumerController) Close() error {
 	return nil
 }
 
-// QueryFinalityProviderInAllowlist queries whether the finality provider is in the allowlist
-// For Babylon, there is no FP allowlist feature - all FPs are allowed
-func (bc *BabylonConsumerController) QueryFinalityProviderInAllowlist(_ context.Context, _ *btcec.PublicKey) (bool, error) {
-	// No FP allowlist feature in Babylon - all FPs are allowed
-	return true, nil
-}
-
 // UnjailFinalityProvider sends an unjail transaction to the consumer chain
 func (bc *BabylonConsumerController) UnjailFinalityProvider(ctx context.Context, fpPk *btcec.PublicKey) (*types.TxResponse, error) {
 	msg := &finalitytypes.MsgUnjailFinalityProvider{

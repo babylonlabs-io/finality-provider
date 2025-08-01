@@ -143,15 +143,6 @@ func (fp *FinalityProviderInstance) Start(ctx context.Context) error {
 		return fmt.Errorf("the finality-provider instance %s is already started", fp.GetBtcPkHex())
 	}
 
-	// Check if finality provider is in allowlist
-	allowed, err := fp.consumerCon.QueryFinalityProviderInAllowlist(ctx, fp.btcPk.MustToBTCPK())
-	if err != nil {
-		return fmt.Errorf("failed to check allowlist: %w", err)
-	}
-	if !allowed {
-		return fmt.Errorf("finality provider %s is not in allowlist", fp.GetBtcPkHex())
-	}
-
 	if fp.IsJailed() {
 		fp.logger.Warn("the finality provider is jailed",
 			zap.String("pk", fp.GetBtcPkHex()))
