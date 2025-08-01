@@ -2,6 +2,7 @@ BUILDDIR ?= $(CURDIR)/build
 TOOLS_DIR := tools
 
 BCD_PKG     := github.com/babylonlabs-io/babylon-sdk/demo/cmd/bcd
+RLY_PKG     := github.com/cosmos/relayer/v2
 
 GO_BIN := ${GOPATH}/bin
 BTCD_BIN := $(GO_BIN)/btcd
@@ -73,19 +74,23 @@ install-bcd:
 	cd $(TOOLS_DIR); \
 	go install -trimpath $(BCD_PKG)
 
+install-rly:
+	cd $(TOOLS_DIR); \
+	go install -trimpath $(RLY_PKG)
+
 .PHONY: clean-e2e test-e2e test-e2e-babylon test-e2e-babylon-ci test-e2e-bcd test-e2e-rollup
 
 # Clean up environments by stopping processes and removing data directories
 clean-e2e:
-	@pids=$$(ps aux | grep -E 'babylond start|bcd start' | grep -v grep | awk '{print $$2}' | tr '\n' ' '); \
+	@pids=$$(ps aux | grep -E 'babylond start|bcd start|relayer start' | grep -v grep | awk '{print $$2}' | tr '\n' ' '); \
 	if [ -n "$$pids" ]; then \
 		echo $$pids | xargs kill; \
 		echo "Killed processes $$pids"; \
 	else \
 		echo "No processes to kill"; \
 	fi
-	rm -rf ~/.babylond ~/.bcd
-
+	rm -rf ~/.babylond ~/.bcd ~/.relayer
+	rm -rf /tmp/ZBcdTest* /tmp/ZRelayerTest* /tmp/ZBabylonTest*
 # Main test target that runs all e2e tests
 test-e2e: test-e2e-babylon test-e2e-bcd test-e2e-rollup
 

@@ -8,19 +8,21 @@ require (
 	cosmossdk.io/errors v1.0.2
 	cosmossdk.io/math v1.5.3
 	github.com/avast/retry-go/v4 v4.5.1
-	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250710070516-a8ad676746c1
+	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250801111417-fe7557c41640
+	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250801111417-fe7557c41640
 	github.com/btcsuite/btcd v0.24.2
-	github.com/btcsuite/btcd/btcec/v2 v2.3.4
+	github.com/btcsuite/btcd/btcec/v2 v2.3.5
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/btcsuite/btcwallet/walletdb v1.4.0
 	github.com/cometbft/cometbft v0.38.17
 	github.com/cosmos/cosmos-db v1.1.1
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5
-	github.com/cosmos/cosmos-sdk v0.53.2
+	github.com/cosmos/cosmos-sdk v0.53.3
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.7.0
+	github.com/cosmos/ibc-go/v10 v10.3.0
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0
-	github.com/ethereum/go-ethereum v1.15.10
+	github.com/ethereum/go-ethereum v1.15.11
 	github.com/gogo/protobuf v1.3.3
 	github.com/gogo/status v1.1.0
 	github.com/golang/mock v1.6.0
@@ -35,33 +37,33 @@ require (
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/atomic v1.10.0
 	go.uber.org/mock v0.5.2
-	go.uber.org/zap v1.26.0
+	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.24.0
-	google.golang.org/grpc v1.72.2
+	google.golang.org/grpc v1.73.0
 	google.golang.org/protobuf v1.36.6
 	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
-	cel.dev/expr v0.20.0 // indirect
+	cel.dev/expr v0.23.0 // indirect
 	cloud.google.com/go/auth v0.14.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.7 // indirect
 	cloud.google.com/go/monitoring v1.21.2 // indirect
 	cosmossdk.io/schema v1.1.0 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.26.0 // indirect
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.27.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.48.1 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.48.1 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
+	github.com/babylonlabs-io/babylon-sdk/tests/e2e v0.0.0-20250801111417-fe7557c41640 // indirect
 	github.com/bytedance/sonic v1.13.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
-	github.com/cncf/xds/go v0.0.0-20250121191232-2f005788dc42 // indirect
+	github.com/cncf/xds/go v0.0.0-20250326154945-ae57f3c0d45f // indirect
 	github.com/consensys/bavard v0.1.27 // indirect
 	github.com/consensys/gnark-crypto v0.16.0 // indirect
 	github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v10 v10.1.0 // indirect
 	github.com/cosmos/ibc-apps/modules/rate-limiting/v10 v10.1.0 // indirect
-	github.com/cosmos/ibc-go/modules/light-clients/08-wasm/v10 v10.1.1 // indirect
-	github.com/cosmos/ibc-go/v10 v10.2.0 // indirect
+	github.com/cosmos/ibc-go/modules/light-clients/08-wasm/v10 v10.3.0 // indirect
 	github.com/crate-crypto/go-eth-kzg v1.3.0 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240724233137-53bbb0ceb27a // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4 // indirect
@@ -69,11 +71,10 @@ require (
 	github.com/ethereum/c-kzg-4844/v2 v2.1.0 // indirect
 	github.com/ethereum/go-verkle v0.2.2 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
-	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
+	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
 	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad // indirect
 	github.com/iancoleman/orderedmap v0.3.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
-	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mdp/qrterminal/v3 v3.2.1 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
@@ -85,8 +86,8 @@ require (
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3 // indirect
 	github.com/zeebo/errs v1.4.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/contrib/detectors/gcp v1.34.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.34.0 // indirect
+	go.opentelemetry.io/contrib/detectors/gcp v1.35.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.35.0 // indirect
 	golang.org/x/arch v0.15.0 // indirect
 	rsc.io/qr v0.2.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
@@ -98,15 +99,15 @@ require (
 	cloud.google.com/go/iam v1.2.2 // indirect
 	cloud.google.com/go/storage v1.49.0 // indirect
 	cosmossdk.io/api v0.9.2 // indirect
-	cosmossdk.io/client/v2 v2.0.0-beta.7 // indirect
+	cosmossdk.io/client/v2 v2.0.0-beta.9 // indirect
 	cosmossdk.io/collections v1.2.1 // indirect
 	cosmossdk.io/core v0.12.0 // indirect
 	cosmossdk.io/depinject v1.2.1 // indirect
 	cosmossdk.io/log v1.6.0
 	cosmossdk.io/store v1.1.2 // indirect
-	cosmossdk.io/x/circuit v0.1.1 // indirect
-	cosmossdk.io/x/evidence v0.1.1 // indirect
-	cosmossdk.io/x/feegrant v0.1.1 // indirect
+	cosmossdk.io/x/circuit v0.2.0 // indirect
+	cosmossdk.io/x/evidence v0.2.0 // indirect
+	cosmossdk.io/x/feegrant v0.2.0 // indirect
 	cosmossdk.io/x/nft v0.1.1 // indirect
 	cosmossdk.io/x/tx v0.14.0 // indirect
 	cosmossdk.io/x/upgrade v0.2.0 // indirect
@@ -115,7 +116,7 @@ require (
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
-	github.com/CosmWasm/wasmd v0.55.1
+	github.com/CosmWasm/wasmd v0.60.1
 	github.com/CosmWasm/wasmvm/v2 v2.2.4 // indirect
 	github.com/DataDog/datadog-go v4.8.3+incompatible // indirect
 	github.com/DataDog/zstd v1.5.7 // indirect
@@ -123,9 +124,8 @@ require (
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/aead/siphash v1.0.1 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
-	github.com/aws/aws-sdk-go v1.44.312 // indirect
-	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250407051200-a5d652116d6d
-	github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250711
+	github.com/aws/aws-sdk-go v1.49.0 // indirect
+	github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250729
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bgentry/speakeasy v0.2.0 // indirect
@@ -162,7 +162,7 @@ require (
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/cli v25.0.6+incompatible // indirect
 	github.com/docker/docker v25.0.6+incompatible // indirect
-	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -311,19 +311,19 @@ require (
 	go.etcd.io/etcd/server/v3 v3.5.7 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.58.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0 // indirect
-	go.opentelemetry.io/otel v1.34.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.59.0 // indirect
+	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.0.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.0.1 // indirect
-	go.opentelemetry.io/otel/metric v1.34.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.34.0 // indirect
-	go.opentelemetry.io/otel/trace v1.34.0 // indirect
+	go.opentelemetry.io/otel/metric v1.35.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.35.0 // indirect
+	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
 	golang.org/x/net v0.40.0 // indirect
-	golang.org/x/oauth2 v0.27.0 // indirect
+	golang.org/x/oauth2 v0.28.0 // indirect
 	golang.org/x/sync v0.14.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/term v0.32.0

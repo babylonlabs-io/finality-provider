@@ -1,20 +1,13 @@
-//go:build e2e_bcd
-
 package e2etest_bcd
 
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"testing"
-
-	"cosmossdk.io/errors"
 	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
-	"github.com/babylonlabs-io/babylon-sdk/x/babylon/client/cli"
 	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
 
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 )
@@ -32,7 +25,6 @@ import (
 // NOTE: the delegation is injected after ensuring pub randomness loop in fp daemon has started
 // this order is necessary otherwise pub randomness loop takes time to start and due to this blocks won't get finalized.
 func TestConsumerFpLifecycle(t *testing.T) {
-	t.Skipf("Skipping until we upgrade wasmd to v0.60")
 	ctx, cancel := context.WithCancel(context.Background())
 	ctm := StartBcdTestManager(t, ctx)
 	defer func() {
@@ -40,80 +32,34 @@ func TestConsumerFpLifecycle(t *testing.T) {
 		ctm.Stop(t)
 	}()
 
-	// store babylon contract
-	babylonContractPath := "./bytecode/babylon_contract.wasm"
-	err := ctm.BcdConsumerClient.StoreWasmCode(babylonContractPath)
-	require.NoError(t, err)
-	babylonContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
-	require.NoError(t, err)
-	require.Equal(t, uint64(1), babylonContractWasmId)
+	// setup the contracts
+	bbnContracts := ctm.setupContracts(ctx, t)
 
-	// store btc staking contract
-	btcStakingContractPath := "./bytecode/btc_staking.wasm"
-	err = ctm.BcdConsumerClient.StoreWasmCode(btcStakingContractPath)
-	require.NoError(t, err)
-	btcStakingContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
-	require.NoError(t, err)
-	require.Equal(t, uint64(2), btcStakingContractWasmId)
+	// setup relayer
+	ctm.BcdHandler.SetContractAddress(bbnContracts.BabylonContract)
+	ctm.BcdHandler.SetBabylonConfig("chain-test", ctm.FpConfig.BabylonConfig.RPCAddr, ctm.babylonKeyDir)
 
-	// store btc finality contract
-	btcFinalityContractPath := "./bytecode/btc_finality.wasm"
-	err = ctm.BcdConsumerClient.StoreWasmCode(btcFinalityContractPath)
+	err := ctm.BcdHandler.StartRelayer(t)
 	require.NoError(t, err)
-	btcFinalityContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
-	require.NoError(t, err)
-	require.Equal(t, uint64(3), btcFinalityContractWasmId)
-
-	initMsg, err := cli.ParseInstantiateArgs(
-		[]string{
-			fmt.Sprintf("%d", babylonContractWasmId),
-			fmt.Sprintf("%d", btcStakingContractWasmId),
-			fmt.Sprintf("%d", btcFinalityContractWasmId),
-			"regtest",
-			"01020304",
-			"1",
-			"2",
-			"false",
-			fmt.Sprintf(`{"admin":"%s"}`, ctm.BcdConsumerClient.MustGetValidatorAddress()),
-			fmt.Sprintf(`{"admin":"%s"}`, ctm.BcdConsumerClient.MustGetValidatorAddress()),
-			"test-consumer",
-			"test-consumer-description",
-		},
-		"",
-		ctm.BcdConsumerClient.MustGetValidatorAddress(),
-		ctm.BcdConsumerClient.MustGetValidatorAddress(),
-	)
-	require.NoError(t, err)
-	emptyErrs := []*errors.Error{}
-	_, err = ctm.BcdConsumerClient.GetClient().ReliablySendMsg(ctx, initMsg, emptyErrs, emptyErrs)
-	require.NoError(t, err)
-
-	// get btc staking contract address
-	resp, err := ctm.BcdConsumerClient.ListContractsByCode(btcStakingContractWasmId, &sdkquerytypes.PageRequest{})
-	require.NoError(t, err)
-	require.Len(t, resp.Contracts, 1)
-	btcStakingContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
-	// update the contract address
-	btcStakingContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcStakingContractAddr)
-	ctm.BcdConsumerClient.SetBtcStakingContractAddress(btcStakingContractAddrStr)
-
-	// get btc finality contract address
-	resp, err = ctm.BcdConsumerClient.ListContractsByCode(btcFinalityContractWasmId, &sdkquerytypes.PageRequest{})
-	require.NoError(t, err)
-	require.Len(t, resp.Contracts, 1)
-	btcFinalityContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
-	// update the contract address
-	btcFinalityContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcFinalityContractAddr)
-	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddrStr)
 
 	// register consumer to babylon
 	_, err = ctm.BabylonController.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
 	require.NoError(t, err)
 
+	// zone concierge channel is created after registering consumer fp
+	err = ctm.BcdHandler.createZoneConciergeChannel(t)
+	require.NoError(t, err)
+
+	ctm.waitForZoneConciergeChannel(t)
+
 	// register consumer fps to babylon
 	// this will be submitted to babylon once fp daemon starts
-	fp := ctm.CreateConsumerFinalityProviders(t, bcdConsumerID)
+	fp := ctm.CreateConsumerFinalityProviders(ctx, t, bcdConsumerID)
 	fpPk := fp.GetBtcPkBIP340()
+
+	res, err := ctm.BcdConsumerClient.QueryFinalityProvidersByPower(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	// ensure pub rand is submitted to smart contract
 	require.Eventually(t, func() bool {
@@ -158,7 +104,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.NotNil(t, consumerFpsByPowerResp)
 	require.Len(t, consumerFpsByPowerResp.Fps, 1)
 	require.Equal(t, fpPk.MarshalHex(), consumerFpsByPowerResp.Fps[0].BtcPkHex)
-	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].TotalSat, consumerFpsByPowerResp.Fps[0].Power)
+	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].TotalSat, consumerFpsByPowerResp.Fps[0].TotalActiveSats)
 
 	// get comet latest height
 	wasmdNodeStatus, err := ctm.BcdConsumerClient.GetCometNodeStatus()
@@ -166,6 +112,35 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	// TODO: this is a hack as its possible that latest comet height is less than activated height
 	//  and the sigs/finalization can only happen after activated height
 	lookupHeight := wasmdNodeStatus.SyncInfo.LatestBlockHeight + 5
+
+	ctm.BaseTestManager.WaitForFpPubRandTimestamped(t, fp)
+
+	activatedHeight, err := ctm.BcdConsumerClient.QueryFinalityActivationBlockHeight(ctx)
+	require.NoError(t, err)
+	activatedBlock, err := ctm.BcdConsumerClient.QueryIndexedBlock(ctx, activatedHeight)
+	require.NoError(t, err)
+	require.NotNil(t, activatedBlock)
+
+	require.Eventually(t, func() bool {
+		res, err := ctm.BcdConsumerClient.QueryLastBTCTimestampedHeader(ctx)
+		if err != nil {
+			t.Logf("failed to query last BTC timestamped header: %s", err.Error())
+			return false
+		}
+		t.Logf("QueryLastBTCTimestampedHeader: height %d, bbn epoch %d", res.Height, res.BabylonEpoch)
+
+		return res.Height > 0
+	}, e2eutils.EventuallyWaitTimeOut, 5*time.Second)
+
+	var lastVotedHeight uint64
+	require.Eventually(t, func() bool {
+		if fp.GetLastVotedHeight() > 0 {
+			lastVotedHeight = fp.GetLastVotedHeight()
+			t.Logf("FP voted on block at height: %d", lastVotedHeight)
+			return true
+		}
+		return false
+	}, 2*e2eutils.EventuallyWaitTimeOut, 2*time.Second, "FP should automatically vote on rollup blocks")
 
 	// ensure finality signature is submitted to smart contract
 	require.Eventually(t, func() bool {
@@ -178,11 +153,18 @@ func TestConsumerFpLifecycle(t *testing.T) {
 			return false
 		}
 		return true
-	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
+	}, 2*e2eutils.EventuallyWaitTimeOut, 3*time.Second)
 
-	// ensure latest comet block is finalized
+	//
+	startTime := time.Now()
 	require.Eventually(t, func() bool {
-		idxBlockedResponse, err := ctm.BcdConsumerClient.QueryIndexedBlock(context.Background(), uint64(lookupHeight))
+
+		lastFin, err := ctm.BcdConsumerClient.QueryLatestFinalizedBlock(ctx)
+		require.NoError(t, err)
+		if lastFin != nil {
+			t.Logf("Latest finalized block height: %d is finalized %v", lastFin.GetHeight(), lastFin.IsFinalized())
+		}
+		idxBlockedResponse, err := ctm.BcdConsumerClient.QueryIndexedBlock(ctx, uint64(lookupHeight))
 		if err != nil {
 			t.Logf("failed to query indexed block: %s", err.Error())
 			return false
@@ -190,9 +172,19 @@ func TestConsumerFpLifecycle(t *testing.T) {
 		if idxBlockedResponse == nil {
 			return false
 		}
-		if !idxBlockedResponse.Finalized {
-			return false
+
+		// Additional if statement to check finalization status
+		if idxBlockedResponse.Finalized {
+			t.Logf("Block at height %d is now finalized", lookupHeight)
+			return true
 		}
-		return true
-	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
+
+		// Check if 2 minutes have elapsed
+		if time.Since(startTime) >= 5*time.Minute {
+			t.Logf("2 minutes have elapsed, still checking for finalized block at height %d", lookupHeight)
+		}
+
+		return false
+	}, 3*e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
+
 }
