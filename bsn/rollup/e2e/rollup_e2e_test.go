@@ -1,3 +1,5 @@
+//go:build e2e_rollup
+
 package e2etest_rollup
 
 import (
@@ -340,7 +342,7 @@ func TestFinalityProviderAllowlistBlocking(t *testing.T) {
 	allowed, err = rollupController.QueryFinalityProviderInAllowlist(ctx, consumerFpPk.MustToBTCPK())
 	require.NoError(t, err, "Allowlist query should work")
 	require.True(t, allowed, "FP should now be in allowlist")
-	
+
 	t.Logf("✅ Confirmed FP %s is now in allowlist", consumerFpPk.MarshalHex())
 
 	// Step 6: Now start FP instance directly for functional testing
