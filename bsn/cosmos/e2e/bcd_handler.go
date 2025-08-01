@@ -419,30 +419,16 @@ func (w *BcdNodeHandler) createZoneConciergeChannel(t *testing.T) error {
 }
 
 func (w *BcdNodeHandler) createChannel(t *testing.T, srcPort, dstPort, order, version string) error {
-	var cmd *exec.Cmd
-
-	// Create context with longer timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	if srcPort == "zoneconcierge" {
-		// Use tx link for zoneconcierge
-		cmd = exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "channel", pathName,
-			"--src-port", srcPort, "--dst-port", dstPort,
-			"--order", order, "--version", version,
-			"--timeout", "59s", "--max-retries", "5",
-			"--debug")
+	cmd := exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "channel", pathName,
+		"--src-port", srcPort, "--dst-port", dstPort,
+		"--order", order, "--version", version,
+		"--timeout", "59s", "--max-retries", "5",
+		"--debug")
 
-		t.Logf("Running command: %s\n", cmd.String())
-
-	} else {
-		// Use tx channel for transfer
-		cmd = exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "channel", pathName,
-			"--src-port", srcPort, "--dst-port", dstPort,
-			"--order", order, "--version", version,
-			"--timeout", "59s", "--max-retries", "5",
-			"--debug")
-	}
+	t.Logf("Running command: %s\n", cmd.String())
 
 	output, err := cmd.CombinedOutput()
 
