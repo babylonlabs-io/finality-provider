@@ -4,10 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/btcec/v2"
 	"sync"
 	"time"
-
-	"github.com/btcsuite/btcd/btcec/v2"
 
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
