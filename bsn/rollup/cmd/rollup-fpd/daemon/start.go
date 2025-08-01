@@ -133,5 +133,6 @@ func validateRollupFP(ctx context.Context, fpApp *service.FinalityProviderApp, f
 	}
 
 	logger.Info("Finality provider verified in allowlist", zap.String("fp_pk", fpToValidate.MarshalHex()))
+	
 	return nil
 }
