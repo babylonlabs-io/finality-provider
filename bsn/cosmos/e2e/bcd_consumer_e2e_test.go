@@ -247,7 +247,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.NotNil(t, consumerFpsByPowerResp)
 	require.Len(t, consumerFpsByPowerResp.Fps, 1)
 	require.Equal(t, fpPk.MarshalHex(), consumerFpsByPowerResp.Fps[0].BtcPkHex)
-	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].TotalSat, consumerFpsByPowerResp.Fps[0].Power)
+	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].TotalSat, consumerFpsByPowerResp.Fps[0].TotalActiveSats)
 
 	// get comet latest height
 	//wasmdNodeStatus, err := ctm.BcdConsumerClient.GetCometNodeStatus()

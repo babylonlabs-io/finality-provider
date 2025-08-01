@@ -39,8 +39,10 @@ type SingleConsumerDelegationResponse struct {
 }
 
 type ConsumerFpInfoResponse struct {
-	BtcPkHex string `json:"btc_pk_hex"`
-	Power    uint64 `json:"power"`
+	BtcPkHex        string `json:"btc_pk_hex"`
+	Power           uint64 `json:"power"`
+	Slashed         bool   `json:"slashed"`
+	TotalActiveSats uint64 `json:"total_active_sats"`
 }
 
 type ConsumerFpsByPowerResponse struct {
@@ -207,7 +209,7 @@ type QueryMsgDelegations struct {
 }
 
 type QueryMsgFinalityProvidersByPower struct {
-	FinalityProvidersByPower struct{} `json:"finality_providers_by_power"`
+	FinalityProvidersByTotalActiveSats struct{} `json:"finality_providers_by_total_active_sats"`
 }
 
 type QueryMsgLastPubRandCommit struct {
@@ -238,4 +240,17 @@ type BabylonContracts struct {
 	BtcLightClientContract string
 	BtcStakingContract     string
 	BtcFinalityContract    string
+}
+
+type QueryMsgFinalityProviderPower struct {
+	FinalityProviderPower FinalityProviderPowerQuery `json:"finality_provider_power"`
+}
+
+type FinalityProviderPowerQuery struct {
+	BtcPkHex string `json:"btc_pk_hex"`
+	Height   uint64 `json:"height"`
+}
+
+type ConsumerFpPowerResponse struct {
+	Power uint64 `json:"power"`
 }

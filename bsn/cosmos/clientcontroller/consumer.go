@@ -186,8 +186,8 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderHasPower(
 ) (bool, error) {
 	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex()
 
-	queryMsgStruct := QueryMsgFinalityProviderInfo{
-		FinalityProviderInfo: FinalityProviderInfo{
+	queryMsgStruct := QueryMsgFinalityProviderPower{
+		FinalityProviderPower: FinalityProviderPowerQuery{
 			BtcPkHex: fpBtcPkHex,
 			Height:   req.BlockHeight,
 		},
@@ -196,7 +196,7 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderHasPower(
 	if err != nil {
 		return false, fmt.Errorf("failed to marshal query message: %w", err)
 	}
-	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.cfg.BtcStakingContractAddress, string(queryMsgBytes))
+	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.cfg.BtcFinalityContractAddress, string(queryMsgBytes))
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			// this is expected when the FP has no power at the given height
@@ -206,9 +206,9 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderHasPower(
 		return false, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
 
-	var resp ConsumerFpInfoResponse
-	err = json.Unmarshal(dataFromContract.Data, &resp)
-	if err != nil {
+	var resp ConsumerFpPowerResponse
+
+	if err = json.Unmarshal(dataFromContract.Data, &resp); err != nil {
 		return false, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
@@ -217,7 +217,7 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderHasPower(
 
 func (wc *CosmwasmConsumerController) QueryFinalityProvidersByPower(ctx context.Context) (*ConsumerFpsByPowerResponse, error) {
 	queryMsgStruct := QueryMsgFinalityProvidersByPower{
-		FinalityProvidersByPower: struct{}{},
+		FinalityProvidersByTotalActiveSats: struct{}{},
 	}
 
 	queryMsgBytes, err := json.Marshal(queryMsgStruct)

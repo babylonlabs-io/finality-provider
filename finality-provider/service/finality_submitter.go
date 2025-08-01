@@ -337,6 +337,8 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 			return nil, ErrFinalityProviderSlashed
 		}
 
+		ds.logger.Error("failed to submit finality signature to the consumer chain")
+
 		return nil, fmt.Errorf("failed to submit finality signature to the consumer chain: %w", err)
 	}
 
@@ -348,6 +350,13 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	// update state with the highest height of this batch
 	highBlock := blocks[len(blocks)-1]
 	ds.mustSetLastVotedHeight(highBlock.GetHeight())
+
+	ds.logger.Info("finality signature submitted",
+		zap.String("pk", ds.getBtcPkHex()),
+		zap.Uint64("height", highBlock.GetHeight()),
+		zap.Uint64("last_voted_height", ds.state.GetLastVotedHeight()),
+		zap.Uint32("num_blocks", uint32(len(validBlocks))),
+	)
 
 	return res, nil
 }

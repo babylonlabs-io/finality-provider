@@ -422,7 +422,7 @@ func (w *BcdNodeHandler) createChannel(t *testing.T, srcPort, dstPort, order, ve
 	var cmd *exec.Cmd
 
 	// Create context with longer timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
 	if srcPort == "zoneconcierge" {
@@ -430,8 +430,8 @@ func (w *BcdNodeHandler) createChannel(t *testing.T, srcPort, dstPort, order, ve
 		cmd = exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "channel", pathName,
 			"--src-port", srcPort, "--dst-port", dstPort,
 			"--order", order, "--version", version,
-			"--timeout", "120s", "--max-retries", "5",
-			"--debug") // Add debug flag
+			"--timeout", "59s", "--max-retries", "5",
+			"--debug")
 
 		t.Logf("Running command: %s\n", cmd.String())
 
@@ -440,7 +440,7 @@ func (w *BcdNodeHandler) createChannel(t *testing.T, srcPort, dstPort, order, ve
 		cmd = exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "channel", pathName,
 			"--src-port", srcPort, "--dst-port", dstPort,
 			"--order", order, "--version", version,
-			"--timeout", "120s", "--max-retries", "5",
+			"--timeout", "59s", "--max-retries", "5",
 			"--debug")
 	}
 
