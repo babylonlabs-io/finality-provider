@@ -287,8 +287,6 @@ func (mr *MockConsumerControllerMockRecorder) QueryFinalityProviderHighestVotedH
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderHighestVotedHeight", reflect.TypeOf((*MockConsumerController)(nil).QueryFinalityProviderHighestVotedHeight), ctx, fpPk)
 }
 
-
-
 // QueryFinalityProviderStatus mocks base method.
 func (m *MockConsumerController) QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
 	m.ctrl.T.Helper()
@@ -643,8 +641,6 @@ func (mr *MockFinalityOperatorMockRecorder) QueryFinalityProviderHighestVotedHei
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderHighestVotedHeight", reflect.TypeOf((*MockFinalityOperator)(nil).QueryFinalityProviderHighestVotedHeight), ctx, fpPk)
 }
-
-
 
 // QueryFinalityProviderStatus mocks base method.
 func (m *MockFinalityOperator) QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
