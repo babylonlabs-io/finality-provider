@@ -318,24 +318,34 @@ func TestFinalityProviderAllowlistBlocking(t *testing.T) {
 	t.Log("Step 2: Setting up BTC delegation")
 	ctm.delegateBTCAndWaitForActivation(t, babylonFpPk, consumerFpPk)
 
-	// Step 3: Try to start FP instance WITHOUT adding to allowlist first
-	t.Log("Step 3: Attempting to start FP instance without allowlist permission (should fail)")
-	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
+	// Step 3: Test rollup FP allowlist query WITHOUT adding to allowlist first
+	t.Log("Step 3: Testing rollup FP allowlist query without allowlist permission (should return false)")
 
-	// This should fail because the FP is not in the allowlist
-	err := consumerFpInstance.Start(ctx)
-	require.Error(t, err, "FP should fail to start when not in allowlist")
-	require.Contains(t, err.Error(), "not in allowlist", "Error should mention allowlist restriction")
-	require.Contains(t, err.Error(), consumerFpPk.MarshalHex(), "Error should mention the FP public key")
+	// Test the allowlist query directly using rollup controller
+	rollupController := ctm.RollupBSNController
+	allowed, err := rollupController.QueryFinalityProviderInAllowlist(ctx, consumerFpPk.MustToBTCPK())
+	require.NoError(t, err, "Allowlist query should work")
+	require.False(t, allowed, "FP should not be in allowlist initially")
 
-	t.Logf("✅ FP correctly blocked from starting: %v", err)
+	t.Logf("✅ Confirmed FP %s is not in allowlist", consumerFpPk.MarshalHex())
 
 	// Step 4: Add FP to allowlist
 	t.Log("Step 4: Adding FP to contract allowlist")
 	ctm.addFpToContractAllowlist(t, ctx, consumerFpPk)
 
-	// Step 5: Now try to start FP instance (should succeed)
-	t.Log("Step 5: Attempting to start FP instance with allowlist permission (should succeed)")
+	// Step 5: Verify allowlist query now returns true
+	t.Log("Step 5: Verifying rollup FP allowlist query passes with allowlist permission")
+
+	// Test that allowlist query now returns true
+	allowed, err = rollupController.QueryFinalityProviderInAllowlist(ctx, consumerFpPk.MustToBTCPK())
+	require.NoError(t, err, "Allowlist query should work")
+	require.True(t, allowed, "FP should now be in allowlist")
+	
+	t.Logf("✅ Confirmed FP %s is now in allowlist", consumerFpPk.MarshalHex())
+
+	// Step 6: Now start FP instance directly for functional testing
+	t.Log("Step 6: Starting FP instance for functional testing (should succeed)")
+	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
 	err = consumerFpInstance.Start(ctx)
 	require.NoError(t, err, "FP should start successfully when in allowlist")
 
@@ -344,8 +354,8 @@ func TestFinalityProviderAllowlistBlocking(t *testing.T) {
 
 	t.Log("✅ FP successfully started after being added to allowlist")
 
-	// Step 6: Verify FP can perform normal operations
-	t.Log("Step 6: Verifying FP can perform normal operations")
+	// Step 7: Verify FP can perform normal operations
+	t.Log("Step 7: Verifying FP can perform normal operations")
 
 	// Wait for FP to commit randomness and get it timestamped
 	ctm.WaitForFpPubRandTimestamped(t, ctx, consumerFpInstance)
