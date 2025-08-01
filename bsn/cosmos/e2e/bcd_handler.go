@@ -418,7 +418,7 @@ func (w *BcdNodeHandler) createZoneConciergeChannel(t *testing.T) error {
 }
 
 func (w *BcdNodeHandler) createChannel(t *testing.T, srcPort, dstPort, order, version string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "channel", pathName,

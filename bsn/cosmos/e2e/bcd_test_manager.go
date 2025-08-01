@@ -13,6 +13,8 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
+	"strings"
 
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -584,4 +586,23 @@ func (ctm *BcdTestManager) setupContracts(ctx context.Context, t *testing.T) cwc
 	ctm.submitAndVoteGovProp(ctx, t, msgSet)
 
 	return bbnContracts
+}
+
+func (ctm *BcdTestManager) waitForZoneConciergeChannel(t *testing.T) {
+	require.Eventually(t, func() bool {
+		res, err := ctm.BaseTestManager.BabylonController.GetBBNClient().IBCChannels()
+		require.NoError(t, err)
+
+		require.Len(t, res.Channels, 2, "Expected exactly two IBC channels to be returned, got %d", len(res.Channels))
+		for _, channel := range res.Channels {
+			if channel.State == channeltypes.OPEN &&
+				channel.Ordering == channeltypes.ORDERED &&
+				strings.Contains(channel.Counterparty.PortId, "wasm.") {
+				t.Logf("ZoneConcierge channel found and open")
+				return true
+			}
+		}
+
+		return false
+	}, e2eutils.EventuallyWaitTimeOut, 1*time.Second, "ZoneConcierge channel did not open in time")
 }
