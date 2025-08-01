@@ -526,33 +526,59 @@ func (cc *RollupBSNController) isEligibleForFinalitySignature(ctx context.Contex
 }
 
 func (cc *RollupBSNController) QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error) {
-    config, err := cc.queryContractConfig(ctx)
-    if err != nil {
-        return 0, fmt.Errorf("failed to query contract config: %w", err)
-    }
+	config, err := cc.queryContractConfig(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query contract config: %w", err)
+	}
 
-    return config.BsnActivationHeight, nil
+	return config.BsnActivationHeight, nil
 }
 
-func (cc *RollupBSNController) QueryFinalityProviderHighestVotedHeight(_ context.Context, _ *btcec.PublicKey) (uint64, error) {
-	// TODO: This needs a new query in rollup BSN contract to return the highest
-	// voted height the contract storage stores (height, fp_pk) -> [signatures]
-	// so this query will be O(n), as we need to iterate and find the highest
-	// voted height
-	return 0, nil
+func (cc *RollupBSNController) QueryFinalityProviderHighestVotedHeight(ctx context.Context, fpPk *btcec.PublicKey) (uint64, error) {
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+
+	queryMsg := &QueryMsg{
+		HighestVotedHeight: &HighestVotedHeightQuery{
+			BtcPkHex: fpPubKey.MarshalHex(),
+		},
+	}
+
+	jsonData, err := json.Marshal(queryMsg)
+	if err != nil {
+		return 0, fmt.Errorf("failed marshaling to JSON: %w", err)
+	}
+
+	stateResp, err := cc.QuerySmartContractState(ctx, cc.Cfg.FinalityContractAddress, string(jsonData))
+	if err != nil {
+		return 0, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+
+	// The contract returns Option<u64> as JSON: either a number or null
+	var heightResponse *uint64
+	err = json.Unmarshal(stateResp.Data, &heightResponse)
+	if err != nil {
+		return 0, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	// If the response is null (None in Rust), the finality provider has never voted
+	if heightResponse == nil {
+		return 0, nil
+	}
+
+	return *heightResponse, nil
 }
 
 func (cc *RollupBSNController) QueryFinalityProviderStatus(_ context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
-    fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-    res, err := cc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
-    if err != nil {
-        return nil, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
-    }
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+	res, err := cc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+	if err != nil {
+		return nil, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
+	}
 
-    return api.NewFinalityProviderStatusResponse(
-        res.FinalityProvider.SlashedBtcHeight > 0,
-        false, // always return false, there is no jail/unjail feature in rollup BSN
-    ), nil
+	return api.NewFinalityProviderStatusResponse(
+		res.FinalityProvider.SlashedBtcHeight > 0,
+		false, // always return false, there is no jail/unjail feature in rollup BSN
+	), nil
 }
 
 func (cc *RollupBSNController) UnjailFinalityProvider(_ context.Context, _ *btcec.PublicKey) (*types.TxResponse, error) {

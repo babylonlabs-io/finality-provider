@@ -44,9 +44,9 @@ func PrepareMockedConsumerControllerWithTxHash(t *testing.T, r *rand.Rand, start
 	return mockConsumerController
 }
 
-func PrepareMockedBabylonController(t *testing.T) *mocks.MockClientController {
+func PrepareMockedBabylonController(t *testing.T) *mocks.MockBabylonController {
 	ctl := gomock.NewController(t)
-	mockBabylonController := mocks.NewMockClientController(ctl)
+	mockBabylonController := mocks.NewMockBabylonController(ctl)
 	mockBabylonController.EXPECT().Close().Return(nil).AnyTimes()
 
 	return mockBabylonController
