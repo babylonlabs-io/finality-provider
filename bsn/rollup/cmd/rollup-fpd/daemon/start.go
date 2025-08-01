@@ -80,9 +80,8 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to create finality-provider app: %w", err)
 	}
 
-	// Rollup-specific: Pre-validate ALL FPs that will actually be started against allowlist
-	if err := validateAllFPsInAllowlist(cmd.Context(), fpApp, fpStr, logger); err != nil {
-		return err
+	if err := validateRollupFP(cmd.Context(), fpApp, fpStr, logger); err != nil {
+		return fmt.Errorf("failed to validate rollup finality provider: %w", err)
 	}
 
 	if err := fpdaemon.StartApp(cmd.Context(), fpApp, fpStr); err != nil {
@@ -98,50 +97,41 @@ func runStartCmd(ctx client.Context, cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// validateAllFPsInAllowlist validates only the FPs that will actually be started by StartApp
-func validateAllFPsInAllowlist(ctx context.Context, fpApp *service.FinalityProviderApp, fpStr string, logger *zap.Logger) error {
+func validateRollupFP(ctx context.Context, fpApp *service.FinalityProviderApp, fpStr string, logger *zap.Logger) error {
 	rollupController, ok := fpApp.GetConsumerController().(*rollupfpcc.RollupBSNController)
 	if !ok {
 		return fmt.Errorf("expected RollupBSNController but got different controller type")
 	}
 
-	// Scenario 1: Explicit FP key provided - validate it
+	var fpToValidate *bbntypes.BIP340PubKey
+
 	if fpStr != "" {
 		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(fpStr)
 		if err != nil {
 			return fmt.Errorf("invalid finality provider public key %s: %w", fpStr, err)
 		}
+		fpToValidate = fpPk
+	} else {
+		storedFps, err := fpApp.GetFinalityProviderStore().GetAllStoredFinalityProviders()
+		if err != nil {
+			return fmt.Errorf("failed to get stored finality providers: %w", err)
+		}
 
-		return validateSingleFP(ctx, rollupController, fpPk, logger)
+		if len(storedFps) != 1 {
+			return fmt.Errorf("%d finality providers found in DB. Please specify the EOTS public key", len(storedFps))
+		}
+
+		fpToValidate = bbntypes.NewBIP340PubKeyFromBTCPK(storedFps[0].BtcPk)
 	}
 
-	// Scenario 2: No explicit key - check stored FPs
-	storedFps, err := fpApp.GetFinalityProviderStore().GetAllStoredFinalityProviders()
+	allowed, err := rollupController.QueryFinalityProviderInAllowlist(ctx, fpToValidate.MustToBTCPK())
 	if err != nil {
-		return fmt.Errorf("failed to get stored finality providers: %w", err)
-	}
-
-	// Only validate if exactly 1 stored FP (the one that will auto-start)
-	if len(storedFps) == 1 {
-		fpPk := bbntypes.NewBIP340PubKeyFromBTCPK(storedFps[0].BtcPk)
-		return validateSingleFP(ctx, rollupController, fpPk, logger)
-	}
-
-	// Multiple or zero stored FPs: no validation needed (none will start)
-	// Let StartApp handle the error cases
-	return nil
-}
-
-// validateSingleFP validates a single FP against the allowlist
-func validateSingleFP(ctx context.Context, rollupController *rollupfpcc.RollupBSNController, fpPk *bbntypes.BIP340PubKey, logger *zap.Logger) error {
-	allowed, err := rollupController.QueryFinalityProviderInAllowlist(ctx, fpPk.MustToBTCPK())
-	if err != nil {
-		return fmt.Errorf("failed to check allowlist for FP %s: %w", fpPk.MarshalHex(), err)
+		return fmt.Errorf("failed to check allowlist for FP %s: %w", fpToValidate.MarshalHex(), err)
 	}
 	if !allowed {
-		return fmt.Errorf("finality provider %s is not in allowlist", fpPk.MarshalHex())
+		return fmt.Errorf("finality provider %s is not in allowlist", fpToValidate.MarshalHex())
 	}
 
-	logger.Info("Finality provider verified in allowlist", zap.String("fp_pk", fpPk.MarshalHex()))
+	logger.Info("Finality provider verified in allowlist", zap.String("fp_pk", fpToValidate.MarshalHex()))
 	return nil
 }
