@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.uber.org/zap/zaptest"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
-
-	"go.uber.org/zap/zaptest"
 
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -198,7 +197,6 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 			mockConsumerController.EXPECT().QueryFinalityActivationBlockHeight(gomock.Any()).Return(currentHeight, nil).AnyTimes()
 		}
 		mockConsumerController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any(), gomock.Any()).Return(uint64(0), nil).AnyTimes()
-
 		var isSlashedOrJailed int
 		if noVotingPowerTable {
 			// 0 means is slashed, 1 means is jailed, 2 means neither slashed nor jailed
@@ -288,7 +286,6 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 			Jailed:  true,
 		}, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any(), gomock.Any()).Return(uint64(0), nil).AnyTimes()
-
 		ctx, cancel := context.WithCancel(context.Background())
 
 		// Create fp app
