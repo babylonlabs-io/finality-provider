@@ -562,27 +562,6 @@ func (ctm *BcdTestManager) setupContracts(ctx context.Context, t *testing.T) cwc
 	btcFinalityContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcFinalityContractAddr)
 	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddrStr)
 
-	//var babylonAddr, btcLightClientAddr2, btcStakingAddr2, btcFinalityAddr2 string
-	//for _, event := range instResp.Events {
-	//	if event.EventType == "instantiate" {
-	//		addr := event.Attributes["_contract_address"]
-	//		if addr == "" {
-	//			addr = event.Attributes["contract_address"]
-	//		}
-	//		codeID := event.Attributes["code_id"]
-	//		switch codeID {
-	//		case fmt.Sprintf("%d", babylonContractWasmId):
-	//			babylonAddr2 = addr
-	//		case fmt.Sprintf("%d", btcLightClientWasmId):
-	//			btcLightClientAddr2 = addr
-	//		case fmt.Sprintf("%d", btcStakingContractWasmId):
-	//			btcStakingAddr2 = addr
-	//		case fmt.Sprintf("%d", btcFinalityContractWasmId):
-	//			btcFinalityAddr2 = addr
-	//		}
-	//	}
-	//}
-
 	bbnContracts := cwcc.BabylonContracts{
 		BabylonContract:        babylonContractAddr.String(),
 		BtcLightClientContract: btcLightClientAddr.String(),
