@@ -41,7 +41,6 @@ type BcdNodeHandler struct {
 	relayerHomeDir  string
 	contractAddress string
 
-	// Configuration
 	babylonChainID string
 	babylonNodeRPC string
 	babylonHome    string
@@ -106,9 +105,9 @@ func NewBcdNodeHandler(t *testing.T) *BcdNodeHandler {
 
 	setupBcd(t, testDir)
 	cmd := bcdStartCmd(t, testDir)
-	fmt.Println("Starting bcd with command:", cmd.String())
-	fmt.Println("Test directory:", testDir)
-	fmt.Println("Relayer directory:", relayerDir)
+	t.Log("Starting bcd with command:", cmd.String())
+	t.Log("Test directory:", testDir)
+	t.Log("Relayer directory:", relayerDir)
 
 	return &BcdNodeHandler{
 		cmd:            cmd,
@@ -143,7 +142,6 @@ func (w *BcdNodeHandler) Start() error {
 }
 
 func (w *BcdNodeHandler) StartRelayer(t *testing.T) error {
-
 	// Query contract address if not set
 	if w.contractAddress == "" {
 		contractAddr, err := w.queryContractAddress()
@@ -158,7 +156,7 @@ func (w *BcdNodeHandler) StartRelayer(t *testing.T) error {
 		return fmt.Errorf("failed to setup relayer: %w", err)
 	}
 
-	if err := w.createClients(); err != nil {
+	if err := w.createClients(t); err != nil {
 		return fmt.Errorf("failed to create IBC clients: %w", err)
 	}
 
@@ -166,7 +164,7 @@ func (w *BcdNodeHandler) StartRelayer(t *testing.T) error {
 	time.Sleep(10 * time.Second)
 
 	// Step 2: Create IBC connection
-	if err := w.createConnection(); err != nil {
+	if err := w.createConnection(t); err != nil {
 		return fmt.Errorf("failed to create IBC connection: %w", err)
 	}
 
@@ -235,7 +233,7 @@ func (w *BcdNodeHandler) setupRelayer(t *testing.T) error {
 	}
 
 	// Create relayer configuration file
-	if err := w.createRelayerConfig(); err != nil {
+	if err := w.createRelayerConfig(t); err != nil {
 		return fmt.Errorf("failed to create relayer config: %w", err)
 	}
 
@@ -256,7 +254,7 @@ func (w *BcdNodeHandler) initRelayerConfig() error {
 	return nil
 }
 
-func (w *BcdNodeHandler) createRelayerConfig() error {
+func (w *BcdNodeHandler) createRelayerConfig(t *testing.T) error {
 	configContent := fmt.Sprintf(`global:
     api-listen-addr: :%d
     max-retries: 20
@@ -317,7 +315,8 @@ paths:
 		return fmt.Errorf("failed to write relayer config: %w", err)
 	}
 
-	fmt.Printf("Created relayer config at: %s\n", configPath)
+	t.Logf("Created relayer config at: %s\n", configPath)
+
 	return nil
 }
 
@@ -470,8 +469,8 @@ func (w *BcdNodeHandler) createChannel(t *testing.T, srcPort, dstPort, order, ve
 	return nil
 }
 
-func (w *BcdNodeHandler) createClients() error {
-	fmt.Println("Creating IBC clients...")
+func (w *BcdNodeHandler) createClients(t *testing.T) error {
+	t.Log("Creating IBC clients...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -485,18 +484,19 @@ func (w *BcdNodeHandler) createClients() error {
 		if strings.Contains(outputStr, "Clients created") ||
 			strings.Contains(outputStr, "Successful transaction") ||
 			strings.Contains(outputStr, "client_created") {
-			fmt.Printf("Clients created successfully (despite timeout): %s\n", outputStr)
+			t.Logf("Clients created successfully (despite timeout): %s\n", outputStr)
 			return nil
 		}
 		return fmt.Errorf("failed to create clients: %w, output: %s", err, outputStr)
 	}
 
-	fmt.Printf("Clients created: %s\n", string(output))
+	t.Logf("Clients created: %s", string(output))
+
 	return nil
 }
 
-func (w *BcdNodeHandler) createConnection() error {
-	fmt.Println("Creating IBC connection...")
+func (w *BcdNodeHandler) createConnection(t *testing.T) error {
+	t.Log("Creating IBC connection...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
@@ -510,18 +510,19 @@ func (w *BcdNodeHandler) createConnection() error {
 		if strings.Contains(outputStr, "Found termination condition for connection handshake") ||
 			strings.Contains(outputStr, "Successful transaction") ||
 			strings.Contains(outputStr, "connection_open_confirm") {
-			fmt.Printf("Connection created successfully (despite timeout): %s\n", outputStr)
+			t.Logf("Connection created successfully (despite timeout): %s\n", outputStr)
 			return nil
 		}
 		return fmt.Errorf("failed to create connection: %w, output: %s", err, outputStr)
 	}
 
-	fmt.Printf("Connection created: %s\n", string(output))
+	t.Logf("Connection created: %s\n", string(output))
+
 	return nil
 }
 
 func (w *BcdNodeHandler) startRelayer(t *testing.T) error {
-	fmt.Println("Starting the IBC relayer")
+	t.Log("Starting the IBC relayer")
 
 	args := []string{
 		"--home", w.relayerHomeDir,
@@ -670,13 +671,13 @@ func bcdInit(homeDir string) error {
 	return err
 }
 
-func bcdUpdateGenesisFile(homeDir string) error {
+func bcdUpdateGenesisFile(t *testing.T, homeDir string) error {
 	genesisPath := filepath.Join(homeDir, "config", "genesis.json")
-	fmt.Println("Home directory path:", homeDir)
+	t.Log("Home directory path:", homeDir)
 
 	// Update "stake" placeholder (keep your existing sed)
 	sedCmd1 := fmt.Sprintf("sed -i. 's/\"stake\"/\"%s\"/' %s", common.WasmStake, genesisPath)
-	fmt.Println("Executing command:", sedCmd1)
+	t.Log("Executing command:", sedCmd1)
 	_, err := common.RunCommand("sh", "-c", sedCmd1)
 	if err != nil {
 		return fmt.Errorf("failed to update stake in genesis.json: %w", err)
@@ -684,7 +685,7 @@ func bcdUpdateGenesisFile(homeDir string) error {
 
 	jqCmd := fmt.Sprintf("jq '.app_state.gov.params.voting_period = \"30s\" | .app_state.gov.params.max_deposit_period = \"10s\" | .app_state.gov.params.expedited_voting_period = \"15s\"' %s > %s.tmp && mv %s.tmp %s",
 		genesisPath, genesisPath, genesisPath, genesisPath)
-	fmt.Println("Executing jq command:", jqCmd)
+	t.Log("Executing jq command:", jqCmd)
 	_, err = common.RunCommand("sh", "-c", jqCmd)
 	if err != nil {
 		return fmt.Errorf("failed to update governance periods: %w", err)
@@ -696,11 +697,11 @@ func bcdUpdateGenesisFile(homeDir string) error {
 		return fmt.Errorf("failed to read updated genesis.json: %w", err)
 	}
 
-	fmt.Printf("Updated genesis.json: %s", content)
+	t.Log("Updated genesis.json")
 	lines := strings.Split(string(content), "\n")
 	for _, line := range lines {
 		if strings.Contains(line, "voting_period") || strings.Contains(line, "max_deposit_period") {
-			fmt.Println(line)
+			t.Log(line)
 		}
 	}
 
@@ -722,7 +723,6 @@ func bcdKeysAdd(homeDir string) error {
 		return fmt.Errorf("failed to write key_seed.json: %w", err)
 	}
 
-	fmt.Printf("Created key and saved to: %s\n", keySeedPath)
 	return nil
 }
 
@@ -731,17 +731,18 @@ func bcdAddValidatorGenesisAccount(homeDir string) error {
 	return err
 }
 
-func bcdVersion() error {
+func bcdVersion(t *testing.T) error {
 	cmd := exec.Command("bcd", "version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
-	fmt.Printf("bcd version:\n%s\n", string(output))
+	t.Logf("bcd version:\n%s\n", string(output))
+
 	return nil
 }
 
-func bcdGentxValidator(homeDir string) error {
+func bcdGentxValidator(t *testing.T, homeDir string) error {
 	cmd := exec.Command("bcd", "genesis", "gentx", "validator",
 		fmt.Sprintf("250000000%s", common.WasmStake),
 		"--chain-id="+bcdChainID,
@@ -749,9 +750,9 @@ func bcdGentxValidator(homeDir string) error {
 		"--home", homeDir,
 		"--keyring-backend=test")
 
-	fmt.Printf("Running gentx command: %s\n", cmd.String())
+	t.Logf("Running gentx command: %s\n", cmd.String())
 	output, err := cmd.CombinedOutput()
-	fmt.Printf("Gentx output: %s\n", string(output))
+	t.Logf("Gentx output: %s\n", string(output))
 
 	if err != nil {
 		return fmt.Errorf("gentx failed: %w", err)
@@ -768,7 +769,7 @@ func setupBcd(t *testing.T, testDir string) {
 	err := bcdInit(testDir)
 	require.NoError(t, err)
 
-	err = bcdUpdateGenesisFile(testDir)
+	err = bcdUpdateGenesisFile(t, testDir)
 	require.NoError(t, err)
 
 	err = bcdKeysAdd(testDir)
@@ -777,13 +778,13 @@ func setupBcd(t *testing.T, testDir string) {
 	err = bcdAddValidatorGenesisAccount(testDir)
 	require.NoError(t, err)
 
-	err = bcdGentxValidator(testDir)
+	err = bcdGentxValidator(t, testDir)
 	require.NoError(t, err)
 
 	err = bcdCollectGentxs(testDir)
 	require.NoError(t, err)
 
-	err = bcdVersion()
+	err = bcdVersion(t)
 	require.NoError(t, err)
 }
 
