@@ -340,6 +340,9 @@ func (cc *RollupBSNController) hasActiveBTCDelegation(fpBtcPkHex string) (bool, 
 // 1. Exists (has committed public randomness that covers the specific height)
 // 2. Is Bitcoin timestamped (finalized)
 func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Context, fpPk *btcec.PublicKey, blockHeight uint64) bool {
+	// NOTE: This query has O(1) best case (recent commits) to O(n) worst case complexity,
+	// where n is the number of PR commits for this FP. The contract scans commits in
+	// descending order by start_height and stops at the first match.
 	pubRand, err := cc.QueryPubRandCommitForHeight(ctx, fpPk, blockHeight)
 	if err != nil {
 		cc.logger.Debug(
@@ -348,6 +351,7 @@ func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Cont
 			zap.Uint64("height", blockHeight),
 			zap.Error(err),
 		)
+
 		return false
 	}
 	if pubRand == nil {
@@ -356,6 +360,7 @@ func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Cont
 			zap.String("fp_btc_pk", bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()),
 			zap.Uint64("height", blockHeight),
 		)
+
 		return false
 	}
 
@@ -368,6 +373,7 @@ func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Cont
 			zap.Uint64("height", blockHeight),
 			zap.Error(err),
 		)
+
 		return false
 	}
 	if pubRand.BabylonEpoch > lastFinalizedCkpt.RawCheckpoint.EpochNum {
@@ -378,6 +384,7 @@ func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Cont
 			zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
 			zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
 		)
+		
 		return false
 	}
 
