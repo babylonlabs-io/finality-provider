@@ -270,12 +270,12 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 		return false, nil
 	}
 
-	// Step 2-4: Validate public randomness (exists, covers height, and is timestamped)
+	// Step 2: Validate public randomness (exists, covers height, and is timestamped)
 	if !cc.hasValidTimestampedPubRandomness(ctx, req.FpPk, req.BlockHeight) {
 		return false, nil
 	}
 
-	// Step 5: Check if FP has active BTC delegations (voting power)
+	// Step 3: Check if FP has active BTC delegations (voting power)
 	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex()
 	hasActiveDelegation, err := cc.hasActiveBTCDelegation(ctx, fpBtcPkHex)
 	if err != nil {
@@ -295,7 +295,7 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 		zap.String("fp_btc_pk", fpBtcPkHex),
 		zap.Uint64("height", req.BlockHeight),
 	)
-	
+
 	return true, nil
 }
 
