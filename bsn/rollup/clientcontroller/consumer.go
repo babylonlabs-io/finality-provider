@@ -278,7 +278,7 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 
 	// Step 3: Check if FP has active BTC delegations (voting power)
 	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex()
-	hasActiveDelegation, err := cc.hasActiveBTCDelegation(ctx, fpBtcPkHex)
+	hasActiveDelegation, err := cc.hasActiveBTCDelegation(fpBtcPkHex)
 	if err != nil {
 		return false, fmt.Errorf("failed to check active BTC delegations: %w", err)
 	}
@@ -302,7 +302,7 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 }
 
 // hasActiveBTCDelegation checks if the finality provider has any active BTC delegations
-func (cc *RollupBSNController) hasActiveBTCDelegation(ctx context.Context, fpBtcPkHex string) (bool, error) {
+func (cc *RollupBSNController) hasActiveBTCDelegation(fpBtcPkHex string) (bool, error) {
 	btcStakingParams, err := cc.bbnClient.QueryClient.BTCStakingParams()
 	if err != nil {
 		return false, fmt.Errorf("failed to query BTC staking params: %w", err)
@@ -395,7 +395,7 @@ func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Cont
 			zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
 			zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
 		)
-		
+
 		return false
 	}
 
