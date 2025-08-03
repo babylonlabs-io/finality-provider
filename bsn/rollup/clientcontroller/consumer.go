@@ -13,6 +13,7 @@ import (
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	ckpttypes "github.com/babylonlabs-io/babylon/v3/x/checkpointing/types"
 	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup/config"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
@@ -270,6 +271,19 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 		return false, fmt.Errorf("failed to query last public rand commit: %w", err)
 	}
 	if pubRand == nil {
+		return false, nil
+	}
+
+	lastFinalizedCkpt, err := cc.bbnClient.LatestEpochFromStatus(ckpttypes.Finalized)
+	if err != nil {
+		return false, fmt.Errorf("failed to query last finalized checkpoint: %w", err)
+	}
+	if pubRand.BabylonEpoch > lastFinalizedCkpt.RawCheckpoint.EpochNum {
+		cc.logger.Debug(
+			"the pub rand's corresponding epoch hasn't been finalized yet",
+			zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
+			zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
+		)
 		return false, nil
 	}
 

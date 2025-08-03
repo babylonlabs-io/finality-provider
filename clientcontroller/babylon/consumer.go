@@ -291,9 +291,10 @@ func (bc *BabylonConsumerController) QueryLastPublicRandCommit(_ context.Context
 	var commit *types.PubRandCommit
 	for height, commitRes := range res.PubRandCommitMap {
 		commit = &types.PubRandCommit{
-			StartHeight: height,
-			NumPubRand:  commitRes.NumPubRand,
-			Commitment:  commitRes.Commitment,
+			StartHeight:  height,
+			NumPubRand:   commitRes.NumPubRand,
+			Commitment:   commitRes.Commitment,
+			BabylonEpoch: commitRes.EpochNum,
 		}
 	}
 
