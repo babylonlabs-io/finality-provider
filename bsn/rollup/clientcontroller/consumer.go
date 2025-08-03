@@ -270,46 +270,8 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 		return false, nil
 	}
 
-	// Step 2: Get public randomness commitment
-	pubRand, err := cc.QueryLastPublicRandCommit(ctx, req.FpPk)
-	if err != nil {
-		return false, fmt.Errorf("failed to query last public rand commit: %w", err)
-	}
-	if pubRand == nil {
-		cc.logger.Debug(
-			"FP has 0 voting power - no public randomness commitment found",
-			zap.String("fp_btc_pk", bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex()),
-		)
-		return false, nil
-	}
-
-	// Step 3: Check if the requested height is covered by public randomness
-	lastCommittedPubRandHeight := pubRand.EndHeight()
-	if req.BlockHeight > lastCommittedPubRandHeight {
-		cc.logger.Debug(
-			"FP has 0 voting power - no public randomness at this height",
-			zap.Uint64("requested_height", req.BlockHeight),
-			zap.Uint64("last_committed_height", lastCommittedPubRandHeight),
-		)
-		// TODO: Handle the case where public randomness is not consecutive.
-		// For example, if the FP is down for a while and misses some public randomness commits:
-		// Assume blocks 1-100 and 200-300 have public randomness, and lastCommittedPubRandHeight is 300.
-		// For blockHeight 101 to 199, even though blockHeight < lastCommittedPubRandHeight,
-		// the finality provider should have 0 voting power.
-		return false, nil
-	}
-
-	// Step 4: Check if public randomness is Bitcoin timestamped (finalized)
-	lastFinalizedCkpt, err := cc.bbnClient.LatestEpochFromStatus(ckpttypes.Finalized)
-	if err != nil {
-		return false, fmt.Errorf("failed to query last finalized checkpoint: %w", err)
-	}
-	if pubRand.BabylonEpoch > lastFinalizedCkpt.RawCheckpoint.EpochNum {
-		cc.logger.Debug(
-			"FP has 0 voting power - public randomness epoch not yet finalized",
-			zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
-			zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
-		)
+	// Step 2-4: Validate public randomness (exists, covers height, and is timestamped)
+	if !cc.hasValidTimestampedPubRandomness(ctx, req.FpPk, req.BlockHeight) {
 		return false, nil
 	}
 
@@ -329,12 +291,11 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 	}
 
 	cc.logger.Debug(
-		"FP has voting power",
+		"FP has voting power - all checks passed",
 		zap.String("fp_btc_pk", fpBtcPkHex),
 		zap.Uint64("height", req.BlockHeight),
-		zap.Uint64("pub_rand_end_height", lastCommittedPubRandHeight),
-		zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
 	)
+	
 	return true, nil
 }
 
@@ -371,6 +332,76 @@ func (cc *RollupBSNController) hasActiveBTCDelegation(ctx context.Context, fpBtc
 	}
 
 	return false, nil
+}
+
+// hasValidTimestampedPubRandomness validates that the FP has public randomness that:
+// 1. Exists (has committed public randomness)
+// 2. Covers the requested height
+// 3. Is Bitcoin timestamped (finalized)
+func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Context, fpPk *btcec.PublicKey, blockHeight uint64) bool {
+	// Get public randomness commitment
+	pubRand, err := cc.QueryLastPublicRandCommit(ctx, fpPk)
+	if err != nil {
+		cc.logger.Debug(
+			"FP has 0 voting power - failed to query public randomness commitment",
+			zap.String("fp_btc_pk", bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()),
+			zap.Error(err),
+		)
+		return false
+	}
+	if pubRand == nil {
+		cc.logger.Debug(
+			"FP has 0 voting power - no public randomness commitment found",
+			zap.String("fp_btc_pk", bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()),
+		)
+		return false
+	}
+
+	// Check if the requested height is covered by public randomness
+	lastCommittedPubRandHeight := pubRand.EndHeight()
+	if blockHeight > lastCommittedPubRandHeight {
+		cc.logger.Debug(
+			"FP has 0 voting power - no public randomness at this height",
+			zap.Uint64("requested_height", blockHeight),
+			zap.Uint64("last_committed_height", lastCommittedPubRandHeight),
+		)
+		// TODO: Handle the case where public randomness is not consecutive.
+		// For example, if the FP is down for a while and misses some public randomness commits:
+		// Assume blocks 1-100 and 200-300 have public randomness, and lastCommittedPubRandHeight is 300.
+		// For blockHeight 101 to 199, even though blockHeight < lastCommittedPubRandHeight,
+		// the finality provider should have 0 voting power.
+		return false
+	}
+
+	// Check if public randomness is Bitcoin timestamped (finalized)
+	lastFinalizedCkpt, err := cc.bbnClient.LatestEpochFromStatus(ckpttypes.Finalized)
+	if err != nil {
+		cc.logger.Debug(
+			"FP has 0 voting power - failed to query last finalized checkpoint",
+			zap.String("fp_btc_pk", bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()),
+			zap.Error(err),
+		)
+		return false
+	}
+	if pubRand.BabylonEpoch > lastFinalizedCkpt.RawCheckpoint.EpochNum {
+		cc.logger.Debug(
+			"FP has 0 voting power - public randomness epoch not yet finalized",
+			zap.String("fp_btc_pk", bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()),
+			zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
+			zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
+		)
+		return false
+	}
+
+	cc.logger.Debug(
+		"FP has valid timestamped public randomness",
+		zap.String("fp_btc_pk", bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()),
+		zap.Uint64("height", blockHeight),
+		zap.Uint64("pub_rand_end_height", lastCommittedPubRandHeight),
+		zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
+		zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
+	)
+	return true
 }
 
 // QueryLatestFinalizedBlock returns the finalized L2 block from a RPC call
