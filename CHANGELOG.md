@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Bug Fixes
 
 * [#508](https://github.com/babylonlabs-io/finality-provider/pull/508) fix: fixes registration with sign ctx
+* [#568](https://github.com/babylonlabs-io/finality-provider/pull/568) fix: correct logic for ctx signing start
 
 ### Improvements
 
@@ -56,6 +57,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [537](https://github.com/babylonlabs-io/finality-provider/pull/537) chore: mv helper methods from fpi
 * [#538](https://github.com/babylonlabs-io/finality-provider/pull/538) chore: fix e2e tags and wrap check
 * [520](https://github.com/babylonlabs-io/finality-provider/pull/520) chore: migration guide keyring test to file
+* [#539](https://github.com/babylonlabs-io/finality-provider/pull/539) api: replace QueryLatestBlockHeight with QueryLatestBlock
+* [#547](https://github.com/babylonlabs-io/finality-provider/pull/547) api: consolidate QueryActivatedHeight and QueryFinalityActivatationHeight APIs
+* [#542](https://github.com/babylonlabs-io/finality-provider/pull/542) chore: abstract finality submitter
+* [#550](https://github.com/babylonlabs-io/finality-provider/pull/550) chore: use context for lifecycle
+* [#554](https://github.com/babylonlabs-io/finality-provider/pull/554) chore: rollup e2e parallel
+* [#555](https://github.com/babylonlabs-io/finality-provider/pull/555) chore: babylon controller use ctx
+* [#558](https://github.com/babylonlabs-io/finality-provider/pull/558) chore: creates cosmos-fpd bsn
+* [#551](https://github.com/babylonlabs-io/finality-provider/pull/551)
+  chore(rollup): add more tests for rollup bsn
+* [#561](https://github.com/babylonlabs-io/finality-provider/pull/561) chore: run e2e in parallel
+* [#563](https://github.com/babylonlabs-io/finality-provider/pull/563)
+  chore(rollup): add missing fns in controller
+* [#569](https://github.com/babylonlabs-io/finality-provider/pull/569)
+  chore(rollup): add highest voted height query
 
 ## v1.1.0-rc.1
 

@@ -107,7 +107,7 @@ func RunCommandCommitPubRandWithConfig(_ client.Context, cmd *cobra.Command, hom
 	}
 	consumerCon, err := babylon.NewBabylonConsumerController(cfg.BabylonConfig, logger)
 	if err != nil {
-		return fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
+		return fmt.Errorf("failed to create rpc client for the consumer chain: %w", err)
 	}
 	em, err := eotsclient.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress, cfg.HMACKey)
 	if err != nil {
@@ -121,9 +121,18 @@ func RunCommandCommitPubRandWithConfig(_ client.Context, cmd *cobra.Command, hom
 		service.NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore), consumerCon, em, logger, fpMetrics)
 	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, cfg.PollerConfig, logger)
+	finalitySubmitter := service.NewDefaultFinalitySubmitter(consumerCon,
+		em,
+		rndCommitter.GetPubRandProofList,
+		service.NewDefaultFinalitySubmitterConfig(cfg.MaxSubmissionRetries,
+			cfg.ContextSigningHeight,
+			cfg.SubmissionRetryInterval),
+		logger,
+		fpMetrics,
+	)
 
 	fp, err := service.NewFinalityProviderInstance(
-		fpPk, cfg, fpStore, pubRandStore, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, fpMetrics,
+		fpPk, cfg, fpStore, pubRandStore, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics,
 		make(chan<- *service.CriticalError), logger)
 	if err != nil {
 		return fmt.Errorf("failed to create finality-provider %s instance: %w", fpPk.MarshalHex(), err)

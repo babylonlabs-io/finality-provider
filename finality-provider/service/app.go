@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"strings"
 	"sync"
 
@@ -34,16 +35,17 @@ type FinalityProviderApp struct {
 	wg        sync.WaitGroup
 	quit      chan struct{}
 
-	cc               ccapi.ClientController
-	consumerCon      ccapi.ConsumerController
-	kr               keyring.Keyring
-	fps              *store.FinalityProviderStore
-	pubRandStore     *store.PubRandProofStore
-	config           *fpcfg.Config
-	logger           *zap.Logger
-	poller           types.BlockPoller[types.BlockDescription]
-	rndCommitter     types.RandomnessCommitter
-	heightDeterminer types.HeightDeterminer
+	cc                ccapi.BabylonController
+	consumerCon       ccapi.ConsumerController
+	kr                keyring.Keyring
+	fps               *store.FinalityProviderStore
+	pubRandStore      *store.PubRandProofStore
+	config            *fpcfg.Config
+	logger            *zap.Logger
+	poller            types.BlockPoller[types.BlockDescription]
+	rndCommitter      types.RandomnessCommitter
+	heightDeterminer  types.HeightDeterminer
+	finalitySubmitter types.FinalitySignatureSubmitter
 
 	fpInsMu     sync.RWMutex // Protects fpIns
 	fpIns       *FinalityProviderInstance
@@ -70,9 +72,9 @@ func NewFinalityProviderAppFromConfig(
 		return nil, fmt.Errorf("failed to start rpc client for the Babylon chain: %w", err)
 	}
 
-	consumerCon, err := fpcc.NewConsumerController(cfg, logger)
+	consumerCon, err := babylon.NewBabylonConsumerController(cfg.BabylonConfig, logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create rpc client for the consumer chain %s: %w", cfg.ChainType, err)
+		return nil, fmt.Errorf("failed to create rpc client for the consumer chain babylon: %w", err)
 	}
 
 	// if the EOTSManagerAddress is empty, run a local EOTS manager;
@@ -102,18 +104,25 @@ func NewFinalityProviderAppFromConfig(
 	)
 
 	heightDeterminer := NewStartHeightDeterminer(consumerCon, cfg.PollerConfig, logger)
+	fsCfg := NewDefaultFinalitySubmitterConfig(
+		cfg.MaxSubmissionRetries,
+		cfg.ContextSigningHeight,
+		cfg.SubmissionRetryInterval,
+	)
+	finalitySubmitter := NewDefaultFinalitySubmitter(consumerCon, em, rndCommiter.GetPubRandProofList, fsCfg, logger, fpMetrics)
 
-	return NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, rndCommiter, heightDeterminer, fpMetrics, db, logger)
+	return NewFinalityProviderApp(cfg, cc, consumerCon, em, poller, rndCommiter, heightDeterminer, finalitySubmitter, fpMetrics, db, logger)
 }
 
 func NewFinalityProviderApp(
 	config *fpcfg.Config,
-	cc ccapi.ClientController,
+	cc ccapi.BabylonController,
 	consumerCon ccapi.ConsumerController,
 	em eotsmanager.EOTSManager,
 	poller types.BlockPoller[types.BlockDescription],
 	rndCommitter types.RandomnessCommitter,
 	heightDeterminer types.HeightDeterminer,
+	finalitySubmitter types.FinalitySignatureSubmitter,
 	metrics *metrics.FpMetrics,
 	db kvdb.Backend,
 	logger *zap.Logger,
@@ -148,11 +157,12 @@ func NewFinalityProviderApp(
 		poller:                            poller,
 		rndCommitter:                      rndCommitter,
 		heightDeterminer:                  heightDeterminer,
+		finalitySubmitter:                 finalitySubmitter,
 		metrics:                           metrics,
-		quit:                              make(chan struct{}),
 		unjailFinalityProviderRequestChan: make(chan *UnjailFinalityProviderRequest),
 		createFinalityProviderRequestChan: make(chan *CreateFinalityProviderRequest),
 		criticalErrChan:                   make(chan *CriticalError),
+		quit:                              make(chan struct{}),
 	}, nil
 }
 
@@ -160,7 +170,7 @@ func (app *FinalityProviderApp) GetConfig() *fpcfg.Config {
 	return app.config
 }
 
-func (app *FinalityProviderApp) GetBabylonController() ccapi.ClientController {
+func (app *FinalityProviderApp) GetBabylonController() ccapi.BabylonController {
 	return app.cc
 }
 
@@ -229,10 +239,10 @@ func (app *FinalityProviderApp) Logger() *zap.Logger {
 
 // StartFinalityProvider starts a finality provider instance with the given EOTS public key
 // Note: this should be called right after the finality-provider is registered
-func (app *FinalityProviderApp) StartFinalityProvider(fpPk *bbntypes.BIP340PubKey) error {
+func (app *FinalityProviderApp) StartFinalityProvider(ctx context.Context, fpPk *bbntypes.BIP340PubKey) error {
 	app.logger.Info("starting finality provider", zap.String("pk", fpPk.MarshalHex()))
 
-	if err := app.startFinalityProviderInstance(fpPk); err != nil {
+	if err := app.startFinalityProviderInstance(ctx, fpPk); err != nil {
 		return err
 	}
 
@@ -241,29 +251,28 @@ func (app *FinalityProviderApp) StartFinalityProvider(fpPk *bbntypes.BIP340PubKe
 	return nil
 }
 
-// SyncAllFinalityProvidersStatus syncs the status of all the stored finality providers with the chain.
+// syncAllFinalityProvidersStatus syncs the status of all the stored finality providers with the chain.
 // it should be called before a fp instance is started
-func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
-	ctx := context.Background()
+func (app *FinalityProviderApp) syncAllFinalityProvidersStatus(ctx context.Context) error {
 	fps, err := app.fps.GetAllStoredFinalityProviders()
 	if err != nil {
 		return fmt.Errorf("failed to get all stored finality providers: %w", err)
 	}
 
 	for _, fp := range fps {
-		latestBlockHeight, err := app.consumerCon.QueryLatestBlockHeight(ctx)
-		if err != nil {
+		latestBlock, err := app.consumerCon.QueryLatestBlock(ctx)
+		if latestBlock == nil || err != nil {
 			return fmt.Errorf("failed to query latest block height: %w", err)
 		}
 
 		pkHex := fp.GetBIP340BTCPK().MarshalHex()
 		hasPower, err := app.consumerCon.QueryFinalityProviderHasPower(ctx, ccapi.NewQueryFinalityProviderHasPowerRequest(
 			fp.BtcPk,
-			latestBlockHeight,
+			latestBlock.GetHeight(),
 		))
 		if err != nil {
 			return fmt.Errorf("failed to query voting power for finality provider %s at height %d: %w",
-				fp.GetBIP340BTCPK().MarshalHex(), latestBlockHeight, err)
+				fp.GetBIP340BTCPK().MarshalHex(), latestBlock.GetHeight(), err)
 		}
 
 		// power > 0 (slashed_height must > 0), set status to ACTIVE
@@ -321,21 +330,21 @@ func (app *FinalityProviderApp) SyncAllFinalityProvidersStatus() error {
 }
 
 // Start starts only the finality-provider daemon without any finality-provider instances
-func (app *FinalityProviderApp) Start() error {
+func (app *FinalityProviderApp) Start(ctx context.Context) error {
 	var startErr error
 	app.startOnce.Do(func() {
 		app.logger.Info("Starting FinalityProviderApp")
 
-		startErr = app.SyncAllFinalityProvidersStatus()
+		startErr = app.syncAllFinalityProvidersStatus(ctx)
 		if startErr != nil {
 			return
 		}
 
 		app.wg.Add(4)
-		go app.metricsUpdateLoop()
-		go app.monitorCriticalErr()
-		go app.registrationLoop()
-		go app.unjailFpLoop()
+		go app.metricsUpdateLoop(ctx)
+		go app.monitorCriticalErr(ctx)
+		go app.registrationLoop(ctx)
+		go app.unjailFpLoop(ctx)
 	})
 
 	return startErr
@@ -346,7 +355,6 @@ func (app *FinalityProviderApp) Stop() error {
 	app.stopOnce.Do(func() {
 		app.logger.Info("Stopping FinalityProviderApp")
 
-		close(app.quit)
 		app.wg.Wait()
 
 		if app.fpIns != nil && app.fpIns.IsRunning() {
@@ -407,7 +415,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 	// Query the consumer chain to check if the fp is already registered
 	// if true, update db with the fp info from the consumer chain
 	// otherwise, proceed registration
-	resp, err := app.cc.QueryFinalityProvider(eotsPk.MustToBTCPK())
+	resp, err := app.cc.QueryFinalityProvider(ctx, eotsPk.MustToBTCPK())
 	if err != nil {
 		if !strings.Contains(err.Error(), "the finality provider is not found") {
 			return nil, fmt.Errorf("err getting finality provider: %w", err)
@@ -479,12 +487,12 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 			TxHash: successResponse.txHash,
 		}, nil
 	case <-app.quit:
-		return nil, fmt.Errorf("finality-provider app is shutting down")
+		return nil, fmt.Errorf("finality-provider app is shutting down: %w", ctx.Err())
 	}
 }
 
 // UnjailFinalityProvider sends a transaction to unjail a finality-provider
-func (app *FinalityProviderApp) UnjailFinalityProvider(fpPk *bbntypes.BIP340PubKey) (*UnjailFinalityProviderResponse, error) {
+func (app *FinalityProviderApp) UnjailFinalityProvider(ctx context.Context, fpPk *bbntypes.BIP340PubKey) (*UnjailFinalityProviderResponse, error) {
 	// send request to the loop to avoid blocking the main thread
 	request := &UnjailFinalityProviderRequest{
 		btcPubKey:       fpPk,
@@ -514,8 +522,8 @@ func (app *FinalityProviderApp) UnjailFinalityProvider(fpPk *bbntypes.BIP340PubK
 		app.metrics.RecordFpStatus(fpPk.MarshalHex(), proto.FinalityProviderStatus_INACTIVE)
 
 		return successResponse, nil
-	case <-app.quit:
-		return nil, fmt.Errorf("finality-provider app is shutting down")
+	case <-ctx.Done():
+		return nil, fmt.Errorf("finality-provider app is shutting down: %w", ctx.Err())
 	}
 }
 
@@ -529,8 +537,7 @@ func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntyp
 	hasher := tmhash.New()
 	nextHeight := app.poller.NextHeight()
 	//  nextHeight-1 might underflow if the nextHeight is 0
-	if (nextHeight == 0 && app.config.ContextSigningHeight > 0) ||
-		(nextHeight > 0 && app.config.ContextSigningHeight > nextHeight-1) {
+	if nextHeight >= app.config.ContextSigningHeight {
 		signCtx := app.cc.GetFpPopContextV0()
 		if _, err := hasher.Write([]byte(signCtx)); err != nil {
 			return nil, fmt.Errorf("failed to write signing context to the hash: %w", err)
@@ -552,6 +559,7 @@ func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntyp
 }
 
 func (app *FinalityProviderApp) startFinalityProviderInstance(
+	ctx context.Context,
 	pk *bbntypes.BIP340PubKey,
 ) error {
 	pkHex := pk.MarshalHex()
@@ -561,7 +569,7 @@ func (app *FinalityProviderApp) startFinalityProviderInstance(
 	if app.fpIns == nil {
 		fpIns, err := NewFinalityProviderInstance(
 			pk, app.config, app.fps, app.pubRandStore, app.cc, app.consumerCon,
-			app.eotsManager, app.poller, app.rndCommitter, app.heightDeterminer,
+			app.eotsManager, app.poller, app.rndCommitter, app.heightDeterminer, app.finalitySubmitter,
 			app.metrics, app.criticalErrChan, app.logger,
 		)
 		if err != nil {
@@ -574,7 +582,7 @@ func (app *FinalityProviderApp) startFinalityProviderInstance(
 			"please restart the daemon to switch to another instance", app.fpIns.btcPk.MarshalHex())
 	}
 
-	return app.fpIns.Start()
+	return app.fpIns.Start(ctx)
 }
 
 func (app *FinalityProviderApp) IsFinalityProviderRunning(fpPk *bbntypes.BIP340PubKey) bool {
@@ -612,7 +620,7 @@ func (app *FinalityProviderApp) removeFinalityProviderInstance() error {
 }
 
 func (app *FinalityProviderApp) setFinalityProviderSlashed(fpi *FinalityProviderInstance) {
-	fpi.MustSetStatus(proto.FinalityProviderStatus_SLASHED)
+	fpi.mustSetStatus(proto.FinalityProviderStatus_SLASHED)
 	if err := app.removeFinalityProviderInstance(); err != nil {
 		panic(fmt.Errorf("failed to terminate a slashed finality-provider %s: %w", fpi.GetBtcPkHex(), err))
 	}

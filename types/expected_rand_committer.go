@@ -23,7 +23,8 @@ type RandomnessCommitter interface {
 	// GetLastCommittedHeight retrieves the last height at which randomness was committed.
 	GetLastCommittedHeight(ctx context.Context) (uint64, error)
 
-	SetBtcPk(btcPk *types.BIP340PubKey)
+	// GetPubRandProofList retrieves a list of public randomness proofs for the given height.
+	GetPubRandProofList(height uint64, numPubRand uint64) ([][]byte, error)
 
-	SetChainID(chainID []byte)
+	Init(btcPk *types.BIP340PubKey, chainID []byte) error
 }

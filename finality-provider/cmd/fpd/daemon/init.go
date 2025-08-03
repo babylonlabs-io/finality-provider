@@ -30,6 +30,7 @@ func CommandInitTemplate(binaryName string) *cobra.Command {
 		Args:    cobra.NoArgs,
 	}
 	cmd.Flags().Bool(commoncmd.ForceFlag, false, "Override existing configuration")
+	cmd.Flags().String("home", fpcfg.DefaultFpdDir, "The application home directory")
 
 	return cmd
 }

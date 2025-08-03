@@ -8,15 +8,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
+	fplog "github.com/babylonlabs-io/finality-provider/log"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-
-	"github.com/babylonlabs-io/finality-provider/eotsmanager"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
-	"github.com/babylonlabs-io/finality-provider/testutil"
 )
 
 func FuzzNewKeysCmd(f *testing.F) {
@@ -72,7 +71,9 @@ func FuzzNewKeysCmd(f *testing.F) {
 			require.NoError(t, err)
 		}()
 
-		eotsManager, err := eotsmanager.NewLocalEOTSManager(tempHome, "test", dbBackend, zap.NewNop())
+		logger, err := fplog.NewDevLogger()
+		require.NoError(t, err)
+		eotsManager, err := eotsmanager.NewLocalEOTSManager(tempHome, "test", dbBackend, logger)
 		require.NoError(t, err, "Should be able to create EOTS manager")
 
 		// Verify the key exists and has correct BIP340 public key

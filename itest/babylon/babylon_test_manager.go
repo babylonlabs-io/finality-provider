@@ -1,5 +1,4 @@
 //go:build e2e_babylon
-// +build e2e_babylon
 
 package e2etest_babylon
 
@@ -99,7 +98,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", babylond.GetPort("9090/tcp"))
 
-	var bc ccapi.ClientController
+	var bc ccapi.BabylonController
 	var bcc ccapi.ConsumerController
 
 	// Increase timeout and polling interval for CI environments
@@ -163,7 +162,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 
 	tm := &TestManager{
 		BaseTestManager: &base_test_manager.BaseTestManager{
-			BabylonController: bc.(*bbncc.BabylonController),
+			BabylonController: bc.(*bbncc.ClientWrapper),
 			CovenantPrivKeys:  covenantPrivKeys,
 		},
 		EOTSServerHandler: eh,
@@ -201,7 +200,6 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	cfg.BabylonConfig.Key = fpKeyName
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", tm.babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("https://localhost:%s", tm.babylond.GetPort("9090/tcp"))
-	cfg.ContextSigningHeight = ^uint64(0) // max uint64 to enable context signing
 
 	// Set HMAC key if provided
 	if len(hmacKey) > 0 && hmacKey[0] != "" {
@@ -239,10 +237,16 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 		service.NewRandomnessCommitterConfig(cfg.NumPubRand, int64(cfg.TimestampingDelayBlocks), cfg.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore), bcc, eotsCli, tm.logger, fpMetrics)
 	heightDeterminer := service.NewStartHeightDeterminer(bcc, cfg.PollerConfig, tm.logger)
+	fsCfg := service.NewDefaultFinalitySubmitterConfig(
+		cfg.MaxSubmissionRetries,
+		cfg.ContextSigningHeight,
+		cfg.SubmissionRetryInterval,
+	)
+	finalitySubmitter := service.NewDefaultFinalitySubmitter(bcc, eotsCli, rndCommitter.GetPubRandProofList, fsCfg, tm.logger, fpMetrics)
 
-	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, eotsCli, poller, rndCommitter, heightDeterminer, fpMetrics, fpdb, tm.logger)
+	fpApp, err := service.NewFinalityProviderApp(cfg, bc, bcc, eotsCli, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, fpdb, tm.logger)
 	require.NoError(t, err)
-	err = fpApp.Start()
+	err = fpApp.Start(ctx)
 	require.NoError(t, err)
 
 	// Create and register the finality provider
@@ -250,13 +254,13 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	commission := testutil.ZeroCommissionRate()
 	desc := newDescription(testMoniker)
 
-	_, err = fpApp.CreateFinalityProvider(context.Background(), cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
+	_, err = fpApp.CreateFinalityProvider(ctx, cfg.BabylonConfig.Key, testChainID, eotsPk, desc, commission)
 	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	err = fpApp.StartFinalityProvider(eotsPk)
+	err = fpApp.StartFinalityProvider(ctx, eotsPk)
 	require.NoError(t, err)
 
 	fpServer := service.NewFinalityProviderServer(cfg, tm.logger, fpApp, fpdb)
@@ -388,40 +392,45 @@ func (tm *TestManager) WaitForFpVoteCastAtHeight(t *testing.T, fpIns *service.Fi
 	t.Logf("the fp voted at height %d", lastVotedHeight)
 }
 
-func (tm *TestManager) StopAndRestartFpAfterNBlocks(t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
-	blockBeforeStop, err := tm.BBNConsumerClient.QueryLatestBlockHeight(context.Background())
+func (tm *TestManager) StopAndRestartFpAfterNBlocks(ctx context.Context, t *testing.T, n int, fpIns *service.FinalityProviderInstance) {
+	blockBeforeStop, err := tm.BBNConsumerClient.QueryLatestBlock(ctx)
+	require.NotNil(t, blockBeforeStop)
 	require.NoError(t, err)
 	err = fpIns.Stop()
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		headerAfterStop, err := tm.BBNConsumerClient.QueryLatestBlockHeight(context.Background())
-		if err != nil {
+		headerAfterStop, err := tm.BBNConsumerClient.QueryLatestBlock(ctx)
+		if headerAfterStop == nil || err != nil {
 			return false
 		}
 
-		return headerAfterStop >= uint64(n)+blockBeforeStop
+		return headerAfterStop.GetHeight() >= uint64(n)+blockBeforeStop.GetHeight()
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	t.Log("restarting the finality-provider instance")
 
-	err = fpIns.Start()
+	err = fpIns.Start(ctx)
 	require.NoError(t, err)
+
+	// Add sleep to allow database to initialize
+	time.Sleep(15 * time.Second)
 }
 
 func (tm *TestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
-	beforeHeight, err := tm.BBNConsumerClient.QueryLatestBlockHeight(context.Background())
+	beforeHeight, err := tm.BBNConsumerClient.QueryLatestBlock(context.Background())
+	require.NotNil(t, beforeHeight)
 	require.NoError(t, err)
 
 	var afterHeight uint64
 	require.Eventually(t, func() bool {
-		height, err := tm.BBNConsumerClient.QueryLatestBlockHeight(context.Background())
-		if err != nil {
+		block, err := tm.BBNConsumerClient.QueryLatestBlock(context.Background())
+		if block == nil || err != nil {
 			return false
 		}
 
-		if height >= uint64(n)+beforeHeight {
-			afterHeight = height
+		if block.GetHeight() >= uint64(n)+beforeHeight.GetHeight() {
+			afterHeight = block.GetHeight()
 			return true
 		}
 
