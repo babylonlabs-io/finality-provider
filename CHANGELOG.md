@@ -71,6 +71,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
   chore(rollup): add missing fns in controller
 * [#569](https://github.com/babylonlabs-io/finality-provider/pull/569)
   chore(rollup): add highest voted height query
+* [#572](https://github.com/babylonlabs-io/finality-provider/pull/572)
+  chore(rollup): ensure pub randomness is timestamped
 
 ## v1.1.0-rc.1
 

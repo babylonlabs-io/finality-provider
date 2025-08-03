@@ -279,11 +279,12 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 		return false, fmt.Errorf("failed to query last finalized checkpoint: %w", err)
 	}
 	if pubRand.BabylonEpoch > lastFinalizedCkpt.RawCheckpoint.EpochNum {
-		cc.logger.Debug(
+		cc.logger.Info(
 			"the pub rand's corresponding epoch hasn't been finalized yet",
 			zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
 			zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
 		)
+
 		return false, nil
 	}
 
