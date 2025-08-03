@@ -257,63 +257,95 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 	ctx context.Context,
 	req *api.QueryFinalityProviderHasPowerRequest,
 ) (bool, error) {
-	// Check if finality signatures are allowed for this height based on contract config
+	// Step 1: Check if finality signatures are allowed for this height (activation + interval)
 	eligible, err := cc.isEligibleForFinalitySignature(ctx, req.BlockHeight)
 	if err != nil {
 		return false, fmt.Errorf("failed to check finality signature eligibility: %w", err)
 	}
 	if !eligible {
+		cc.logger.Debug(
+			"FP has 0 voting power - finality signatures not eligible for this height",
+			zap.Uint64("height", req.BlockHeight),
+		)
 		return false, nil
 	}
 
+	// Step 2: Get public randomness commitment
 	pubRand, err := cc.QueryLastPublicRandCommit(ctx, req.FpPk)
 	if err != nil {
 		return false, fmt.Errorf("failed to query last public rand commit: %w", err)
 	}
 	if pubRand == nil {
+		cc.logger.Debug(
+			"FP has 0 voting power - no public randomness commitment found",
+			zap.String("fp_btc_pk", bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex()),
+		)
 		return false, nil
 	}
 
+	// Step 3: Check if the requested height is covered by public randomness
+	lastCommittedPubRandHeight := pubRand.EndHeight()
+	if req.BlockHeight > lastCommittedPubRandHeight {
+		cc.logger.Debug(
+			"FP has 0 voting power - no public randomness at this height",
+			zap.Uint64("requested_height", req.BlockHeight),
+			zap.Uint64("last_committed_height", lastCommittedPubRandHeight),
+		)
+		// TODO: Handle the case where public randomness is not consecutive.
+		// For example, if the FP is down for a while and misses some public randomness commits:
+		// Assume blocks 1-100 and 200-300 have public randomness, and lastCommittedPubRandHeight is 300.
+		// For blockHeight 101 to 199, even though blockHeight < lastCommittedPubRandHeight,
+		// the finality provider should have 0 voting power.
+		return false, nil
+	}
+
+	// Step 4: Check if public randomness is Bitcoin timestamped (finalized)
 	lastFinalizedCkpt, err := cc.bbnClient.LatestEpochFromStatus(ckpttypes.Finalized)
 	if err != nil {
 		return false, fmt.Errorf("failed to query last finalized checkpoint: %w", err)
 	}
 	if pubRand.BabylonEpoch > lastFinalizedCkpt.RawCheckpoint.EpochNum {
-		cc.logger.Info(
-			"the pub rand's corresponding epoch hasn't been finalized yet",
+		cc.logger.Debug(
+			"FP has 0 voting power - public randomness epoch not yet finalized",
 			zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
 			zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
 		)
-
 		return false, nil
 	}
 
-	// fp has 0 voting power if there is no public randomness at this height
-	lastCommittedPubRandHeight := pubRand.EndHeight()
-	cc.logger.Debug(
-		"FP last committed public randomness",
-		zap.Uint64("height", lastCommittedPubRandHeight),
-	)
-	// TODO: Handle the case where public randomness is not consecutive.
-	// For example, if the FP is down for a while and misses some public randomness commits:
-	// Assume blocks 1-100 and 200-300 have public randomness, and lastCommittedPubRandHeight is 300.
-	// For blockHeight 101 to 199, even though blockHeight < lastCommittedPubRandHeight,
-	// the finality provider should have 0 voting power.
-	if req.BlockHeight > lastCommittedPubRandHeight {
+	// Step 5: Check if FP has active BTC delegations (voting power)
+	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex()
+	hasActiveDelegation, err := cc.hasActiveBTCDelegation(ctx, fpBtcPkHex)
+	if err != nil {
+		return false, fmt.Errorf("failed to check active BTC delegations: %w", err)
+	}
+	if !hasActiveDelegation {
 		cc.logger.Debug(
-			"FP has 0 voting power because there is no public randomness at this height",
+			"FP has 0 voting power - no active BTC delegation",
+			zap.String("fp_btc_pk", fpBtcPkHex),
 			zap.Uint64("height", req.BlockHeight),
 		)
-
 		return false, nil
 	}
 
-	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex()
-	var nextKey []byte
+	cc.logger.Debug(
+		"FP has voting power",
+		zap.String("fp_btc_pk", fpBtcPkHex),
+		zap.Uint64("height", req.BlockHeight),
+		zap.Uint64("pub_rand_end_height", lastCommittedPubRandHeight),
+		zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
+	)
+	return true, nil
+}
+
+// hasActiveBTCDelegation checks if the finality provider has any active BTC delegations
+func (cc *RollupBSNController) hasActiveBTCDelegation(ctx context.Context, fpBtcPkHex string) (bool, error) {
 	btcStakingParams, err := cc.bbnClient.QueryClient.BTCStakingParams()
 	if err != nil {
 		return false, fmt.Errorf("failed to query BTC staking params: %w", err)
 	}
+
+	var nextKey []byte
 	for {
 		resp, err := cc.bbnClient.QueryClient.FinalityProviderDelegations(fpBtcPkHex, &sdkquerytypes.PageRequest{Key: nextKey, Limit: 100})
 		if err != nil {
@@ -324,7 +356,7 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 			for _, btcDel := range btcDels.Dels {
 				active, err := cc.isDelegationActive(btcStakingParams, btcDel)
 				if err != nil {
-					continue
+					continue // Skip invalid delegations but continue checking others
 				}
 				if active {
 					return true, nil
@@ -337,11 +369,6 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 		}
 		nextKey = resp.Pagination.NextKey
 	}
-	cc.logger.Debug(
-		"FP has 0 voting power because there is no BTC delegation",
-		zap.String("fp_btc_pk", fpBtcPkHex),
-		zap.Uint64("height", req.BlockHeight),
-	)
 
 	return false, nil
 }
