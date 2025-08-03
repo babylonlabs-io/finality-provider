@@ -267,6 +267,7 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 			"FP has 0 voting power - finality signatures not eligible for this height",
 			zap.Uint64("height", req.BlockHeight),
 		)
+
 		return false, nil
 	}
 
@@ -287,6 +288,7 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 			zap.String("fp_btc_pk", fpBtcPkHex),
 			zap.Uint64("height", req.BlockHeight),
 		)
+
 		return false, nil
 	}
 
@@ -347,6 +349,7 @@ func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Cont
 			zap.String("fp_btc_pk", bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()),
 			zap.Error(err),
 		)
+
 		return false
 	}
 	if pubRand == nil {
@@ -354,6 +357,7 @@ func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Cont
 			"FP has 0 voting power - no public randomness commitment found",
 			zap.String("fp_btc_pk", bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()),
 		)
+		
 		return false
 	}
 
@@ -381,6 +385,7 @@ func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Cont
 			zap.String("fp_btc_pk", bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()),
 			zap.Error(err),
 		)
+
 		return false
 	}
 	if pubRand.BabylonEpoch > lastFinalizedCkpt.RawCheckpoint.EpochNum {
@@ -390,6 +395,7 @@ func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Cont
 			zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
 			zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
 		)
+		
 		return false
 	}
 
@@ -401,6 +407,7 @@ func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Cont
 		zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
 		zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
 	)
+
 	return true
 }
 
