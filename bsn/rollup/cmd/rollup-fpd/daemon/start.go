@@ -106,7 +106,7 @@ func validateRollupFP(ctx context.Context, fpApp *service.FinalityProviderApp, f
 	var fpToValidate *bbntypes.BIP340PubKey
 
 	if fpStr == "" {
-		// If no FP is specified, then check DB
+		// No explicit FP provided, use the single stored FP from database
 		storedFps, err := fpApp.GetFinalityProviderStore().GetAllStoredFinalityProviders()
 		if err != nil {
 			return fmt.Errorf("failed to get stored finality providers: %w", err)
@@ -118,7 +118,7 @@ func validateRollupFP(ctx context.Context, fpApp *service.FinalityProviderApp, f
 
 		fpToValidate = bbntypes.NewBIP340PubKeyFromBTCPK(storedFps[0].BtcPk)
 	} else {
-		// If FP is specified, then use this one
+		// Use the explicitly provided FP public key
 		fpPk, err := bbntypes.NewBIP340PubKeyFromHex(fpStr)
 		if err != nil {
 			return fmt.Errorf("invalid finality provider public key %s: %w", fpStr, err)
