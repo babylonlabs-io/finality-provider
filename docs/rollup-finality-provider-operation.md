@@ -393,7 +393,7 @@ Required parameters:
 * `--commission-rate`: The initial commission rate percentage (between 0 and 1)
   that you'll receive from delegators
 * `--commission-max-rate`: The maximum commission rate percentage (between 0 and 1) that
-  you'll receive from delegators
+  you can modify your commission to
 * `--commission-max-change-rate`: The maximum commission change rate percentage
   (per day)
 * `--key-name`: The key name in your Babylon Genesis keyring that your finality
