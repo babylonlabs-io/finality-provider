@@ -268,10 +268,11 @@ repository](https://github.com/babylonlabs-io/networks).
 Another notable configurable parameter is `NumPubRand`, which is the number of
 public randomness that will be generated and submitted in one commit to Babylon
 Genesis. This value is set to `50,000` by default, which is sufficient for
-roughly 5 days of usage with block production time at `10s`.
+roughly 13h of usage with rollup block production time at `1s`.
 Larger values can be set to tolerate longer downtime with larger size of
 merkle proofs for each randomness, resulting in higher gas fees when submitting
 future finality signatures and larger storage requirements.
+<!-- TODO: Update this paragraph once we add filtering based on the public randomness submission interval. -->
 
 ### 4.4. Starting the Finality Provider Daemon
 
@@ -335,10 +336,14 @@ separate daemons (`eotsd` and `rollup-fpd`).
 The EOTS manager is responsible for managing the keys for finality providers and
 handles operations such as key management, signature generation, and randomness
 commitments. Whereas the finality provider is responsible for creating and
+<<<<<<< Updated upstream
 registering finality providers, monitoring the Rollup BSN, and
 submitting finality votes on the finality contract deployed on Babylon Genesis.
 The finality provider daemon is also responsible for coordinating various
 operations.
+=======
+registering finality providers and handling the monitoring of the Babylon Genesis.
+>>>>>>> Stashed changes
 
 The interactions between the EOTS Manager and the finality provider happen
 through RPC calls. These calls handle key operations, signature generation,
@@ -577,10 +582,6 @@ transaction hash.
 ### 5.3. Set Up Operation Key
 
 Finality providers consume gas for operations with Babylon Genesis.
-Given that the cost of sending finality signatures is refunded automatically
-after success, the only cost of operating a finality provider is randomness
-commit, which is made periodically with low gas cost.
-
 Therefore, it is recommended to use a separate key specifically for operations.
 This leaves the key used for registration isolated and only needed for withdrawing
 rewards. The operation key is totally replaceable in the sense that it is not
@@ -601,10 +602,6 @@ You may follow the following procedure to set up the operation key.
 
 4. Restart the finality provider daemon.
 
-> 💡 **Tip**: Committing randomness has a constant cost of `0.00013 BABY` per
-> commit. Therefore, reserving `5-10 BABY` for operations should be enough for a
-> long time.
-
 ### 5.4. Start Finality Provider
 
 After a successful registration and proper set up of the operation key,
@@ -620,7 +617,6 @@ are in the database, specifying `--eots-pk` is required.
 
 > ⚠️ **Important**: The BTC public key (`btc_pk`) from `eotsd` must be in the 
 > Rollup BSN contract's allow-list or the finality provider will fail to start.
-
 
 ### 5.5. Status of Finality Provider
 
@@ -647,9 +643,6 @@ rollup-fpd finality-provider-info <hex-string-of-eots-public-key>
 This will return the same response as the `create-finality-provider`
 command but you will be able to check in real time the status of the
 finality provider.
-
-For more information on status transition, please refer to diagram in the core
-documentation[fp-core](fp-core.md).
 
 ### 5.6. Edit Finality Provider
 
