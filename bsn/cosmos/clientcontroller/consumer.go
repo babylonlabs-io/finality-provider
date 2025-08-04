@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	fpcfg "github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
-	cwcclient "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/client"
 	"sort"
 	"strings"
+
+	"github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
+	fpcfg "github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
+	cwcclient "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/client"
+	"github.com/cosmos/cosmos-sdk/client"
 
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
@@ -184,8 +187,8 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderHasPower(
 ) (bool, error) {
 	fpBtcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex()
 
-	queryMsgStruct := QueryMsgFinalityProviderInfo{
-		FinalityProviderInfo: FinalityProviderInfo{
+	queryMsgStruct := QueryMsgFinalityProviderPower{
+		FinalityProviderPower: FinalityProviderPowerQuery{
 			BtcPkHex: fpBtcPkHex,
 			Height:   req.BlockHeight,
 		},
@@ -194,23 +197,28 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderHasPower(
 	if err != nil {
 		return false, fmt.Errorf("failed to marshal query message: %w", err)
 	}
-	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.cfg.BtcStakingContractAddress, string(queryMsgBytes))
+	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.cfg.BtcFinalityContractAddress, string(queryMsgBytes))
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			// this is expected when the FP has no power at the given height
+			return false, nil
+		}
+
 		return false, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
 
-	var resp ConsumerFpInfoResponse
-	err = json.Unmarshal(dataFromContract.Data, &resp)
-	if err != nil {
+	var resp ConsumerFpPowerResponse
+
+	if err = json.Unmarshal(dataFromContract.Data, &resp); err != nil {
 		return false, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return resp.Power > 0, nil
 }
 
-func (wc *CosmwasmConsumerController) QueryFinalityProvidersByPower(ctx context.Context) (*ConsumerFpsByPowerResponse, error) {
-	queryMsgStruct := QueryMsgFinalityProvidersByPower{
-		FinalityProvidersByPower: struct{}{},
+func (wc *CosmwasmConsumerController) QueryFinalityProvidersByTotalActiveSats(ctx context.Context) (*ConsumerFpsByPowerResponse, error) {
+	queryMsgStruct := QueryMsgFinalityProvidersByTotalActiveSats{
+		FinalityProvidersByTotalActiveSats: struct{}{},
 	}
 
 	queryMsgBytes, err := json.Marshal(queryMsgStruct)
@@ -344,11 +352,7 @@ func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight(ctx con
 	if err != nil {
 		return 0, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
-	if resp.Height == 0 {
-		return 0, fmt.Errorf("BTC staking is not activated yet")
-	}
 
-	// Return the activated height
 	return resp.Height, nil
 }
 
@@ -400,6 +404,9 @@ func (wc *CosmwasmConsumerController) QueryFinalitySignature(ctx context.Context
 	err = json.Unmarshal(dataFromContract.Data, &resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+	if len(resp.Signature) == 0 {
+		return nil, fmt.Errorf("finality signature not found")
 	}
 
 	return &resp, nil
@@ -698,4 +705,45 @@ func (wc *CosmwasmConsumerController) QueryIndexedBlock(ctx context.Context, hei
 	}
 
 	return &resp, nil
+}
+
+// QueryLastBTCTimestampedHeader - used for testing purposes
+func (wc *CosmwasmConsumerController) QueryLastBTCTimestampedHeader(ctx context.Context) (*ConsumerHeaderResponse, error) {
+	queryMsgStruct := QueryMsgLastConsumerHeader{
+		LastConsumerHeader: struct{}{},
+	}
+	queryMsgBytes, err := json.Marshal(queryMsgStruct)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query message: %w", err)
+	}
+
+	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.MustQueryBabylonContracts(ctx).BabylonContract, string(queryMsgBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+
+	var resp ConsumerHeaderResponse
+	err = json.Unmarshal(dataFromContract.Data, &resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return &resp, nil
+}
+
+func (wc *CosmwasmConsumerController) MustQueryBabylonContracts(ctx context.Context) *BabylonContracts {
+	clientCtx := client.Context{Client: wc.cwClient.RPCClient}
+	queryClient := types.NewQueryClient(clientCtx)
+
+	resp, err := queryClient.BSNContracts(ctx, &types.QueryBSNContractsRequest{})
+	if err != nil {
+		panic(err)
+	}
+
+	return &BabylonContracts{
+		BabylonContract:        resp.BsnContracts.BabylonContract,
+		BtcLightClientContract: resp.BsnContracts.BtcLightClientContract,
+		BtcStakingContract:     resp.BsnContracts.BtcStakingContract,
+		BtcFinalityContract:    resp.BsnContracts.BtcFinalityContract,
+	}
 }

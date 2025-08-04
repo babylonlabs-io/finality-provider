@@ -688,6 +688,48 @@ func (cc *RollupBSNController) UnjailFinalityProvider(_ context.Context, _ *btce
 	return nil, nil
 }
 
+// QueryFinalityProviderInAllowlist queries whether the finality provider is in the allowlist
+func (cc *RollupBSNController) QueryFinalityProviderInAllowlist(ctx context.Context, fpPk *btcec.PublicKey) (bool, error) {
+	// Query the contract for allowed finality providers
+	query := QueryMsg{
+		AllowedFinalityProviders: &struct{}{},
+	}
+	jsonData, err := json.Marshal(query)
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal allowlist query: %w", err)
+	}
+
+	stateResp, err := cc.QuerySmartContractState(ctx, cc.Cfg.FinalityContractAddress, string(jsonData))
+	if err != nil {
+		return false, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+	if len(stateResp.Data) == 0 {
+		return false, fmt.Errorf("no allowlist data found")
+	}
+
+	var allowedFPs AllowedFinalityProvidersResponse
+	err = json.Unmarshal(stateResp.Data, &allowedFPs)
+	if err != nil {
+		return false, fmt.Errorf("failed to unmarshal allowlist response: %w", err)
+	}
+
+	// Check if the FP public key is in the allowlist
+	fpPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
+	for _, allowedFpPkHex := range allowedFPs {
+		if allowedFpPkHex == fpPkHex {
+			cc.logger.Debug("Finality provider found in allowlist",
+				zap.String("fp_pk_hex", fpPkHex))
+
+			return true, nil
+		}
+	}
+
+	cc.logger.Debug("Finality provider not found in allowlist",
+		zap.String("fp_pk_hex", fpPkHex))
+
+	return false, nil
+}
+
 func convertProof(cmtProof cmtcrypto.Proof) Proof {
 	return Proof{
 		Total:    uint64(cmtProof.Total), // #nosec G115

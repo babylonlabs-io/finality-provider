@@ -4,16 +4,35 @@ package e2etest_bcd
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	sdkErr "cosmossdk.io/errors"
+	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	bbnsdktypes "github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
 	cwcc "github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
+
+	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	"go.uber.org/zap/zaptest"
+
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/babylonlabs-io/finality-provider/metrics"
 
@@ -22,7 +41,6 @@ import (
 	wasmparams "github.com/CosmWasm/wasmd/app/params"
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	_ "github.com/babylonlabs-io/babylon-sdk/demo/app"
-	bbnsdktypes "github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -58,6 +76,9 @@ type BcdTestManager struct {
 	EOTSClient        *client.EOTSManagerGRpcClient
 	baseDir           string
 	logger            *zap.Logger
+	cfg               *config.CosmwasmConfig
+	encodingCfg       wasmparams.EncodingConfig
+	babylonKeyDir     string
 }
 
 func createLogger(t *testing.T, level zapcore.Level) *zap.Logger {
@@ -73,9 +94,8 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	require.NoError(t, err)
 
 	loggerConfig := zap.NewDevelopmentConfig()
-	loggerConfig.Level = zap.NewAtomicLevelAt(zap.ErrorLevel)
-	logger, err := loggerConfig.Build()
-	require.NoError(t, err)
+	loggerConfig.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	logger := zaptest.NewLogger(t)
 
 	// 1. generate covenant committee
 	covenantQuorum := 2
@@ -136,6 +156,9 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	cosmwasmConfig.AccountPrefix = "bbnc"
 	cosmwasmConfig.ChainID = bcdChainID
 	cosmwasmConfig.RPCAddr = fmt.Sprintf("http://localhost:%d", bcdRpcPort)
+	cosmwasmConfig.GasPrices = "0.01ustake"
+	cosmwasmConfig.GasAdjustment = 2.0
+
 	// tempApp := bcdapp.NewTmpApp() // TODO: investigate why wasmapp works and bcdapp doesn't
 	tempApp := wasmapp.NewWasmApp(sdklogs.NewNopLogger(), dbm.NewMemDB(), nil, false, simtestutil.NewAppOptionsWithFlagHome(t.TempDir()), []wasmkeeper.Option{})
 	encodingCfg := wasmparams.EncodingConfig{
@@ -206,6 +229,9 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 		EOTSClient:        eotsCli,
 		baseDir:           testDir,
 		logger:            logger,
+		cfg:               cosmwasmConfig,
+		encodingCfg:       encodingCfg,
+		babylonKeyDir:     keyDir,
 	}
 
 	ctm.WaitForServicesStart(t)
@@ -246,7 +272,7 @@ func (ctm *BcdTestManager) Stop(t *testing.T) {
 
 // CreateConsumerFinalityProviders creates finality providers for a consumer chain
 // and registers them in Babylon and consumer smart contract
-func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consumerId string) *service.FinalityProviderInstance {
+func (ctm *BcdTestManager) CreateConsumerFinalityProviders(ctx context.Context, t *testing.T, consumerId string) *service.FinalityProviderInstance {
 	app := ctm.Fpa
 	cfg := app.GetConfig()
 	keyName := cfg.BabylonConfig.Key
@@ -265,17 +291,17 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	fpMsg := e2eutils.GenBtcStakingFpExecMsg(eotsPubKey.MarshalHex())
 	fpMsgBytes, err := json.Marshal(fpMsg)
 	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(context.Background(), fpMsgBytes)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, fpMsgBytes)
 	require.NoError(t, err)
 
 	// register fp in Babylon
-	_, err = app.CreateFinalityProvider(context.Background(), keyName, consumerId, eotsPubKey, desc, commission)
+	_, err = app.CreateFinalityProvider(ctx, keyName, consumerId, eotsPubKey, desc, commission)
 	require.NoError(t, err)
 
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	cfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
-	err = app.StartFinalityProvider(context.Background(), eotsPubKey)
+	err = app.StartFinalityProvider(ctx, eotsPubKey)
 	require.NoError(t, err)
 
 	fpIns, err := app.GetFinalityProviderInstance()
@@ -284,7 +310,7 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 
 	// ensure finality providers are registered in smart contract
 	require.Eventually(t, func() bool {
-		consumerFpsResp, err := ctm.BcdConsumerClient.QueryFinalityProviders(context.Background())
+		consumerFpsResp, err := ctm.BcdConsumerClient.QueryFinalityProviders(ctx)
 		if err != nil {
 			t.Logf("failed to query finality providers from consumer contract: %s", err.Error())
 			return false
@@ -305,4 +331,316 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(t *testing.T, consume
 	t.Logf("the consumer test manager is running with %v finality-provider(s)", 1)
 
 	return fpIns
+}
+
+func (ctm *BcdTestManager) createGrpcConnection() (*grpc.ClientConn, error) {
+	parsedUrl, err := url.Parse(ctm.cfg.GRPCAddr)
+	if err != nil {
+		return nil, fmt.Errorf("grpc-address is not correctly formatted: %w", err)
+	}
+	endpoint := fmt.Sprintf("%s:%s", parsedUrl.Hostname(), parsedUrl.Port())
+	grpcConn, err := grpc.NewClient(
+		endpoint,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(nil).GRPCCodec())),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return grpcConn, nil
+}
+
+func (ctm *BcdTestManager) submitGovProp(ctx context.Context, t *testing.T, msgs []sdk.Msg, title, summary string) uint64 {
+	t.Helper()
+	grpcConn, err := ctm.createGrpcConnection()
+	require.NoError(t, err)
+	defer grpcConn.Close()
+
+	govClient := govtypes.NewQueryClient(grpcConn)
+	paramsResp, err := govClient.Params(ctx, &govtypes.QueryParamsRequest{ParamsType: "deposit"})
+	require.NoError(t, err)
+
+	minDeposit := paramsResp.Params.MinDeposit
+	proposer := ctm.BcdConsumerClient.GetClient().MustGetAddr()
+	govMsg, err := govtypes.NewMsgSubmitProposal(msgs, minDeposit, proposer, "", title, summary, false)
+	require.NoError(t, err)
+
+	_, err = ctm.BcdConsumerClient.GetClient().ReliablySendMsgs(ctx, []sdk.Msg{govMsg}, []*sdkErr.Error{}, []*sdkErr.Error{})
+	require.NoError(t, err)
+
+	proposalsResp, err := govClient.Proposals(ctx, &govtypes.QueryProposalsRequest{
+		Depositor: proposer,
+	})
+	require.NoError(t, err)
+	require.Len(t, proposalsResp.Proposals, 1, "Expected exactly one proposal to be returned, got %d", len(proposalsResp.Proposals))
+
+	maxID := proposalsResp.Proposals[0].Id
+	for _, p := range proposalsResp.Proposals {
+		if p.Id > maxID {
+			maxID = p.Id
+		}
+	}
+
+	return maxID
+}
+
+func (ctm *BcdTestManager) voteGovProp(ctx context.Context, t *testing.T, proposalID uint64, option govtypes.VoteOption) {
+	t.Helper()
+	voter := ctm.BcdConsumerClient.GetClient().MustGetAddr()
+	voterAddr, err := sdk.AccAddressFromBech32(voter)
+	require.NoError(t, err)
+
+	voteMsg := govtypes.NewMsgVote(voterAddr, proposalID, option, "")
+	_, err = ctm.BcdConsumerClient.GetClient().ReliablySendMsgs(ctx, []sdk.Msg{voteMsg}, []*sdkErr.Error{}, []*sdkErr.Error{})
+	require.NoError(t, err)
+}
+
+func (ctm *BcdTestManager) queryProposalStatus(ctx context.Context, t *testing.T, proposalID uint64) (govtypes.ProposalStatus, error) {
+	t.Helper()
+	grpcConn, err := ctm.createGrpcConnection()
+	require.NoError(t, err)
+	defer grpcConn.Close()
+
+	govClient := govtypes.NewQueryClient(grpcConn)
+	proposalResp, err := govClient.Proposal(ctx, &govtypes.QueryProposalRequest{ProposalId: proposalID})
+	if err != nil {
+		return govtypes.ProposalStatus_PROPOSAL_STATUS_UNSPECIFIED, err
+	}
+
+	return proposalResp.Proposal.Status, nil
+}
+
+func (ctm *BcdTestManager) QueryProposalDetails(ctx context.Context, proposalID uint64) (*govtypes.Proposal, error) {
+	grpcConn, err := ctm.createGrpcConnection()
+	if err != nil {
+		return nil, err
+	}
+	defer grpcConn.Close()
+	govClient := govtypes.NewQueryClient(grpcConn)
+	resp, err := govClient.Proposal(ctx, &govtypes.QueryProposalRequest{ProposalId: proposalID})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Proposal, nil
+}
+
+func (ctm *BcdTestManager) submitAndVoteGovProp(ctx context.Context, t *testing.T, msg sdk.Msg) {
+	t.Helper()
+	proposalID := ctm.submitGovProp(ctx, t, []sdk.Msg{msg}, "Set BSN Contracts", "Set contract addresses for Babylon system")
+	t.Logf("proposalID: %d", proposalID)
+
+	ctm.voteGovProp(ctx, t, proposalID, govtypes.OptionYes)
+	t.Logf("voted on proposal %d with YES option", proposalID)
+
+	require.Eventually(t, func() bool {
+		status, err := ctm.queryProposalStatus(ctx, t, proposalID)
+		if err != nil {
+			t.Logf("Error querying proposal status: %v", err)
+
+			return false
+		}
+
+		if status == govtypes.ProposalStatus_PROPOSAL_STATUS_FAILED ||
+			status == govtypes.ProposalStatus_PROPOSAL_STATUS_REJECTED {
+
+			// Query final proposal details
+			finalProposal, err := ctm.QueryProposalDetails(ctx, proposalID)
+			if err == nil {
+				t.Logf("=== Final Proposal Details ===")
+				t.Logf("Final Status: %s", finalProposal.Status.String())
+				t.Logf("Failed Reason: %s", finalProposal.FailedReason)
+			}
+
+			t.Fatalf("Proposal %d failed with status: %s", proposalID, status.String())
+		}
+
+		return status == govtypes.ProposalStatus_PROPOSAL_STATUS_PASSED
+
+	}, 2*time.Minute, 5*time.Second, "proposal did not pass in time")
+}
+
+func (ctm *BcdTestManager) setupContracts(ctx context.Context, t *testing.T) cwcc.BabylonContracts {
+	// store babylon contract
+	babylonContractPath := "./bytecode/babylon_contract.wasm"
+	err := ctm.BcdConsumerClient.StoreWasmCode(babylonContractPath)
+	require.NoError(t, err)
+	babylonContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), babylonContractWasmId)
+
+	// store btc staking contract
+	btcStakingContractPath := "./bytecode/btc_staking.wasm"
+	err = ctm.BcdConsumerClient.StoreWasmCode(btcStakingContractPath)
+	require.NoError(t, err)
+	btcStakingContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), btcStakingContractWasmId)
+
+	// store btc finality contract
+	btcFinalityContractPath := "./bytecode/btc_finality.wasm"
+	err = ctm.BcdConsumerClient.StoreWasmCode(btcFinalityContractPath)
+	require.NoError(t, err)
+	btcFinalityContractWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), btcFinalityContractWasmId)
+
+	btcLightClientPath := "./bytecode/btc_light_client.wasm"
+	err = ctm.BcdConsumerClient.StoreWasmCode(btcLightClientPath)
+	require.NoError(t, err)
+	btcLightClientWasmId, err := ctm.BcdConsumerClient.GetLatestCodeID()
+	require.NoError(t, err)
+	require.Equal(t, uint64(4), btcLightClientWasmId)
+
+	network := "regtest"
+	btcConfirmationDepth := 1
+	btcFinalizationTimeout := 2
+	admin := ctm.BcdConsumerClient.MustGetValidatorAddress()
+	btcLightClientInitMsg := fmt.Sprintf(`{"network":"%s","btc_confirmation_depth":%d,"checkpoint_finalization_timeout":%d}`,
+		network, btcConfirmationDepth, btcFinalizationTimeout)
+	btcFinalityInitMsg := fmt.Sprintf(`{"admin":"%s"}`, admin)
+	btcStakingInitMsg := fmt.Sprintf(`{"admin":"%s"}`, admin)
+	btcLightClientInitMsgBz := base64.StdEncoding.EncodeToString([]byte(btcLightClientInitMsg))
+	btcFinalityInitMsgBz := base64.StdEncoding.EncodeToString([]byte(btcFinalityInitMsg))
+	btcStakingInitMsgBz := base64.StdEncoding.EncodeToString([]byte(btcStakingInitMsg))
+
+	babylonInitMsg := map[string]interface{}{
+		"network":                         network,
+		"babylon_tag":                     "01020304",
+		"btc_confirmation_depth":          btcConfirmationDepth,
+		"checkpoint_finalization_timeout": btcFinalizationTimeout,
+		"notify_cosmos_zone":              false,
+		"btc_light_client_code_id":        btcLightClientWasmId,
+		"btc_light_client_msg":            btcLightClientInitMsgBz,
+		"btc_staking_code_id":             btcStakingContractWasmId,
+		"btc_staking_msg":                 btcStakingInitMsgBz,
+		"btc_finality_code_id":            btcFinalityContractWasmId,
+		"btc_finality_msg":                btcFinalityInitMsgBz,
+		"consumer_name":                   "test-consumer",
+		"consumer_description":            "test-consumer-description",
+		"ics20_channel_id":                "channel-0",
+		"destination_module":              "btcstaking",
+	}
+	babylonInitMsgBz, err := json.Marshal(babylonInitMsg)
+	require.NoError(t, err)
+
+	msg := &wasmdtypes.MsgInstantiateContract{
+		Sender: ctm.BcdConsumerClient.MustGetValidatorAddress(),
+		Admin:  ctm.BcdConsumerClient.MustGetValidatorAddress(),
+		CodeID: babylonContractWasmId,
+		Label:  "cw",
+		Msg:    babylonInitMsgBz,
+		Funds:  nil,
+	}
+
+	instResp, err := ctm.BcdConsumerClient.GetClient().ReliablySendMsg(ctx, msg, []*sdkErr.Error{}, []*sdkErr.Error{})
+	require.NoError(t, err)
+	require.NotNil(t, instResp)
+
+	// get btc staking contract address
+	resp, err := ctm.BcdConsumerClient.ListContractsByCode(btcStakingContractWasmId, &sdkquerytypes.PageRequest{})
+	require.NoError(t, err)
+	require.Len(t, resp.Contracts, 1)
+	btcStakingContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+	// update the contract address
+	btcStakingContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcStakingContractAddr)
+	ctm.BcdConsumerClient.SetBtcStakingContractAddress(btcStakingContractAddrStr)
+
+	// get btc finality contract address
+	resp, err = ctm.BcdConsumerClient.ListContractsByCode(btcFinalityContractWasmId, &sdkquerytypes.PageRequest{})
+	require.NoError(t, err)
+	require.Len(t, resp.Contracts, 1)
+	btcFinalityContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+
+	resp, err = ctm.BcdConsumerClient.ListContractsByCode(babylonContractWasmId, &sdkquerytypes.PageRequest{})
+	require.NoError(t, err)
+	require.Len(t, resp.Contracts, 1)
+	babylonContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+
+	resp, err = ctm.BcdConsumerClient.ListContractsByCode(btcLightClientWasmId, &sdkquerytypes.PageRequest{})
+	require.NoError(t, err)
+	require.Len(t, resp.Contracts, 1)
+	btcLightClientAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+
+	// update the contract address
+	btcFinalityContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcFinalityContractAddr)
+	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddrStr)
+
+	bbnContracts := cwcc.BabylonContracts{
+		BabylonContract:        babylonContractAddr.String(),
+		BtcLightClientContract: btcLightClientAddr.String(),
+		BtcStakingContract:     btcStakingContractAddrStr,
+		BtcFinalityContract:    btcFinalityContractAddrStr,
+	}
+
+	authorityBbnc := sdk.MustBech32ifyAddressBytes("bbnc", authtypes.NewModuleAddress("gov"))
+
+	msgSet := &bbnsdktypes.MsgSetBSNContracts{
+		Authority: authorityBbnc,
+		Contracts: &bbnsdktypes.BSNContracts{
+			BabylonContract:        bbnContracts.BabylonContract,
+			BtcLightClientContract: bbnContracts.BtcLightClientContract,
+			BtcStakingContract:     bbnContracts.BtcStakingContract,
+			BtcFinalityContract:    bbnContracts.BtcFinalityContract,
+		},
+	}
+
+	ctm.submitAndVoteGovProp(ctx, t, msgSet)
+
+	return bbnContracts
+}
+
+func (ctm *BcdTestManager) waitForZoneConciergeChannel(t *testing.T) {
+	require.Eventually(t, func() bool {
+		res, err := ctm.BaseTestManager.BabylonController.GetBBNClient().IBCChannels()
+		require.NoError(t, err)
+
+		require.Len(t, res.Channels, 2, "Expected exactly two IBC channels to be returned, got %d", len(res.Channels))
+		for _, channel := range res.Channels {
+			if channel.State == channeltypes.OPEN &&
+				channel.Ordering == channeltypes.ORDERED &&
+				strings.Contains(channel.Counterparty.PortId, "wasm.") {
+				t.Logf("ZoneConcierge channel found and open")
+				return true
+			}
+		}
+
+		return false
+	}, e2eutils.EventuallyWaitTimeOut, 1*time.Second, "ZoneConcierge channel did not open in time")
+}
+
+func (ctm *BcdTestManager) WaitForTimestampedHeight(t *testing.T, ctx context.Context, height uint64) {
+	t.Logf("WaitForTimestampedHeight: trying to timestamp target height %d", height)
+
+	// finalize the next epoch to have >=1 BTC timestamp
+	currentEpoch, err := ctm.BaseTestManager.BabylonController.QueryCurrentEpoch()
+	require.NoError(t, err, "failed to query current epoch")
+	ctm.FinalizeUntilEpoch(t, currentEpoch)
+
+	require.Eventually(t, func() bool {
+		res, err := ctm.BcdConsumerClient.QueryLastBTCTimestampedHeader(ctx)
+		if err != nil {
+			t.Logf("failed to query last BTC timestamped header: %s", err.Error())
+			return false
+		}
+
+		if res.Height >= height {
+			t.Logf("BTC timestamped header height %d is now higher than target height %d", res.Height, height)
+			return true
+		}
+
+		t.Logf("WaitForTimestampedHeight: trying to timestamp target height %d, last BTC timestamped height %d", height, res.Height)
+
+		currentEpoch, err := ctm.BaseTestManager.BabylonController.QueryCurrentEpoch()
+		if err != nil {
+			t.Logf("failed to query current epoch: %s", err.Error())
+			return false
+		}
+		ctm.FinalizeUntilEpoch(t, currentEpoch)
+
+		return false
+	}, 2*e2eutils.EventuallyWaitTimeOut, 5*time.Second, "BTC timestamped header height should reach target height %d", height)
+
+	t.Logf("WaitForTimestampedHeight: target height %d is now timestamped", height)
 }
