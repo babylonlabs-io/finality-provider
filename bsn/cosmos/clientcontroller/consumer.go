@@ -216,8 +216,8 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderHasPower(
 	return resp.Power > 0, nil
 }
 
-func (wc *CosmwasmConsumerController) QueryFinalityProvidersByPower(ctx context.Context) (*ConsumerFpsByPowerResponse, error) {
-	queryMsgStruct := QueryMsgFinalityProvidersByPower{
+func (wc *CosmwasmConsumerController) QueryFinalityProvidersByTotalActiveSats(ctx context.Context) (*ConsumerFpsByPowerResponse, error) {
+	queryMsgStruct := QueryMsgFinalityProvidersByTotalActiveSats{
 		FinalityProvidersByTotalActiveSats: struct{}{},
 	}
 

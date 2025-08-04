@@ -3,11 +3,12 @@ package e2etest_bcd
 import (
 	"context"
 	"encoding/json"
+	"testing"
+	"time"
+
 	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
 	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 )
@@ -57,7 +58,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	fp := ctm.CreateConsumerFinalityProviders(ctx, t, bcdConsumerID)
 	fpPk := fp.GetBtcPkBIP340()
 
-	res, err := ctm.BcdConsumerClient.QueryFinalityProvidersByPower(ctx)
+	res, err := ctm.BcdConsumerClient.QueryFinalityProvidersByTotalActiveSats(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
@@ -98,29 +99,16 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].StakingTx, consumerDelsResp.Delegations[0].StakingTx)
 	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].SlashingTx, consumerDelsResp.Delegations[0].SlashingTx)
 
-	// ensure fp has voting power in smart contract
-	consumerFpsByPowerResp, err := ctm.BcdConsumerClient.QueryFinalityProvidersByPower(ctx)
+	// ensure fp has positive total active sats in smart contract
+	consumerFpsByPowerResp, err := ctm.BcdConsumerClient.QueryFinalityProvidersByTotalActiveSats(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, consumerFpsByPowerResp)
 	require.Len(t, consumerFpsByPowerResp.Fps, 1)
 	require.Equal(t, fpPk.MarshalHex(), consumerFpsByPowerResp.Fps[0].BtcPkHex)
 	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].TotalSat, consumerFpsByPowerResp.Fps[0].TotalActiveSats)
 
-	// get comet latest height
-	wasmdNodeStatus, err := ctm.BcdConsumerClient.GetCometNodeStatus()
-	require.NoError(t, err)
-	// TODO: this is a hack as its possible that latest comet height is less than activated height
-	//  and the sigs/finalization can only happen after activated height
-	lookupHeight := wasmdNodeStatus.SyncInfo.LatestBlockHeight + 5
-
+	// wait for public randomness to be BTC timestamped
 	ctm.BaseTestManager.WaitForFpPubRandTimestamped(t, fp)
-
-	activatedHeight, err := ctm.BcdConsumerClient.QueryFinalityActivationBlockHeight(ctx)
-	require.NoError(t, err)
-	activatedBlock, err := ctm.BcdConsumerClient.QueryIndexedBlock(ctx, activatedHeight)
-	require.NoError(t, err)
-	require.NotNil(t, activatedBlock)
-
 	require.Eventually(t, func() bool {
 		res, err := ctm.BcdConsumerClient.QueryLastBTCTimestampedHeader(ctx)
 		if err != nil {
@@ -132,6 +120,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 		return res.Height > 0
 	}, e2eutils.EventuallyWaitTimeOut, 5*time.Second)
 
+	// wait for FP to vote on block
 	var lastVotedHeight uint64
 	require.Eventually(t, func() bool {
 		if fp.GetLastVotedHeight() > 0 {
@@ -140,31 +129,30 @@ func TestConsumerFpLifecycle(t *testing.T) {
 			return true
 		}
 		return false
-	}, 2*e2eutils.EventuallyWaitTimeOut, 2*time.Second, "FP should automatically vote on rollup blocks")
+	}, e2eutils.EventuallyWaitTimeOut, 2*time.Second, "FP should automatically vote on rollup blocks")
 
-	// ensure finality signature is submitted to smart contract
+	// wait for finality signature to be included in the smart contract
 	require.Eventually(t, func() bool {
-		fpSigsResponse, err := ctm.BcdConsumerClient.QueryFinalitySignature(ctx, fpPk.MarshalHex(), uint64(lookupHeight))
+		fpSigsResponse, err := ctm.BcdConsumerClient.QueryFinalitySignature(ctx, fpPk.MarshalHex(), lastVotedHeight)
 		if err != nil {
 			t.Logf("failed to query finality signature: %s", err.Error())
 			return false
 		}
-		if fpSigsResponse == nil || fpSigsResponse.Signature == nil || len(fpSigsResponse.Signature) == 0 {
+		if fpSigsResponse == nil || len(fpSigsResponse.Signature) == 0 {
+			t.Logf("finality signature not found for height %d", lastVotedHeight)
 			return false
 		}
 		return true
-	}, 2*e2eutils.EventuallyWaitTimeOut, 3*time.Second)
+	}, e2eutils.EventuallyWaitTimeOut, 3*time.Second)
 
-	//
-	startTime := time.Now()
+	// wait for the block to be finalized
 	require.Eventually(t, func() bool {
-
 		lastFin, err := ctm.BcdConsumerClient.QueryLatestFinalizedBlock(ctx)
 		require.NoError(t, err)
 		if lastFin != nil {
 			t.Logf("Latest finalized block height: %d is finalized %v", lastFin.GetHeight(), lastFin.IsFinalized())
 		}
-		idxBlockedResponse, err := ctm.BcdConsumerClient.QueryIndexedBlock(ctx, uint64(lookupHeight))
+		idxBlockedResponse, err := ctm.BcdConsumerClient.QueryIndexedBlock(ctx, lastVotedHeight)
 		if err != nil {
 			t.Logf("failed to query indexed block: %s", err.Error())
 			return false
@@ -175,16 +163,10 @@ func TestConsumerFpLifecycle(t *testing.T) {
 
 		// Additional if statement to check finalization status
 		if idxBlockedResponse.Finalized {
-			t.Logf("Block at height %d is now finalized", lookupHeight)
+			t.Logf("Block at height %d is now finalized", lastVotedHeight)
 			return true
 		}
 
-		// Check if 2 minutes have elapsed
-		if time.Since(startTime) >= 5*time.Minute {
-			t.Logf("2 minutes have elapsed, still checking for finalized block at height %d", lookupHeight)
-		}
-
 		return false
-	}, 3*e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
-
+	}, e2eutils.EventuallyWaitTimeOut, 2*time.Second)
 }

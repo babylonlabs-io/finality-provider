@@ -208,7 +208,7 @@ type QueryMsgDelegations struct {
 	Delegations struct{} `json:"delegations"`
 }
 
-type QueryMsgFinalityProvidersByPower struct {
+type QueryMsgFinalityProvidersByTotalActiveSats struct {
 	FinalityProvidersByTotalActiveSats struct{} `json:"finality_providers_by_total_active_sats"`
 }
 
