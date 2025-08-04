@@ -81,7 +81,7 @@ func (m *Manager) RunBabylondResource(
 				"--additional-sender-account "+
 				"--epoch-interval=%d --slashing-pk-script=%s "+
 				"--btc-finalization-timeout 2 --btc-confirmation-depth 1 "+
-				"--covenant-quorum=%d --covenant-pks=%s && "+
+				"--covenant-quorum=%d --covenant-pks=%s --max-finality-providers-in-script=2 && "+
 				"chmod -R 777 /home && "+
 				"babylond start --home=/home/node0/babylond",
 			epochInterval,

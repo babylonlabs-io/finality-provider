@@ -504,6 +504,12 @@ func (tm *BaseTestManager) FinalizeUntilEpoch(t *testing.T, epoch uint64) {
 	submitter := tm.BabylonController.GetKeyAddress()
 
 	for _, checkpoint := range resp.RawCheckpoints {
+		if checkpoint.Status == ckpttypes.Finalized {
+			t.Logf("checkpoint %d is already finalized", checkpoint.Ckpt.EpochNum)
+
+			continue
+		}
+
 		currentBtcTipResp, err := tm.BabylonController.QueryBtcLightClientTip()
 		require.NoError(t, err)
 		tipHeader, err := bbntypes.NewBTCHeaderBytesFromHex(currentBtcTipResp.HeaderHex)
