@@ -344,7 +344,7 @@ The interactions between the EOTS Manager and the finality provider happen
 through RPC calls. These calls handle key operations, signature generation,
 and randomness commitments. An easy way to think about it is the EOTS Manager
 maintains the keys while the FP daemon coordinates any interactions with the
-Babylon Genesis.
+Rollup BSN and the finality contract deployed on Babylon Genesis.
 
 The EOTS Manager is designed to handle multiple finality provider keys, operating
 as a centralized key management system. When starting a finality provider instance,
