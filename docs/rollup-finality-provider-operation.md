@@ -480,7 +480,7 @@ Rewards are calculated by the Rollup BSN based on finality providers’ particip
 in sending valid finality votes, with voting power typically the primary weight. 
 They accumulate in a reward gauge and are bridged into Babylon Genesis as 
 native `x/bank` assets. To learn more, see the 
-[rewards distribution documentatio](https://github.com/babylonlabs-io/babylon/blob/release/v3.x/x/btcstaking/docs/rewards-distribution.md)
+[rewards distribution documentation](https://github.com/babylonlabs-io/babylon/blob/release/v3.x/x/btcstaking/docs/rewards-distribution.md)
 
 #### 5.2.1. Querying Rewards
 
