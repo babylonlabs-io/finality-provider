@@ -806,7 +806,7 @@ registered on Babylon.
 #### 6.3.2. Recover public randomness proof
 
 Every finality vote must contain the public randomness proof to prove that the
-randomness used in the signature is already committed on Babylon. Loss of
+randomness used in the signature is already committed on the finality contract. Loss of
 public randomness proof leads to direct failure of the vote submission.
 
 To recover the public randomness proof, the following steps should be followed:
