@@ -129,15 +129,16 @@ func (ds *DefaultFinalitySubmitter) filterBlocksForVoting(ctx context.Context, b
 		}
 
 		// check whether the finality provider has voting power
-		hasPower, err = ds.getVotingPowerWithRetry(ctx, blk.GetHeight())
+		blkHeight := blk.GetHeight()
+		hasPower, err = ds.getVotingPowerWithRetry(ctx, blkHeight)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get voting power for height %d: %w", blk.GetHeight(), err)
+			return nil, fmt.Errorf("failed to get voting power for height %d: %w", blkHeight, err)
 		}
 		if !hasPower {
 			ds.logger.Debug(
 				"the finality-provider does not have voting power",
 				zap.String("pk", ds.getBtcPkHex()),
-				zap.Uint64("block_height", blk.GetHeight()),
+				zap.Uint64("block_height", blkHeight),
 			)
 
 			// the finality provider does not have voting power
@@ -146,6 +147,11 @@ func (ds *DefaultFinalitySubmitter) filterBlocksForVoting(ctx context.Context, b
 
 			continue
 		}
+		ds.logger.Debug(
+			"the finality-provider has voting power",
+			zap.String("pk", ds.getBtcPkHex()),
+			zap.Uint64("block_height", blkHeight),
+		)
 
 		processedBlocks = append(processedBlocks, blk)
 	}
