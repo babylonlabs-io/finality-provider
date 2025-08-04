@@ -6,7 +6,9 @@ import (
 	"github.com/cometbft/cometbft/crypto/merkle"
 )
 
-// PubRandCommit interface abstracts epoch information across different sources
+// PubRandCommit interface abstracts source-specific structs
+// (Babylon/Cosmos/Rollup FPs) to handle different JSON field names across
+// sources.
 type PubRandCommit interface {
 	EndHeight() uint64
 	Validate() error
