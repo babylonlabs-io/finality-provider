@@ -183,8 +183,6 @@ essential for its liveness and earning of rewards.
 > ⚠️ **Important**: To operate your Finality Provider, ensure your Babylon Genesis account 
 > is funded.
 > **Block vote transactions and public randomness submissions require gas payments.**
-> For testnet, you can obtain funds from our
-> testnet faucet.
 
 > ⚠️ **Notice:** Do not reuse the same Operation Key across multiple finality providers.  
 > Doing so can cause sequence number mismatches and lead to failed transactions or 
