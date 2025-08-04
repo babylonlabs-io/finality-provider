@@ -385,7 +385,7 @@ rollup-fpd create-finality-provider \
 Required parameters:
 
 * `--chain-id`: The Rollup BSN chain ID. Needs to be the same as the once used in
-  rollup-bsn contract
+  the Rollup BSN finality contract
 * `--eots-pk`: The EOTS public key maintained by the connected EOTS manager
   instance that the finality provider should use. If one is not provided the
   finality provider will request the creation of a new one from the connected
