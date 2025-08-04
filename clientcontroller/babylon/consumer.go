@@ -26,6 +26,8 @@ import (
 var _ api.ConsumerController = &BabylonConsumerController{}
 
 // BabylonPubRandCommit represents the Babylon-specific public randomness commitment response
+//
+//nolint:revive
 type BabylonPubRandCommit struct {
 	StartHeight uint64 `json:"start_height"`
 	NumPubRand  uint64 `json:"num_pub_rand"`
