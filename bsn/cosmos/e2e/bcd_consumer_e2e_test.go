@@ -1,3 +1,5 @@
+//go:build e2e_bcd
+
 package e2etest_bcd
 
 import (
@@ -115,7 +117,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 			t.Logf("FP voted on block at height: %d", lastVotedHeight)
 			return true
 		}
-		
+
 		return false
 	}, e2eutils.EventuallyWaitTimeOut, 2*time.Second, "FP should automatically vote on rollup blocks")
 
