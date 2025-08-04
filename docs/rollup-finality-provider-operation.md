@@ -492,7 +492,7 @@ rollup-fpd reward-gauges <address> --node <babylon-genesis-rpc-address>
 
 Parameters:
 
-* `<address>`: The Babylon Genesis address of the stakeholder in bech32 string.
+* `<address>`: The Babylon Genesis address of the finality provider in bech32 format.
 * `--node <babylon-genesis-rpc-address>`: <host>:<port> to Babylon Genesis
 RPC interface for this chain (default `tcp://localhost:26657`)
 
