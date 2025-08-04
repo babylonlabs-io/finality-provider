@@ -81,7 +81,7 @@ Operating a finality provider involves managing multiple keys, each serving dist
 | **Managed By** | `eotsd`                                                                                                                                                             | • `rollup-fpd`<br>• Can kept isolated after Operation Key is set                                                                                                       | `rollup-fpd`                                                                                              |
 | **Mutability** | Immutable after registration                                                                                                                                        | Immutable after registration                                                                                                                                    | Rotatable (if separate from the Babylon Genesis key)                                               |
 | **Key Relationships** | Permanently paired with Babylon Genesis Key during registration                                                                                                     | • Permanently paired with EOTS Key during registration<br>• Can delegate operations to Operation Key                                                            | • Not associated with the other keys<br>• Should be set after the finality provider is registered   |
-| **Recomended Practices** | • Store backups in multiple secure locations<br>• Use dedicated machine for EOTS Manager                                                                            | • Store backups in multiple secure locations<br>• Setup the Operation Key right after registration<br>• Only use for reward operations                          | • Maintain minimal balance<br>• Monitor for balance and fund it when needed                        |
+| **Recommended Practices** | • Store backups in multiple secure locations<br>• Use dedicated machine for EOTS Manager                                                                            | • Store backups in multiple secure locations<br>• Setup the Operation Key right after registration<br>• Only use for reward operations                          | • Maintain minimal balance<br>• Monitor for balance and fund it when needed                        |
 | **Security Implications** | • Loss is irrecoverable<br>• Cannot participate finality voting                                                                                                     | • Loss is irrecoverable<br>• Cannot withdraw rewards                                                                                                            | • Temporary service disruption<br>• Can be replaced with a new key<br>• Small loss of funds        |
 
 Instructions of setting up the three keys can be found in the following places:
@@ -220,7 +220,7 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/babylon-node/README.md).
 >
 > ⚠️ **Critical RPC Configuration**:
-> When configuring your finality provider to a Babylon Gensis RPC node, you should
+> When configuring your finality provider to a Babylon Genesis RPC node, you should
 > connect to a **single** node directly. Additionally you **must**
 > ensure that this node has transaction indexing enabled (`indexer = "kv"`).
 > Using multiple RPC nodes or load balancers can lead to sync issues.
