@@ -60,7 +60,7 @@ process described in [EOTS Daemon Setup](./eots-daemon.md). This includes:
 > operate a finality provider.
 
 > ⚠️ **Important**: Each Finality Provider must generate a new EOTS key.
-> EOTS keys must not be reused across different providers.
+> EOTS keys cannot be reused across different finality providers.
 
 ## 2. System Requirements
 
