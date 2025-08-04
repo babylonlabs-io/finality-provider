@@ -356,7 +356,7 @@ RPC will have access to all the EOTS keys held within it.
 For example, after registering a finality provider, you can start its daemon by
 providing the EOTS public key `rollup-fpd start --eots-pk <hex-string-of-eots-public-key>`.
 
-> ⚠️ **Note**: that a single finality provider daemon can only run with a single
+> ⚠️ **Note**: A single finality provider daemon can only run with a single
 > finality provider instance at a time.
 
 ## 5. Finality Provider Operations
