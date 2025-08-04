@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
 	fpcfg "github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
 	cwcclient "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/client"
 	"github.com/cosmos/cosmos-sdk/client"
-	"sort"
-	"strings"
 
 	sdkErr "cosmossdk.io/errors"
 	wasmdparams "github.com/CosmWasm/wasmd/app/params"
@@ -403,6 +404,9 @@ func (wc *CosmwasmConsumerController) QueryFinalitySignature(ctx context.Context
 	err = json.Unmarshal(dataFromContract.Data, &resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+	if len(resp.Signature) == 0 {
+		return nil, fmt.Errorf("finality signature not found")
 	}
 
 	return &resp, nil
