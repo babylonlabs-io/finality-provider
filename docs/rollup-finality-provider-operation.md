@@ -276,7 +276,7 @@ The command flags:
 
 It will start the finality provider daemon listening for registration and other
 operations. If there is already a finality provider created (described in a
-later [section](#51-create-finality-provider)), `fpd start` will also start
+later [section](#51-create-finality-provider)), `rollup-fpd start` will also start
 the finality provider. If there are multiple finality providers created,
 `--eots-pk` is required.
 
@@ -331,7 +331,7 @@ EOTS Manager. Note that someone having access to your EOTS Manager
 RPC will have access to all the EOTS keys held within it.
 
 For example, after registering a finality provider, you can start its daemon by
-providing the EOTS public key `fpd start --eots-pk <hex-string-of-eots-public-key>`.
+providing the EOTS public key `rollup-fpd start --eots-pk <hex-string-of-eots-public-key>`.
 
 > ⚠️ **Note**: that a single finality provider daemon can only run with a single
 > finality provider instance at a time.
