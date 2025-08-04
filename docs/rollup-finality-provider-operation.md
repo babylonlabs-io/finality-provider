@@ -487,7 +487,7 @@ native `x/bank` assets. To learn more, see the
 To query rewards of a given stakeholder address, use the following command.
 
 ```shell
-fpd reward-gauges <address> --node <babylon-genesis-rpc-address>
+rollup-fpd reward-gauges <address> --node <babylon-genesis-rpc-address>
 ```
 
 Parameters:
