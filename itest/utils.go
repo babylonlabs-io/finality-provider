@@ -119,8 +119,6 @@ func DefaultFpConfig(keyringDir, homeDir string) *config.Config {
 	cfg.BabylonConfig.GasAdjustment = 2.0
 	cfg.BabylonConfig.GasPrices = "0.01ubbn"
 
-	cfg.SignatureSubmissionInterval = 3 * time.Second
-
 	return &cfg
 }
 
