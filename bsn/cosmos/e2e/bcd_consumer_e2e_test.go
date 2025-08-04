@@ -115,6 +115,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 			t.Logf("FP voted on block at height: %d", lastVotedHeight)
 			return true
 		}
+		
 		return false
 	}, e2eutils.EventuallyWaitTimeOut, 2*time.Second, "FP should automatically vote on rollup blocks")
 
@@ -129,6 +130,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 			t.Logf("finality signature not found for height %d", lastVotedHeight)
 			return false
 		}
+
 		return true
 	}, e2eutils.EventuallyWaitTimeOut, 3*time.Second)
 

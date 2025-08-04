@@ -609,28 +609,24 @@ func (ctm *BcdTestManager) waitForZoneConciergeChannel(t *testing.T) {
 	}, e2eutils.EventuallyWaitTimeOut, 1*time.Second, "ZoneConcierge channel did not open in time")
 }
 
-func (ctm *BcdTestManager) WaitForTimestampedHeight(t *testing.T, ctx context.Context, height uint64) error {
+func (ctm *BcdTestManager) WaitForTimestampedHeight(t *testing.T, ctx context.Context, height uint64) {
 	t.Logf("WaitForTimestampedHeight: trying to timestamp target height %d", height)
 
 	// finalize the next epoch to have >=1 BTC timestamp
 	currentEpoch, err := ctm.BaseTestManager.BabylonController.QueryCurrentEpoch()
-	if err != nil {
-		t.Logf("failed to query current epoch: %s", err.Error())
-		return err
-	}
+	require.NoError(t, err, "failed to query current epoch")
 	ctm.FinalizeUntilEpoch(t, currentEpoch)
 
-	for {
+	require.Eventually(t, func() bool {
 		res, err := ctm.BcdConsumerClient.QueryLastBTCTimestampedHeader(ctx)
 		if err != nil {
 			t.Logf("failed to query last BTC timestamped header: %s", err.Error())
-			time.Sleep(5 * time.Second)
-			continue
+			return false
 		}
 
 		if res.Height >= height {
 			t.Logf("BTC timestamped header height %d is now higher than target height %d", res.Height, height)
-			break
+			return true
 		}
 
 		t.Logf("WaitForTimestampedHeight: trying to timestamp target height %d, last BTC timestamped height %d", height, res.Height)
@@ -638,12 +634,12 @@ func (ctm *BcdTestManager) WaitForTimestampedHeight(t *testing.T, ctx context.Co
 		currentEpoch, err := ctm.BaseTestManager.BabylonController.QueryCurrentEpoch()
 		if err != nil {
 			t.Logf("failed to query current epoch: %s", err.Error())
-			return err
+			return false
 		}
 		ctm.FinalizeUntilEpoch(t, currentEpoch)
-	}
+
+		return false
+	}, 2*e2eutils.EventuallyWaitTimeOut, 5*time.Second, "BTC timestamped header height should reach target height %d", height)
 
 	t.Logf("WaitForTimestampedHeight: target height %d is now timestamped", height)
-
-	return nil
 }
