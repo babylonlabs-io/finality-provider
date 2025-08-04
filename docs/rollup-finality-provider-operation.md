@@ -303,7 +303,7 @@ the finality provider. If there are multiple finality providers created,
 `--eots-pk` is required.
 
 The daemon will establish a connection with the Rollup BSN node, 
-Babylon Genesis node and rollup-bsn contract, 
+Babylon Genesis node and the rollup BSN finality contract, and
 boot up its RPC server for executing CLI requests.
 
 You should see logs indicating successful startup:
