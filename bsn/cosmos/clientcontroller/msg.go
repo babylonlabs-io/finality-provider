@@ -39,8 +39,10 @@ type SingleConsumerDelegationResponse struct {
 }
 
 type ConsumerFpInfoResponse struct {
-	BtcPkHex string `json:"btc_pk_hex"`
-	Power    uint64 `json:"power"`
+	BtcPkHex        string `json:"btc_pk_hex"`
+	Power           uint64 `json:"power"`
+	Slashed         bool   `json:"slashed"`
+	TotalActiveSats uint64 `json:"total_active_sats"`
 }
 
 type ConsumerFpsByPowerResponse struct {
@@ -206,8 +208,8 @@ type QueryMsgDelegations struct {
 	Delegations struct{} `json:"delegations"`
 }
 
-type QueryMsgFinalityProvidersByPower struct {
-	FinalityProvidersByPower struct{} `json:"finality_providers_by_power"`
+type QueryMsgFinalityProvidersByTotalActiveSats struct {
+	FinalityProvidersByTotalActiveSats struct{} `json:"finality_providers_by_total_active_sats"`
 }
 
 type QueryMsgLastPubRandCommit struct {
@@ -216,4 +218,39 @@ type QueryMsgLastPubRandCommit struct {
 
 type LastPubRandCommitQuery struct {
 	BtcPkHex string `json:"btc_pk_hex"`
+}
+
+type QueryMsgLastConsumerHeader struct {
+	LastConsumerHeader struct{} `json:"last_consumer_header"`
+}
+
+type ConsumerHeaderResponse struct {
+	ConsumerID          string `json:"consumer_id"`
+	Hash                string `json:"hash"`
+	Height              uint64 `json:"height"`
+	Time                string `json:"time,omitempty"`
+	BabylonHeaderHash   string `json:"babylon_header_hash"`
+	BabylonHeaderHeight uint64 `json:"babylon_header_height"`
+	BabylonEpoch        uint64 `json:"babylon_epoch"`
+	BabylonTxHash       string `json:"babylon_tx_hash"`
+}
+
+type BabylonContracts struct {
+	BabylonContract        string
+	BtcLightClientContract string
+	BtcStakingContract     string
+	BtcFinalityContract    string
+}
+
+type QueryMsgFinalityProviderPower struct {
+	FinalityProviderPower FinalityProviderPowerQuery `json:"finality_provider_power"`
+}
+
+type FinalityProviderPowerQuery struct {
+	BtcPkHex string `json:"btc_pk_hex"`
+	Height   uint64 `json:"height"`
+}
+
+type ConsumerFpPowerResponse struct {
+	Power uint64 `json:"power"`
 }
