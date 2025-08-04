@@ -474,7 +474,6 @@ in sending valid finality votes, with voting power typically the primary weight.
 They accumulate in a reward gauge and are bridged into Babylon Genesis as 
 native `x/bank` assets
 
-
 #### 5.2.1. Querying Rewards
 
 To query rewards of a given stakeholder address, use the following command.
