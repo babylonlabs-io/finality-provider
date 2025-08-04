@@ -8,6 +8,9 @@ import (
 	"github.com/cometbft/cometbft/crypto/merkle"
 )
 
+// TODO: Shared across Babylon/Cosmos/Rollup FPs. Sources return different field
+// names (epoch_num/height/babylon_epoch). Consider source-specific structs or
+// interface approach.
 type PubRandCommit struct {
 	StartHeight uint64 `json:"start_height"`
 	NumPubRand  uint64 `json:"num_pub_rand"`
