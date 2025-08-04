@@ -15,18 +15,27 @@ import (
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 )
 
-// TestConsumerFpLifecycle tests the consumer finality provider lifecycle
+// TestConsumerFpLifecycle tests the complete consumer finality provider lifecycle
+// including contract setup, registration, delegation, and block finalization.
+//
+// Test Steps:
 // 1. Upload Babylon and BTC staking contracts to bcd chain
 // 2. Instantiate Babylon contract with admin
-// 3. Register consumer chain to Babylon
-// 4. Inject consumer fp in BTC staking contract using admin
-// 6. Start the finality provider daemon and app
-// 7. Wait for fp daemon to submit public randomness and finality signature
-// 8. Inject consumer delegation in BTC staking contract using admin, this will give voting power to fp
-// 9. Ensure fp has voting power in smart contract
-// 10. Ensure finality sigs are being submitted by fp daemon and block is finalized
-// NOTE: the delegation is injected after ensuring pub randomness loop in fp daemon has started
-// this order is necessary otherwise pub randomness loop takes time to start and due to this blocks won't get finalized.
+// 3. Setup relayer with contract addresses and Babylon configuration
+// 4. Register consumer chain to Babylon
+// 5. Create zone concierge channel for consumer communication
+// 6. Register consumer finality provider (FP) to Babylon
+// 7. Wait for FP daemon to submit public randomness commits to smart contract
+// 8. Inject consumer delegation in BTC staking contract using admin (gives voting power to FP)
+// 9. Verify FP has positive total active sats (voting power) in smart contract
+// 10. Wait for current block to be BTC timestamped to finalize pub rand commits
+// 11. Wait for FP to vote on rollup blocks and submit finality signatures
+// 12. Verify finality signatures are included in the smart contract
+// 13. Ensure blocks are finalized based on FP votes
+//
+// NOTE: The delegation is injected after ensuring the public randomness loop in the FP daemon
+// has started. This order is critical because the pub randomness loop takes time to initialize,
+// and without it, blocks won't get finalized properly.
 func TestConsumerFpLifecycle(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ctm := StartBcdTestManager(t, ctx)
