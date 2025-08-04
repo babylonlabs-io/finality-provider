@@ -607,7 +607,7 @@ You may follow the following procedure to set up the operation key.
 
 ### 5.4. Start Finality Provider
 
-After successful registration and properly set up the operation key,
+After a successful registration and proper set up of the operation key,
 you may start the finality provider instance by running:
 
 ```shell
