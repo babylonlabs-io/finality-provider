@@ -69,6 +69,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#561](https://github.com/babylonlabs-io/finality-provider/pull/561) chore: run e2e in parallel
 * [#563](https://github.com/babylonlabs-io/finality-provider/pull/563)
   chore(rollup): add missing fns in controller
+* [#569](https://github.com/babylonlabs-io/finality-provider/pull/569)
+  chore(rollup): add highest voted height query
 * [#567](https://github.com/babylonlabs-io/finality-provider/pull/567) chore: e2e cosmos bsn
 
 ## v1.1.0-rc.1

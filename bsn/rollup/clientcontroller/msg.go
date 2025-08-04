@@ -36,9 +36,10 @@ type SubmitFinalitySignatureResponse struct {
 }
 
 type QueryMsg struct {
-	Config             *ContractConfig `json:"config,omitempty"`
-	FirstPubRandCommit *PubRandCommit  `json:"first_pub_rand_commit,omitempty"`
-	LastPubRandCommit  *PubRandCommit  `json:"last_pub_rand_commit,omitempty"`
+	Config             *ContractConfig          `json:"config,omitempty"`
+	FirstPubRandCommit *PubRandCommit           `json:"first_pub_rand_commit,omitempty"`
+	LastPubRandCommit  *PubRandCommit           `json:"last_pub_rand_commit,omitempty"`
+	HighestVotedHeight *HighestVotedHeightQuery `json:"highest_voted_height,omitempty"`
 }
 
 // ContractConfig represents the full configuration from the finality contract
@@ -56,6 +57,10 @@ type RateLimitingConfig struct {
 }
 
 type PubRandCommit struct {
+	BtcPkHex string `json:"btc_pk_hex"`
+}
+
+type HighestVotedHeightQuery struct {
 	BtcPkHex string `json:"btc_pk_hex"`
 }
 
