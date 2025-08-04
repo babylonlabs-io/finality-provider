@@ -1,13 +1,13 @@
 # Rollup Finality Provider Operation
 
-This is an operational guide intended for technical finality provider 
-administrators. This guide covers the complete
-lifecycle of running a finality provider, including:
+This is an operational guide intended for technical Rollup finality provider 
+administrators of rollup BSNs. This guide covers the complete
+lifecycle of running a Rollup finality provider, including:
 
 * Managing keys (EOTS key for EOTS signatures and Babylon Genesis key for rewards).
-* Registering a finality provider on Babylon Genesis.
-* Operating a finality provider.
-* Withdrawing finality provider commission rewards.
+* Registering a Rollup finality provider on Babylon Genesis.
+* Operating a Rollup finality provider.
+* Withdrawing Rollup finality provider commission rewards.
 
 Please review the [high-level explainer](../README.md) before proceeding to
 gain an overall understanding of the finality provider.
@@ -48,7 +48,11 @@ process described in [EOTS Daemon Setup](./eots-daemon.md). This includes:
 * Adding your EOTS key to the daemon
 * Starting the EOTS daemon service
 
-> ⚠️ **Critical**: The EOTS daemon must be running and accessible before you can operate a finality provider.
+> ⚠️ **Critical**: The EOTS daemon must be running and accessible before you can 
+> operate a finality provider.
+
+> ⚠️ **Important**: Each Finality Provider must generate a new EOTS key.
+> EOTS keys must not be reused across different providers.
 
 ## 2. System Requirements
 
@@ -73,7 +77,9 @@ and [Recovery and Backup](#6-recovery-and-backup).
 
 ## 3. Keys Involved in Finality Provider Operation
 
-Operating a finality provider involves managing multiple keys, each serving distinct purposes. Understanding these keys, their relationships, and security implications is crucial for secure operation.
+Operating a finality provider involves managing multiple keys, each serving distinct 
+purposes. Understanding these keys, their relationships, and security implications is 
+crucial for secure operation.
 
 | Aspect | EOTS Key                                                                                                                                                            | Babylon Genesis Key                                                                                                                                             | Operation Key                                                                                      |
 |--------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
@@ -91,6 +97,10 @@ Instructions of setting up the three keys can be found in the following places:
 - [5.3. Set Up Operation Key](#53-set-up-operation-key).
 
 ## 4. Setting up the Finality Provider
+
+> ⚠️ **WARNING**: One finality provider can serve only one Rollup BSN.  
+> Each finality provider must use a unique EOTS daemon with its own unique btc_pk
+
 
 ### 4.1. Initialize the Finality Provider Daemon
 
@@ -157,20 +167,20 @@ This ensures that the finality provider daemon can promptly submit
 transactions, such as block votes and public randomness submissions that are
 essential for its liveness and earning of rewards.
 
-It is also important to note that the finality provider daemon will refund
-fees for the submission of valid votes as those are essential for the protocol.
-All other transactions, will require gas, but will be happening infrequently
-or only once. As this keyring is used for both earning and
-operational purposes, we strongly recommend maintaining only the necessary
-funds for operations in the keyring, and extracting the rest into
-more secure locations.
+> **Note:** All finality provider transactions including vote submissions and 
+> public randomness submissions require gas. 
+> Because this keyring is used for both reward related and operational actions, 
+> keep only the minimum needed balance here and move the rest to more secure storage.
 
-> ⚠️ **Important**:
-> To operate your Finality Provider, ensure your Babylon Genesis account 
+> ⚠️ **Important**: To operate your Finality Provider, ensure your Babylon Genesis account 
 > is funded.
-> Block vote transactions have their gas fees refunded, but public randomness
-> submissions require gas payments. For testnet, you can obtain funds from our
+> **Block vote transactions and public randomness submissions require gas payments.**
+> For testnet, you can obtain funds from our
 > testnet faucet.
+
+> ⚠️ **Notice:** Do not reuse the same Operation Key across multiple finality providers.  
+> Doing so can cause sequence number mismatches and lead to failed transactions or 
+> unexpected outages. Use a unique, rotatable Operation Key per FP.
 
 Use the following command to add the Babylon Genesis key for your finality provider:
 
@@ -207,7 +217,7 @@ RPCListener = 127.0.0.1:12581
 
 [babylon]
 Key = <finality-provider-key-name-signer> # the key you used above
-ChainID = bbn-test-5 # chain ID of the Babylon Genesis
+ChainID = <babylon-genesis-chain-id> # chain ID of the Babylon Genesis
 RPCAddr = http://127.0.0.1:26657 # Your Babylon Genesis node's RPC endpoint
 KeyDirectory = <path> # The `--home` path to the directory where the keyring is stored
 ```
@@ -215,21 +225,24 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > ⚠️ **Important**: Operating a finality provider requires direct 
 > connections to both a Babylon Genesis full node and a Rollup BSN node. 
 > It is **highly recommended** to operate your own instances of
-> full nodes instead of relying on third parties. You can find
-> instructions on setting up a Babylon Genesis node
-> [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/babylon-node/README.md).
+> full nodes instead of relying on third parties.
 >
 > ⚠️ **Critical RPC Configuration**:
-> When configuring your finality provider to a Babylon Genesis RPC node, you should
-> connect to a **single** node directly. Additionally you **must**
-> ensure that this node has transaction indexing enabled (`indexer = "kv"`).
-> Using multiple RPC nodes or load balancers can lead to sync issues.
+> When configuring your finality provider to connect to
+> a Babylon Genesis RPC node,
+> you should connect directly to a single node.
+> It is essential that this node has transaction indexing enabled
+> (`indexer = "kv"`).
+> Avoid using multiple RPC nodes or load balancers, as this can lead to synchronization issues.
 
 > ⚠️ **Contract Requirement**: To start a finality provider you must 
-> supply a valid Rollup BSN contract address. Additionally, the `btc_pk` obtained 
+> supply a valid Rollup BSN contract address ssociated with a registered BSN. 
+> Additionally, the `btc_pk` obtained 
 > from `eotsd` must be included in the contract’s allow-list. If the contract 
 > address is missing/invalid or the `btc_pk` isn’t allowed, the finality provider 
-> will fail to start.
+> will fail to start. 
+> To learn how to configure the allow-list, see the 
+> [parameter selection guidelines under `allowed_finality_providers`](https://github.com/babylonlabs-io/rollup-bsn-contracts/blob/main/docs/contract-managment.md#42-parameter-selection-guidelines)
 
 Configuration parameters explained:
 
@@ -255,6 +268,9 @@ merkle proofs for each randomness, resulting in higher gas fees when submitting
 future finality signatures and larger storage requirements.
 
 ### 4.4. Starting the Finality Provider Daemon
+
+> ⚠️ **Note**: Before starting, ensure this finality provider’s EOTS public key 
+> is allow-listed in the Rollup BSN contract; otherwise it will fail to start.
 
 The finality provider daemon (`rollup-fpd`) needs to be running before proceeding with
 registration or voting participation.
@@ -430,7 +446,7 @@ your finality provider's details:
         "moniker": "MyFinalityProvider",
         "website": "https://myfinalityprovider.com",
         "security_contact": "security@myfinalityprovider.com",
-        "details": "finality provider for the Babylon Genesis network"
+        "details": "finality provider for the Rollup BSN network"
       },
       "commission": "0.050000000000000000",
       "status": "REGISTERED"
@@ -453,10 +469,11 @@ The response includes:
 
 ### 5.2. Rewards
 
-Rewards are accumulated in a reward gauge, and a finality provider becomes
-eligible for rewards if it has participated sending finality votes.
-The distribution of rewards is based on the provider's voting power portion
-relative to other voters.
+Rewards are calculated by the Rollup BSN based on finality providers’ participation 
+in sending valid finality votes, with voting power typically the primary weight. 
+They accumulate in a reward gauge and are bridged into Babylon Genesis as 
+native `x/bank` assets
+
 
 #### 5.2.1. Querying Rewards
 
@@ -774,7 +791,8 @@ type StoredFinalityProvider struct {
 }
 ```
 
-It can be recovered by downloading the finality provider's info from Babylon Genesis. Specifically, this can be achieved by repeating the
+It can be recovered by downloading the finality provider's info from Babylon Genesis. 
+Specifically, this can be achieved by repeating the 
 [creation process](#51-create-finality-provider). The `create-finality-provider`
 cmd will download the info of the finality provider locally if it is already
 registered on Babylon.

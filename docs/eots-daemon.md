@@ -55,7 +55,7 @@ This command will:
 * Install binaries to `$GOPATH/bin`:
   * `eotsd`: EOTS manager daemon
   * `fpd`: Finality provider daemon.
-  * All BSN finality provider deamon (e.g., `rollup-fpd`, etc.)
+  * All BSN finality provider deamon (e.g., `rollup-fpd`, `cosmos-fpd`, etc.)
 * Make commands globally accessible from your terminal.
 
 ### 1.3. Verify Installation

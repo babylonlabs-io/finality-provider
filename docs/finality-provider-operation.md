@@ -50,7 +50,11 @@ process described in [EOTS Daemon Setup](./eots-daemon.md). This includes:
 * Adding your EOTS key to the daemon
 * Starting the EOTS daemon service
 
-> ⚠️ **Critical**: The EOTS daemon must be running and accessible before you can operate a finality provider.
+> ⚠️ **Critical**: The EOTS daemon must be running and accessible before you can 
+> operate a finality provider.
+
+> ⚠️ **Important**: Each Finality Provider must generate a new EOTS key.
+> EOTS keys must not be reused across different providers.
 
 ## 2. System Requirements
 
