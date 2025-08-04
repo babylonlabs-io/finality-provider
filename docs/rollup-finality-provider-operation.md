@@ -106,7 +106,7 @@ Instructions of setting up the three keys can be found in the following places:
 
 ## 4. Setting up the Finality Provider
 
-> ⚠️ **WARNING**: One finality provider can serve only one Rollup BSN.  
+> ⚠️ **Critical**: One finality provider can serve only one Rollup BSN.  
 > Each finality provider must use a unique EOTS daemon with its own unique btc_pk
 
 
