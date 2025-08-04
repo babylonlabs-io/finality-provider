@@ -242,7 +242,7 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > Avoid using multiple RPC nodes or load balancers, as this can lead to synchronization issues.
 
 > ⚠️ **Contract Requirement**: To start a finality provider you must 
-> supply a valid Rollup BSN contract address ssociated with a registered BSN. 
+> supply a valid Rollup BSN contract address associated with a registered BSN. 
 > Additionally, the `btc_pk` obtained 
 > from `eotsd` must be included in the contract’s allow-list. If the contract 
 > address is missing/invalid or the `btc_pk` isn’t allowed, the finality provider 
