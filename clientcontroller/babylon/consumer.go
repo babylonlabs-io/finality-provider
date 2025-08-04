@@ -294,7 +294,6 @@ func (bc *BabylonConsumerController) QueryLastPublicRandCommit(_ context.Context
 			StartHeight:  height,
 			NumPubRand:   commitRes.NumPubRand,
 			Commitment:   commitRes.Commitment,
-			BabylonEpoch: commitRes.EpochNum,
 		}
 	}
 

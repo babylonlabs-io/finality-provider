@@ -272,7 +272,7 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 	}
 
 	// Step 2: Validate public randomness (exists, covers height, and is timestamped)
-	if !cc.hasValidTimestampedPubRandomness(ctx, req.FpPk, req.BlockHeight) {
+	if !cc.hasTimestampedPubRandomness(ctx, req.FpPk, req.BlockHeight) {
 		return false, nil
 	}
 
@@ -336,10 +336,10 @@ func (cc *RollupBSNController) hasActiveBTCDelegation(fpBtcPkHex string) (bool, 
 	return false, nil
 }
 
-// hasValidTimestampedPubRandomness validates that the FP has public randomness that:
+// hasTimestampedPubRandomness validates that the FP has public randomness that:
 // 1. Exists (has committed public randomness that covers the specific height)
 // 2. Is Bitcoin timestamped (finalized)
-func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Context, fpPk *btcec.PublicKey, blockHeight uint64) bool {
+func (cc *RollupBSNController) hasTimestampedPubRandomness(ctx context.Context, fpPk *btcec.PublicKey, blockHeight uint64) bool {
 	// NOTE: This query has O(1) best case (recent commits) to O(n) worst case complexity,
 	// where n is the number of PR commits for this FP. The contract scans commits in
 	// descending order by start_height and stops at the first match.
@@ -384,7 +384,7 @@ func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Cont
 			zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
 			zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
 		)
-		
+
 		return false
 	}
 
@@ -393,7 +393,7 @@ func (cc *RollupBSNController) hasValidTimestampedPubRandomness(ctx context.Cont
 		zap.String("fp_btc_pk", bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()),
 		zap.Uint64("height", blockHeight),
 		zap.Uint64("pub_rand_start_height", pubRand.StartHeight),
-		zap.Uint64("pub_rand_end_height", pubRand.EndHeight()),
+		zap.Uint64("num_pub_rand", pubRand.NumPubRand),
 		zap.Uint64("pub_rand_epoch", pubRand.BabylonEpoch),
 		zap.Uint64("last_finalized_epoch", lastFinalizedCkpt.RawCheckpoint.EpochNum),
 	)
@@ -562,7 +562,7 @@ func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fp
 }
 
 // QueryPubRandCommitForHeight returns the public randomness commitment that covers a specific height
-func (cc *RollupBSNController) QueryPubRandCommitForHeight(ctx context.Context, fpPk *btcec.PublicKey, height uint64) (*types.PubRandCommit, error) {
+func (cc *RollupBSNController) QueryPubRandCommitForHeight(ctx context.Context, fpPk *btcec.PublicKey, height uint64) (*PubRandCommitResponse, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	queryMsg := &QueryMsg{
 		PubRandCommitForHeight: &PubRandCommitForHeightQuery{
@@ -584,16 +584,10 @@ func (cc *RollupBSNController) QueryPubRandCommitForHeight(ctx context.Context, 
 		return nil, nil
 	}
 
-	var resp *types.PubRandCommit
+	var resp *PubRandCommitResponse
 	err = json.Unmarshal(stateResp.Data, &resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
-	}
-	if resp == nil {
-		return nil, nil
-	}
-	if err := resp.Validate(); err != nil {
-		return nil, fmt.Errorf("failed to validate response: %w", err)
 	}
 
 	return resp, nil

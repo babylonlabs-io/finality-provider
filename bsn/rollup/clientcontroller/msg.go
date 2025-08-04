@@ -70,6 +70,13 @@ type HighestVotedHeightQuery struct {
 	BtcPkHex string `json:"btc_pk_hex"`
 }
 
+type PubRandCommitResponse struct {
+	StartHeight  uint64 `json:"start_height"`
+	NumPubRand   uint64 `json:"num_pub_rand"`
+	Commitment   []byte `json:"commitment"`
+	BabylonEpoch uint64 `json:"babylon_epoch"`
+}
+
 // FIXME: Remove this ancillary struct.
 // Only required because the e2e tests are using a zero index, which is removed by the `json:"omitempty"` annotation in
 // the original cmtcrypto Proof
