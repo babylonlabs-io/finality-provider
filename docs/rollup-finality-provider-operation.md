@@ -594,7 +594,7 @@ You may follow the following procedure to set up the operation key.
 1. Create an additional key for operation following steps in
    [4.2 Add key for the Babylon Genesis account](#42-add-key-for-the-babylon-genesis-account).
 
-2. Fund the operation key with minimum BABY tokens for gas cost.
+2. Fund the operation key with BABY tokens for gas cost.
 
 3. Set the operation key name (`Key`) and the keyring directory (`KeyDirectory`)
    under `[babylon]` in `fpd.conf`.
