@@ -539,7 +539,7 @@ transaction hash.
 
 This will withdraw **ALL** accumulated rewards to the address you set in the
 `set-withdraw-addr` command if you set one. If no withdrawal address was set,
-the rewards will be withdrawn to the finality provider's `BABY` address used
+the rewards will be withdrawn to the finality provider's Babylon Genesis address used
 in registration.
 
 #### 5.2.3. Set Withdraw Address
