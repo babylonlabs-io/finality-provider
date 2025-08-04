@@ -2,10 +2,12 @@ package e2etest_bcd
 
 import (
 	"context"
-	sdkErr "cosmossdk.io/errors"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	sdkErr "cosmossdk.io/errors"
 	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	bbnsdktypes "github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
 	cwcc "github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
@@ -14,21 +16,21 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
-	"strings"
 
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"go.uber.org/zap/zaptest"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/babylonlabs-io/finality-provider/metrics"
 
@@ -605,4 +607,43 @@ func (ctm *BcdTestManager) waitForZoneConciergeChannel(t *testing.T) {
 
 		return false
 	}, e2eutils.EventuallyWaitTimeOut, 1*time.Second, "ZoneConcierge channel did not open in time")
+}
+
+func (ctm *BcdTestManager) WaitForTimestampedHeight(t *testing.T, ctx context.Context, height uint64) error {
+	t.Logf("WaitForTimestampedHeight: trying to timestamp target height %d", height)
+
+	// finalize the next epoch to have >=1 BTC timestamp
+	currentEpoch, err := ctm.BaseTestManager.BabylonController.QueryCurrentEpoch()
+	if err != nil {
+		t.Logf("failed to query current epoch: %s", err.Error())
+		return err
+	}
+	ctm.FinalizeUntilEpoch(t, currentEpoch)
+
+	for {
+		res, err := ctm.BcdConsumerClient.QueryLastBTCTimestampedHeader(ctx)
+		if err != nil {
+			t.Logf("failed to query last BTC timestamped header: %s", err.Error())
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		if res.Height >= height {
+			t.Logf("BTC timestamped header height %d is now higher than target height %d", res.Height, height)
+			break
+		}
+
+		t.Logf("WaitForTimestampedHeight: trying to timestamp target height %d, last BTC timestamped height %d", height, res.Height)
+
+		currentEpoch, err := ctm.BaseTestManager.BabylonController.QueryCurrentEpoch()
+		if err != nil {
+			t.Logf("failed to query current epoch: %s", err.Error())
+			return err
+		}
+		ctm.FinalizeUntilEpoch(t, currentEpoch)
+	}
+
+	t.Logf("WaitForTimestampedHeight: target height %d is now timestamped", height)
+
+	return nil
 }

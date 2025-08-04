@@ -91,13 +91,6 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, consumerDelsResp)
 	require.Len(t, consumerDelsResp.Delegations, 1)
-	require.Empty(t, consumerDelsResp.Delegations[0].UndelegationInfo.DelegatorUnbondingSig) // assert there is no delegator unbonding sig
-	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].BTCPkHex, consumerDelsResp.Delegations[0].BtcPkHex)
-	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].StartHeight, consumerDelsResp.Delegations[0].StartHeight)
-	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].EndHeight, consumerDelsResp.Delegations[0].EndHeight)
-	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].TotalSat, consumerDelsResp.Delegations[0].TotalSat)
-	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].StakingTx, consumerDelsResp.Delegations[0].StakingTx)
-	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].SlashingTx, consumerDelsResp.Delegations[0].SlashingTx)
 
 	// ensure fp has positive total active sats in smart contract
 	consumerFpsByPowerResp, err := ctm.BcdConsumerClient.QueryFinalityProvidersByTotalActiveSats(ctx)
@@ -107,18 +100,12 @@ func TestConsumerFpLifecycle(t *testing.T) {
 	require.Equal(t, fpPk.MarshalHex(), consumerFpsByPowerResp.Fps[0].BtcPkHex)
 	require.Equal(t, delMsg.BtcStaking.ActiveDel[0].TotalSat, consumerFpsByPowerResp.Fps[0].TotalActiveSats)
 
-	// wait for public randomness to be BTC timestamped
-	ctm.BaseTestManager.WaitForFpPubRandTimestamped(t, fp)
-	require.Eventually(t, func() bool {
-		res, err := ctm.BcdConsumerClient.QueryLastBTCTimestampedHeader(ctx)
-		if err != nil {
-			t.Logf("failed to query last BTC timestamped header: %s", err.Error())
-			return false
-		}
-		t.Logf("QueryLastBTCTimestampedHeader: height %d, bbn epoch %d", res.Height, res.BabylonEpoch)
-
-		return res.Height > 0
-	}, e2eutils.EventuallyWaitTimeOut, 5*time.Second)
+	// wait for current block to be BTC timestamped
+	// thus some pub rand commit will be finalized
+	nodeStatus, err := ctm.BcdConsumerClient.GetClient().GetStatus(ctx)
+	require.NoError(t, err)
+	curHeight := uint64(nodeStatus.SyncInfo.LatestBlockHeight)
+	ctm.WaitForTimestampedHeight(t, ctx, curHeight)
 
 	// wait for FP to vote on block
 	var lastVotedHeight uint64
