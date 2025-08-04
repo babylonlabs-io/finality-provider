@@ -245,7 +245,7 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > supply a valid Rollup BSN contract address associated with a registered BSN. 
 > Additionally, the `btc_pk` obtained 
 > from `eotsd` must be included in the contract’s allow-list. If the contract 
-> address is missing/invalid or the `btc_pk` isn’t allowed, the finality provider 
+> address is missing/invalid or the `btc_pk` isn’t in the allow-list, the finality provider 
 > will fail to start. 
 > To learn more about the allow-list, see the 
 > [parameter selection guidelines under `allowed_finality_providers`](https://github.com/babylonlabs-io/rollup-bsn-contracts/blob/main/docs/contract-managment.md#42-parameter-selection-guidelines)
