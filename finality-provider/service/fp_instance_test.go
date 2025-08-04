@@ -11,6 +11,7 @@ import (
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -73,10 +74,11 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 
 		// mock committed pub rand
 		lastCommittedHeight := randomStartingHeight + 25
-		lastCommittedPubRand := &types.PubRandCommit{
+		lastCommittedPubRand := &babylon.BabylonPubRandCommit{
 			StartHeight: lastCommittedHeight,
 			NumPubRand:  1000,
 			Commitment:  datagen.GenRandomByteArray(r, 32),
+			EpochNum:    5, // Mock epoch number
 		}
 		mockConsumerController.EXPECT().QueryLastPublicRandCommit(context.Background(), gomock.Any()).Return(lastCommittedPubRand, nil).AnyTimes()
 		// mock voting power and commit pub rand

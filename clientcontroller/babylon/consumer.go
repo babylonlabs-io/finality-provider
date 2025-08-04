@@ -25,6 +25,23 @@ import (
 
 var _ api.ConsumerController = &BabylonConsumerController{}
 
+// BabylonPubRandCommit represents the Babylon-specific public randomness commitment response
+type BabylonPubRandCommit struct {
+	StartHeight uint64 `json:"start_height"`
+	NumPubRand  uint64 `json:"num_pub_rand"`
+	Commitment  []byte `json:"commitment"`
+	EpochNum    uint64 `json:"epoch_num"`
+}
+
+// Interface implementation
+func (b *BabylonPubRandCommit) EndHeight() uint64 { return b.StartHeight + b.NumPubRand - 1 }
+func (b *BabylonPubRandCommit) Validate() error {
+	if b.NumPubRand < 1 {
+		return fmt.Errorf("NumPubRand must be >= 1, got %d", b.NumPubRand)
+	}
+	return nil
+}
+
 //nolint:revive
 type BabylonConsumerController struct {
 	bbnClient *bbnclient.Client
@@ -266,7 +283,7 @@ func (bc *BabylonConsumerController) QueryBlock(_ context.Context, height uint64
 }
 
 // QueryLastPublicRandCommit returns the last public randomness commitments
-func (bc *BabylonConsumerController) QueryLastPublicRandCommit(_ context.Context, fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
+func (bc *BabylonConsumerController) QueryLastPublicRandCommit(_ context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error) {
 	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	pagination := &sdkquery.PageRequest{
@@ -288,12 +305,13 @@ func (bc *BabylonConsumerController) QueryLastPublicRandCommit(_ context.Context
 		return nil, fmt.Errorf("expected length to be 1, but get :%d", len(res.PubRandCommitMap))
 	}
 
-	var commit *types.PubRandCommit
+	var commit *BabylonPubRandCommit
 	for height, commitRes := range res.PubRandCommitMap {
-		commit = &types.PubRandCommit{
+		commit = &BabylonPubRandCommit{
 			StartHeight: height,
 			NumPubRand:  commitRes.NumPubRand,
 			Commitment:  commitRes.Commitment,
+			EpochNum:    commitRes.EpochNum,
 		}
 	}
 
@@ -421,7 +439,7 @@ func (bc *BabylonConsumerController) UnjailFinalityProvider(ctx context.Context,
 
 // QueryPublicRandCommitList returns the public randomness commitments list from the startHeight to the last commit
 // the returned commits are ordered in the accenting order of the start height
-func (bc *BabylonConsumerController) QueryPublicRandCommitList(fpPk *btcec.PublicKey, startHeight uint64) ([]*types.PubRandCommit, error) {
+func (bc *BabylonConsumerController) QueryPublicRandCommitList(fpPk *btcec.PublicKey, startHeight uint64) ([]*BabylonPubRandCommit, error) {
 	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	pagination := &sdkquery.PageRequest{
@@ -429,7 +447,7 @@ func (bc *BabylonConsumerController) QueryPublicRandCommitList(fpPk *btcec.Publi
 		Reverse: false,
 	}
 
-	commitList := make([]*types.PubRandCommit, 0)
+	commitList := make([]*BabylonPubRandCommit, 0)
 
 	for {
 		res, err := bc.bbnClient.QueryClient.ListPubRandCommit(fpBtcPk.MarshalHex(), pagination)
@@ -444,12 +462,13 @@ func (bc *BabylonConsumerController) QueryPublicRandCommitList(fpPk *btcec.Publi
 		if len(res.PubRandCommitMap) > 1 {
 			return nil, fmt.Errorf("expected length to be 1, but get :%d", len(res.PubRandCommitMap))
 		}
-		var commit *types.PubRandCommit
+		var commit *BabylonPubRandCommit
 		for height, commitRes := range res.PubRandCommitMap {
-			commit = &types.PubRandCommit{
+			commit = &BabylonPubRandCommit{
 				StartHeight: height,
 				NumPubRand:  commitRes.NumPubRand,
 				Commitment:  commitRes.Commitment,
+				EpochNum:    commitRes.EpochNum,
 			}
 		}
 		if err := commit.Validate(); err != nil {

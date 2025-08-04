@@ -525,7 +525,7 @@ func (cc *RollupBSNController) QueryLatestBlock(ctx context.Context) (types.Bloc
 
 // QueryLastPublicRandCommit returns the last public randomness commitments
 // It is fetched from the state of a CosmWasm contract OP finality gadget.
-func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*types.PubRandCommit, error) {
+func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	queryMsg := &QueryMsg{
 		LastPubRandCommit: &PubRandCommit{
@@ -546,7 +546,7 @@ func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fp
 		return nil, nil
 	}
 
-	var resp *types.PubRandCommit
+	var resp *PubRandCommitResponse
 	err = json.Unmarshal(stateResp.Data, &resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)

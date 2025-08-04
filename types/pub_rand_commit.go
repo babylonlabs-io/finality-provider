@@ -1,35 +1,15 @@
 package types
 
 import (
-	"fmt"
-
 	bbn "github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cometbft/cometbft/crypto/merkle"
 )
 
-// TODO: Shared across Babylon/Cosmos/Rollup FPs. Sources return different field
-// names (epoch_num/height/babylon_epoch). Consider source-specific structs or
-// interface approach.
-type PubRandCommit struct {
-	StartHeight uint64 `json:"start_height"`
-	NumPubRand  uint64 `json:"num_pub_rand"`
-	Commitment  []byte `json:"commitment"`
-}
-
-// Validate checks if the PubRandCommit structure is valid
-// returns an error if not.
-func (prc *PubRandCommit) Validate() error {
-	if prc.NumPubRand < 1 {
-		return fmt.Errorf("NumPubRand must be >= 1, got %d", prc.NumPubRand)
-	}
-
-	return nil
-}
-
-// EndHeight returns the last height covered by this public randomness commitment
-func (prc *PubRandCommit) EndHeight() uint64 {
-	return prc.StartHeight + prc.NumPubRand - 1
+// PubRandCommit interface abstracts epoch information across different sources
+type PubRandCommit interface {
+	EndHeight() uint64
+	Validate() error
 }
 
 // GetPubRandCommitAndProofs commits a list of public randomness and returns

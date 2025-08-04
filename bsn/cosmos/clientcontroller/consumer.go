@@ -31,6 +31,23 @@ import (
 
 var _ api.ConsumerController = &CosmwasmConsumerController{}
 
+// CosmosPubRandCommit represents the Cosmos-specific public randomness commitment response
+type CosmosPubRandCommit struct {
+	StartHeight uint64 `json:"start_height"`
+	NumPubRand  uint64 `json:"num_pub_rand"`
+	Commitment  []byte `json:"commitment"`
+	Height      uint64 `json:"height"`
+}
+
+// Interface implementation
+func (c *CosmosPubRandCommit) EndHeight() uint64 { return c.StartHeight + c.NumPubRand - 1 }
+func (c *CosmosPubRandCommit) Validate() error {
+	if c.NumPubRand < 1 {
+		return fmt.Errorf("NumPubRand must be >= 1, got %d", c.NumPubRand)
+	}
+	return nil
+}
+
 //nolint:revive
 type CosmwasmConsumerController struct {
 	cwClient *cwcclient.Client
@@ -269,7 +286,7 @@ func (wc *CosmwasmConsumerController) QueryBlock(ctx context.Context, height uin
 }
 
 // QueryLastPublicRandCommit returns the last public randomness commitments
-func (wc *CosmwasmConsumerController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*fptypes.PubRandCommit, error) {
+func (wc *CosmwasmConsumerController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (fptypes.PubRandCommit, error) {
 	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	// Construct the query message
@@ -296,7 +313,7 @@ func (wc *CosmwasmConsumerController) QueryLastPublicRandCommit(ctx context.Cont
 	}
 
 	// Define a response struct
-	var commit fptypes.PubRandCommit
+	var commit CosmosPubRandCommit
 	err = json.Unmarshal(dataFromContract.Data.Bytes(), &commit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
