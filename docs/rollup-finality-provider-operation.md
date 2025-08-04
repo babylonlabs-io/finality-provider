@@ -12,6 +12,13 @@ lifecycle of running a Rollup finality provider, including:
 Please review the [high-level explainer](../README.md) before proceeding to
 gain an overall understanding of the finality provider.
 
+**Architecture Overview**: Unlike Babylon Genesis finality providers that operate 
+directly on the Babylon chain, rollup finality providers work with a dual-chain architecture. 
+They query blocks from a rollup BSN chain, compute public randomness and finality 
+signatures, and submit these commitments to a rollup BSN contract deployed on 
+Babylon Genesis. This allows rollup chains to inherit Bitcoin's security 
+through Babylon's BTC staking protocol while maintaining their own execution environment.
+
 ## Table of Contents
 
 1. [Prerequisites](#1-prerequisites)
