@@ -12,12 +12,13 @@ lifecycle of running a Rollup finality provider, including:
 Please review the [high-level explainer](../README.md) before proceeding to
 gain an overall understanding of the finality provider.
 
-**Architecture Overview**: Unlike Babylon Genesis finality providers that operate 
-directly on the Babylon chain, rollup finality providers work with a dual-chain architecture. 
-They query blocks from a rollup BSN chain, compute public randomness and finality 
-signatures, and submit these commitments to a rollup BSN contract deployed on 
-Babylon Genesis. This allows rollup chains to inherit Bitcoin's security 
-through Babylon's BTC staking protocol while maintaining their own execution environment.
+> **⚠️ Important**: Rollup BSN integration requires the deployment of a
+> [CosmoWasm smart contract](https://github.com/babylonlabs-io/rollup-bsn-contracts)
+> on Babylon Genesis that is responsible for receiving finality signatures and
+> maintaining the finality status of rollup blocks.
+> Finality providers connect with both this CosmWasm contract and the Rollup itself.
+> This is in contrast with Babylon Genesis finality providers which only need
+> to interact with the Babylon Genesis chain.
 
 ## Table of Contents
 
