@@ -45,6 +45,7 @@ func (c *CosmosPubRandCommit) Validate() error {
 	if c.NumPubRand < 1 {
 		return fmt.Errorf("NumPubRand must be >= 1, got %d", c.NumPubRand)
 	}
+
 	return nil
 }
 
