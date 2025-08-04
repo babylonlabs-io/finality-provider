@@ -96,7 +96,6 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	loggerConfig := zap.NewDevelopmentConfig()
 	loggerConfig.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
 	logger := zaptest.NewLogger(t)
-	require.NoError(t, err)
 
 	// 1. generate covenant committee
 	covenantQuorum := 2
