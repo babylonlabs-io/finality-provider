@@ -33,6 +33,7 @@ func NewImageConfig(t *testing.T) ImageConfig {
 	// babylondVersion, err := testutil.GetBabylonVersion()
 	babylondVersion, err := testutil.GetBabylonCommitHash()
 	require.NoError(t, err)
+	
 	return ImageConfig{
 		BabylonRepository:     dockerBabylondRepository,
 		BabylonVersion:        babylondVersion,
