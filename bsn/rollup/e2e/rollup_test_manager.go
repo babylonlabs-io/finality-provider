@@ -1,3 +1,5 @@
+//go:build e2e_rollup
+
 package e2etest_rollup
 
 import (
