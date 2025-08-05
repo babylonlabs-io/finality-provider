@@ -730,7 +730,7 @@ For a complete list of available metrics, see:
 
 The following assets **must** be backed up frequently to prevent loss of service or funds:
 
-* **keyring-*** directory: Contains your Babylon Genesis account keys used for:
+**keyring-directory**: Contains your Babylon Genesis account keys used for:
   * Submitting finality signatures to Babylon
   * Withdrawing rewards
   * Managing your finality provider
