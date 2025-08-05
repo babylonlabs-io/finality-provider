@@ -336,14 +336,8 @@ separate daemons (`eotsd` and `rollup-fpd`).
 The EOTS manager is responsible for managing the keys for finality providers and
 handles operations such as key management, signature generation, and randomness
 commitments. Whereas the finality provider is responsible for creating and
-<<<<<<< Updated upstream
 registering finality providers, monitoring the Rollup BSN, and
 submitting finality votes on the finality contract deployed on Babylon Genesis.
-The finality provider daemon is also responsible for coordinating various
-operations.
-=======
-registering finality providers and handling the monitoring of the Babylon Genesis.
->>>>>>> Stashed changes
 
 The interactions between the EOTS Manager and the finality provider happen
 through RPC calls. These calls handle key operations, signature generation,
