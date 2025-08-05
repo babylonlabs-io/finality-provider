@@ -14,6 +14,14 @@ type EOTSManager interface {
 	// block height
 	CreateRandomnessPairList(uid []byte, chainID []byte, startHeight uint64, num uint32) ([]*btcec.FieldVal, error)
 
+	// CreateRandomnessPairListWithInterval generates a list of Schnorr randomness pairs with intervals
+	// from startHeight, startHeight+interval, startHeight+2*interval, etc. where num means the number of public randomness
+	// It fails if the finality provider does not exist or a randomness pair has been created before
+	// or passPhrase is incorrect
+	// NOTE: the randomness is deterministically generated based on the EOTS key, chainID and
+	// block height. This method is used for rollup FPs that only vote on specific intervals.
+	CreateRandomnessPairListWithInterval(uid []byte, chainID []byte, startHeight uint64, num uint32, interval uint64) ([]*btcec.FieldVal, error)
+
 	// SignEOTS signs an EOTS using the private key of the finality provider and the corresponding
 	// secret randomness of the given chain at the given height
 	// It fails if the finality provider does not exist or there's no randomness committed to the given height.

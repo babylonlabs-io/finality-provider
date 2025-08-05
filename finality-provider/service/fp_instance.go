@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/btcsuite/btcd/btcec/v2"
 	"sync"
 	"time"
+
+	"github.com/btcsuite/btcd/btcec/v2"
 
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -351,6 +352,9 @@ func (fp *FinalityProviderInstance) processRandomnessCommitment(ctx context.Cont
 
 		return
 	}
+
+	fmt.Println("DEBUG: should processRandomnessCommitment", should)
+	fmt.Println("DEBUG: startHeight processRandomnessCommitment", startHeight)
 
 	if !should {
 		return

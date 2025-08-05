@@ -215,6 +215,25 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 	return prList, nil
 }
 
+func (lm *LocalEOTSManager) CreateRandomnessPairListWithInterval(fpPk []byte, chainID []byte, startHeight uint64, num uint32, interval uint64) ([]*btcec.FieldVal, error) {
+	prList := make([]*btcec.FieldVal, 0, num)
+
+	for i := uint32(0); i < num; i++ {
+		// KEY DIFFERENCE: height increments by interval, not 1
+		height := startHeight + uint64(i)*interval // 100, 105, 110, 115...
+		_, pubRand, err := lm.getRandomnessPair(fpPk, chainID, height)
+		if err != nil {
+			return nil, err
+		}
+
+		prList = append(prList, pubRand)
+	}
+	lm.metrics.IncrementEotsFpTotalGeneratedRandomnessCounter(hex.EncodeToString(fpPk))
+	lm.metrics.SetEotsFpLastGeneratedRandomnessHeight(hex.EncodeToString(fpPk), float64(startHeight))
+
+	return prList, nil
+}
+
 func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, height uint64) (*btcec.ModNScalar, error) {
 	record, found, err := lm.es.GetSignRecord(eotsPk, chainID, height)
 	if err != nil {

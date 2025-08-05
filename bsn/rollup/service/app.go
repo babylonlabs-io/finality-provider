@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 
 	rollupfpcc "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
@@ -9,6 +10,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/metrics"
+	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/lightningnetwork/lnd/kvdb"
 	"go.uber.org/zap"
 )
@@ -50,14 +52,50 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 		return nil, fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
 
-	rndCommitter := service.NewDefaultRandomnessCommitter(
-		service.NewRandomnessCommitterConfig(cfg.Common.NumPubRand, int64(cfg.Common.TimestampingDelayBlocks), cfg.Common.ContextSigningHeight),
-		service.NewPubRandState(pubRandStore),
-		consumerCon,
-		em,
-		logger,
-		fpMetrics,
-	)
+	// Determine whether to use sparse randomness generation based on finality signature interval
+	var rndCommitter types.RandomnessCommitter
+
+	// Query the contract config to get finality signature interval
+	contractConfig, err := consumerCon.QueryContractConfig(context.Background())
+	if err != nil {
+		// If we can't query the config, fall back to default committer with warning
+		logger.Warn("Failed to query contract config, using default randomness committer", zap.Error(err))
+		rndCommitter = service.NewDefaultRandomnessCommitter(
+			service.NewRandomnessCommitterConfig(cfg.Common.NumPubRand, int64(cfg.Common.TimestampingDelayBlocks), cfg.Common.ContextSigningHeight),
+			service.NewPubRandState(pubRandStore),
+			consumerCon,
+			em,
+			logger,
+			fpMetrics,
+		)
+	} else if contractConfig.FinalitySignatureInterval > 1 {
+		// Use RollupRandomnessCommitter for sparse generation
+		logger.Info("Using RollupRandomnessCommitter with sparse generation",
+			zap.Uint64("finality_signature_interval", contractConfig.FinalitySignatureInterval))
+
+		rndCommitter = service.NewRollupRandomnessCommitter(
+			service.NewRandomnessCommitterConfig(cfg.Common.NumPubRand, int64(cfg.Common.TimestampingDelayBlocks), cfg.Common.ContextSigningHeight),
+			service.NewPubRandState(pubRandStore),
+			consumerCon,
+			em,
+			logger,
+			fpMetrics,
+			contractConfig.FinalitySignatureInterval,
+		)
+	} else {
+		// Use default committer for interval=1 (vote every block)
+		logger.Info("Using DefaultRandomnessCommitter for consecutive generation",
+			zap.Uint64("finality_signature_interval", contractConfig.FinalitySignatureInterval))
+
+		rndCommitter = service.NewDefaultRandomnessCommitter(
+			service.NewRandomnessCommitterConfig(cfg.Common.NumPubRand, int64(cfg.Common.TimestampingDelayBlocks), cfg.Common.ContextSigningHeight),
+			service.NewPubRandState(pubRandStore),
+			consumerCon,
+			em,
+			logger,
+			fpMetrics,
+		)
+	}
 
 	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, cfg.Common.PollerConfig, logger)
 	finalitySubmitter := service.NewDefaultFinalitySubmitter(consumerCon,
