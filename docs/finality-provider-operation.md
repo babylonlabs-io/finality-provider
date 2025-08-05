@@ -224,10 +224,10 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > ensure that this node has transaction indexing enabled (`indexer = "kv"`).
 > Using multiple RPC nodes or load balancers can lead to sync issues.
 > 
-> ⚠️ **Important**: `ContextSigningHeight` must be updated to the current Babylon chain
-> height whenever you upgrade your finality provider software. During any
-> upgrade process, always set `ContextSigningHeight` to the current
-> Babylon block height to ensure proper signing context activation.
+> ⚠️ **Important**: `ContextSigningHeight` must be updated during network upgrades. 
+> Set this parameter to `UpgradeHeight - 1`, where `UpgradeHeight` is the specific 
+> Babylon block height at which the network upgrade occurs. This ensures proper 
+> signing context activation one block before the upgrade takes effect.
 
 Configuration parameters explained:
 
