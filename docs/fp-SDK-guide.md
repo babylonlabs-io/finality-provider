@@ -31,14 +31,14 @@ customise components for their specific blockchain implementations while
 maintaining compatibility with the core finality provider functionality.
 
 The SDK includes two reference implementations:
-- **Cosmos chains** - Uses CosmWasm smart contracts for finality coordination  
-  ([implementation](../bsn/cosmos/), [config](../bsn/cosmos/config/))
+- **Cosmos chains** - Uses CosmWasm smart contracts for finality 
+  coordination ([implementation](../bsn/cosmos/), [config](../bsn/cosmos/config/))
 - **Rollup chains** - Uses Ethereum-compatible smart contracts for finality 
   coordination ([implementation](../bsn/rollup/), [config](../bsn/rollup/config/))
 
 Both implementations demonstrate the same extensible interface pattern, 
 enabling BSNs to create custom implementations for any consumer chain type 
-by implementing [well-defined interfaces](../clientcontroller/api/interface.go) 
+by implementing [interfaces](../clientcontroller/api/interface.go) 
 rather than modifying core logic.
 
 ## Constructor Pattern
@@ -82,7 +82,7 @@ fpApp, err := service.NewFinalityProviderApp(
     logger,              // *zap.Logger - Structured logging
 )
 ```
-- [`service.NewFinalityProviderApp()`](../finality-provider/service/app.go) - Core constructor for finality provider application
+- You can find the above example at [`app.go`](../finality-provider/service/app.go)
 
 ### Interface Responsibilities
 
@@ -147,12 +147,9 @@ sequenceDiagram
 
 Each step in this flow maps to specific code locations:
 
-1. [Block Polling](../finality-provider/service/chain_poller.go) - 
-   `NextBlock()`
+1. [Block Polling](../finality-provider/service/chain_poller.go)
 2. [Randomness Commitment](../finality-provider/service/fp_instance.go)
-   (../finality-provider/service/fp_instance.go#L324) - `randomnessCommitmentLoop()`
-3. [Finality Voting](../finality-provider/service/fp_instance.go) - 
-   `finalitySigSubmissionLoop()`
+3. [Finality Voting](../finality-provider/service/fp_instance.go)
 4. Aggregation: Handled by Babylon chain consensus
 5. Slashing: EOTS + Babylon chain 
 
@@ -181,7 +178,7 @@ type ConsumerController interface {
 }
 ```
 
-- [`ConsumerController` interface](../clientcontroller/api/interface.go) - Main interface definition in the codebase
+- [`ConsumerController`](../clientcontroller/api/interface.go) - Main interface definition in the codebase
 
 **Sub-interfaces:**
 
@@ -255,7 +252,7 @@ type BlockPoller[T BlockDescription] interface {
 }
 ```
 
-- [`BlockPoller` interface](../types/expected_block.go) - Interface definition in the codebase
+- [`BlockPoller`](../types/expected_block.go) - Interface definition in the codebase
 
 ### Randomness Committer Interface
 
@@ -294,7 +291,7 @@ type RandomnessCommitter interface {
 }
 ```
 
-- [`RandomnessCommitter` interface](../types/expected_rand_committer.go) - Interface definition in the codebase
+- [`RandomnessCommitter`](../types/expected_rand_committer.go) - Interface definition in the codebase
 
 ### Finality Signature Submitter Interface
 
@@ -321,7 +318,7 @@ type FinalitySignatureSubmitter interface {
 }
 ```
 
-- [`FinalitySignatureSubmitter` interface](../types/expected_finality_submitter.go) - Interface definition in the codebase
+- [`FinalitySignatureSubmitter`](../types/expected_finality_submitter.go) - Interface definition in the codebase
 
 ### Height Determiner Interface
 
@@ -343,7 +340,7 @@ type HeightDeterminer interface {
 }
 ```
 
-- [`HeightDeterminer` interface](../types/expected_bootstraper.go) - Interface definition in the codebase
+- [`HeightDeterminer`](../types/expected_bootstraper.go) - Interface definition in the codebase
 
 Most BSNs can use `NewStartHeightDeterminer()` unless they have specific 
 requirements for custom bootstrap logic.
