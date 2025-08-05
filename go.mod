@@ -10,7 +10,7 @@ require (
 	github.com/avast/retry-go/v4 v4.5.1
 	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250801111417-fe7557c41640
 	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250801111417-fe7557c41640
-	github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250724
+	github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250805a
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.5
 	github.com/btcsuite/btcd/btcutil v1.1.6
@@ -357,7 +357,6 @@ replace (
 	cosmossdk.io/core => cosmossdk.io/core v0.11.3
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
-	github.com/babylonlabs-io/babylon/v3 => github.com/babylonlabs-io/babylon/v3 v3.0.0-20250805132433-52134aab621e
 	github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v1.15.11-cosmos-0
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/strangelove-ventures/tokenfactory => github.com/babylonlabs-io/tokenfactory v0.50.6-wasmvm2

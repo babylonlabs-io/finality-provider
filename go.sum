@@ -739,8 +739,8 @@ github.com/babylonlabs-io/babylon-sdk/tests/e2e v0.0.0-20250801111417-fe7557c416
 github.com/babylonlabs-io/babylon-sdk/tests/e2e v0.0.0-20250801111417-fe7557c41640/go.mod h1:KEu5zoOSTTJyyAzTqVKHIt8jyDaMxzxrMS9WjffoAdA=
 github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250801111417-fe7557c41640 h1:0znOGQ1Mh0l7OrGKGiN9Jd/Vu/YZ6LMmTSoiqIYoHmI=
 github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250801111417-fe7557c41640/go.mod h1:seS4E882FYvlzi07MpIgtCtcC7AISJp1oo30AWMbGfE=
-github.com/babylonlabs-io/babylon/v3 v3.0.0-20250805132433-52134aab621e h1:mZHPuEK1j4AbidlyR0allDGjfZHm0YLV4cCy+UO5yoY=
-github.com/babylonlabs-io/babylon/v3 v3.0.0-20250805132433-52134aab621e/go.mod h1:7QpvIvZTClWlm1hNz4ivb3I522XrOJC5UcnqDGiwi08=
+github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250805a h1:RHqL0xoYuFf575ViZsQszSR0DnyjWx6BrKUqlrrWNS0=
+github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250805a/go.mod h1:7QpvIvZTClWlm1hNz4ivb3I522XrOJC5UcnqDGiwi08=
 github.com/babylonlabs-io/tokenfactory v0.50.6-wasmvm2 h1:7wtBLjwncBsYgc+LlW4eir/bGcycrhpbz7PkUVADzBc=
 github.com/babylonlabs-io/tokenfactory v0.50.6-wasmvm2/go.mod h1:L8XfncoH1M6fOrzqfRVQZePqo54ZlTDdatUpEr0Iz/E=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
