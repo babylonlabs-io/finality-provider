@@ -554,6 +554,14 @@ func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fp
 	if resp == nil {
 		return nil, nil
 	}
+
+	// Populate the interval field from contract config for correct EndHeight calculation
+	config, err := cc.QueryContractConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query contract config for interval: %w", err)
+	}
+	resp.Interval = config.FinalitySignatureInterval
+
 	if err := resp.Validate(); err != nil {
 		return nil, fmt.Errorf("failed to validate response: %w", err)
 	}
@@ -588,6 +596,20 @@ func (cc *RollupBSNController) QueryPubRandCommitForHeight(ctx context.Context, 
 	err = json.Unmarshal(stateResp.Data, &resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+	if resp == nil {
+		return nil, nil
+	}
+
+	// Populate the interval field from contract config for correct EndHeight calculation
+	config, err := cc.QueryContractConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query contract config for interval: %w", err)
+	}
+	resp.Interval = config.FinalitySignatureInterval
+
+	if err := resp.Validate(); err != nil {
+		return nil, fmt.Errorf("failed to validate response: %w", err)
 	}
 
 	return resp, nil

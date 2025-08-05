@@ -78,13 +78,13 @@ type RollupPubRandCommit struct {
 	NumPubRand   uint64 `json:"num_pub_rand"`
 	Commitment   []byte `json:"commitment"`
 	BabylonEpoch uint64 `json:"babylon_epoch"`
+	Interval     uint64 `json:"interval,omitempty"` // Finality signature interval for sparse generation
 }
 
 // Interface implementation
 func (r *RollupPubRandCommit) EndHeight() uint64 {
-	// For sparse generation with interval=5 (hardcoded for testing)
-	interval := uint64(5)
-	return r.StartHeight + (r.NumPubRand-1)*interval
+	// Use the interval from the struct - interval is guaranteed to be > 0
+	return r.StartHeight + (r.NumPubRand-1)*r.Interval
 }
 func (r *RollupPubRandCommit) Validate() error {
 	if r.NumPubRand < 1 {
