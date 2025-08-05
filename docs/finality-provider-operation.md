@@ -224,17 +224,24 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > ensure that this node has transaction indexing enabled (`indexer = "kv"`).
 > Using multiple RPC nodes or load balancers can lead to sync issues.
 > 
-> ⚠️ **Important**: `ContextSigningHeight` must be updated during network upgrades. 
-> Set this parameter to `UpgradeHeight - 1`, where `UpgradeHeight` is the specific 
-> Babylon block height at which the network upgrade occurs. This ensures proper 
-> signing context activation one block before the upgrade takes effect.
+> ⚠️ **Important**: The `ContextSigningHeight` configuration defines
+>   the Babylon Genesis height in which context signing --
+>   a method for introducing context strings in the
+>   [proof of
+>   possession](https://github.com/babylonlabs-io/babylon/blob/release/v3.x/x/btcstaking/docs/proof-of-possesion.md)
+>   -- takes effect.
+>   This height is typically the height in which the Babylon Genesis v3 upgrade
+>   (which introduces context signing) takes into effect.
+>   To find the appropriate height for the v3 upgrade of the network you
+>   operate a finality provider for (testnet or mainnet), please visit the
+>   [networks repository](https://github.com/babylonlabs-io/networks).
 
 Configuration parameters explained:
 
 * `EOTSManagerAddress`: Address where your EOTS daemon is running
 * `RPCListener`: Address for the finality provider RPC server
-* `ContextSigningHeight`: The Babylon block height at which context signing 
-  will start
+* `ContextSigningHeight`: The Babylon Genesis block height at which context
+  takes effect
 * `Key`: Your Babylon Genesis key name from Step 2
 * `ChainID`: The Babylon Genesis chain ID
 * `RPCAddr`: Your Babylon Genesis node's RPC endpoint
