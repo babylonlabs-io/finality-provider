@@ -10,6 +10,7 @@ require (
 	github.com/avast/retry-go/v4 v4.5.1
 	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250801111417-fe7557c41640
 	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250801111417-fe7557c41640
+	github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250805a
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.5
 	github.com/btcsuite/btcd/btcutil v1.1.6
@@ -125,7 +126,6 @@ require (
 	github.com/aead/siphash v1.0.1 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/aws/aws-sdk-go v1.49.0 // indirect
-	github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250729
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bgentry/speakeasy v0.2.0 // indirect
