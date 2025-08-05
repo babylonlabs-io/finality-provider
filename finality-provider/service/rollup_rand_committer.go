@@ -38,6 +38,7 @@ func NewRollupRandomnessCommitter(
 // ShouldCommit overrides the default implementation with rollup-specific logic
 // that directly calculates aligned startHeight without redundant parent calls
 func (rrc *RollupRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, uint64, error) {
+	fmt.Println("DEBUG: RollupRandomnessCommitter ShouldCommit")
 	// Get last committed height (same as parent)
 	lastCommittedHeight, err := rrc.GetLastCommittedHeight(ctx)
 	if err != nil {
@@ -109,6 +110,14 @@ func (rrc *RollupRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 			return false, 0, fmt.Errorf("failed to calculate aligned height: %w", err)
 		}
 	}
+
+	// fmt.Println("DEBUG: RollupRandomnessCommitter ShouldCommit")
+	// fmt.Println("DEBUG: tipHeight:", tipBlock.GetHeight())
+	// fmt.Println("DEBUG: lastCommittedHeight:", lastCommittedHeight)
+	// fmt.Println("DEBUG: tipHeightWithDelay:", tipHeightWithDelay)
+	// fmt.Println("DEBUG: activationBlkHeight:", activationBlkHeight)
+	// fmt.Println("DEBUG: interval:", rrc.interval)
+	fmt.Println("DEBUG: alignedStartHeight:", alignedStartHeight)
 
 	rrc.logger.Debug(
 		"the rollup finality-provider should commit randomness",

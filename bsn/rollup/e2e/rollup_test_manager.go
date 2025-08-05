@@ -1,4 +1,3 @@
-
 package e2etest_rollup
 
 import (
@@ -501,16 +500,25 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	fpMetrics := metrics.NewFpMetrics()
 	poller := service.NewChainPoller(ctm.logger, fpCfg.PollerConfig, ctm.RollupBSNController, fpMetrics)
 
-	rndCommitter := service.NewDefaultRandomnessCommitter(
+	// For E2E tests, use RollupRandomnessCommitter to test our sparse generation
+	contractConfig, err := ctm.RollupBSNController.QueryContractConfig(context.Background())
+	require.NoError(t, err)
+
+	fmt.Println("DEBUG: E2E test using interval:", contractConfig.FinalitySignatureInterval)
+
+	rndCommitter := service.NewRollupRandomnessCommitter(
 		service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
-		service.NewPubRandState(pubRandStore), ctm.RollupBSNController, ctm.ConsumerEOTSClient, ctm.logger, fpMetrics)
+		service.NewPubRandState(pubRandStore), ctm.RollupBSNController, ctm.ConsumerEOTSClient, ctm.logger, fpMetrics,
+		contractConfig.FinalitySignatureInterval)
 
 	heightDeterminer := service.NewStartHeightDeterminer(ctm.RollupBSNController, fpCfg.PollerConfig, ctm.logger)
-	finalitySubmitter := service.NewDefaultFinalitySubmitter(ctm.RollupBSNController, ctm.ConsumerEOTSClient, rndCommitter.GetPubRandProofList,
+
+	// For E2E tests, use RollupFinalitySubmitter to test sparse randomness generation
+	finalitySubmitter := service.NewRollupFinalitySubmitter(ctm.RollupBSNController, ctm.ConsumerEOTSClient, rndCommitter.GetPubRandProofList,
 		service.NewDefaultFinalitySubmitterConfig(fpCfg.MaxSubmissionRetries,
 			fpCfg.ContextSigningHeight,
 			fpCfg.SubmissionRetryInterval),
-		ctm.logger, fpMetrics)
+		ctm.logger, fpMetrics, contractConfig.FinalitySignatureInterval)
 
 	fpInstance, err := service.NewFinalityProviderInstance(
 		consumerFpPk,

@@ -183,6 +183,9 @@ func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 	}
 
 	if len(blocks) == 0 {
+		// fmt.Println("DEBUG: SubmitBatchFinalitySignatures - no blocks to vote for after filtering")
+		// fmt.Println("DEBUG: SubmitBatchFinalitySignatures - last voted height:", ds.state.GetLastVotedHeight())
+
 		ds.logger.Debug(
 			"no blocks to vote for after filtering",
 			zap.String("pk", ds.getBtcPkHex()),
@@ -192,6 +195,8 @@ func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 		return nil, nil // No blocks to vote for
 	}
 
+	fmt.Println("DEBUG: SubmitBatchFinalitySignatures - blocks to vote for:", blocks[0].GetHeight(), "to", blocks[len(blocks)-1].GetHeight())
+
 	var failedCycles uint32
 	targetHeight := blocks[len(blocks)-1].GetHeight()
 
@@ -199,6 +204,11 @@ func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 	for {
 		res, err := ds.submitBatchFinalitySignaturesOnce(ctx, blocks)
 		if err != nil {
+			fmt.Println("DEBUG: SubmitBatchFinalitySignatures - failed to submit finality signature to the consumer chain", err)
+			fmt.Println("DEBUG: SubmitBatchFinalitySignatures - current failures:", failedCycles)
+			fmt.Println("DEBUG: SubmitBatchFinalitySignatures - target start height:", blocks[0].GetHeight())
+			fmt.Println("DEBUG: SubmitBatchFinalitySignatures - target end height:", targetHeight)
+
 			ds.logger.Debug(
 				"failed to submit finality signature to the consumer chain",
 				zap.String("pk", ds.getBtcPkHex()),
@@ -378,19 +388,31 @@ func (ds *DefaultFinalitySubmitter) signFinalitySig(b types.BlockDescription) (*
 		msgToSign = b.MsgToSign("")
 	}
 
+	fmt.Println("DEBUG: Attempting to sign height:", b.GetHeight())
+	fmt.Println("DEBUG: Last voted height before signing:", ds.state.GetLastVotedHeight())
+
 	sig, err := ds.em.SignEOTS(ds.getBtcPkBIP340().MustMarshal(), ds.state.GetChainID(), msgToSign, b.GetHeight())
 	if err != nil {
 		if strings.Contains(err.Error(), failedPreconditionErrStr) {
+			fmt.Println("DEBUG: Duplicate sign detected for height:", b.GetHeight(), "- skipping")
+			fmt.Println("DEBUG: Last voted height after duplicate:", ds.state.GetLastVotedHeight())
 			return nil, ErrFailedPrecondition
 		}
 
 		return nil, fmt.Errorf("failed to sign EOTS: %w", err)
 	}
 
+	fmt.Println("DEBUG: Successfully signed height:", b.GetHeight())
+	fmt.Println("DEBUG: Last voted height after successful sign:", ds.state.GetLastVotedHeight())
+
 	return bbntypes.NewSchnorrEOTSSigFromModNScalar(sig), nil
 }
 
 func (ds *DefaultFinalitySubmitter) GetPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
+	fmt.Println("❌ DEBUG: DefaultFinalitySubmitter.GetPubRandList - CALLED! Using consecutive generation")
+	fmt.Println("❌ DEBUG: DefaultFinalitySubmitter.GetPubRandList - startHeight:", startHeight)
+	fmt.Println("❌ DEBUG: DefaultFinalitySubmitter.GetPubRandList - numPubRand:", numPubRand)
+
 	pubRandList, err := ds.em.CreateRandomnessPairList(
 		ds.getBtcPkBIP340().MustMarshal(),
 		ds.state.GetChainID(),

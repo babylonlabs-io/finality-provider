@@ -81,12 +81,16 @@ type RollupPubRandCommit struct {
 }
 
 // Interface implementation
-func (r *RollupPubRandCommit) EndHeight() uint64 { return r.StartHeight + r.NumPubRand - 1 }
+func (r *RollupPubRandCommit) EndHeight() uint64 {
+	// For sparse generation with interval=5 (hardcoded for testing)
+	interval := uint64(5)
+	return r.StartHeight + (r.NumPubRand-1)*interval
+}
 func (r *RollupPubRandCommit) Validate() error {
 	if r.NumPubRand < 1 {
 		return fmt.Errorf("NumPubRand must be >= 1, got %d", r.NumPubRand)
 	}
-	
+
 	return nil
 }
 

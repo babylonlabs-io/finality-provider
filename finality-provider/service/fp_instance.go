@@ -370,6 +370,10 @@ func (fp *FinalityProviderInstance) processRandomnessCommitment(ctx context.Cont
 
 	// txRes could be nil if no need to commit more randomness
 	if txRes != nil {
+		fmt.Println("DEBUG: processRandomnessCommitment - successfully committed public randomness to the consumer chain")
+		fmt.Println("DEBUG: processRandomnessCommitment - tx hash:", txRes.TxHash)
+		fmt.Println("DEBUG: processRandomnessCommitment - start height:", startHeight)
+
 		fp.logger.Info(
 			"successfully committed public randomness to the consumer chain",
 			zap.String("consumer_id", string(fp.GetChainID())),
