@@ -151,7 +151,7 @@ If the home directory already exists, `init` will not succeed.
   * Public randomness proofs
   * Last voted block height
 
-* **keyring-*** directory: Contains your Babylon Genesis account keys used for:
+**keyring-directory**: Contains your Babylon Genesis account keys used for:
   * Submitting finality signatures to Babylon
   * Withdrawing rewards
   * Managing your finality provider
