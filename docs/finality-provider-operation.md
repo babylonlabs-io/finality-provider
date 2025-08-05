@@ -203,6 +203,7 @@ following parameters:
 [Application Options]
 EOTSManagerAddress = 127.0.0.1:12582
 RPCListener = 127.0.0.1:12581
+ContextSigningHeight = <babylon-height>
 
 [babylon]
 Key = <finality-provider-key-name-signer> # the key you used above
@@ -222,11 +223,18 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > connect to a **single** node directly. Additionally you **must**
 > ensure that this node has transaction indexing enabled (`indexer = "kv"`).
 > Using multiple RPC nodes or load balancers can lead to sync issues.
+> 
+> ⚠️ **Important**: `ContextSigningHeight` must be updated to the current Babylon chain
+> height whenever you upgrade your finality provider software. During any
+> upgrade process, always set `ContextSigningHeight` to the current
+> Babylon block height to ensure proper signing context activation.
 
 Configuration parameters explained:
 
 * `EOTSManagerAddress`: Address where your EOTS daemon is running
 * `RPCListener`: Address for the finality provider RPC server
+* `ContextSigningHeight`: The Babylon block height at which context signing 
+  will start
 * `Key`: Your Babylon Genesis key name from Step 2
 * `ChainID`: The Babylon Genesis chain ID
 * `RPCAddr`: Your Babylon Genesis node's RPC endpoint
