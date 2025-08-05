@@ -70,7 +70,7 @@ type RandomnessCommitter interface {
 	CommitPubRandList(ctx context.Context, req *CommitPubRandListRequest) (*types.TxResponse, error)
 
 	// QueryLastPublicRandCommit returns the last public randomness commitment
-	QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*types.PubRandCommit, error)
+	QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error)
 }
 
 type BlockQuerier[T types.BlockDescription] interface {

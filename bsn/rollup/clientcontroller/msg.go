@@ -1,5 +1,7 @@
 package clientcontroller
 
+import "fmt"
+
 type CommitPublicRandomnessMsg struct {
 	CommitPublicRandomness CommitPublicRandomnessMsgParams `json:"commit_public_randomness"`
 }
@@ -36,11 +38,12 @@ type SubmitFinalitySignatureResponse struct {
 }
 
 type QueryMsg struct {
-	Config                   *ContractConfig          `json:"config,omitempty"`
-	FirstPubRandCommit       *PubRandCommit           `json:"first_pub_rand_commit,omitempty"`
-	LastPubRandCommit        *PubRandCommit           `json:"last_pub_rand_commit,omitempty"`
-	HighestVotedHeight       *HighestVotedHeightQuery `json:"highest_voted_height,omitempty"`
-	AllowedFinalityProviders *struct{}                `json:"allowed_finality_providers,omitempty"`
+	Config                   *ContractConfig              `json:"config,omitempty"`
+	FirstPubRandCommit       *PubRandCommit               `json:"first_pub_rand_commit,omitempty"`
+	LastPubRandCommit        *PubRandCommit               `json:"last_pub_rand_commit,omitempty"`
+	PubRandCommitForHeight   *PubRandCommitForHeightQuery `json:"pub_rand_commit_for_height,omitempty"`
+	HighestVotedHeight       *HighestVotedHeightQuery     `json:"highest_voted_height,omitempty"`
+	AllowedFinalityProviders *struct{}                    `json:"allowed_finality_providers,omitempty"`
 }
 
 // ContractConfig represents the full configuration from the finality contract
@@ -61,8 +64,30 @@ type PubRandCommit struct {
 	BtcPkHex string `json:"btc_pk_hex"`
 }
 
+type PubRandCommitForHeightQuery struct {
+	BtcPkHex string `json:"btc_pk_hex"`
+	Height   uint64 `json:"height"`
+}
+
 type HighestVotedHeightQuery struct {
 	BtcPkHex string `json:"btc_pk_hex"`
+}
+
+type RollupPubRandCommit struct {
+	StartHeight  uint64 `json:"start_height"`
+	NumPubRand   uint64 `json:"num_pub_rand"`
+	Commitment   []byte `json:"commitment"`
+	BabylonEpoch uint64 `json:"babylon_epoch"`
+}
+
+// Interface implementation
+func (r *RollupPubRandCommit) EndHeight() uint64 { return r.StartHeight + r.NumPubRand - 1 }
+func (r *RollupPubRandCommit) Validate() error {
+	if r.NumPubRand < 1 {
+		return fmt.Errorf("NumPubRand must be >= 1, got %d", r.NumPubRand)
+	}
+	
+	return nil
 }
 
 // FIXME: Remove this ancillary struct.

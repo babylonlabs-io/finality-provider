@@ -318,10 +318,10 @@ func (mr *MockConsumerControllerMockRecorder) QueryIsBlockFinalized(ctx, height 
 }
 
 // QueryLastPublicRandCommit mocks base method.
-func (m *MockConsumerController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*types0.PubRandCommit, error) {
+func (m *MockConsumerController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types0.PubRandCommit, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "QueryLastPublicRandCommit", ctx, fpPk)
-	ret0, _ := ret[0].(*types0.PubRandCommit)
+	ret0, _ := ret[0].(types0.PubRandCommit)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -446,10 +446,10 @@ func (mr *MockRandomnessCommitterMockRecorder) GetFpRandCommitContext() *gomock.
 }
 
 // QueryLastPublicRandCommit mocks base method.
-func (m *MockRandomnessCommitter) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*types0.PubRandCommit, error) {
+func (m *MockRandomnessCommitter) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types0.PubRandCommit, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "QueryLastPublicRandCommit", ctx, fpPk)
-	ret0, _ := ret[0].(*types0.PubRandCommit)
+	ret0, _ := ret[0].(types0.PubRandCommit)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

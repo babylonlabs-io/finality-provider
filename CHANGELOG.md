@@ -76,6 +76,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#570](https://github.com/babylonlabs-io/finality-provider/pull/570)
   chore(rollup): don't allow FP program to start if not in allowlist
 * [#580](https://github.com/babylonlabs-io/finality-provider/pull/580) chore: bump bbn for v2 compatibility
+* [#572](https://github.com/babylonlabs-io/finality-provider/pull/572)
+  chore(rollup): ensure pub randomness is timestamped
 
 ## v1.1.0-rc.1
 
