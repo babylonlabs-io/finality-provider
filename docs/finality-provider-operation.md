@@ -203,7 +203,7 @@ following parameters:
 [Application Options]
 EOTSManagerAddress = 127.0.0.1:12582
 RPCListener = 127.0.0.1:12581
-ContextSigningHeight = <babylon-height>
+ContextSigningHeight = <current-babylon-block-height>
 
 [babylon]
 Key = <finality-provider-key-name-signer> # the key you used above
