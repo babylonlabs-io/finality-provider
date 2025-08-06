@@ -198,6 +198,208 @@ func TestRollupRandomnessCommitterShouldCommit(t *testing.T) {
 			expectedStartHeight:  105,
 			description:          "Handle minimum randomness requirement",
 		},
+
+		// === BOUNDARY EDGE CASES ===
+		{
+			name:                 "activation_height_exact",
+			activationHeight:     100,
+			currentHeight:        100, // Exactly at activation
+			lastCommittedHeight:  0,
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    0,
+			expectedShouldCommit: true,
+			expectedStartHeight:  100, // Should start exactly at activation
+			description:          "Current height exactly at activation height",
+		},
+		{
+			name:                 "activation_height_plus_one",
+			activationHeight:     100,
+			currentHeight:        101, // Just after activation
+			lastCommittedHeight:  0,
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    0,
+			expectedShouldCommit: true,
+			expectedStartHeight:  105, // Should align to next interval
+			description:          "Current height just after activation",
+		},
+		{
+			name:                 "large_timestamping_delay",
+			activationHeight:     100,
+			currentHeight:        110,
+			lastCommittedHeight:  0,
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    50, // Large delay
+			expectedShouldCommit: true,
+			expectedStartHeight:  160, // 110 + 50 = 160, aligned to 160 (100 + 12*5)
+			description:          "Handle large timestamping delay",
+		},
+		{
+			name:                 "zero_timestamping_delay",
+			activationHeight:     100,
+			currentHeight:        110,
+			lastCommittedHeight:  0,
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    0, // Zero delay
+			expectedShouldCommit: true,
+			expectedStartHeight:  110, // 110 + 0 = 110, aligned to 110
+			description:          "Handle zero timestamping delay",
+		}, // === COVERAGE BOUNDARY CASES ===
+		{
+			name:                 "coverage_just_below_required",
+			activationHeight:     100,
+			currentHeight:        110,
+			lastCommittedHeight:  120, // Just below required (110 + 3*5 = 125), aligned to interval
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    0,
+			expectedShouldCommit: true,
+			expectedStartHeight:  125, // Continue from 120+1, aligned to 125
+			description:          "Coverage just below required threshold",
+		},
+		{
+			name:                 "coverage_exactly_required",
+			activationHeight:     100,
+			currentHeight:        110,
+			lastCommittedHeight:  125, // Exactly covers required (110 + 3*5 = 125), aligned to interval
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    0,
+			expectedShouldCommit: false, // Sufficient coverage
+			expectedStartHeight:  0,
+			description:          "Coverage exactly matches required threshold",
+		},
+		{
+			name:                 "coverage_just_above_required",
+			activationHeight:     100,
+			currentHeight:        110,
+			lastCommittedHeight:  130, // Just above required (110 + 3*5 = 125), aligned to interval
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    0,
+			expectedShouldCommit: false, // Sufficient coverage
+			expectedStartHeight:  0,
+			description:          "Coverage just above required threshold",
+		},
+
+		// === INTERVAL ALIGNMENT EDGE CASES ===
+		{
+			name:                 "interval_alignment_edge_case",
+			activationHeight:     100,
+			currentHeight:        104, // Just before interval boundary
+			lastCommittedHeight:  0,
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    0,
+			expectedShouldCommit: true,
+			expectedStartHeight:  105, // Should round up to next boundary
+			description:          "Current height just before interval boundary",
+		},
+		{
+			name:                 "interval_alignment_exact",
+			activationHeight:     100,
+			currentHeight:        105, // Exactly on interval boundary
+			lastCommittedHeight:  0,
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    0,
+			expectedShouldCommit: true,
+			expectedStartHeight:  105, // Should use exact boundary
+			description:          "Current height exactly on interval boundary",
+		},
+		{
+			name:                 "interval_alignment_just_after",
+			activationHeight:     100,
+			currentHeight:        106, // Just after interval boundary
+			lastCommittedHeight:  0,
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    0,
+			expectedShouldCommit: true,
+			expectedStartHeight:  110, // Should round up to next boundary
+			description:          "Current height just after interval boundary",
+		},
+
+		// === CONTINUATION SCENARIOS ===
+		{
+			name:                 "continue_from_last_commit_plus_one",
+			activationHeight:     100,
+			currentHeight:        120,
+			lastCommittedHeight:  115, // Last commit at 115
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    0,
+			expectedShouldCommit: true,
+			expectedStartHeight:  120, // Continue from 115+1, aligned to 120
+			description:          "Continue from last commit + 1, aligned to current tip",
+		},
+		{
+			name:                 "continue_from_last_commit_plus_interval",
+			activationHeight:     100,
+			currentHeight:        125,
+			lastCommittedHeight:  115, // Last commit at 115
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    0,
+			expectedShouldCommit: true,
+			expectedStartHeight:  125, // Continue from 115+1, aligned to 125 (not 120)
+			description:          "Continue from last commit + interval",
+		},
+
+		// === LARGE NUMBERS EDGE CASES ===
+		{
+			name:                 "very_large_interval",
+			activationHeight:     1000,
+			currentHeight:        1050,
+			lastCommittedHeight:  0,
+			interval:             1000, // Very large interval
+			numPubRand:           3,
+			timestampingDelay:    0,
+			expectedShouldCommit: true,
+			expectedStartHeight:  2000, // 1000 + 1*1000, aligned to 2000
+			description:          "Handle very large intervals",
+		},
+		{
+			name:                 "very_large_num_pub_rand",
+			activationHeight:     100,
+			currentHeight:        105,
+			lastCommittedHeight:  0,
+			interval:             5,
+			numPubRand:           100, // Very large number
+			timestampingDelay:    0,
+			expectedShouldCommit: true,
+			expectedStartHeight:  105,
+			description:          "Handle very large numPubRand",
+		},
+
+		// === COMPLEX CONTINUATION SCENARIOS ===
+		{
+			name:                 "complex_continuation_with_gap",
+			activationHeight:     100,
+			currentHeight:        200,
+			lastCommittedHeight:  150, // Gap between last commit and current tip
+			interval:             5,
+			numPubRand:           3,
+			timestampingDelay:    0,
+			expectedShouldCommit: true,
+			expectedStartHeight:  200, // Jump to current tip due to large gap
+			description:          "Complex continuation with large gap",
+		},
+		{
+			name:                 "continuation_with_insufficient_coverage",
+			activationHeight:     100,
+			currentHeight:        110,
+			lastCommittedHeight:  120, // Tip behind last commit
+			interval:             5,
+			numPubRand:           4, // Need more coverage
+			timestampingDelay:    0,
+			expectedShouldCommit: true,
+			expectedStartHeight:  125, // Continue from 120+1, aligned to 125
+			description:          "Continue when tip behind but need more coverage",
+		},
 	}
 
 	for _, tt := range tests {
