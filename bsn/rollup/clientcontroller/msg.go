@@ -76,16 +76,36 @@ type HighestVotedHeightQuery struct {
 type RollupPubRandCommit struct {
 	StartHeight  uint64 `json:"start_height"`
 	NumPubRand   uint64 `json:"num_pub_rand"`
-	Commitment   []byte `json:"commitment"`
+	Interval     uint64 `json:"interval"`
 	BabylonEpoch uint64 `json:"babylon_epoch"`
-	Interval     uint64 `json:"interval,omitempty"` // Finality signature interval for sparse generation
+	Commitment   []byte `json:"commitment"`
 }
 
 // Interface implementation
-func (r *RollupPubRandCommit) EndHeight() uint64 {
-	// Use the interval from the struct - interval is guaranteed to be > 0
-	return r.StartHeight + (r.NumPubRand-1)*r.Interval
+// ContainsHeight checks if the given height is within the range of the commitment
+// i.e., the given height should be in the form of `start_height + i * interval` for some `i < num_pub_rand`
+func (r *RollupPubRandCommit) ContainsHeight(height uint64) bool {
+	// Check if the height is before the start height
+	if height < r.StartHeight {
+		return false
+	}
+
+	// Check if the height is after the end height
+	if height > r.EndHeight() {
+		return false
+	}
+
+	// Check if the height falls at the interval boundary
+	offset := height - r.StartHeight
+
+	return offset%r.Interval == 0
 }
+
+// EndHeight returns the height of the last commitment
+func (r *RollupPubRandCommit) EndHeight() uint64 {
+	return r.StartHeight + r.NumPubRand*r.Interval - 1
+}
+
 func (r *RollupPubRandCommit) Validate() error {
 	if r.NumPubRand < 1 {
 		return fmt.Errorf("NumPubRand must be >= 1, got %d", r.NumPubRand)

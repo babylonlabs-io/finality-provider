@@ -506,8 +506,6 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	contractConfig, err := ctm.RollupBSNController.QueryContractConfig(context.Background())
 	require.NoError(t, err)
 
-	fmt.Println("DEBUG: E2E test using interval:", contractConfig.FinalitySignatureInterval)
-
 	rndCommitter := service.NewRollupRandomnessCommitter(
 		service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore), ctm.RollupBSNController, ctm.ConsumerEOTSClient, ctm.logger, fpMetrics,

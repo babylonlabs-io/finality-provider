@@ -7,13 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec/v2"
-
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
-
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -21,6 +16,9 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
 )
 
 type FinalityProviderInstance struct {
@@ -353,9 +351,6 @@ func (fp *FinalityProviderInstance) processRandomnessCommitment(ctx context.Cont
 		return
 	}
 
-	fmt.Println("DEBUG: should processRandomnessCommitment", should)
-	fmt.Println("DEBUG: startHeight processRandomnessCommitment", startHeight)
-
 	if !should {
 		return
 	}
@@ -370,10 +365,6 @@ func (fp *FinalityProviderInstance) processRandomnessCommitment(ctx context.Cont
 
 	// txRes could be nil if no need to commit more randomness
 	if txRes != nil {
-		fmt.Println("DEBUG: processRandomnessCommitment - successfully committed public randomness to the consumer chain")
-		fmt.Println("DEBUG: processRandomnessCommitment - tx hash:", txRes.TxHash)
-		fmt.Println("DEBUG: processRandomnessCommitment - start height:", startHeight)
-
 		fp.logger.Info(
 			"successfully committed public randomness to the consumer chain",
 			zap.String("consumer_id", string(fp.GetChainID())),

@@ -42,11 +42,6 @@ func NewRollupFinalitySubmitter(
 // GetPubRandList overrides the default implementation to use sparse generation
 // This ensures the randomness retrieval matches the sparse commitment pattern
 func (rfs *RollupFinalitySubmitter) GetPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
-	// fmt.Println("🎯 DEBUG: RollupFinalitySubmitter.GetPubRandList - CALLED! Using sparse generation")
-	// fmt.Println("🎯 DEBUG: RollupFinalitySubmitter.GetPubRandList - startHeight:", startHeight)
-	// fmt.Println("🎯 DEBUG: RollupFinalitySubmitter.GetPubRandList - numPubRand:", numPubRand)
-	// fmt.Println("🎯 DEBUG: RollupFinalitySubmitter.GetPubRandList - interval:", rfs.interval)
-
 	pubRandList, err := rfs.em.CreateRandomnessPairListWithInterval(
 		rfs.getBtcPkBIP340().MustMarshal(),
 		rfs.state.GetChainID(),
@@ -58,21 +53,12 @@ func (rfs *RollupFinalitySubmitter) GetPubRandList(startHeight uint64, numPubRan
 		return nil, fmt.Errorf("failed to create sparse public randomness list: %w", err)
 	}
 
-	// Debug: show the actual heights generated
-	heights := make([]uint64, len(pubRandList))
-	for i := range pubRandList {
-		heights[i] = startHeight + uint64(i)*rfs.interval
-	}
-	fmt.Println("DEBUG: RollupFinalitySubmitter.GetPubRandList - generated heights:", heights)
-
 	return pubRandList, nil
 }
 
 // SubmitBatchFinalitySignatures overrides the default implementation to ensure
 // our sparse GetPubRandList method is called throughout the submission process
 func (rfs *RollupFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Context, blocks []types.BlockDescription) (*types.TxResponse, error) {
-	// fmt.Println("🎯 DEBUG: RollupFinalitySubmitter.SubmitBatchFinalitySignatures - CALLED!")
-
 	if len(blocks) == 0 {
 		return nil, fmt.Errorf("cannot send signatures for empty blocks")
 	}
@@ -88,10 +74,9 @@ func (rfs *RollupFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 			zap.String("pk", rfs.getBtcPkHex()),
 			zap.Uint64("last_voted_height", rfs.state.GetLastVotedHeight()),
 		)
+
 		return nil, nil // No blocks to vote for
 	}
-
-	fmt.Println("🎯 DEBUG: RollupFinalitySubmitter - blocks to vote for:", blocks[0].GetHeight(), "to", blocks[len(blocks)-1].GetHeight())
 
 	var failedCycles uint32
 	targetHeight := blocks[len(blocks)-1].GetHeight()
@@ -100,11 +85,6 @@ func (rfs *RollupFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 	for {
 		res, err := rfs.submitBatchFinalitySignaturesOnce(ctx, blocks)
 		if err != nil {
-			fmt.Println("🎯 DEBUG: RollupFinalitySubmitter - failed to submit finality signature to the consumer chain", err)
-			fmt.Println("🎯 DEBUG: RollupFinalitySubmitter - current failures:", failedCycles)
-			fmt.Println("🎯 DEBUG: RollupFinalitySubmitter - target start height:", blocks[0].GetHeight())
-			fmt.Println("🎯 DEBUG: RollupFinalitySubmitter - target end height:", targetHeight)
-
 			rfs.logger.Debug(
 				"failed to submit finality signature to the consumer chain",
 				zap.String("pk", rfs.getBtcPkHex()),
@@ -164,8 +144,6 @@ func (rfs *RollupFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 
 // submitBatchFinalitySignaturesOnce overrides to ensure our GetPubRandList method is called
 func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx context.Context, blocks []types.BlockDescription) (*types.TxResponse, error) {
-	// fmt.Println("🎯 DEBUG: RollupFinalitySubmitter.submitBatchFinalitySignaturesOnce - CALLED!")
-
 	if len(blocks) == 0 {
 		return nil, fmt.Errorf("should not submit batch finality signature with zero block")
 	}
@@ -176,7 +154,6 @@ func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 
 	for _, block := range blocks {
 		// Get public randomness for this specific height using OUR method
-		// fmt.Println("🎯 DEBUG: About to call rfs.GetPubRandList for height:", block.GetHeight())
 		pr, err := rfs.GetPubRandList(block.GetHeight(), 1)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get public randomness for height %d: %w", block.GetHeight(), err)
@@ -211,6 +188,7 @@ func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 				zap.Uint64("height", b.GetHeight()),
 				zap.String("hash", hex.EncodeToString(b.GetHash())),
 				zap.Error(err))
+
 			continue
 		}
 
@@ -224,6 +202,7 @@ func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	// If all blocks were skipped, return early
 	if len(validBlocks) == 0 {
 		rfs.logger.Info("all blocks were skipped due to double sign errors")
+
 		return nil, nil
 	}
 
@@ -243,6 +222,7 @@ func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 		if strings.Contains(err.Error(), "slashed") {
 			return nil, ErrFinalityProviderSlashed
 		}
+
 		return nil, fmt.Errorf("failed to submit finality signature to the consumer chain: %w", err)
 	}
 

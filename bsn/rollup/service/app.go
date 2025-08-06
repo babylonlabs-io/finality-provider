@@ -57,9 +57,7 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 		return nil, fmt.Errorf("failed to query contract config: %w", err)
 	}
 
-	fmt.Println("DEBUG: contractConfig.FinalitySignatureInterval", contractConfig.FinalitySignatureInterval)
-
-	logger.Info("Using RollupRandomnessCommitter for rollup environment",
+	logger.Info("using RollupRandomnessCommitter for rollup environment",
 		zap.Uint64("finality_signature_interval", contractConfig.FinalitySignatureInterval))
 
 	rndCommitter := service.NewRollupRandomnessCommitter(
@@ -73,6 +71,9 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 	)
 
 	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, cfg.Common.PollerConfig, logger)
+
+	logger.Info("using RollupFinalitySubmitter for rollup environment",
+		zap.Uint64("finality_signature_interval", contractConfig.FinalitySignatureInterval))
 
 	// For rollup environments, use RollupFinalitySubmitter for sparse randomness generation
 	finalitySubmitter := service.NewRollupFinalitySubmitter(consumerCon,

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	rollupfpcc "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/metrics"
@@ -38,7 +37,6 @@ func NewRollupRandomnessCommitter(
 // ShouldCommit overrides the default implementation with rollup-specific logic
 // that directly calculates aligned startHeight without redundant parent calls
 func (rrc *RollupRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, uint64, error) {
-	fmt.Println("DEBUG: RollupRandomnessCommitter ShouldCommit")
 	// Get last committed height (same as parent)
 	lastCommittedHeight, err := rrc.GetLastCommittedHeight(ctx)
 	if err != nil {
@@ -62,7 +60,7 @@ func (rrc *RollupRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 	}
 
 	// Calculate tip height with delay
-	tipHeightWithDelay := tipBlock.GetHeight() + uint64(rrc.cfg.TimestampingDelayBlocks)
+	tipHeightWithDelay := tipBlock.GetHeight() + uint64(rrc.cfg.TimestampingDelayBlocks) // #nosec G115
 
 	// ROLLUP-SPECIFIC: Determine startHeight with interval awareness from the beginning
 	var alignedStartHeight uint64
@@ -70,19 +68,13 @@ func (rrc *RollupRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 	case lastCommittedHeight < tipHeightWithDelay:
 		// Need to start from tipHeightWithDelay, but align it to voting schedule
 		baseHeight := max(tipHeightWithDelay, activationBlkHeight)
-		alignedStartHeight, err = rrc.calculateFirstEligibleHeightWithActivation(baseHeight, activationBlkHeight)
-		if err != nil {
-			return false, 0, fmt.Errorf("failed to calculate aligned height: %w", err)
-		}
+		alignedStartHeight = rrc.calculateFirstEligibleHeightWithActivation(baseHeight, activationBlkHeight)
 
 	case rrc.needsMoreVotingRandomness(lastCommittedHeight, tipHeightWithDelay, activationBlkHeight):
 		// Need to continue from where we left off, but with interval spacing
 		// For sparse generation, we need to check if we have enough *voting* heights covered
 		baseHeight := max(lastCommittedHeight+rrc.interval, activationBlkHeight)
-		alignedStartHeight, err = rrc.calculateFirstEligibleHeightWithActivation(baseHeight, activationBlkHeight)
-		if err != nil {
-			return false, 0, fmt.Errorf("failed to calculate aligned height: %w", err)
-		}
+		alignedStartHeight = rrc.calculateFirstEligibleHeightWithActivation(baseHeight, activationBlkHeight)
 
 	default:
 		// Check if we have sufficient *voting* randomness, not just any randomness
@@ -100,24 +92,14 @@ func (rrc *RollupRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 				zap.Uint64("last_voting_height", lastVotingHeight),
 				zap.Uint64("required_voting_height", requiredVotingHeight),
 			)
+
 			return false, 0, nil
 		}
 
 		// Need more voting randomness
 		baseHeight := max(lastCommittedHeight+rrc.interval, activationBlkHeight)
-		alignedStartHeight, err = rrc.calculateFirstEligibleHeightWithActivation(baseHeight, activationBlkHeight)
-		if err != nil {
-			return false, 0, fmt.Errorf("failed to calculate aligned height: %w", err)
-		}
+		alignedStartHeight = rrc.calculateFirstEligibleHeightWithActivation(baseHeight, activationBlkHeight)
 	}
-
-	// fmt.Println("DEBUG: RollupRandomnessCommitter ShouldCommit")
-	// fmt.Println("DEBUG: tipHeight:", tipBlock.GetHeight())
-	// fmt.Println("DEBUG: lastCommittedHeight:", lastCommittedHeight)
-	// fmt.Println("DEBUG: tipHeightWithDelay:", tipHeightWithDelay)
-	// fmt.Println("DEBUG: activationBlkHeight:", activationBlkHeight)
-	// fmt.Println("DEBUG: interval:", rrc.interval)
-	fmt.Println("DEBUG: alignedStartHeight:", alignedStartHeight)
 
 	rrc.logger.Debug(
 		"the rollup finality-provider should commit randomness",
@@ -138,7 +120,7 @@ func (rrc *RollupRandomnessCommitter) needsMoreVotingRandomness(lastCommittedHei
 	lastVotingHeight := rrc.getLastVotingHeightWithRandomness(lastCommittedHeight, activationHeight)
 
 	// Find the next voting height we need to cover after tipHeightWithDelay
-	nextRequiredVotingHeight, _ := rrc.calculateFirstEligibleHeightWithActivation(tipHeightWithDelay, activationHeight)
+	nextRequiredVotingHeight := rrc.calculateFirstEligibleHeightWithActivation(tipHeightWithDelay, activationHeight)
 
 	// We need randomness for NumPubRand voting heights starting from nextRequiredVotingHeight
 	requiredVotingHeight := nextRequiredVotingHeight + (uint64(rrc.cfg.NumPubRand)-1)*rrc.interval
@@ -157,27 +139,33 @@ func (rrc *RollupRandomnessCommitter) getLastVotingHeightWithRandomness(lastComm
 	// that aligns with the voting schedule
 	offset := lastCommittedHeight - activationHeight
 	votingHeightIndex := offset / rrc.interval
+
 	return activationHeight + votingHeightIndex*rrc.interval
 }
 
 // getPubRandList overrides the default implementation to use sparse generation
 // startHeight is already aligned by ShouldCommit, so we can use it directly
 func (rrc *RollupRandomnessCommitter) getPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
-	return rrc.em.CreateRandomnessPairListWithInterval(
+	pubRandList, err := rrc.em.CreateRandomnessPairListWithInterval(
 		rrc.btcPk.MustMarshal(),
 		rrc.cfg.ChainID,
 		startHeight, // Already aligned by ShouldCommit
 		numPubRand,
 		rrc.interval,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create randomness pair list with interval: %w", err)
+	}
+
+	return pubRandList, nil
 }
 
 // calculateFirstEligibleHeightWithActivation finds the first height >= startHeight that is eligible for voting
 // using the provided activation height (avoids redundant contract queries)
-func (rrc *RollupRandomnessCommitter) calculateFirstEligibleHeightWithActivation(startHeight, activationHeight uint64) (uint64, error) {
+func (rrc *RollupRandomnessCommitter) calculateFirstEligibleHeightWithActivation(startHeight, activationHeight uint64) uint64 {
 	// If startHeight is before activation, first eligible is activation height
 	if startHeight <= activationHeight {
-		return activationHeight, nil
+		return activationHeight
 	}
 
 	// Calculate the first eligible height at or after startHeight
@@ -187,28 +175,11 @@ func (rrc *RollupRandomnessCommitter) calculateFirstEligibleHeightWithActivation
 
 	if remainder == 0 {
 		// startHeight is already aligned
-		return startHeight, nil
+		return startHeight
 	}
 
 	// Round up to next aligned height
-	return startHeight + (rrc.interval - remainder), nil
-}
-
-// calculateFirstEligibleHeight finds the first height >= startHeight that is eligible for voting
-// based on BSN activation height and finality signature interval (legacy method for backward compatibility)
-func (rrc *RollupRandomnessCommitter) calculateFirstEligibleHeight(startHeight uint64) (uint64, error) {
-	// Get contract configuration to determine voting schedule
-	rollupController, ok := rrc.consumerCon.(*rollupfpcc.RollupBSNController)
-	if !ok {
-		return 0, fmt.Errorf("expected RollupBSNController, got %T", rrc.consumerCon)
-	}
-
-	contractConfig, err := rollupController.QueryContractConfig(context.Background())
-	if err != nil {
-		return 0, fmt.Errorf("failed to query contract config: %w", err)
-	}
-
-	return rrc.calculateFirstEligibleHeightWithActivation(startHeight, contractConfig.BsnActivationHeight)
+	return startHeight + (rrc.interval - remainder)
 }
 
 // Commit overrides the default implementation to use interval-aware storage
