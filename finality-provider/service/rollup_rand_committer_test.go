@@ -248,7 +248,9 @@ func TestRollupRandomnessCommitterShouldCommit(t *testing.T) {
 			expectedShouldCommit: true,
 			expectedStartHeight:  110, // 110 + 0 = 110, aligned to 110
 			description:          "Handle zero timestamping delay",
-		}, // === COVERAGE BOUNDARY CASES ===
+		},
+
+		// === COVERAGE BOUNDARY CASES ===
 		{
 			name:                 "coverage_just_below_required",
 			activationHeight:     100,
