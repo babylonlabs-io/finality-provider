@@ -524,7 +524,6 @@ func (cc *RollupBSNController) QueryLatestBlock(ctx context.Context) (types.Bloc
 }
 
 // QueryFirstPubRandCommit returns the first public randomness commitment
-// It is fetched from the state of a CosmWasm contract OP finality gadget.
 func (cc *RollupBSNController) QueryFirstPubRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*RollupPubRandCommit, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	queryMsg := &QueryMsg{
@@ -562,7 +561,6 @@ func (cc *RollupBSNController) QueryFirstPubRandCommit(ctx context.Context, fpPk
 }
 
 // QueryLastPublicRandCommit returns the last public randomness commitments
-// It is fetched from the state of a CosmWasm contract OP finality gadget.
 func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	queryMsg := &QueryMsg{
