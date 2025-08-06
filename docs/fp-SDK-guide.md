@@ -13,7 +13,7 @@
       1. [Block Polling Interface](#321-blockpolling-interface)
       2. [Randomness Committer Interface](#322-randomnesscommitter-interface)
       3. [Finality Signature Submitter Interface](#323-finalitysignaturesubmitter-interface)
-      4. [Height Determiner Interface](#324-height-determiner-interface)
+      4. [Height Determiner Interface](#324-heightdeterminer-interface)
 4. [Instantiation](#4-instantiation)
    1. [Using Built-in Implementations](#41-using-built-in-implementations)
    2. [Using Custom Implementations](#42-using-custom-implementations)
