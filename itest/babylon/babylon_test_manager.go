@@ -356,7 +356,7 @@ func (tm *TestManager) CheckBlockFinalization(t *testing.T, height uint64, num i
 
 	// As the votes have been collected, the block should be finalized
 	require.Eventually(t, func() bool {
-		finalized, err := tm.BBNConsumerClient.QueryIsBlockFinalized(context.Background(), height)
+		finalized, err := tm.BBNConsumerClient.QueryIsBlockFinalized(t.Context(), height)
 		if err != nil {
 			t.Logf("failed to query block at height %v: %s", height, err.Error())
 			return false
@@ -418,13 +418,13 @@ func (tm *TestManager) StopAndRestartFpAfterNBlocks(ctx context.Context, t *test
 }
 
 func (tm *TestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
-	beforeHeight, err := tm.BBNConsumerClient.QueryLatestBlock(context.Background())
+	beforeHeight, err := tm.BBNConsumerClient.QueryLatestBlock(t.Context())
 	require.NotNil(t, beforeHeight)
 	require.NoError(t, err)
 
 	var afterHeight uint64
 	require.Eventually(t, func() bool {
-		block, err := tm.BBNConsumerClient.QueryLatestBlock(context.Background())
+		block, err := tm.BBNConsumerClient.QueryLatestBlock(t.Context())
 		if block == nil || err != nil {
 			return false
 		}
@@ -448,7 +448,7 @@ func (tm *TestManager) WaitForNFinalizedBlocks(t *testing.T, n uint) *types.Bloc
 	)
 
 	require.Eventually(t, func() bool {
-		lastFinalizedBlock, err = tm.BBNConsumerClient.QueryLatestFinalizedBlock(context.Background())
+		lastFinalizedBlock, err = tm.BBNConsumerClient.QueryLatestFinalizedBlock(t.Context())
 		if err != nil {
 			t.Logf("failed to get the latest finalized block: %s", err.Error())
 			return false

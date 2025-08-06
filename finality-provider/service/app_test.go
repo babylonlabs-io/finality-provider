@@ -43,7 +43,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {
 		t.Parallel()
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		r := rand.New(rand.NewSource(seed))
 
 		logger := testutil.GetTestLogger(t)
@@ -174,7 +174,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		t.Parallel()
 		r := rand.New(rand.NewSource(seed))
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		randomStartingHeight := uint64(r.Int63n(100) + 1)
@@ -286,7 +286,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 			Jailed:  true,
 		}, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryFinalityProviderHighestVotedHeight(gomock.Any(), gomock.Any()).Return(uint64(0), nil).AnyTimes()
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 
 		// Create fp app
 		app, fpPk, cleanup := startFPAppWithRegisteredFp(ctx, t, r, fpHomeDir, &fpCfg, mockBabylonController, mockConsumerController)
@@ -393,7 +393,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 			err = os.RemoveAll(fpHomeDir)
 			require.NoError(t, err)
 		}()
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		err = app.Start(ctx)
 		require.NoError(t, err)
 		defer func() {

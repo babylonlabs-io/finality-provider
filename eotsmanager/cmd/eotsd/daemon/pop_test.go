@@ -2,7 +2,6 @@ package daemon_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -90,7 +89,7 @@ func TestPoPValidate(t *testing.T) {
 
 		validateCmd.SetArgs([]string{fileName})
 
-		err = validateCmd.ExecuteContext(context.Background())
+		err = validateCmd.ExecuteContext(t.Context())
 		require.NoError(t, err)
 
 		require.Equal(t, writer.String(), "Proof of Possession is valid!\n")

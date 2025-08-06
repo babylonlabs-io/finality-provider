@@ -1,8 +1,6 @@
 module github.com/babylonlabs-io/finality-provider
 
-go 1.23.8
-
-toolchain go1.23.10
+go 1.24.3
 
 require (
 	cosmossdk.io/errors v1.0.2

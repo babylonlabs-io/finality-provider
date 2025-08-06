@@ -43,7 +43,7 @@ func TestHMACGeneration(t *testing.T) {
 
 	interceptor := HMACUnaryClientInterceptor(testKey)
 	err = interceptor(
-		context.Background(),
+		t.Context(),
 		"/proto.EOTSManager/SignEOTS",
 		testReq,
 		nil,

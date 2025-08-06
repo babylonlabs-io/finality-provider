@@ -37,7 +37,7 @@ import (
 // has started. This order is critical because the pub randomness loop takes time to initialize,
 // and without it, blocks won't get finalized properly.
 func TestConsumerFpLifecycle(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	ctm := StartBcdTestManager(t, ctx)
 	defer func() {
 		cancel()
