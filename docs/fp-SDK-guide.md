@@ -375,35 +375,37 @@ fpApp, err := service.NewFinalityProviderApp(
 
 ## Startup
 
-Start finality provider and manage lifecycle:
+Once you have a finality provider app instance, start it:
 
 ```go
-// Start all services (connects to chains, starts background processes)
+// Start the finality provider app
 err := fpApp.Start()
 if err != nil {
     return fmt.Errorf("failed to start finality provider: %w", err)
 }
 
-// Monitor status
-if fpApp.IsRunning() {
-    logger.Info("Finality provider is running")
+// Optionally start a specific finality provider instance
+if err := fpApp.StartFinalityProvider(ctx, fpPk); err != nil {
+    return fmt.Errorf("failed to start finality provider: %w", err)
 }
-
-// Graceful shutdown
-err = fpApp.Stop()
 ```
 
-- [`app.go`](../finality-provider/service/app.go)
+For external API access, wrap the app with a gRPC server:
+
+```go
+fpServer := service.NewFinalityProviderServer(cfg, logger, fpApp, dbBackend)
+if err := fpServer.RunUntilShutdown(ctx); err != nil {
+    return fmt.Errorf("failed to run finality provider server: %w", err)
+}
+```
 
 **Startup sequence:**
-1. App starts 4 background processes: metrics updates, critical error 
-   monitoring, registration handling, and unjailing requests
-2. When a finality provider instance starts, it determines the start height
-3. Two main processes start asynchronously:
+1. Connections to Babylon chain, consumer chain, and EOTS manager are established 
+2. 4 background processes start: metrics updates, critical error monitoring, registration handling, and unjailing requests
+3. If finality provider specified, determines start height and launches two 
+   main processes:
    - Randomness commitment loop - Pre-commits public randomness
    - Finality signature submission loop - Processes blocks and submits votes
-
-**Note:** Connections to Babylon chain, consumer chain, and EOTS manager are 
-established during app creation, before startup.
+4. gRPC server starts for external API access
 
 Monitor logs for connection status and voting activity.
