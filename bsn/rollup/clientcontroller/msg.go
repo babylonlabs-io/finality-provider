@@ -1,6 +1,10 @@
 package clientcontroller
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/babylonlabs-io/finality-provider/types"
+)
 
 type CommitPublicRandomnessMsg struct {
 	CommitPublicRandomness CommitPublicRandomnessMsgParams `json:"commit_public_randomness"`
@@ -72,6 +76,8 @@ type PubRandCommitForHeightQuery struct {
 type HighestVotedHeightQuery struct {
 	BtcPkHex string `json:"btc_pk_hex"`
 }
+
+var _ types.PubRandCommit = &RollupPubRandCommit{}
 
 type RollupPubRandCommit struct {
 	StartHeight  uint64 `json:"start_height"`

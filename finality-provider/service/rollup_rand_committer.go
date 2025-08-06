@@ -73,7 +73,7 @@ func (rrc *RollupRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 	case rrc.needsMoreVotingRandomness(lastCommittedHeight, tipHeightWithDelay, activationBlkHeight):
 		// Need to continue from where we left off, but with interval spacing
 		// For sparse generation, we need to check if we have enough *voting* heights covered
-		baseHeight := max(lastCommittedHeight+rrc.interval, activationBlkHeight)
+		baseHeight := max(lastCommittedHeight+1, activationBlkHeight)
 		alignedStartHeight = rrc.calculateFirstEligibleHeightWithActivation(baseHeight, activationBlkHeight)
 
 	default:
@@ -97,7 +97,7 @@ func (rrc *RollupRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 		}
 
 		// Need more voting randomness
-		baseHeight := max(lastCommittedHeight+rrc.interval, activationBlkHeight)
+		baseHeight := max(lastCommittedHeight+1, activationBlkHeight)
 		alignedStartHeight = rrc.calculateFirstEligibleHeightWithActivation(baseHeight, activationBlkHeight)
 	}
 
