@@ -153,7 +153,8 @@ func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	var prList []*btcec.FieldVal
 
 	for _, block := range blocks {
-		// Get public randomness for this specific height using OUR method
+		// Get public randomness for this specific height using sparse generation method
+		// We request exactly 1 randomness value since we need randomness for this single block height
 		pr, err := rfs.GetPubRandList(block.GetHeight(), 1)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get public randomness for height %d: %w", block.GetHeight(), err)

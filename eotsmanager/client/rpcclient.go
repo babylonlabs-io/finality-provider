@@ -97,6 +97,8 @@ func (c *EOTSManagerGRpcClient) CreateRandomnessPairListWithInterval(uid, chainI
 
 	for i := uint32(0); i < num; i++ {
 		height := startHeight + uint64(i)*interval
+		// We request exactly 1 randomness value per height since we're generating sparse randomness
+		// for specific heights (startHeight, startHeight+interval, startHeight+2*interval, etc.)
 		singleList, err := c.CreateRandomnessPairList(uid, chainID, height, 1)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create randomness for height %d: %w", height, err)
