@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"math/rand"
 	"testing"
 
@@ -20,6 +19,7 @@ import (
 // These tests verify the complete decision logic by calling the actual function
 
 func TestRollupRandomnessCommitterShouldCommit(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		// Mock setup
@@ -403,8 +403,10 @@ func TestRollupRandomnessCommitterShouldCommit(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			t.Parallel()
+			ctx := t.Context()
 
 			// Create mocks
 			ctrl := gomock.NewController(t)
