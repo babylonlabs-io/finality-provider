@@ -84,47 +84,13 @@ fpApp, err := service.NewFinalityProviderApp(
 ```
 - You can find the above example at [`app.go`](../finality-provider/service/app.go)
 
-### Interface Responsibilities
-
-- **`ccapi.ConsumerController`** - Communication layer. Handles block queries,
-  finality signature submission, randomness commits to your consumer chain
-- **`types.BlockPoller`** - Monitors consumer chain blocks. Emits channel of
-  new blocks requiring finality votes based on your chain's finality rules
-- **`types.RandomnessCommitter`** - Pre-commits EOTS public randomness.
-  Required before finality signatures to enable slashing detection
-- **`types.FinalitySignatureSubmitter`** - Submits batched EOTS finality
-  signatures. Coordinates with randomness commits for proper EOTS verification
-- **`types.HeightDeterminer`** - Calculates finality voting start height.
-  Usually built-in implementation sufficient
-- **`ccapi.BabylonController`** - Babylon chain operations (FP registration,
-  BTC staking queries). Use built-in unless custom Babylon integration
-- **`eotsmanager.EOTSManager`** - EOTS key management and signature generation.
-  Use built-in unless custom HSM integration
-
-## Finality Process Flow
-
-The following diagram illustrates how blocks flow through the Bitcoin-secured finality system:
-
-### Implementation References
-
-Each step in this flow maps to specific code locations:
-
-1. [Block Polling](../finality-provider/service/chain_poller.go)
-2. [Randomness Commitment](../finality-provider/service/fp_instance.go)
-3. [Finality Voting](../finality-provider/service/fp_instance.go)
-4. Aggregation: Handled by Babylon chain consensus
-5. Slashing: EOTS + Babylon chain 
-
-Every block's `MsgToSign()` generates the exact message that receives 
-Bitcoin security through the EOTS signature scheme.
-
 ## Interfaces
 
 ### Communication Level Interfaces
 #### ConsumerController Interface
 
-The Communication layer for consumer chain integration. Composes three
-sub-interfaces for separation of concerns into a single contract. This is the 
+The communication layer interface for consumer chain integration. It composes three
+sub-interfaces into a single contract for separation of concerns. This is the 
 main interface BSNs implement to connect their consumer chain to Babylon's 
 Bitcoin-secured finality system.
 
@@ -186,12 +152,12 @@ type FinalityOperator interface {
 #### Block Polling Interface
 
 The `BlockPoller` sits between the consumer chain and the finality providers,
-monitors the consumer chain for new blocks, then feeds
-those blocks through a channel to finality providers for voting. The generic
-type parameter `T` must implement the `BlockDescription` interface, enabling
-BSNs to attach chain-specific data while ensuring every block provides
-the core methods also needed. Additionally, every block must provide `MsgToSign
-()` which generates the exact message that will be signed by EOTS.
+monitors the consumer chain for new blocks, then provides those blocks to 
+finality providers for voting. The generic type parameter `T` must implement 
+the `BlockDescription` interface, enabling BSNs to attach chain-specific data 
+while ensuring every block provides the required core methods. Additionally, 
+every block must provide `MsgToSign()` which generates the exact message that 
+will be signed by EOTS.
 
 ```go
 type BlockDescription interface {
@@ -430,18 +396,14 @@ err = fpApp.Stop()
 - [`app.go`](../finality-provider/service/app.go)
 
 **Startup sequence:**
-1. Connect to Babylon chain - Establishes RPC/gRPC connections for BTC
-   staking queries
-2. Connect to consumer chain - `ConsumerController` establishes chain
-   connections
-3. Connect to EOTS manager - gRPC connection for signature generation
-4. Start block polling - BlockPoller begins monitoring consumer
-   chain
-5. Start randomness committer - Begins pre-committing public randomness
-6. Start finality submitter - Begins processing polled blocks for finality
-   votes
-7. Finality voting active - System processes blocks and submits finality
-   signatures
+1. App starts 4 background processes: metrics updates, critical error 
+   monitoring, registration handling, and unjailing requests
+2. When a finality provider instance starts, it determines the start height
+3. Two main processes start asynchronously:
+   - Randomness commitment loop - Pre-commits public randomness
+   - Finality signature submission loop - Processes blocks and submits votes
 
-Each service starts asynchronously. Monitor logs for connection status and
-voting activity.
+**Note:** Connections to Babylon chain, consumer chain, and EOTS manager are 
+established during app creation, before startup.
+
+Monitor logs for connection status and voting activity.
