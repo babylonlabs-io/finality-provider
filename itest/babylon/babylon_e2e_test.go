@@ -47,7 +47,7 @@ const (
 // vote submission -> block finalization
 func TestFinalityProviderLifeCycle(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	n := 2
 	tm, fps := StartManagerWithFinalityProvider(t, n, ctx)
 	defer func() {
@@ -139,7 +139,7 @@ func TestSkippingDoubleSignError(t *testing.T) {
 // in this case, the BTC private key should be extracted by Babylon
 func TestDoubleSigning(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer func() {
 		cancel()
@@ -202,7 +202,7 @@ func TestDoubleSigning(t *testing.T) {
 // TestCatchingUp tests if a fp can catch up after restarted
 func TestCatchingUp(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer func() {
 		cancel()
@@ -255,7 +255,7 @@ func TestCatchingUp(t *testing.T) {
 
 func TestFinalityProviderEditCmd(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer func() {
 		cancel()
@@ -336,7 +336,7 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 
 func TestFinalityProviderCreateCmd(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer func() {
 		cancel()
@@ -406,7 +406,7 @@ func TestFinalityProviderCreateCmd(t *testing.T) {
 
 func TestRemoveMerkleProofsCmd(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer func() {
 		cancel()
@@ -438,7 +438,7 @@ func TestRemoveMerkleProofsCmd(t *testing.T) {
 
 func TestPrintEotsCmd(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	tm := StartManager(t, ctx, "", "")
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	defer func() {
@@ -483,7 +483,7 @@ func TestPrintEotsCmd(t *testing.T) {
 
 func TestRecoverRandProofCmd(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer func() {
 		cancel()
@@ -553,7 +553,7 @@ func TestRecoverRandProofCmd(t *testing.T) {
 
 func TestSigHeightOutdated(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer func() {
 		cancel()
@@ -591,7 +591,7 @@ func TestSigHeightOutdated(t *testing.T) {
 
 func TestEotsdRollbackCmd(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	testDir := t.TempDir()
 
@@ -663,7 +663,7 @@ func TestEotsdRollbackCmd(t *testing.T) {
 
 func TestEotsdBackupCmd(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	testDir := t.TempDir()
 
@@ -753,7 +753,7 @@ func TestEotsdBackupCmd(t *testing.T) {
 // TestEotsdUnlockCmd tests the EOTS manager unlock command, demonstrating file backend keyring
 func TestEotsdUnlockCmd(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	testDir := t.TempDir()
 
@@ -839,7 +839,7 @@ func TestEotsdUnlockCmd(t *testing.T) {
 
 func TestUnsafeCommitPubRandCmd(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
 	defer func() {
 		cancel()

@@ -80,6 +80,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
   chore(rollup): ensure pub randomness is timestamped
 * [#583](https://github.com/babylonlabs-io/finality-provider/pull/583)
   feat(rollup): sparse pub rand generation
+* [#584](https://github.com/babylonlabs-io/finality-provider/pull/584) chore: bump go 1.24
+* [#586](https://github.com/babylonlabs-io/finality-provider/pull/586) chore: init fp metrics
 
 ## v1.1.0-rc.1
 

@@ -23,7 +23,7 @@ import (
 // 6. Block finalization verification
 func TestRollupFinalityProviderLifeCycle(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	ctx, cancel := context.WithCancel(t.Context())
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
 		cancel()
@@ -97,7 +97,7 @@ func TestRollupFinalityProviderLifeCycle(t *testing.T) {
 // This is critical for preventing accidental slashing during restart scenarios
 func TestBSNSkippingDoubleSignError(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	ctx, cancel := context.WithCancel(t.Context())
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
 		cancel()
@@ -207,7 +207,7 @@ func TestBSNSkippingDoubleSignError(t *testing.T) {
 // In this case, the BTC private key should be extracted by the system
 func TestBSNDoubleSigning(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	ctx, cancel := context.WithCancel(t.Context())
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
 		cancel()
@@ -380,7 +380,7 @@ func TestFinalityProviderAllowlistBlocking(t *testing.T) {
 // This is the rollup BSN equivalent of the Babylon TestCatchingUp test
 func TestRollupBSNCatchingUp(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	ctx, cancel := context.WithCancel(t.Context())
 	ctm := StartRollupTestManager(t, ctx)
 	defer func() {
 		cancel()

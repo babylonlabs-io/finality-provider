@@ -1,7 +1,6 @@
 package clientctx_test
 
 import (
-	"context"
 	"math/rand"
 	"path/filepath"
 	"testing"
@@ -22,7 +21,7 @@ func TestPersistClientCtx(t *testing.T) {
 	t.Parallel()
 	ctx := client.Context{}
 	cmd := &cobra.Command{}
-	cmd.SetContext(context.Background())
+	cmd.SetContext(t.Context())
 
 	tempDir := t.TempDir()
 	defaultHome := filepath.Join(tempDir, "defaultHome")

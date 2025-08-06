@@ -45,7 +45,7 @@ func FuzzCommitPubRandList(f *testing.F) {
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
 
-		res, err := fpIns.CommitPubRand(context.Background(), startingBlock.GetHeight())
+		res, err := fpIns.CommitPubRand(t.Context(), startingBlock.GetHeight())
 		require.NoError(t, err)
 		require.Equal(t, expectedTxHash, res.TxHash)
 	})
@@ -62,14 +62,14 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		startingBlock := types.NewBlockInfo(randomStartingHeight, testutil.GenRandomByteArray(r, 32), false)
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
-		mockConsumerController.EXPECT().QueryLatestBlock(context.Background()).Return(types.NewBlockInfo(0, testutil.GenRandomByteArray(r, 32), false), nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLatestBlock(t.Context()).Return(types.NewBlockInfo(0, testutil.GenRandomByteArray(r, 32), false), nil).AnyTimes()
 		mockConsumerController.EXPECT().GetFpRandCommitContext().Return("").AnyTimes()
 		mockConsumerController.EXPECT().GetFpFinVoteContext().Return("").AnyTimes()
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
 
 		// commit pub rand
-		_, err := fpIns.CommitPubRand(context.Background(), startingBlock.GetHeight())
+		_, err := fpIns.CommitPubRand(t.Context(), startingBlock.GetHeight())
 		require.NoError(t, err)
 
 		// mock committed pub rand
@@ -80,16 +80,16 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 			Commitment:  datagen.GenRandomByteArray(r, 32),
 			EpochNum:    5, // Mock epoch number
 		}
-		mockConsumerController.EXPECT().QueryLastPublicRandCommit(context.Background(), gomock.Any()).Return(lastCommittedPubRand, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLastPublicRandCommit(t.Context(), gomock.Any()).Return(lastCommittedPubRand, nil).AnyTimes()
 		// mock voting power and commit pub rand
-		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(context.Background(), gomock.Any()).
+		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(t.Context(), gomock.Any()).
 			Return(true, nil).AnyTimes()
 
 		// submit finality sig
 		nextBlock := types.NewBlockInfo(startingBlock.GetHeight()+1, testutil.GenRandomByteArray(r, 32), false)
 		expectedTxHash := testutil.GenRandomHexStr(r, 32)
 		mockConsumerController.EXPECT().
-			SubmitBatchFinalitySigs(context.Background(), gomock.Any()).
+			SubmitBatchFinalitySigs(t.Context(), gomock.Any()).
 			Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
 		providerRes, err := fpIns.NewTestHelper().SubmitBatchFinalitySignatures(t, []types.BlockDescription{nextBlock})
 		require.NoError(t, err)
@@ -132,7 +132,7 @@ func FuzzDetermineStartHeight(f *testing.F) {
 		defer cleanUp()
 		fpIns.NewTestHelper().MustUpdateStateAfterFinalitySigSubmission(t, lastVotedHeight)
 
-		startHeight, err := fpIns.DetermineStartHeight(context.Background())
+		startHeight, err := fpIns.DetermineStartHeight(t.Context())
 		require.NoError(t, err)
 
 		actualLastVotedHeight := fpIns.GetLastVotedHeight()
@@ -187,7 +187,7 @@ func startFinalityProviderAppWithRegisteredFp(
 
 	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, db, logger)
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	err = app.Start(ctx)
 	require.NoError(t, err)
 
@@ -283,9 +283,9 @@ func setupBenchmarkEnvironment(t *testing.T, seed int64, numPubRand uint32) (*ty
 		nil,
 	)
 	mockConsumerController.EXPECT().
-		CommitPubRandList(context.Background(), req).
+		CommitPubRandList(t.Context(), req).
 		Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
-	mockConsumerController.EXPECT().QueryLastPublicRandCommit(context.Background(), gomock.Any()).Return(nil, nil).AnyTimes()
+	mockConsumerController.EXPECT().QueryLastPublicRandCommit(t.Context(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	return startingBlock, fpIns, cleanUp
 }
@@ -302,7 +302,7 @@ func BenchmarkCommitPubRand(b *testing.B) {
 
 			var totalTiming service.CommitPubRandTiming
 			for i := 0; i < b.N; i++ {
-				res, timing, err := fpIns.HelperCommitPubRand(context.Background(), startingBlock.GetHeight())
+				res, timing, err := fpIns.HelperCommitPubRand(t.Context(), startingBlock.GetHeight())
 				if err != nil {
 					b.Fatalf("unexpected error: %v", err)
 				}

@@ -24,7 +24,7 @@ func NewDescription(moniker string) *stakingtypes.Description {
 // results in authentication failures and prevents operations
 func TestHMACMismatch(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	eotsHmacKey := "server-hmac-key-for-testing"
 	fpHmacKey := "client-hmac-key-for-testing-different"

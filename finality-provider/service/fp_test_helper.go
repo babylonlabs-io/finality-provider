@@ -194,7 +194,7 @@ func (th *FinalityProviderTestHelper) GetFinalityProviderInstance() *FinalityPro
 func (th *FinalityProviderTestHelper) SubmitBatchFinalitySignatures(t *testing.T, blocks []types.BlockDescription) (*types.TxResponse, error) {
 	t.Helper()
 
-	res, err := th.fp.finalitySubmitter.SubmitBatchFinalitySignatures(context.Background(), blocks)
+	res, err := th.fp.finalitySubmitter.SubmitBatchFinalitySignatures(t.Context(), blocks)
 	if err != nil {
 		return nil, fmt.Errorf("failed to submit batch finality signatures: %w", err)
 	}
