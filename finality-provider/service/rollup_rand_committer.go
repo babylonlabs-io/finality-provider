@@ -77,7 +77,7 @@ func (rrc *RollupRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 		alignedStartHeight = rrc.calculateFirstEligibleHeightWithActivation(baseHeight, activationBlkHeight)
 
 	default:
-		// Check if we have sufficient *voting* randomness, not just any randomness
+		// Check if we have sufficient voting randomness, not just any randomness
 		// Calculate the last voting height we have randomness for
 		lastVotingHeight := rrc.getLastVotingHeightWithRandomness(lastCommittedHeight, activationBlkHeight)
 		requiredVotingHeight := tipHeightWithDelay + uint64(rrc.cfg.NumPubRand)*rrc.interval
