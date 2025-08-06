@@ -41,10 +41,10 @@ enabling BSNs to create custom implementations for any consumer chain type
 by implementing [interfaces](../clientcontroller/api/interface.go) 
 rather than modifying core logic.
 
-## Constructor Pattern
+## Core constructor
 
-The BSN SDK uses `service.NewFinalityProviderApp()` as the core constructor
-pattern. It supports two usage modes:
+The BSN SDK uses `service.NewFinalityProviderApp()` as the main entry point. It 
+supports two usage modes:
 
 ### Default Usage
 Use built-in implementations with constructors. These create all
@@ -70,9 +70,9 @@ allows custom consumer chain types beyond Cosmos/Rollup:
 ```go
 fpApp, err := service.NewFinalityProviderApp(
     config,              // *fpcfg.Config 
-    babylonController,   // ccapi.BabylonController 
+    babylonController,   // ccapi.BabylonController - Can be customised
     consumerController,  // ccapi.ConsumerController - Can be customised
-    eotsManager,         // eotsmanager.EOTSManager 
+    eotsManager,         // eotsmanager.EOTSManager - Can be customised
     blockPoller,         // types.BlockPoller - Can be customised
     randomnessCommitter, // types.RandomnessCommitter - Can be customised
     heightDeterminer,    // types.HeightDeterminer 
@@ -86,7 +86,7 @@ fpApp, err := service.NewFinalityProviderApp(
 
 ### Interface Responsibilities
 
-- **`ccapi.ConsumerController`** - Primary interface. Handles block queries,
+- **`ccapi.ConsumerController`** - Communication layer. Handles block queries,
   finality signature submission, randomness commits to your consumer chain
 - **`types.BlockPoller`** - Monitors consumer chain blocks. Emits channel of
   new blocks requiring finality votes based on your chain's finality rules
@@ -105,44 +105,6 @@ fpApp, err := service.NewFinalityProviderApp(
 
 The following diagram illustrates how blocks flow through the Bitcoin-secured finality system:
 
-```mermaid
-sequenceDiagram
-    participant CC as Consumer Chain
-    participant BP as BlockPoller
-    participant FP as Finality Provider
-    participant RC as RandomnessCommitter
-    participant FS as FinalitySubmitter
-    participant BC as Babylon Chain
-    participant EOTS as EOTS Manager
-
-    CC->>BP: New blocks produced
-    BP->>FP: NextBlock() - feeds blocks requiring votes
-    
-    Note over FP: Randomness commitment phase
-    FP->>RC: ShouldCommit() - check if randomness needed
-    RC-->>FP: true, startHeight
-    FP->>EOTS: Generate public randomness
-    EOTS-->>FP: Public randomness values
-    FP->>RC: Commit() - submit to consumer chain
-    RC->>CC: CommitPubRandList transaction
-    
-    Note over FP: Finality voting phase  
-    FP->>EOTS: Sign block.MsgToSign() with EOTS
-    EOTS-->>FP: EOTS signature
-    FP->>FS: SubmitBatchFinalitySignatures()
-    FS->>CC: Submit finality votes
-    
-    Note over BC: Aggregation phase
-    CC->>BC: Forward finality votes
-    BC->>BC: Aggregate votes by Bitcoin stake weight
-    BC->>BC: Block reaches finality threshold
-    BC->>CC: Block achieves absolute finality
-    
-    Note over BC: Slashing protection
-    BC->>BC: Detect conflicting EOTS signatures
-    BC->>BC: Extract private key, slash Bitcoin stake
-```
-
 ### Implementation References
 
 Each step in this flow maps to specific code locations:
@@ -158,9 +120,10 @@ Bitcoin security through the EOTS signature scheme.
 
 ## Interfaces
 
-### ConsumerController Interface
+### Communication Level Interfaces
+#### ConsumerController Interface
 
-The primary interface for consumer chain integration. Composes three
+The Communication layer for consumer chain integration. Composes three
 sub-interfaces for separation of concerns into a single contract. This is the 
 main interface BSNs implement to connect their consumer chain to Babylon's 
 Bitcoin-secured finality system.
@@ -219,17 +182,25 @@ type FinalityOperator interface {
 **Sub-interface references:**
 - All sub-interfaces are also defined in [`clientcontroller/api/interface.go`](../clientcontroller/api/interface.go)
 
-### Block Polling Interface
+### Service Level Interfaces
+#### Block Polling Interface
 
-The BlockPoller sits between the consumer chain and the finality providers,
+The `BlockPoller` sits between the consumer chain and the finality providers,
 monitors the consumer chain for new blocks, then feeds
 those blocks through a channel to finality providers for voting. The generic
-type parameter `T` must implement the BlockDescription interface, enabling
+type parameter `T` must implement the `BlockDescription` interface, enabling
 BSNs to attach chain-specific data while ensuring every block provides
 the core methods also needed. Additionally, every block must provide `MsgToSign
 ()` which generates the exact message that will be signed by EOTS.
 
 ```go
+type BlockDescription interface {
+GetHeight() uint64
+GetHash() []byte
+IsFinalized() bool
+MsgToSign(signCtx string) []byte // this is the message that will be signed by the eots signer
+}
+
 type BlockPoller[T BlockDescription] interface {
     // NextBlock returns the next block requiring finality vote
     // Blocks until a block is available or context is cancelled
@@ -254,7 +225,7 @@ type BlockPoller[T BlockDescription] interface {
 
 - [`BlockPoller`](../types/expected_block.go) - Interface definition in the codebase
 
-### Randomness Committer Interface
+#### Randomness Committer Interface
 
 The `RandomnessCommitter` interface separates the information on committing
 randomness, abstracting both when and how to commit randomness, and allows
@@ -293,7 +264,7 @@ type RandomnessCommitter interface {
 
 - [`RandomnessCommitter`](../types/expected_rand_committer.go) - Interface definition in the codebase
 
-### Finality Signature Submitter Interface
+#### Finality Signature Submitter Interface
 
 The `FinalitySignatureSubmitter` interface abstracts away the processes of 
 batching and retry handling. This means that BSNs only 
@@ -320,7 +291,7 @@ type FinalitySignatureSubmitter interface {
 
 - [`FinalitySignatureSubmitter`](../types/expected_finality_submitter.go) - Interface definition in the codebase
 
-### Height Determiner Interface
+#### Height Determiner Interface
 
 The `HeightDeterminer` interface abstracts the bootstrap logic required 
 when a finality provider starts or restarts, enabling BSNs to implement custom 
