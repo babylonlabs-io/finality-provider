@@ -18,6 +18,7 @@ import (
 // Test suite for RollupRandomnessCommitter ShouldCommit function
 // These tests verify the complete decision logic by calling the actual function
 
+//nolint:maintidx // This test function has high cyclomatic complexity due to comprehensive test cases
 func TestRollupRandomnessCommitterShouldCommit(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
