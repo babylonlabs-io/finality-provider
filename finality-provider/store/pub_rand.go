@@ -83,8 +83,8 @@ func buildKeysWithInterval(chainID, pk []byte, startHeight uint64, num uint64, i
 	keys := make([][]byte, 0, num)
 
 	for i := uint64(0); i < num; i++ {
-		actualHeight := startHeight + i*interval // 100, 105, 110, 115...
-		key := getKey(chainID, pk, actualHeight)
+		height := startHeight + i*interval // 100, 105, 110, 115...
+		key := getKey(chainID, pk, height)
 		keys = append(keys, key)
 	}
 
