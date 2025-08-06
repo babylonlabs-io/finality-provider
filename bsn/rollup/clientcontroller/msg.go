@@ -87,12 +87,18 @@ type RollupPubRandCommit struct {
 	Commitment   []byte `json:"commitment"`
 }
 
-// EndHeight returns the height of the last commitment in the sparse commitment scheme.
-// For sparse commitments, the committed heights are not sequential but are spaced by `Interval`.
-// The end height is calculated as: start_height + (num_pub_rand * interval) - 1.
-// This differs from the simple sequential case (where interval = 1), as it accounts for the spacing between commitments.
+// EndHeight returns the last height for which randomness actually exists in this commitment.
+// For sparse commitments, randomness is generated only at specific intervals, not consecutively.
+//
+// Example with StartHeight=60, NumPubRand=5, Interval=5:
+//   - Randomness exists for heights: 60, 65, 70, 75, 80
+//   - EndHeight() returns 80 (the last height with actual randomness)
+//   - Heights 61-64, 66-69, 71-74, 76-79, 81+ have NO randomness
+//
+// The ShouldCommit function is responsible for computing the next eligible start height
+// and ensuring no gaps or overlaps by using proper alignment logic.
 func (r *RollupPubRandCommit) EndHeight() uint64 {
-	return r.StartHeight + r.NumPubRand*r.Interval - 1
+	return r.StartHeight + (r.NumPubRand-1)*r.Interval
 }
 
 func (r *RollupPubRandCommit) Validate() error {
