@@ -2,24 +2,24 @@
 
 ## Table of Contents
 
-1. [Introduction](#introduction)
-2. [Core constructor](#core-constructor)
-   - [Default Usage](#default-usage)
-   - [Custom Usage](#custom-usage)
-3. [Interfaces](#interfaces)
-   - [Communication Level Interfaces](#communication-level-interfaces)
-     - [ConsumerController Interface](#consumercontroller-interface)
-   - [Service Level Interfaces](#service-level-interfaces)
-     - [Block Polling Interface](#block-polling-interface)
-     - [Randomness Committer Interface](#randomness-committer-interface)
-     - [Finality Signature Submitter Interface](#finality-signature-submitter-interface)
-     - [Height Determiner Interface](#height-determiner-interface)
-4. [Instantiation](#instantiation)
-   - [Using Built-in Implementations](#using-built-in-implementations)
-   - [Using Custom Implementations](#using-custom-implementations)
-5. [Startup](#startup)
+1. [Introduction](#1-introduction)
+2. [Core constructor](#2-core-constructor)
+   1. [Default Usage](#21-default-usage)
+   2. [Custom Usage](#22-custom-usage)
+3. [Interfaces](#3-interfaces)
+   1. [Communication Level Interfaces](#31-communication-level-interfaces)
+      1. [ConsumerController Interface](#311-consumercontroller-interface)
+   2. [Service Level Interfaces](#32-service-level-interfaces)
+      1. [Block Polling Interface](#321-blockpolling-interface)
+      2. [Randomness Committer Interface](#322-randomnesscommitter-interface)
+      3. [Finality Signature Submitter Interface](#323-finalitysignaturesubmitter-interface)
+      4. [Height Determiner Interface](#324-height-determiner-interface)
+4. [Instantiation](#4-instantiation)
+   1. [Using Built-in Implementations](#41-using-built-in-implementations)
+   2. [Using Custom Implementations](#42-using-custom-implementations)
+5. [Startup](#5-startup)
 
-## Introduction
+## 1. Introduction
 
 The Finality Provider SDK enables Bitcoin Supercharged Networks (BSNs) to 
 integrate with Babylon's Bitcoin-secured finality infrastructure as a flexible 
@@ -41,12 +41,12 @@ enabling BSNs to create custom implementations for any consumer chain type
 by implementing [interfaces](../clientcontroller/api/interface.go) 
 rather than modifying core logic.
 
-## Core constructor
+## 2. Core constructor
 
 The BSN SDK uses `service.NewFinalityProviderApp()` as the main entry point. It 
 supports two usage modes:
 
-### Default Usage
+### 2.1. Default Usage
 Use built-in implementations with constructors. These create all
 required interfaces internally with default implementations:
 
@@ -63,7 +63,7 @@ fpApp, err := rollupservice.NewRollupBSNFinalityProviderAppFromConfig(
 Both internally call [`service.NewFinalityProviderApp()`](../finality-provider/service/app.go)
 with pre-configured implementations.
 
-### Custom Usage
+### 2.2. Custom Usage
 Implement your own interfaces and call the core constructor directly. This
 allows custom consumer chain types beyond Cosmos/Rollup:
 
@@ -84,10 +84,10 @@ fpApp, err := service.NewFinalityProviderApp(
 ```
 - You can find the above example at [`app.go`](../finality-provider/service/app.go)
 
-## Interfaces
+## 3. Interfaces
 
-### Communication Level Interfaces
-#### ConsumerController Interface
+### 3.1. Communication Level Interfaces
+#### 3.1.1. ConsumerController Interface
 
 The communication layer interface for consumer chain integration. It composes three
 sub-interfaces into a single contract for separation of concerns. This is the 
@@ -107,7 +107,8 @@ type ConsumerController interface {
 }
 ```
 
-- [`ConsumerController`](../clientcontroller/api/interface.go) - Main interface definition in the codebase
+The [`ConsumerController`](../clientcontroller/api/interface.go) interface 
+definition can be found in the codebase.
 
 **Sub-interfaces:**
 
@@ -145,11 +146,10 @@ type FinalityOperator interface {
 }
 ```
 
-**Sub-interface references:**
-- All sub-interfaces are also defined in [`clientcontroller/api/interface.go`](../clientcontroller/api/interface.go)
+All sub-interfaces are also defined in [`clientcontroller/api/interface.go`](../clientcontroller/api/interface.go).
 
-### Service Level Interfaces
-#### Block Polling Interface
+### 3.2. Service Level Interfaces
+#### 3.2.1. BlockPolling Interface
 
 The `BlockPoller` sits between the consumer chain and the finality providers,
 monitors the consumer chain for new blocks, then provides those blocks to 
@@ -189,9 +189,9 @@ type BlockPoller[T BlockDescription] interface {
 }
 ```
 
-- [`BlockPoller`](../types/expected_block.go) - Interface definition in the codebase
+The [`BlockPoller`](../types/expected_block.go) interface definition can be found in the codebase.
 
-#### Randomness Committer Interface
+#### 3.2.2. RandomnessCommitter Interface
 
 The `RandomnessCommitter` interface separates the information on committing
 randomness, abstracting both when and how to commit randomness, and allows
@@ -228,9 +228,10 @@ type RandomnessCommitter interface {
 }
 ```
 
-- [`RandomnessCommitter`](../types/expected_rand_committer.go) - Interface definition in the codebase
+The [`RandomnessCommitter`](../types/expected_rand_committer.go) interface
+definition can be found in the codebase.
 
-#### Finality Signature Submitter Interface
+#### 3.2.3. FinalitySignatureSubmitter Interface
 
 The `FinalitySignatureSubmitter` interface abstracts away the processes of 
 batching and retry handling. This means that BSNs only 
@@ -255,9 +256,10 @@ type FinalitySignatureSubmitter interface {
 }
 ```
 
-- [`FinalitySignatureSubmitter`](../types/expected_finality_submitter.go) - Interface definition in the codebase
+The [`FinalitySignatureSubmitter`](../types/expected_finality_submitter.go) 
+interface definition can be found in the codebase.
 
-#### Height Determiner Interface
+#### 3.2.4. HeightDeterminer Interface
 
 The `HeightDeterminer` interface abstracts the bootstrap logic required 
 when a finality provider starts or restarts, enabling BSNs to implement custom 
@@ -277,14 +279,14 @@ type HeightDeterminer interface {
 }
 ```
 
-- [`HeightDeterminer`](../types/expected_bootstraper.go) - Interface definition in the codebase
+The [`HeightDeterminer`](../types/expected_bootstraper.go) interface definition can be found in the codebase.
 
 Most BSNs can use `NewStartHeightDeterminer()` unless they have specific 
 requirements for custom bootstrap logic.
 
-## Instantiation
+## 4. Instantiation
 
-### Using Built-in Implementations
+### 4.1. Using Built-in Implementations
 
 For standard consumer chain types, use convenience constructors that handle all
 interface creation:
@@ -322,7 +324,7 @@ fpApp, err := rollupservice.NewRollupBSNFinalityProviderAppFromConfig(
 Configuration files define consumer chain endpoints, contract addresses, and
 finality parameters.
 
-### Using Custom Implementations
+### 4.2. Using Custom Implementations
 
 For custom consumer chain types, implement required interfaces and call core
 constructor:
@@ -373,7 +375,7 @@ fpApp, err := service.NewFinalityProviderApp(
 )
 ```
 
-## Startup
+## 5. Startup
 
 Once you have a finality provider app instance, start it:
 
@@ -401,7 +403,8 @@ if err := fpServer.RunUntilShutdown(ctx); err != nil {
 
 **Startup sequence:**
 1. Connections to Babylon chain, consumer chain, and EOTS manager are established 
-2. 4 background processes start: metrics updates, critical error monitoring, registration handling, and unjailing requests
+2. 4 background processes start: metrics updates, critical error monitoring, 
+   registration handling, and unjailing requests
 3. If finality provider specified, determines start height and launches two 
    main processes:
    - Randomness commitment loop - Pre-commits public randomness
