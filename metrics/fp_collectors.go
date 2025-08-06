@@ -167,8 +167,8 @@ func (fm *FpMetrics) InitializeFpMetrics(fpBtcPkHex string) {
 	fm.fpSecondsSinceLastVote.WithLabelValues(fpBtcPkHex).Set(0)
 	fm.fpSecondsSinceLastRandomness.WithLabelValues(fpBtcPkHex).Set(0)
 
-	fm.fpTotalFailedVotes.WithLabelValues(fpBtcPkHex).Add(0)
-	fm.fpTotalFailedRandomness.WithLabelValues(fpBtcPkHex).Add(0)
+	fm.fpTotalFailedVotes.WithLabelValues(fpBtcPkHex)
+	fm.fpTotalFailedRandomness.WithLabelValues(fpBtcPkHex)
 }
 
 // RecordFpStatus records the status of a finality provider
