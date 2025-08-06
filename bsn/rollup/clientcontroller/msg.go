@@ -81,26 +81,6 @@ type RollupPubRandCommit struct {
 	Commitment   []byte `json:"commitment"`
 }
 
-// Interface implementation
-// ContainsHeight checks if the given height is within the range of the commitment
-// i.e., the given height should be in the form of `start_height + i * interval` for some `i < num_pub_rand`
-func (r *RollupPubRandCommit) ContainsHeight(height uint64) bool {
-	// Check if the height is before the start height
-	if height < r.StartHeight {
-		return false
-	}
-
-	// Check if the height is after the end height
-	if height > r.EndHeight() {
-		return false
-	}
-
-	// Check if the height falls at the interval boundary
-	offset := height - r.StartHeight
-
-	return offset%r.Interval == 0
-}
-
 // EndHeight returns the height of the last commitment in the sparse commitment scheme.
 // For sparse commitments, the committed heights are not sequential but are spaced by `Interval`.
 // The end height is calculated as: start_height + (num_pub_rand * interval) - 1.
