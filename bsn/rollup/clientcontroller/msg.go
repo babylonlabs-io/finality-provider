@@ -101,7 +101,10 @@ func (r *RollupPubRandCommit) ContainsHeight(height uint64) bool {
 	return offset%r.Interval == 0
 }
 
-// EndHeight returns the height of the last commitment
+// EndHeight returns the height of the last commitment in the sparse commitment scheme.
+// For sparse commitments, the committed heights are not sequential but are spaced by `Interval`.
+// The end height is calculated as: start_height + (num_pub_rand * interval) - 1.
+// This differs from the simple sequential case (where interval = 1), as it accounts for the spacing between commitments.
 func (r *RollupPubRandCommit) EndHeight() uint64 {
 	return r.StartHeight + r.NumPubRand*r.Interval - 1
 }
