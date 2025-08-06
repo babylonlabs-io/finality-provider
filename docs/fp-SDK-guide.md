@@ -392,7 +392,7 @@ if err := fpApp.StartFinalityProvider(ctx, fpPk); err != nil {
 }
 ```
 
-For external API access, wrap the app with a gRPC server:
+For handling registration and daemon commands (over gRPC), wrap the app with a gRPC server:
 
 ```go
 fpServer := service.NewFinalityProviderServer(cfg, logger, fpApp, dbBackend)
