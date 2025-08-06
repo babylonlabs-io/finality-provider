@@ -134,6 +134,9 @@ func (s *PubRandProofStore) AddPubRandProofList(
 	return nil
 }
 
+// AddPubRandProofListWithInterval adds a list of public randomness proofs to the store with a given interval.
+// It creates keys for heights starting from startHeight and incrementing by interval for numPubRand entries.
+// For example, with startHeight=100, numPubRand=3, interval=5, it generates keys for heights [100, 105, 110].
 func (s *PubRandProofStore) AddPubRandProofListWithInterval(
 	chainID []byte,
 	pk []byte,
