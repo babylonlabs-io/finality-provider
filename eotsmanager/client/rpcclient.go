@@ -93,6 +93,7 @@ func (c *EOTSManagerGRpcClient) CreateRandomnessPairList(uid, chainID []byte, st
 func (c *EOTSManagerGRpcClient) CreateRandomnessPairListWithInterval(uid, chainID []byte, startHeight uint64, num uint32, interval uint64) ([]*btcec.FieldVal, error) {
 	// For now, implement using existing RPC by calling individual heights
 	// TODO: Later can add dedicated GRPC method for efficiency
+	// https://github.com/babylonlabs-io/finality-provider/issues/590
 	pubRandList := make([]*btcec.FieldVal, 0, num)
 
 	for i := uint32(0); i < num; i++ {
