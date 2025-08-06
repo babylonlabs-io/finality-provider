@@ -1,13 +1,23 @@
 package service
 
 import (
+	"context"
+	"math/rand"
 	"testing"
 
+	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	rollupclient "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
+	"github.com/babylonlabs-io/finality-provider/metrics"
+	"github.com/babylonlabs-io/finality-provider/testutil/mocks"
+	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+	"go.uber.org/zap/zaptest"
 )
 
 // Test suite for RollupRandomnessCommitter ShouldCommit function
-// These tests verify the complex interval-based decision logic
+// These tests verify the complete decision logic by calling the actual function
 
 func TestRollupRandomnessCommitterShouldCommit(t *testing.T) {
 	tests := []struct {
@@ -192,170 +202,88 @@ func TestRollupRandomnessCommitterShouldCommit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Test the helper functions directly for now
-			rrc := &RollupRandomnessCommitter{
-				interval: tt.interval,
-			}
+			ctx := context.Background()
 
-			// Test calculateFirstEligibleHeightWithActivation
-			baseHeight := tt.currentHeight + uint64(tt.timestampingDelay)
-			if tt.lastCommittedHeight >= baseHeight {
-				baseHeight = tt.lastCommittedHeight + 1
-			}
-			baseHeight = max(baseHeight, tt.activationHeight)
+			// Create mocks
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-			alignedHeight := rrc.calculateFirstEligibleHeightWithActivation(baseHeight, tt.activationHeight)
+			mockConsumerController := mocks.NewMockConsumerController(ctrl)
 
-			// For first commit scenarios, test the alignment logic
-			if tt.lastCommittedHeight == 0 {
-				require.Equal(t, tt.expectedStartHeight, alignedHeight, tt.description)
-			}
+			// Setup mock expectations
+			mockConsumerController.EXPECT().
+				QueryLatestBlock(gomock.Any()).
+				Return(types.NewBlockInfo(tt.currentHeight, []byte("mock-hash"), false), nil).
+				AnyTimes()
 
-			// Test getLastVotingHeightWithRandomness if we have a committed height
+			mockConsumerController.EXPECT().
+				QueryFinalityActivationBlockHeight(gomock.Any()).
+				Return(tt.activationHeight, nil).
+				AnyTimes()
+
+			// Mock the last committed public randomness query
 			if tt.lastCommittedHeight > 0 {
-				lastVotingHeight := rrc.getLastVotingHeightWithRandomness(tt.lastCommittedHeight, tt.activationHeight)
-				// This should be <= lastCommittedHeight and aligned to interval
-				require.LessOrEqual(t, lastVotingHeight, tt.lastCommittedHeight)
-				if lastVotingHeight >= tt.activationHeight {
-					offset := lastVotingHeight - tt.activationHeight
-					require.Equal(t, uint64(0), offset%tt.interval, "Last voting height should be aligned to interval")
+				// Create a mock PubRandCommit with the expected end height
+				mockPubRandCommit := &rollupclient.RollupPubRandCommit{
+					StartHeight:  tt.lastCommittedHeight - uint64(tt.numPubRand-1)*tt.interval,
+					NumPubRand:   uint64(tt.numPubRand),
+					Interval:     tt.interval,
+					BabylonEpoch: 1,
+					Commitment:   []byte("mock-commitment"),
 				}
+				mockConsumerController.EXPECT().
+					QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).
+					Return(mockPubRandCommit, nil).
+					AnyTimes()
+			} else {
+				// No previous commits
+				mockConsumerController.EXPECT().
+					QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).
+					Return(nil, nil).
+					AnyTimes()
 			}
-		})
-	}
-}
 
-// Unit tests for individual helper functions
-func TestCalculateFirstEligibleHeightWithActivation(t *testing.T) {
-	tests := []struct {
-		name             string
-		startHeight      uint64
-		activationHeight uint64
-		interval         uint64
-		expected         uint64
-		description      string
-	}{
-		{
-			name:             "before_activation",
-			startHeight:      50,
-			activationHeight: 100,
-			interval:         5,
-			expected:         100,
-			description:      "When startHeight < activationHeight, should return activationHeight",
-		},
-		{
-			name:             "exactly_at_activation",
-			startHeight:      100,
-			activationHeight: 100,
-			interval:         5,
-			expected:         100,
-			description:      "When startHeight == activationHeight, should return activationHeight",
-		},
-		{
-			name:             "already_aligned_after_activation",
-			startHeight:      105, // 100 + 1*5
-			activationHeight: 100,
-			interval:         5,
-			expected:         105,
-			description:      "When startHeight is already aligned, should return startHeight",
-		},
-		{
-			name:             "needs_rounding_up",
-			startHeight:      103,
-			activationHeight: 100,
-			interval:         5,
-			expected:         105, // Round up to next interval
-			description:      "When startHeight is not aligned, should round up to next interval boundary",
-		},
-		{
-			name:             "consecutive_generation",
-			startHeight:      101,
-			activationHeight: 100,
-			interval:         1,
-			expected:         101,
-			description:      "With interval=1 (consecutive), every height is aligned",
-		},
-		{
-			name:             "large_interval",
-			startHeight:      150,
-			activationHeight: 100,
-			interval:         100,
-			expected:         200, // 100 + 2*100
-			description:      "With large intervals, should align correctly",
-		},
-	}
+			// Create RollupRandomnessCommitter with proper setup
+			cfg := &RandomnessCommitterConfig{
+				NumPubRand:              tt.numPubRand,
+				TimestampingDelayBlocks: tt.timestampingDelay,
+				ChainID:                 []byte("test-chain"),
+			}
+			logger := zaptest.NewLogger(t)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+			// Create a mock BTC public key for testing
+			r := rand.New(rand.NewSource(42))
+			_, btcPK, err := datagen.GenRandomBTCKeyPair(r)
+			require.NoError(t, err)
+			btcPk := bbntypes.NewBIP340PubKeyFromBTCPK(btcPK)
+
+			// Create mock PubRandState
+			mockPubRandState := &PubRandState{}
+
+			// Create mock metrics
+			mockMetrics := &metrics.FpMetrics{}
+
 			rrc := &RollupRandomnessCommitter{
+				DefaultRandomnessCommitter: &DefaultRandomnessCommitter{
+					btcPk:        btcPk,
+					cfg:          cfg,
+					pubRandState: mockPubRandState,
+					consumerCon:  mockConsumerController,
+					logger:       logger,
+					metrics:      mockMetrics,
+				},
 				interval: tt.interval,
 			}
 
-			result := rrc.calculateFirstEligibleHeightWithActivation(tt.startHeight, tt.activationHeight)
-			require.Equal(t, tt.expected, result, tt.description)
-		})
-	}
-}
+			// Call the ACTUAL ShouldCommit function
+			shouldCommit, startHeight, err := rrc.ShouldCommit(ctx)
 
-func TestGetLastVotingHeightWithRandomness(t *testing.T) {
-	tests := []struct {
-		name                string
-		lastCommittedHeight uint64
-		activationHeight    uint64
-		interval            uint64
-		expected            uint64
-		description         string
-	}{
-		{
-			name:                "before_activation",
-			lastCommittedHeight: 50,
-			activationHeight:    100,
-			interval:            5,
-			expected:            0,
-			description:         "When lastCommittedHeight < activationHeight, should return 0",
-		},
-		{
-			name:                "exactly_at_activation",
-			lastCommittedHeight: 100,
-			activationHeight:    100,
-			interval:            5,
-			expected:            100,
-			description:         "When lastCommittedHeight == activationHeight, should return activationHeight",
-		},
-		{
-			name:                "one_interval_after_activation",
-			lastCommittedHeight: 105,
-			activationHeight:    100,
-			interval:            5,
-			expected:            105, // 100 + 1*5
-			description:         "Should find the voting height at exact interval",
-		},
-		{
-			name:                "between_intervals",
-			lastCommittedHeight: 107,
-			activationHeight:    100,
-			interval:            5,
-			expected:            105, // 100 + 1*5 (floor division)
-			description:         "Should floor to previous voting height when between intervals",
-		},
-		{
-			name:                "multiple_intervals",
-			lastCommittedHeight: 120,
-			activationHeight:    100,
-			interval:            5,
-			expected:            120, // 100 + 4*5
-			description:         "Should handle multiple intervals correctly",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rrc := &RollupRandomnessCommitter{
-				interval: tt.interval,
+			// Verify the results
+			require.NoError(t, err, tt.description)
+			require.Equal(t, tt.expectedShouldCommit, shouldCommit, tt.description)
+			if tt.expectedShouldCommit {
+				require.Equal(t, tt.expectedStartHeight, startHeight, tt.description)
 			}
-
-			result := rrc.getLastVotingHeightWithRandomness(tt.lastCommittedHeight, tt.activationHeight)
-			require.Equal(t, tt.expected, result, tt.description)
 		})
 	}
 }
