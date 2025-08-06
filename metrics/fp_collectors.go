@@ -12,8 +12,6 @@ import (
 )
 
 type FpMetrics struct {
-	// all finality provider metrics
-	runningFpGauge prometheus.Gauge
 	// poller metrics
 	babylonTipHeight     prometheus.Gauge
 	lastPolledHeight     prometheus.Gauge
@@ -47,10 +45,6 @@ var fpMetricsInstance *FpMetrics
 func NewFpMetrics() *FpMetrics {
 	fpMetricsRegisterOnce.Do(func() {
 		fpMetricsInstance = &FpMetrics{
-			runningFpGauge: prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: "total_running_fps",
-				Help: "Current number of finality providers that are running",
-			}),
 			fpStatus: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 				Name: "fp_status",
 				Help: "Current status of a finality provider",
@@ -148,7 +142,6 @@ func NewFpMetrics() *FpMetrics {
 		}
 
 		// Register the metrics with Prometheus
-		prometheus.MustRegister(fpMetricsInstance.runningFpGauge)
 		prometheus.MustRegister(fpMetricsInstance.fpStatus)
 		prometheus.MustRegister(fpMetricsInstance.babylonTipHeight)
 		prometheus.MustRegister(fpMetricsInstance.lastPolledHeight)
@@ -168,14 +161,14 @@ func NewFpMetrics() *FpMetrics {
 	return fpMetricsInstance
 }
 
-// DecrementRunningFpGauge decrements the running finality provider gauge
-func (fm *FpMetrics) DecrementRunningFpGauge() {
-	fm.runningFpGauge.Dec()
-}
+// InitializeFpMetrics initializes all metrics for a finality provider with default values so that they are available
+// in Prometheus even before any activity occurs. This is useful for ensuring that metrics are always present.
+func (fm *FpMetrics) InitializeFpMetrics(fpBtcPkHex string) {
+	fm.fpSecondsSinceLastVote.WithLabelValues(fpBtcPkHex).Set(0)
+	fm.fpSecondsSinceLastRandomness.WithLabelValues(fpBtcPkHex).Set(0)
 
-// IncrementRunningFpGauge increments the running finality provider gauge
-func (fm *FpMetrics) IncrementRunningFpGauge() {
-	fm.runningFpGauge.Inc()
+	fm.fpTotalFailedVotes.WithLabelValues(fpBtcPkHex).Add(0)
+	fm.fpTotalFailedRandomness.WithLabelValues(fpBtcPkHex).Add(0)
 }
 
 // RecordFpStatus records the status of a finality provider

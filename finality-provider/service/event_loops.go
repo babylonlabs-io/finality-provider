@@ -217,6 +217,7 @@ func (app *FinalityProviderApp) metricsUpdateLoop(ctx context.Context) {
 			app.fpInsMu.RLock()
 			if app.fpIns != nil {
 				if fp := app.fpIns.GetStoreFinalityProvider(); fp != nil {
+					app.metrics.InitializeFpMetrics(app.fpIns.btcPk.MarshalHex())
 					app.metrics.UpdateFpMetrics(fp)
 				}
 			}
