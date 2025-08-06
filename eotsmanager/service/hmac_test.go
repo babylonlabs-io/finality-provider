@@ -40,7 +40,7 @@ func TestHMACVerification(t *testing.T) {
 	md := metadata.New(map[string]string{
 		client.HMACHeaderKey: validHMAC,
 	})
-	ctx := metadata.NewIncomingContext(context.Background(), md)
+	ctx := metadata.NewIncomingContext(t.Context(), md)
 
 	handler := func(_ context.Context, req interface{}) (interface{}, error) {
 		return req, nil
@@ -59,7 +59,7 @@ func TestHMACVerification(t *testing.T) {
 	invalidMD := metadata.New(map[string]string{
 		client.HMACHeaderKey: "invalid-hmac",
 	})
-	invalidCtx := metadata.NewIncomingContext(context.Background(), invalidMD)
+	invalidCtx := metadata.NewIncomingContext(t.Context(), invalidMD)
 
 	_, err = interceptor(
 		invalidCtx,
@@ -90,7 +90,7 @@ func TestHMACAuthDisabled(t *testing.T) {
 	md := metadata.New(map[string]string{
 		client.HMACHeaderKey: emptyKeyHMAC,
 	})
-	ctx := metadata.NewIncomingContext(context.Background(), md)
+	ctx := metadata.NewIncomingContext(t.Context(), md)
 
 	handler := func(_ context.Context, req interface{}) (interface{}, error) {
 		return req, nil
@@ -117,7 +117,7 @@ func TestMissingHMACHeader(t *testing.T) {
 	}
 
 	md := metadata.New(map[string]string{})
-	ctx := metadata.NewIncomingContext(context.Background(), md)
+	ctx := metadata.NewIncomingContext(t.Context(), md)
 
 	handler := func(_ context.Context, req interface{}) (interface{}, error) {
 		return req, nil

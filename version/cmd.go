@@ -37,7 +37,7 @@ func CommandVersion(binaryName string) *cobra.Command {
 			_, _ = sb.WriteString("Git Timestamp: " + ts)
 			_, _ = sb.WriteString("\n")
 
-			cmd.Printf(sb.String()) //nolint:govet // it's not an issue
+			cmd.Println(sb.String()) //nolint:govet // it's not an issue
 		},
 	}
 

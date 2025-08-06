@@ -420,7 +420,7 @@ func (w *BcdNodeHandler) createZoneConciergeChannel(t *testing.T) error {
 }
 
 func (w *BcdNodeHandler) createChannel(t *testing.T, srcPort, dstPort, order, version string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "channel", pathName,
@@ -474,7 +474,7 @@ func (w *BcdNodeHandler) createChannel(t *testing.T, srcPort, dstPort, order, ve
 func (w *BcdNodeHandler) createClients(t *testing.T) error {
 	t.Log("Creating IBC clients...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "clients", pathName, "--debug")
@@ -500,7 +500,7 @@ func (w *BcdNodeHandler) createClients(t *testing.T) error {
 func (w *BcdNodeHandler) createConnection(t *testing.T) error {
 	t.Log("Creating IBC connection...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "relayer", "--home", w.relayerHomeDir, "tx", "connection", pathName, "--debug")
