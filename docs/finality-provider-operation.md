@@ -203,6 +203,7 @@ following parameters:
 [Application Options]
 EOTSManagerAddress = 127.0.0.1:12582
 RPCListener = 127.0.0.1:12581
+ContextSigningHeight = <v3-upgrade-height>
 
 [babylon]
 Key = <finality-provider-key-name-signer> # the key you used above
@@ -216,17 +217,42 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > Babylon Genesis full node instead of relying on third parties. You can find
 > instructions on setting up a Babylon Genesis node
 > [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/babylon-node/README.md).
->
+
 > ⚠️ **Critical RPC Configuration**:
 > When configuring your finality provider to a Babylon Gensis RPC node, you should
 > connect to a **single** node directly. Additionally you **must**
 > ensure that this node has transaction indexing enabled (`indexer = "kv"`).
 > Using multiple RPC nodes or load balancers can lead to sync issues.
 
+> ⚠️ **Critical Context Signing Value**:
+>   The `ContextSigningHeight` configuration sets the Babylon Genesis block
+>   height at which context signing -- a method for embedding context strings
+>   in the
+>   [proof of
+>   possession](https://github.com/babylonlabs-io/babylon/blob/release/v3.x/x/btcstaking/docs/proof-of-possesion.md)
+>   -- becomes active.
+>   Once this upgrade is in effect, all finality signatures that do not include
+>   context signing **will be rejected**. Additionally, the finality provider will
+>   no longer be able to vote for that block, as the EOTS randomness for the
+>   given height will already have been consumed.
+>
+>   *Choosing the Correct Context Signing Value*:
+>   * **If you are running on a Babylon Genesis network that has not yet been
+>     upgraded to v3**:
+>     Set the `ContextSigningHeight` to the block **immediately before** the v3 upgrade
+>     block. You can determine the v3 upgrade block height (`X`) from the Babylon
+>     Networks repository.
+>     [networks](https://github.com/babylonlabs-io/networks)
+>     repository.
+>   * **If you are on a network that has already been upgraded to v3**:
+>     You may select any value lower than the current Babylon Genesis height.
+
 Configuration parameters explained:
 
 * `EOTSManagerAddress`: Address where your EOTS daemon is running
 * `RPCListener`: Address for the finality provider RPC server
+* `ContextSigningHeight`: The Babylon Genesis block height at which context
+  takes effect
 * `Key`: Your Babylon Genesis key name from Step 2
 * `ChainID`: The Babylon Genesis chain ID
 * `RPCAddr`: Your Babylon Genesis node's RPC endpoint
