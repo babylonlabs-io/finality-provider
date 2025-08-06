@@ -3,21 +3,21 @@
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [Constructor Pattern](#constructor-pattern)
+2. [Core constructor](#core-constructor)
    - [Default Usage](#default-usage)
    - [Custom Usage](#custom-usage)
-   - [Interface Responsibilities](#interface-responsibilities)
-3. [Finality Process Flow](#finality-process-flow)
-4. [Interfaces](#interfaces)
-   - [ConsumerController Interface](#consumercontroller-interface)
-   - [Block Polling Interface](#block-polling-interface)
-   - [Randomness Committer Interface](#randomness-committer-interface)
-   - [Finality Signature Submitter Interface](#finality-signature-submitter-interface)
-   - [Height Determiner Interface](#height-determiner-interface)
-5. [Instantiation](#instantiation)
+3. [Interfaces](#interfaces)
+   - [Communication Level Interfaces](#communication-level-interfaces)
+     - [ConsumerController Interface](#consumercontroller-interface)
+   - [Service Level Interfaces](#service-level-interfaces)
+     - [Block Polling Interface](#block-polling-interface)
+     - [Randomness Committer Interface](#randomness-committer-interface)
+     - [Finality Signature Submitter Interface](#finality-signature-submitter-interface)
+     - [Height Determiner Interface](#height-determiner-interface)
+4. [Instantiation](#instantiation)
    - [Using Built-in Implementations](#using-built-in-implementations)
    - [Using Custom Implementations](#using-custom-implementations)
-6. [Startup](#startup)
+5. [Startup](#startup)
 
 ## Introduction
 
