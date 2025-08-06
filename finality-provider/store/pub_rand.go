@@ -79,6 +79,18 @@ func buildKeys(chainID, pk []byte, height uint64, num uint64) [][]byte {
 	return keys
 }
 
+func buildKeysWithInterval(chainID, pk []byte, startHeight uint64, num uint64, interval uint64) [][]byte {
+	keys := make([][]byte, 0, num)
+
+	for i := uint64(0); i < num; i++ {
+		height := startHeight + i*interval // 100, 105, 110, 115...
+		key := getKey(chainID, pk, height)
+		keys = append(keys, key)
+	}
+
+	return keys
+}
+
 func (s *PubRandProofStore) AddPubRandProofList(
 	chainID []byte,
 	pk []byte,
@@ -117,6 +129,53 @@ func (s *PubRandProofStore) AddPubRandProofList(
 		return nil
 	}); err != nil {
 		return fmt.Errorf("failed to add pub rand proof list: %w", err)
+	}
+
+	return nil
+}
+
+// AddPubRandProofListWithInterval adds a list of public randomness proofs to the store with a given interval.
+// It creates keys for heights starting from startHeight and incrementing by interval for numPubRand entries.
+// For example, with startHeight=100, numPubRand=3, interval=5, it generates keys for heights [100, 105, 110].
+func (s *PubRandProofStore) AddPubRandProofListWithInterval(
+	chainID []byte,
+	pk []byte,
+	startHeight uint64,
+	numPubRand uint64,
+	proofList []*merkle.Proof,
+	interval uint64,
+) error {
+	keys := buildKeysWithInterval(chainID, pk, startHeight, numPubRand, interval)
+
+	if len(keys) != len(proofList) {
+		return fmt.Errorf("the number of public randomness is not same as the number of proofs")
+	}
+
+	var proofBytesList [][]byte
+	for _, proof := range proofList {
+		proofBytes, err := proof.ToProto().Marshal()
+		if err != nil {
+			return fmt.Errorf("invalid proof: %w", err)
+		}
+		proofBytesList = append(proofBytesList, proofBytes)
+	}
+
+	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+		bucket := tx.ReadWriteBucket(pubRandProofBucketName)
+		if bucket == nil {
+			return ErrCorruptedPubRandProofDB
+		}
+
+		for i, key := range keys {
+			// set to DB
+			if err := bucket.Put(key, proofBytesList[i]); err != nil {
+				return fmt.Errorf("failed to store pub rand proof: %w", err)
+			}
+		}
+
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to add pub rand proof list with interval: %w", err)
 	}
 
 	return nil

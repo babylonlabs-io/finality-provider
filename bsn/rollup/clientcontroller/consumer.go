@@ -103,8 +103,8 @@ func (cc *RollupBSNController) ReliablySendMsg(ctx context.Context, msg sdk.Msg,
 	return cc.reliablySendMsgs(ctx, []sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
-// queryContractConfig queries the finality contract for its config
-func (cc *RollupBSNController) queryContractConfig(ctx context.Context) (*ContractConfig, error) {
+// QueryContractConfig queries the finality contract for its config
+func (cc *RollupBSNController) QueryContractConfig(ctx context.Context) (*ContractConfig, error) {
 	query := QueryMsg{
 		Config: &ContractConfig{},
 	}
@@ -589,6 +589,12 @@ func (cc *RollupBSNController) QueryPubRandCommitForHeight(ctx context.Context, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
+	if resp == nil {
+		return nil, nil
+	}
+	if err := resp.Validate(); err != nil {
+		return nil, fmt.Errorf("failed to validate response: %w", err)
+	}
 
 	return resp, nil
 }
@@ -596,7 +602,7 @@ func (cc *RollupBSNController) QueryPubRandCommitForHeight(ctx context.Context, 
 // isEligibleForFinalitySignature checks if finality signatures are allowed for the given height
 // based on the contract's BSN activation and interval requirements
 func (cc *RollupBSNController) isEligibleForFinalitySignature(ctx context.Context, height uint64) (bool, error) {
-	config, err := cc.queryContractConfig(ctx)
+	config, err := cc.QueryContractConfig(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to query contract config: %w", err)
 	}
@@ -628,7 +634,7 @@ func (cc *RollupBSNController) isEligibleForFinalitySignature(ctx context.Contex
 }
 
 func (cc *RollupBSNController) QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error) {
-	config, err := cc.queryContractConfig(ctx)
+	config, err := cc.QueryContractConfig(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to query contract config: %w", err)
 	}
