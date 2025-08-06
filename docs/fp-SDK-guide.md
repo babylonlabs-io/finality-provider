@@ -75,14 +75,14 @@ fpApp, err := service.NewFinalityProviderApp(
     eotsManager,         // eotsmanager.EOTSManager - Can be customised
     blockPoller,         // types.BlockPoller - Can be customised
     randomnessCommitter, // types.RandomnessCommitter - Can be customised
-    heightDeterminer,    // types.HeightDeterminer 
+    heightDeterminer,    // types.HeightDeterminer - Can be customised
     finalitySubmitter,   // types.FinalitySignatureSubmitter - Can be customised
     metrics,             // *metrics.FpMetrics - Metrics collection
     db,                  // kvdb.Backend - Database for state persistence
     logger,              // *zap.Logger - Structured logging
 )
 ```
-- You can find the above example at [`app.go`](../finality-provider/service/app.go)
+You can find the above example at [`app.go`](../finality-provider/service/app.go)
 
 ## 3. Interfaces
 
@@ -303,8 +303,8 @@ fpApp, err := cosmosservice.NewCosmosBSNFinalityProviderAppFromConfig(
     cfg, db, logger)
 ```
 
-- [Cosmos service implementation](../bsn/cosmos/service/)
-- [Cosmos config package](../bsn/cosmos/config/)
+1. [Cosmos service implementation](../bsn/cosmos/service/)
+2. [Cosmos config package](../bsn/cosmos/config/)
 
 **Rollup chains:**
 ```go
@@ -318,8 +318,8 @@ fpApp, err := rollupservice.NewRollupBSNFinalityProviderAppFromConfig(
     cfg, db, logger)
 ```
 
-- [Rollup service implementation](../bsn/rollup/service/)
-- [Rollup config package](../bsn/rollup/config/)
+1. [Rollup service implementation](../bsn/rollup/service/)
+2. [Rollup config package](../bsn/rollup/config/)
 
 Configuration files define consumer chain endpoints, contract addresses, and
 finality parameters.
