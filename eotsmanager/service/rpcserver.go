@@ -64,7 +64,7 @@ func (r *rpcServer) CreateRandomnessPairList(_ context.Context, req *proto.Creat
 	}, nil
 }
 
-// CreateRandomnessPairListWithInterval returns a list of Schnorr randomness pairs with interval
+// CreateRandomnessPairListWithInterval returns a list of Schnorr randomness pairs with a specified interval between heights.
 func (r *rpcServer) CreateRandomnessPairListWithInterval(_ context.Context, req *proto.CreateRandomnessPairListWithIntervalRequest) (
 	*proto.CreateRandomnessPairListWithIntervalResponse, error) {
 	pubRandList, err := r.em.CreateRandomnessPairListWithInterval(req.Uid, req.ChainId, req.StartHeight, req.Num, req.Interval)
