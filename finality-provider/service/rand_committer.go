@@ -73,8 +73,8 @@ func NewDefaultRandomnessCommitter(
 	}
 }
 
-func (rc *DefaultRandomnessCommitter) Init(BtcPk *bbntypes.BIP340PubKey, chainID []byte) error {
-	if BtcPk == nil {
+func (rc *DefaultRandomnessCommitter) Init(btcPk *bbntypes.BIP340PubKey, chainID []byte) error {
+	if btcPk == nil {
 		return fmt.Errorf("BtcPk cannot be nil")
 	}
 	if len(chainID) == 0 {
@@ -85,7 +85,7 @@ func (rc *DefaultRandomnessCommitter) Init(BtcPk *bbntypes.BIP340PubKey, chainID
 		return fmt.Errorf("randomness committer is already initialized with BtcPk and chainID")
 	}
 
-	rc.BtcPk = BtcPk
+	rc.BtcPk = btcPk
 	rc.Cfg.ChainID = chainID
 
 	return nil
@@ -301,5 +301,6 @@ func (rc *DefaultRandomnessCommitter) AddPubRandProofListWithInterval(startHeigh
 	if err != nil {
 		return fmt.Errorf("failed to add public randomness proof list with interval: %w", err)
 	}
+
 	return nil
 }

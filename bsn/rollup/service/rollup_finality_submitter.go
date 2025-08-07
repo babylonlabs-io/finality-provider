@@ -183,7 +183,7 @@ func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 		eotsSig, err := rfs.SignFinalitySig(b)
 		if err != nil {
 			if !errors.Is(err, service.ErrFailedPrecondition) {
-				return nil, err
+				return nil, fmt.Errorf("failed to sign finality signature for height %d: %w", b.GetHeight(), err)
 			}
 			// Skip this block if we encounter FailedPrecondition
 			rfs.Logger.Warn("encountered FailedPrecondition error, skipping block",
