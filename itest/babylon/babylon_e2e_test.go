@@ -86,7 +86,6 @@ func TestFinalityProviderLifeCycle(t *testing.T) {
 // should skip the block when encountering a double sign request from the
 // eots manager
 func TestSkippingDoubleSignError(t *testing.T) {
-	t.Skip()
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
