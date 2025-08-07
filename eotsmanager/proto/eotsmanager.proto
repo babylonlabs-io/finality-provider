@@ -4,7 +4,9 @@ package proto;
 
 option go_package = "github.com/babylonlabs-io/finality-provider/eotsmanager/proto";
 
+// EOTSManager is the service for managing EOTS keys and randomness pairs
 service EOTSManager {
+  // Ping is a request to ping the EOTSManager service
   rpc Ping (PingRequest) returns (PingResponse);
 
   // CreateRandomnessPairList returns a list of Schnorr randomness pairs
@@ -31,15 +33,23 @@ service EOTSManager {
   rpc UnlockKey (UnlockKeyRequest)
       returns (UnlockKeyResponse);
 
+  // CreateRandomnessPairListWithInterval returns a list of Schnorr randomness pairs
+  // with a specified interval between heights
+  rpc CreateRandomnessPairListWithInterval (CreateRandomnessPairListWithIntervalRequest)
+      returns (CreateRandomnessPairListWithIntervalResponse);
+
   // Backup - etosd db
   rpc Backup (BackupRequest)
       returns (BackupResponse);
 }
 
+// PingRequest is a request to ping the EOTSManager service
 message PingRequest {}
 
+// PingResponse is a response to a ping request
 message PingResponse {}
 
+// CreateKeyRequest is a request to create a new EOTS key
 message CreateKeyRequest {
   // name is the identifier key in keyring
   string name = 1;
@@ -47,11 +57,13 @@ message CreateKeyRequest {
   string hd_path = 2;
 }
 
+// CreateKeyResponse is a response to a create key request
 message CreateKeyResponse {
   // pk is the EOTS public key following BIP-340 spec
   bytes pk = 1;
 }
 
+// CreateRandomnessPairListRequest is a request to create a list of Schnorr randomness pairs
 message CreateRandomnessPairListRequest {
   // uid is the identifier of an EOTS key, i.e., public key following BIP-340 spec
   bytes uid = 1;
@@ -63,11 +75,34 @@ message CreateRandomnessPairListRequest {
   uint32 num = 4;
 }
 
+// CreateRandomnessPairListResponse is a response to a create randomness pair list request
 message CreateRandomnessPairListResponse {
   // pub_rand_list is a list of Schnorr public randomness
   repeated bytes pub_rand_list = 1;
 }
 
+// CreateRandomnessPairListWithIntervalRequest is a request to create a list of Schnorr randomness pairs
+// with a specified interval between heights
+message CreateRandomnessPairListWithIntervalRequest {
+  // uid is the identifier of an EOTS key, i.e., public key following BIP-340 spec
+  bytes uid = 1;
+  // chain_id is the identifier of the consumer chain that the randomness is committed to
+  bytes chain_id = 2;
+  // start_height is the start height of the randomness pair list
+  uint64 start_height = 3;
+  // num is the number of randomness pair list
+  uint32 num = 4;
+  // interval is the height interval between consecutive randomness pairs
+  uint64 interval = 5;
+}
+
+// CreateRandomnessPairListWithIntervalResponse is a response to a create randomness pair list with interval request
+message CreateRandomnessPairListWithIntervalResponse {
+  // pub_rand_list is a list of Schnorr public randomness
+  repeated bytes pub_rand_list = 1;
+}
+
+// SignEOTSRequest is a request to sign an EOTS with the EOTS private key and the relevant randomness
 message SignEOTSRequest {
   // uid is the identifier of an EOTS key, i.e., public key following BIP-340 spec
   bytes uid = 1;
@@ -79,11 +114,13 @@ message SignEOTSRequest {
   uint64 height = 4;
 }
 
+// SignEOTSResponse is a response to a sign EOTS request
 message SignEOTSResponse {
   // sig is the EOTS signature
   bytes sig = 1;
 }
 
+// SignSchnorrSigRequest is a request to sign a Schnorr sig with the EOTS private key
 message SignSchnorrSigRequest {
   // uid is the identifier of an EOTS key, i.e., public key following BIP-340 spec
   bytes uid = 1;
@@ -91,11 +128,13 @@ message SignSchnorrSigRequest {
   bytes msg = 2;
 }
 
+// SignSchnorrSigResponse is a response to a sign Schnorr sig request
 message SignSchnorrSigResponse {
   // sig is the Schnorr signature
   bytes sig = 1;
 }
 
+// SaveEOTSKeyNameRequest is a request to save a new key name mapping for the EOTS public key
 message SaveEOTSKeyNameRequest {
   // KeyName is the name of the key which corresponds to the
   // BIP340 public key
@@ -104,8 +143,10 @@ message SaveEOTSKeyNameRequest {
   bytes eots_pk = 2;
 }
 
+// SaveEOTSKeyNameResponse is a response to a save EOTS key name request
 message SaveEOTSKeyNameResponse {}
 
+// UnlockKeyRequest is a request to unlock the keyring with the given passphrase
 message UnlockKeyRequest {
   // uid is the identifier of an EOTS key, i.e., public key following BIP-340 spec
   bytes uid = 1;
@@ -113,8 +154,10 @@ message UnlockKeyRequest {
   string passphrase = 2;
 }
 
-message UnlockKeyResponse {
-}
+// UnlockKeyResponse is a response to a unlock key request
+message UnlockKeyResponse {}
+
+// BackupRequest is a request to backup the EOTSManager service
 message BackupRequest {
   // db_path of the eotsd.db
   string db_path = 1;
@@ -122,6 +165,7 @@ message BackupRequest {
   string backup_dir = 2;
 }
 
+// BackupResponse is a response to a backup request
 message BackupResponse {
   string backup_name = 1;
 }
