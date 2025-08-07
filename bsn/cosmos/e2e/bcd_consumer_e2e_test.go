@@ -1,5 +1,3 @@
-//go:build e2e_bcd
-
 package e2etest_bcd
 
 import (
@@ -129,6 +127,11 @@ func TestConsumerFpLifecycle(t *testing.T) {
 
 		return false
 	}, e2eutils.EventuallyWaitTimeOut, 2*time.Second, "FP should automatically vote on rollup blocks")
+
+	list, err := ctm.BcdConsumerClient.QueryPublicRandCommitList(ctx, fpPk.MustToBTCPK(), 1)
+	require.NoError(t, err)
+
+	require.NotNil(t, list)
 
 	// wait for finality signature to be included in the smart contract
 	require.Eventually(t, func() bool {

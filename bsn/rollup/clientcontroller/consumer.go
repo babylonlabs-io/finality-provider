@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	// ref: https://github.com/babylonlabs-io/rollup-bsn-contracts/blob/main/contracts/finality/src/error.rs#L87
+	// ErrBSNDuplicatedFinalitySig - ref: https://github.com/babylonlabs-io/rollup-bsn-contracts/blob/main/contracts/finality/src/error.rs#L87
 	ErrBSNDuplicatedFinalitySig = sdkErr.Register("bsn_rollup", 1001, "Duplicated finality signature")
 )
 
@@ -685,6 +685,11 @@ func (cc *RollupBSNController) QueryFinalityProviderStatus(_ context.Context, fp
 
 func (cc *RollupBSNController) UnjailFinalityProvider(_ context.Context, _ *btcec.PublicKey) (*types.TxResponse, error) {
 	// always return nil, there is no jail/unjail feature in rollup BSN
+	return nil, nil
+}
+
+func (cc *RollupBSNController) QueryPublicRandCommitList(_ context.Context, _ *btcec.PublicKey, _ uint64) ([]types.PubRandCommit, error) {
+	//TODO(lazar955): will implement in separate PR
 	return nil, nil
 }
 

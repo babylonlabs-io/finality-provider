@@ -10,7 +10,10 @@ import (
 // (Babylon/Cosmos/Rollup FPs) to handle different JSON field names across
 // sources.
 type PubRandCommit interface {
+	GetStartHeight() uint64
 	EndHeight() uint64
+	GetNumPubRand() uint64
+	GetCommitment() []byte
 	Validate() error
 }
 

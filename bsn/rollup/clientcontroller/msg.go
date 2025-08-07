@@ -1,7 +1,5 @@
 package clientcontroller
 
-import "fmt"
-
 type CommitPublicRandomnessMsg struct {
 	CommitPublicRandomness CommitPublicRandomnessMsgParams `json:"commit_public_randomness"`
 }
@@ -71,23 +69,6 @@ type PubRandCommitForHeightQuery struct {
 
 type HighestVotedHeightQuery struct {
 	BtcPkHex string `json:"btc_pk_hex"`
-}
-
-type RollupPubRandCommit struct {
-	StartHeight  uint64 `json:"start_height"`
-	NumPubRand   uint64 `json:"num_pub_rand"`
-	Commitment   []byte `json:"commitment"`
-	BabylonEpoch uint64 `json:"babylon_epoch"`
-}
-
-// Interface implementation
-func (r *RollupPubRandCommit) EndHeight() uint64 { return r.StartHeight + r.NumPubRand - 1 }
-func (r *RollupPubRandCommit) Validate() error {
-	if r.NumPubRand < 1 {
-		return fmt.Errorf("NumPubRand must be >= 1, got %d", r.NumPubRand)
-	}
-	
-	return nil
 }
 
 // FIXME: Remove this ancillary struct.

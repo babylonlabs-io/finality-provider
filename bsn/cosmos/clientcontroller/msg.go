@@ -220,6 +220,17 @@ type LastPubRandCommitQuery struct {
 	BtcPkHex string `json:"btc_pk_hex"`
 }
 
+type QueryMsgPubRandCommits struct {
+	PubRandCommit PubRandCommitQuery `json:"pub_rand_commit"`
+}
+
+type PubRandCommitQuery struct {
+	BtcPkHex   string `json:"btc_pk_hex"`
+	StartAfter uint64 `json:"start_after,omitempty"`
+	Limit      uint32 `json:"limit,omitempty"`
+	Reverse    bool   `json:"reverse,omitempty"`
+}
+
 type QueryMsgLastConsumerHeader struct {
 	LastConsumerHeader struct{} `json:"last_consumer_header"`
 }

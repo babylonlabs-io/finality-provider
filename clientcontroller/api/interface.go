@@ -71,6 +71,9 @@ type RandomnessCommitter interface {
 
 	// QueryLastPublicRandCommit returns the last public randomness commitment
 	QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error)
+
+	// QueryPublicRandCommitList returns a list of public randomness commitments
+	QueryPublicRandCommitList(ctx context.Context, fpPk *btcec.PublicKey, startHeight uint64) ([]types.PubRandCommit, error)
 }
 
 type BlockQuerier[T types.BlockDescription] interface {
