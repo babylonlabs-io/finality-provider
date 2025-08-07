@@ -7,6 +7,7 @@ import (
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	rollupclient "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
+	service "github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/testutil/mocks"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -451,7 +452,7 @@ func TestRollupRandomnessCommitterShouldCommit(t *testing.T) {
 			}
 
 			// Create RollupRandomnessCommitter with proper setup
-			cfg := &RandomnessCommitterConfig{
+			cfg := &service.RandomnessCommitterConfig{
 				NumPubRand:              tt.numPubRand,
 				TimestampingDelayBlocks: tt.timestampingDelay,
 				ChainID:                 []byte("test-chain"),
@@ -465,19 +466,19 @@ func TestRollupRandomnessCommitterShouldCommit(t *testing.T) {
 			btcPk := bbntypes.NewBIP340PubKeyFromBTCPK(btcPK)
 
 			// Create mock PubRandState
-			mockPubRandState := &PubRandState{}
+			mockPubRandState := &service.PubRandState{}
 
 			// Create mock metrics
 			mockMetrics := &metrics.FpMetrics{}
 
 			rrc := &RollupRandomnessCommitter{
-				DefaultRandomnessCommitter: &DefaultRandomnessCommitter{
-					btcPk:        btcPk,
-					cfg:          cfg,
-					pubRandState: mockPubRandState,
-					consumerCon:  mockConsumerController,
-					logger:       logger,
-					metrics:      mockMetrics,
+				DefaultRandomnessCommitter: &service.DefaultRandomnessCommitter{
+					BtcPk:        btcPk,
+					Cfg:          cfg,
+					PubRandState: mockPubRandState,
+					ConsumerCon:  mockConsumerController,
+					Logger:       logger,
+					Metrics:      mockMetrics,
 				},
 				interval: tt.interval,
 			}

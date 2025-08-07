@@ -91,26 +91,26 @@ func (c *EOTSManagerGRpcClient) CreateRandomnessPairList(uid, chainID []byte, st
 }
 
 func (c *EOTSManagerGRpcClient) CreateRandomnessPairListWithInterval(uid, chainID []byte, startHeight uint64, num uint32, interval uint64) ([]*btcec.FieldVal, error) {
-	// For now, implement using existing RPC by calling individual heights
-	// TODO: Later can add dedicated GRPC method for efficiency
-	// https://github.com/babylonlabs-io/finality-provider/issues/590
-	pubRandList := make([]*btcec.FieldVal, 0, num)
-
-	for i := uint32(0); i < num; i++ {
-		height := startHeight + uint64(i)*interval
-		// We request exactly 1 randomness value per height since we're generating sparse randomness
-		// for specific heights (startHeight, startHeight+interval, startHeight+2*interval, etc.)
-		singleList, err := c.CreateRandomnessPairList(uid, chainID, height, 1)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create randomness for height %d: %w", height, err)
-		}
-		if len(singleList) != 1 {
-			return nil, fmt.Errorf("expected 1 randomness value, got %d", len(singleList))
-		}
-		pubRandList = append(pubRandList, singleList[0])
+	req := &proto.CreateRandomnessPairListWithIntervalRequest{
+		Uid:         uid,
+		ChainId:     chainID,
+		StartHeight: startHeight,
+		Num:         num,
+		Interval:    interval,
+	}
+	res, err := c.client.CreateRandomnessPairListWithInterval(context.Background(), req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create randomness pair list with interval: %w", err)
 	}
 
-	return pubRandList, nil
+	pubRandFieldValList := make([]*btcec.FieldVal, 0, len(res.PubRandList))
+	for _, r := range res.PubRandList {
+		var fieldVal btcec.FieldVal
+		fieldVal.SetByteSlice(r)
+		pubRandFieldValList = append(pubRandFieldValList, &fieldVal)
+	}
+
+	return pubRandFieldValList, nil
 }
 
 func (c *EOTSManagerGRpcClient) SaveEOTSKeyName(pk *btcec.PublicKey, keyName string) error {

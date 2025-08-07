@@ -303,14 +303,14 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 
 // hasActiveBTCDelegation checks if the finality provider has any active BTC delegations
 func (cc *RollupBSNController) hasActiveBTCDelegation(fpBtcPkHex string) (bool, error) {
-	btcStakingParams, err := cc.bbnClient.QueryClient.BTCStakingParams()
+	btcStakingParams, err := cc.bbnClient.BTCStakingParams()
 	if err != nil {
 		return false, fmt.Errorf("failed to query BTC staking params: %w", err)
 	}
 
 	var nextKey []byte
 	for {
-		resp, err := cc.bbnClient.QueryClient.FinalityProviderDelegations(fpBtcPkHex, &sdkquerytypes.PageRequest{Key: nextKey, Limit: 100})
+		resp, err := cc.bbnClient.FinalityProviderDelegations(fpBtcPkHex, &sdkquerytypes.PageRequest{Key: nextKey, Limit: 100})
 		if err != nil {
 			return false, fmt.Errorf("failed to query finality provider delegations: %w", err)
 		}
@@ -714,7 +714,7 @@ func (cc *RollupBSNController) QueryFinalityProviderHighestVotedHeight(ctx conte
 
 func (cc *RollupBSNController) QueryFinalityProviderStatus(_ context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-	res, err := cc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+	res, err := cc.bbnClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
 	}

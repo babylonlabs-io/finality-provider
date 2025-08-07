@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.uber.org/zap/zaptest"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"go.uber.org/zap/zaptest"
 
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -63,7 +64,9 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
 		defer func() {
-			dbBackend.Close()
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
 			err = os.RemoveAll(eotsHomeDir)
 			require.NoError(t, err)
 		}()
@@ -335,7 +338,9 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 		em, err := eotsmanager.NewLocalEOTSManager(eotsHomeDir, eotsCfg.KeyringBackend, dbBackend, logger)
 		require.NoError(t, err)
 		defer func() {
-			dbBackend.Close()
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
 			err = os.RemoveAll(eotsHomeDir)
 			require.NoError(t, err)
 		}()

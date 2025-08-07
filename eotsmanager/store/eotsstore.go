@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	pm "google.golang.org/protobuf/proto"
 
@@ -353,7 +354,12 @@ func (s *EOTSStore) BackupDB(dbPath string, backupDir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to create backup file: %w", err)
 	}
-	defer backupFile.Close()
+	defer func() {
+		if err := backupFile.Close(); err != nil {
+			// Log error but don't return it since we're in a defer
+			fmt.Printf("Error closing backup file: %v\n", err)
+		}
+	}()
 
 	if err := s.db.Copy(backupFile); err != nil {
 		return "", fmt.Errorf("failed to copy database contents: %w", err)

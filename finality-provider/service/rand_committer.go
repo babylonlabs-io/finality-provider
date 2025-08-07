@@ -12,6 +12,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
+	"github.com/cometbft/cometbft/crypto/merkle"
 	"go.uber.org/zap"
 )
 
@@ -45,13 +46,13 @@ func NewRandomnessCommitterConfig(
 }
 
 type DefaultRandomnessCommitter struct {
-	btcPk        *bbntypes.BIP340PubKey
-	cfg          *RandomnessCommitterConfig
-	pubRandState *PubRandState
-	consumerCon  ccapi.ConsumerController
-	em           eotsmanager.EOTSManager
-	logger       *zap.Logger
-	metrics      *metrics.FpMetrics
+	BtcPk        *bbntypes.BIP340PubKey
+	Cfg          *RandomnessCommitterConfig
+	PubRandState *PubRandState
+	ConsumerCon  ccapi.ConsumerController
+	Em           eotsmanager.EOTSManager
+	Logger       *zap.Logger
+	Metrics      *metrics.FpMetrics
 }
 
 func NewDefaultRandomnessCommitter(
@@ -63,29 +64,29 @@ func NewDefaultRandomnessCommitter(
 	metrics *metrics.FpMetrics,
 ) *DefaultRandomnessCommitter {
 	return &DefaultRandomnessCommitter{
-		cfg:          cfg,
-		pubRandState: pubRandState,
-		consumerCon:  consumerCon,
-		em:           em,
-		logger:       logger,
-		metrics:      metrics,
+		Cfg:          cfg,
+		PubRandState: pubRandState,
+		ConsumerCon:  consumerCon,
+		Em:           em,
+		Logger:       logger,
+		Metrics:      metrics,
 	}
 }
 
 func (rc *DefaultRandomnessCommitter) Init(btcPk *bbntypes.BIP340PubKey, chainID []byte) error {
 	if btcPk == nil {
-		return fmt.Errorf("btcPk cannot be nil")
+		return fmt.Errorf("BtcPk cannot be nil")
 	}
 	if len(chainID) == 0 {
 		return fmt.Errorf("chainID cannot be empty")
 	}
 
-	if rc.btcPk != nil && rc.cfg.ChainID != nil {
-		return fmt.Errorf("randomness committer is already initialized with btcPk and chainID")
+	if rc.BtcPk != nil && rc.Cfg.ChainID != nil {
+		return fmt.Errorf("randomness committer is already initialized with BtcPk and chainID")
 	}
 
-	rc.btcPk = btcPk
-	rc.cfg.ChainID = chainID
+	rc.BtcPk = btcPk
+	rc.Cfg.ChainID = chainID
 
 	return nil
 }
@@ -101,17 +102,17 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 		return false, 0, fmt.Errorf("failed to get last committed height: %w", err)
 	}
 
-	tipBlock, err := rc.consumerCon.QueryLatestBlock(ctx)
+	tipBlock, err := rc.ConsumerCon.QueryLatestBlock(ctx)
 	if tipBlock == nil || err != nil {
 		return false, 0, fmt.Errorf("failed to get the last block: %w", err)
 	}
 
-	if rc.cfg.TimestampingDelayBlocks < 0 {
-		return false, 0, fmt.Errorf("TimestampingDelayBlocks cannot be negative: %d", rc.cfg.TimestampingDelayBlocks)
+	if rc.Cfg.TimestampingDelayBlocks < 0 {
+		return false, 0, fmt.Errorf("TimestampingDelayBlocks cannot be negative: %d", rc.Cfg.TimestampingDelayBlocks)
 	}
 
 	// #nosec G115
-	tipHeightWithDelay := tipBlock.GetHeight() + uint64(rc.cfg.TimestampingDelayBlocks)
+	tipHeightWithDelay := tipBlock.GetHeight() + uint64(rc.Cfg.TimestampingDelayBlocks)
 
 	var startHeight uint64
 	switch {
@@ -119,13 +120,13 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 		// the start height should consider the timestamping delay
 		// as it is only available to use after tip height + estimated timestamping delay
 		startHeight = tipHeightWithDelay
-	case lastCommittedHeight < tipHeightWithDelay+uint64(rc.cfg.NumPubRand):
+	case lastCommittedHeight < tipHeightWithDelay+uint64(rc.Cfg.NumPubRand):
 		startHeight = lastCommittedHeight + 1
 	default:
 		// the randomness is enough, no need to make another commit
-		rc.logger.Debug(
+		rc.Logger.Debug(
 			"the finality-provider has sufficient public randomness, skip committing more",
-			zap.String("pk", rc.btcPk.MarshalHex()),
+			zap.String("pk", rc.BtcPk.MarshalHex()),
 			zap.Uint64("tip_height", tipBlock.GetHeight()),
 			zap.Uint64("last_committed_height", lastCommittedHeight),
 		)
@@ -133,14 +134,14 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 		return false, 0, nil
 	}
 
-	rc.logger.Debug(
+	rc.Logger.Debug(
 		"the finality-provider should commit randomness",
-		zap.String("pk", rc.btcPk.MarshalHex()),
+		zap.String("pk", rc.BtcPk.MarshalHex()),
 		zap.Uint64("tip_height", tipBlock.GetHeight()),
 		zap.Uint64("last_committed_height", lastCommittedHeight),
 	)
 
-	activationBlkHeight, err := rc.consumerCon.QueryFinalityActivationBlockHeight(ctx)
+	activationBlkHeight, err := rc.ConsumerCon.QueryFinalityActivationBlockHeight(ctx)
 	if err != nil {
 		return false, 0, fmt.Errorf("failed to query finality activation block height: %w", err)
 	}
@@ -169,7 +170,7 @@ func (rc *DefaultRandomnessCommitter) GetLastCommittedHeight(ctx context.Context
 func (rc *DefaultRandomnessCommitter) lastCommittedPublicRandWithRetry(ctx context.Context) (types.PubRandCommit, error) {
 	var response types.PubRandCommit
 	if err := retry.Do(func() error {
-		resp, err := rc.consumerCon.QueryLastPublicRandCommit(ctx, rc.btcPk.MustToBTCPK())
+		resp, err := rc.ConsumerCon.QueryLastPublicRandCommit(ctx, rc.BtcPk.MustToBTCPK())
 		if err != nil {
 			return fmt.Errorf("failed to query the last committed public randomness: %w", err)
 		}
@@ -182,7 +183,7 @@ func (rc *DefaultRandomnessCommitter) lastCommittedPublicRandWithRetry(ctx conte
 
 		return nil
 	}, retry.Context(ctx), RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
-		rc.logger.Debug(
+		rc.Logger.Debug(
 			"failed to query the last committed public randomness",
 			zap.Uint("attempt", n+1),
 			zap.Uint("max_attempts", RtyAttNum),
@@ -201,7 +202,7 @@ func (rc *DefaultRandomnessCommitter) Commit(ctx context.Context, startHeight ui
 	// NOTE: currently, calling this will create and save a list of randomness
 	// in case of failure, randomness that has been created will be overwritten
 	// for safety reason as the same randomness must not be used twice
-	pubRandList, err := rc.getPubRandList(startHeight, rc.cfg.NumPubRand)
+	pubRandList, err := rc.getPubRandList(startHeight, rc.Cfg.NumPubRand)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate randomness: %w", err)
 	}
@@ -211,18 +212,18 @@ func (rc *DefaultRandomnessCommitter) Commit(ctx context.Context, startHeight ui
 	commitment, proofList := types.GetPubRandCommitAndProofs(pubRandList)
 
 	// store them to database
-	if err := rc.pubRandState.addPubRandProofList(rc.btcPk.MustMarshal(), rc.cfg.ChainID, startHeight, uint64(rc.cfg.NumPubRand), proofList); err != nil {
+	if err := rc.PubRandState.addPubRandProofList(rc.BtcPk.MustMarshal(), rc.Cfg.ChainID, startHeight, uint64(rc.Cfg.NumPubRand), proofList); err != nil {
 		return nil, fmt.Errorf("failed to save public randomness to DB: %w", err)
 	}
 
 	// sign the commitment
-	schnorrSig, err := rc.signPubRandCommit(startHeight, numPubRand, commitment)
+	schnorrSig, err := rc.SignPubRandCommit(startHeight, numPubRand, commitment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign the Schnorr signature: %w", err)
 	}
 
-	res, err := rc.consumerCon.CommitPubRandList(ctx, &ccapi.CommitPubRandListRequest{
-		FpPk:        rc.btcPk.MustToBTCPK(),
+	res, err := rc.ConsumerCon.CommitPubRandList(ctx, &ccapi.CommitPubRandListRequest{
+		FpPk:        rc.BtcPk.MustToBTCPK(),
 		StartHeight: startHeight,
 		NumPubRand:  numPubRand,
 		Commitment:  commitment,
@@ -233,18 +234,18 @@ func (rc *DefaultRandomnessCommitter) Commit(ctx context.Context, startHeight ui
 	}
 
 	// Update metrics
-	rc.metrics.RecordFpRandomnessTime(rc.btcPk.MarshalHex())
-	rc.metrics.RecordFpLastCommittedRandomnessHeight(rc.btcPk.MarshalHex(), startHeight+numPubRand-1)
-	rc.metrics.AddToFpTotalCommittedRandomness(rc.btcPk.MarshalHex(), float64(len(pubRandList)))
-	rc.metrics.RecordFpLastCommittedRandomnessHeight(rc.btcPk.MarshalHex(), startHeight+numPubRand-1)
+	rc.Metrics.RecordFpRandomnessTime(rc.BtcPk.MarshalHex())
+	rc.Metrics.RecordFpLastCommittedRandomnessHeight(rc.BtcPk.MarshalHex(), startHeight+numPubRand-1)
+	rc.Metrics.AddToFpTotalCommittedRandomness(rc.BtcPk.MarshalHex(), float64(len(pubRandList)))
+	rc.Metrics.RecordFpLastCommittedRandomnessHeight(rc.BtcPk.MarshalHex(), startHeight+numPubRand-1)
 
 	return res, nil
 }
 
 func (rc *DefaultRandomnessCommitter) getPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
-	pubRandList, err := rc.em.CreateRandomnessPairList(
-		rc.btcPk.MustMarshal(),
-		rc.cfg.ChainID,
+	pubRandList, err := rc.Em.CreateRandomnessPairList(
+		rc.BtcPk.MustMarshal(),
+		rc.Cfg.ChainID,
 		startHeight,
 		numPubRand,
 	)
@@ -255,14 +256,14 @@ func (rc *DefaultRandomnessCommitter) getPubRandList(startHeight uint64, numPubR
 	return pubRandList, nil
 }
 
-func (rc *DefaultRandomnessCommitter) signPubRandCommit(startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
+func (rc *DefaultRandomnessCommitter) SignPubRandCommit(startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
 	var (
 		hash []byte
 		err  error
 	)
 
-	if startHeight >= rc.cfg.ContextSigningHeight {
-		signCtx := rc.consumerCon.GetFpRandCommitContext()
+	if startHeight >= rc.Cfg.ContextSigningHeight {
+		signCtx := rc.ConsumerCon.GetFpRandCommitContext()
 		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
@@ -275,7 +276,7 @@ func (rc *DefaultRandomnessCommitter) signPubRandCommit(startHeight uint64, numP
 	}
 
 	// sign the message hash using the finality-provider's BTC private key
-	sig, err := rc.em.SignSchnorrSig(rc.btcPk.MustMarshal(), hash)
+	sig, err := rc.Em.SignSchnorrSig(rc.BtcPk.MustMarshal(), hash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
 	}
@@ -284,7 +285,7 @@ func (rc *DefaultRandomnessCommitter) signPubRandCommit(startHeight uint64, numP
 }
 
 func (rc *DefaultRandomnessCommitter) GetPubRandProofList(height uint64, numPubRand uint64) ([][]byte, error) {
-	proofList, err := rc.pubRandState.getPubRandProofList(rc.btcPk.MustMarshal(), rc.cfg.ChainID, height, numPubRand)
+	proofList, err := rc.PubRandState.getPubRandProofList(rc.BtcPk.MustMarshal(), rc.Cfg.ChainID, height, numPubRand)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get public randomness proof list: %w", err)
 	}
@@ -294,4 +295,12 @@ func (rc *DefaultRandomnessCommitter) GetPubRandProofList(height uint64, numPubR
 	}
 
 	return proofList, nil
+}
+func (rc *DefaultRandomnessCommitter) AddPubRandProofListWithInterval(startHeight uint64, numPubRand uint64, proofList []*merkle.Proof, interval uint64) error {
+	err := rc.PubRandState.addPubRandProofListWithInterval(rc.BtcPk.MustMarshal(), rc.Cfg.ChainID, startHeight, numPubRand, proofList, interval)
+	if err != nil {
+		return fmt.Errorf("failed to add public randomness proof list with interval: %w", err)
+	}
+
+	return nil
 }

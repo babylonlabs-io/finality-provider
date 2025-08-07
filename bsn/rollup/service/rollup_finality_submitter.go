@@ -11,6 +11,7 @@ import (
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	service "github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -20,21 +21,21 @@ import (
 // RollupFinalitySubmitter is a finality submitter for rollup FPs that uses sparse randomness generation
 // It generates randomness only for heights where the FP will vote (based on finality signature interval)
 type RollupFinalitySubmitter struct {
-	*DefaultFinalitySubmitter
+	*service.DefaultFinalitySubmitter
 	interval uint64
 }
 
 func NewRollupFinalitySubmitter(
 	consumerCtrl api.ConsumerController,
 	em eotsmanager.EOTSManager,
-	proofListGetterFunc PubRandProofListGetterFunc,
-	cfg *FinalitySubmitterConfig,
+	proofListGetterFunc service.PubRandProofListGetterFunc,
+	cfg *service.FinalitySubmitterConfig,
 	logger *zap.Logger,
 	metrics *metrics.FpMetrics,
 	interval uint64,
 ) *RollupFinalitySubmitter {
 	return &RollupFinalitySubmitter{
-		DefaultFinalitySubmitter: NewDefaultFinalitySubmitter(consumerCtrl, em, proofListGetterFunc, cfg, logger, metrics),
+		DefaultFinalitySubmitter: service.NewDefaultFinalitySubmitter(consumerCtrl, em, proofListGetterFunc, cfg, logger, metrics),
 		interval:                 interval,
 	}
 }
@@ -42,9 +43,9 @@ func NewRollupFinalitySubmitter(
 // GetPubRandList overrides the default implementation to use sparse generation
 // This ensures the randomness retrieval matches the sparse commitment pattern
 func (rfs *RollupFinalitySubmitter) GetPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
-	pubRandList, err := rfs.em.CreateRandomnessPairListWithInterval(
-		rfs.getBtcPkBIP340().MustMarshal(),
-		rfs.state.GetChainID(),
+	pubRandList, err := rfs.Em.CreateRandomnessPairListWithInterval(
+		rfs.GetBtcPkBIP340().MustMarshal(),
+		rfs.State.GetChainID(),
 		startHeight,
 		numPubRand,
 		rfs.interval,
@@ -63,16 +64,16 @@ func (rfs *RollupFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 		return nil, fmt.Errorf("cannot send signatures for empty blocks")
 	}
 
-	blocks, err := rfs.filterBlocksForVoting(ctx, blocks)
+	blocks, err := rfs.FilterBlocksForVoting(ctx, blocks)
 	if err != nil {
 		return nil, fmt.Errorf("failed to filter blocks for voting: %w", err)
 	}
 
 	if len(blocks) == 0 {
-		rfs.logger.Debug(
+		rfs.Logger.Debug(
 			"no blocks to vote for after filtering",
-			zap.String("pk", rfs.getBtcPkHex()),
-			zap.Uint64("last_voted_height", rfs.state.GetLastVotedHeight()),
+			zap.String("pk", rfs.GetBtcPkHex()),
+			zap.Uint64("last_voted_height", rfs.State.GetLastVotedHeight()),
 		)
 
 		return nil, nil // No blocks to vote for
@@ -85,9 +86,9 @@ func (rfs *RollupFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 	for {
 		res, err := rfs.submitBatchFinalitySignaturesOnce(ctx, blocks)
 		if err != nil {
-			rfs.logger.Debug(
+			rfs.Logger.Debug(
 				"failed to submit finality signature to the consumer chain",
-				zap.String("pk", rfs.getBtcPkHex()),
+				zap.String("pk", rfs.GetBtcPkHex()),
 				zap.Uint32("current_failures", failedCycles),
 				zap.Uint64("target_start_height", blocks[0].GetHeight()),
 				zap.Uint64("target_end_height", targetHeight),
@@ -104,7 +105,7 @@ func (rfs *RollupFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 			}
 
 			failedCycles++
-			if failedCycles > rfs.cfg.MaxSubmissionRetries {
+			if failedCycles > rfs.Cfg.MaxSubmissionRetries {
 				return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
 			}
 		} else {
@@ -113,31 +114,31 @@ func (rfs *RollupFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 		}
 
 		// Check if the block is already finalized
-		finalized, err := rfs.checkBlockFinalization(ctx, targetHeight)
+		finalized, err := rfs.CheckBlockFinalization(ctx, targetHeight)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query block finalization at height %v: %w", targetHeight, err)
 		}
 		if finalized {
-			rfs.logger.Debug(
+			rfs.Logger.Debug(
 				"the block is already finalized, skip submission",
-				zap.String("pk", rfs.getBtcPkHex()),
+				zap.String("pk", rfs.GetBtcPkHex()),
 				zap.Uint64("target_height", targetHeight),
 			)
 
-			rfs.metrics.IncrementFpTotalFailedVotes(rfs.getBtcPkHex())
+			rfs.Metrics.IncrementFpTotalFailedVotes(rfs.GetBtcPkHex())
 
 			return nil, nil
 		}
 
 		// Wait for the retry interval
 		select {
-		case <-time.After(rfs.cfg.SubmissionRetryInterval):
+		case <-time.After(rfs.Cfg.SubmissionRetryInterval):
 			// Continue to next retry iteration
 			continue
 		case <-ctx.Done():
-			rfs.logger.Debug("the finality-provider instance is closing", zap.String("pk", rfs.getBtcPkHex()))
+			rfs.Logger.Debug("the finality-provider instance is closing", zap.String("pk", rfs.GetBtcPkHex()))
 
-			return nil, ErrFinalityProviderShutDown
+			return nil, service.ErrFinalityProviderShutDown
 		}
 	}
 }
@@ -162,7 +163,7 @@ func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 		prList = append(prList, pr[0])
 
 		// Get proof for this specific height
-		proofs, err := rfs.proofListGetterFunc(block.GetHeight(), 1)
+		proofs, err := rfs.ProofListGetterFunc(block.GetHeight(), 1)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get public randomness inclusion proof for height %d: %w\nplease recover the randomness proof from db", block.GetHeight(), err)
 		}
@@ -179,13 +180,13 @@ func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	var validSigList []*btcec.ModNScalar
 
 	for i, b := range blocks {
-		eotsSig, err := rfs.signFinalitySig(b)
+		eotsSig, err := rfs.SignFinalitySig(b)
 		if err != nil {
-			if !errors.Is(err, ErrFailedPrecondition) {
-				return nil, err
+			if !errors.Is(err, service.ErrFailedPrecondition) {
+				return nil, fmt.Errorf("failed to sign finality signature for height %d: %w", b.GetHeight(), err)
 			}
 			// Skip this block if we encounter FailedPrecondition
-			rfs.logger.Warn("encountered FailedPrecondition error, skipping block",
+			rfs.Logger.Warn("encountered FailedPrecondition error, skipping block",
 				zap.Uint64("height", b.GetHeight()),
 				zap.String("hash", hex.EncodeToString(b.GetHash())),
 				zap.Error(err))
@@ -202,14 +203,14 @@ func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 
 	// If all blocks were skipped, return early
 	if len(validBlocks) == 0 {
-		rfs.logger.Info("all blocks were skipped due to double sign errors")
+		rfs.Logger.Info("all blocks were skipped due to double sign errors")
 
 		return nil, nil
 	}
 
 	// Send finality signature to the consumer chain
-	res, err := rfs.consumerCtrl.SubmitBatchFinalitySigs(ctx, api.NewSubmitBatchFinalitySigsRequest(
-		rfs.getBtcPk(),
+	res, err := rfs.ConsumerCtrl.SubmitBatchFinalitySigs(ctx, api.NewSubmitBatchFinalitySigsRequest(
+		rfs.GetBtcPk(),
 		validBlocks,
 		validPrList,
 		validProofList,
@@ -218,10 +219,10 @@ func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 
 	if err != nil {
 		if strings.Contains(err.Error(), "jailed") {
-			return nil, ErrFinalityProviderJailed
+			return nil, service.ErrFinalityProviderJailed
 		}
 		if strings.Contains(err.Error(), "slashed") {
-			return nil, ErrFinalityProviderSlashed
+			return nil, service.ErrFinalityProviderSlashed
 		}
 
 		return nil, fmt.Errorf("failed to submit finality signature to the consumer chain: %w", err)
@@ -229,12 +230,12 @@ func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 
 	// Update the metrics with voted blocks
 	for _, b := range validBlocks {
-		rfs.metrics.RecordFpVotedHeight(rfs.getBtcPkHex(), b.GetHeight())
+		rfs.Metrics.RecordFpVotedHeight(rfs.GetBtcPkHex(), b.GetHeight())
 	}
 
 	// Update state with the highest height of this batch
 	highBlock := blocks[len(blocks)-1]
-	rfs.mustSetLastVotedHeight(highBlock.GetHeight())
+	rfs.MustSetLastVotedHeight(highBlock.GetHeight())
 
 	return res, nil
 }

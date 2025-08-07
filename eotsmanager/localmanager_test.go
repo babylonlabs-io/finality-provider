@@ -40,7 +40,9 @@ func FuzzCreateKey(f *testing.F) {
 
 		require.NoError(t, err)
 		defer func() {
-			dbBackend.Close()
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
 			err := os.RemoveAll(homeDir)
 			require.NoError(t, err)
 		}()
@@ -91,7 +93,9 @@ func FuzzCreateRandomnessPairList(f *testing.F) {
 		}
 
 		defer func() {
-			dbBackend.Close()
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
 			err := os.RemoveAll(homeDir)
 			require.NoError(t, err)
 		}()
@@ -134,7 +138,9 @@ func FuzzSignRecord(f *testing.F) {
 		eotsCfg := eotscfg.DefaultConfigWithHomePath(homeDir)
 		dbBackend, err := eotsCfg.DatabaseConfig.GetDBBackend()
 		defer func() {
-			dbBackend.Close()
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
 			err := os.RemoveAll(homeDir)
 			require.NoError(t, err)
 		}()
