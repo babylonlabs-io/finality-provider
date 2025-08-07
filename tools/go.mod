@@ -5,7 +5,7 @@ go 1.23.8
 toolchain go1.23.10
 
 require (
-	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250801111417-fe7557c41640
+	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250807100855-be35b2768ee4
 	github.com/cosmos/relayer/v2 v2.5.3
 )
 
@@ -48,8 +48,8 @@ require (
 	github.com/VictoriaMetrics/fastcache v1.12.2 // indirect
 	github.com/avast/retry-go/v4 v4.5.1 // indirect
 	github.com/aws/aws-sdk-go v1.49.0 // indirect
-	github.com/babylonlabs-io/babylon-sdk/tests/e2e v0.0.0-20250801111417-fe7557c41640 // indirect
-	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250801111417-fe7557c41640 // indirect
+	github.com/babylonlabs-io/babylon-sdk/tests/e2e v0.0.0-20250807100855-be35b2768ee4 // indirect
+	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250807100855-be35b2768ee4 // indirect
 	github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250724 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect

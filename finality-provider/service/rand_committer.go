@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -143,6 +144,10 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 
 	activationBlkHeight, err := rc.ConsumerCon.QueryFinalityActivationBlockHeight(ctx)
 	if err != nil {
+		if strings.Contains(err.Error(), "not activated") {
+			return false, 0, nil
+
+		}
 		return false, 0, fmt.Errorf("failed to query finality activation block height: %w", err)
 	}
 
