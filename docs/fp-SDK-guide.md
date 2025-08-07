@@ -21,32 +21,39 @@
 
 ## 1. Introduction
 
-The Finality Provider SDK enables Bitcoin Supercharged Networks (BSNs) to 
-integrate with Babylon's Bitcoin-secured finality infrastructure as a flexible 
-library. It provides finality guarantees for consumer chain blocks through 
-EOTS (Extractable One-Time Signatures) and BTC staking.
+The Finality Provider SDK enables Bitcoin Supercharged Networks (BSNs) by 
+providing interfaces to implement that create a compatible Finality Provider 
+for their chain. It provides finality guarantees for consumer chain blocks through EOTS 
+(Extractable One-Time Signatures) and BTC staking.
 
 The SDK offers a modular, interface-based architecture that allows teams to 
 customise components for their specific blockchain implementations while 
-maintaining compatibility with the core finality provider functionality.
+maintaining compatibility with the core finality provider functionality. 
+Whilst also handling block querying, randomness generation, finality 
+signature generation, and data submission.
 
 The SDK includes two reference implementations:
-- **Cosmos chains** - Uses CosmWasm smart contracts for finality 
+- **Cosmos chains** - Uses CosmWasm contracts deployed on consumer Cosmos chain for finality 
   coordination ([implementation](../bsn/cosmos/), [config](../bsn/cosmos/config/))
-- **Rollup chains** - Uses Ethereum-compatible smart contracts for finality 
+- **Rollup chains** - Uses CosmWasm contracts deployed on Babylon chain for finality 
   coordination ([implementation](../bsn/rollup/), [config](../bsn/rollup/config/))
 
 Both implementations demonstrate the same extensible interface pattern, 
 enabling BSNs to create custom implementations for any consumer chain type 
-by implementing [interfaces](../clientcontroller/api/interface.go) 
-rather than modifying core logic.
+by implementing [interfaces](../clientcontroller/api/interface.go) rather 
+than modifying core logic.
+
+> **⚡ Important:** If you need a custom finality provider implementation for 
+> your chain, simply implement the required interfaces. There's no need to
+> modify the core logic—this extensible pattern allows full flexibility 
+> across different consumer chain types.
 
 ## 2. Core constructor
 
 The BSN SDK uses `service.NewFinalityProviderApp()` as the main entry point. It 
 supports two usage modes:
 
-### 2.1. Default Usage
+### 2.1. Using Built-In Implementations
 Use built-in implementations with constructors. These create all
 required interfaces internally with default implementations:
 
@@ -82,7 +89,11 @@ fpApp, err := service.NewFinalityProviderApp(
     logger,              // *zap.Logger - Structured logging
 )
 ```
-You can find the above example at [`app.go`](../finality-provider/service/app.go)
+> **💡Example:** The rollup BSN implementation shows exactly how to create 
+> and wire up all the required interfaces:
+> [`NewRollupBSNFinalityProviderAppFromConfig`](../bsn/rollup/service/app.go). 
+> Similarly, the Cosmos implementation demonstrates the pattern: 
+> [`NewCosmosBSNFinalityProviderAppFromConfig`](../bsn/cosmos/service/app.go).
 
 ## 3. Interfaces
 
