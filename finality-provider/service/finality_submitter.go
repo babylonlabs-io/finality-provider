@@ -107,9 +107,7 @@ func (ds *DefaultFinalitySubmitter) InitState(state types.FinalityProviderState)
 	return nil
 }
 
-// FilterBlocksForVoting filters blocks based on the finality provider's voting power and height criteria for submission.
-// It returns a slice of blocks eligible for voting and an error if any issues are encountered during processing.
-// It also updates the fp instance status according to the block's voting power
+// FilterBlocksForVoting filters blocks based on the finality provider's voting power and height criteria for submission, returning a slice of blocks eligible for voting and an error if any issues are encountered during processing. It also updates the finality provider instance status according to the block's voting power.
 func (ds *DefaultFinalitySubmitter) FilterBlocksForVoting(ctx context.Context, blocks []types.BlockDescription) ([]types.BlockDescription, error) {
 	processedBlocks := make([]types.BlockDescription, 0, len(blocks))
 
