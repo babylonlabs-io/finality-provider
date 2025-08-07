@@ -177,7 +177,11 @@ func saveKeyNameMapping(cmd *cobra.Command, clientCtx client.Context, keyName st
 	if err != nil {
 		return nil, fmt.Errorf("failed to create db backend: %w", err)
 	}
-	defer dbBackend.Close()
+	defer func() {
+		if err := dbBackend.Close(); err != nil {
+			fmt.Printf("Error closing database: %v\n", err)
+		}
+	}()
 
 	// Create EOTS manager
 	eotsManager, err := eotsmanager.NewLocalEOTSManager(clientCtx.HomeDir, clientCtx.Keyring.Backend(), dbBackend, logger)
@@ -309,7 +313,11 @@ func getAllEOTSKeys(cmd *cobra.Command) (map[string][]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create db backend: %w", err)
 	}
-	defer dbBackend.Close()
+	defer func() {
+		if err := dbBackend.Close(); err != nil {
+			fmt.Printf("Error closing database: %v\n", err)
+		}
+	}()
 
 	// Create EOTS manager
 	eotsManager, err := eotsmanager.NewLocalEOTSManager(homePath, cfg.KeyringBackend, dbBackend, logger)

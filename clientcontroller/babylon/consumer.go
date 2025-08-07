@@ -216,7 +216,7 @@ func (bc *BabylonConsumerController) QueryFinalityProviderHasPower(
 	_ context.Context,
 	req *api.QueryFinalityProviderHasPowerRequest,
 ) (bool, error) {
-	res, err := bc.bbnClient.QueryClient.FinalityProviderPowerAtHeight(
+	res, err := bc.bbnClient.FinalityProviderPowerAtHeight(
 		bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex(),
 		req.BlockHeight,
 	)
@@ -264,7 +264,7 @@ func (bc *BabylonConsumerController) queryLatestBlocks(startKey []byte, count ui
 		Key:     startKey,
 	}
 
-	res, err := bc.bbnClient.QueryClient.ListBlocks(status, pagination)
+	res, err := bc.bbnClient.ListBlocks(status, pagination)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query finalized blocks: %w", err)
 	}
@@ -277,7 +277,7 @@ func (bc *BabylonConsumerController) queryLatestBlocks(startKey []byte, count ui
 }
 
 func (bc *BabylonConsumerController) QueryBlock(_ context.Context, height uint64) (types.BlockDescription, error) {
-	res, err := bc.bbnClient.QueryClient.Block(height)
+	res, err := bc.bbnClient.Block(height)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query indexed block at height %v: %w", height, err)
 	}
@@ -294,7 +294,7 @@ func (bc *BabylonConsumerController) QueryLastPublicRandCommit(_ context.Context
 		Reverse: true,
 	}
 
-	res, err := bc.bbnClient.QueryClient.ListPubRandCommit(fpBtcPk.MarshalHex(), pagination)
+	res, err := bc.bbnClient.ListPubRandCommit(fpBtcPk.MarshalHex(), pagination)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query committed public randomness: %w", err)
 	}
@@ -330,7 +330,7 @@ func (bc *BabylonConsumerController) QueryLastPublicRandCommit(_ context.Context
 }
 
 func (bc *BabylonConsumerController) QueryIsBlockFinalized(_ context.Context, height uint64) (bool, error) {
-	res, err := bc.bbnClient.QueryClient.Block(height)
+	res, err := bc.bbnClient.Block(height)
 	if err != nil {
 		return false, fmt.Errorf("failed to query indexed block at height %v: %w", height, err)
 	}
@@ -339,7 +339,7 @@ func (bc *BabylonConsumerController) QueryIsBlockFinalized(_ context.Context, he
 }
 
 func (bc *BabylonConsumerController) QueryFinalityActivationBlockHeight(_ context.Context) (uint64, error) {
-	res, err := bc.bbnClient.QueryClient.FinalityParams()
+	res, err := bc.bbnClient.FinalityParams()
 	if err != nil {
 		return 0, fmt.Errorf("failed to query finality params to get finality activation block height: %w", err)
 	}
@@ -350,7 +350,7 @@ func (bc *BabylonConsumerController) QueryFinalityActivationBlockHeight(_ contex
 // QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
 func (bc *BabylonConsumerController) QueryFinalityProviderHighestVotedHeight(_ context.Context, fpPk *btcec.PublicKey) (uint64, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+	res, err := bc.bbnClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
 		return 0, fmt.Errorf("failed to query highest voted height for finality provider %s: %w", fpPubKey.MarshalHex(), err)
 	}
@@ -396,7 +396,7 @@ func (bc *BabylonConsumerController) queryCometBestBlock(ctx context.Context) (*
 // QueryFinalityProviderStatus - returns if the fp has been slashed, jailed, err
 func (bc *BabylonConsumerController) QueryFinalityProviderStatus(_ context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+	res, err := bc.bbnClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
 	}
@@ -453,7 +453,7 @@ func (bc *BabylonConsumerController) QueryPublicRandCommitList(fpPk *btcec.Publi
 	commitList := make([]*BabylonPubRandCommit, 0)
 
 	for {
-		res, err := bc.bbnClient.QueryClient.ListPubRandCommit(fpBtcPk.MarshalHex(), pagination)
+		res, err := bc.bbnClient.ListPubRandCommit(fpBtcPk.MarshalHex(), pagination)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query committed public randomness: %w", err)
 		}

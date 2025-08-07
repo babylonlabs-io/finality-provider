@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"fmt"
+
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
@@ -91,7 +92,11 @@ func rollbackSignStore(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to create eots store: %w", err)
 	}
 
-	defer es.Close()
+	defer func() {
+		if err := es.Close(); err != nil {
+			fmt.Printf("Error closing EOTS store: %v\n", err)
+		}
+	}()
 
 	fpPk, err := bbntypes.NewBIP340PubKeyFromHex(eotsFpPubKeyStr)
 	if err != nil {

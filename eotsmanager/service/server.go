@@ -129,7 +129,11 @@ func (s *Server) startGrpcListen(grpcServer *grpc.Server, listeners []net.Listen
 			s.logger.Info("RPC server listening", zap.String("address", lis.Addr().String()))
 
 			// Close the ready chan to indicate we are listening.
-			defer lis.Close()
+			defer func() {
+				if err := lis.Close(); err != nil {
+					s.logger.Error("Error closing listener", zap.Error(err))
+				}
+			}()
 
 			wg.Done()
 			_ = grpcServer.Serve(lis)

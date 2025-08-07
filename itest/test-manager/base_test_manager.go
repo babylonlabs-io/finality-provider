@@ -33,7 +33,6 @@ import (
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
-	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
@@ -634,7 +633,7 @@ func CreateAndStartFpApp(
 	logger *zap.Logger,
 	cfg *fpcfg.Config,
 	cc api.ConsumerController,
-	eotsCli *client.EOTSManagerGRpcClient,
+	eotsCli *eotsclient.EOTSManagerGRpcClient,
 ) *service.FinalityProviderApp {
 	bc, err := fpcc.NewBabylonController(cfg.BabylonConfig, logger)
 	require.NoError(t, err)

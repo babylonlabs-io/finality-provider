@@ -283,7 +283,7 @@ func (wc *CosmwasmConsumerController) QueryBlock(ctx context.Context, height uin
 	}
 
 	// #nosec G115
-	return fptypes.NewBlockInfo(uint64(block.Block.Header.Height), block.Block.Header.AppHash, false), nil
+	return fptypes.NewBlockInfo(uint64(block.Block.Height), block.Block.AppHash, false), nil
 }
 
 // QueryLastPublicRandCommit returns the last public randomness commitments

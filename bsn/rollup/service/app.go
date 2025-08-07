@@ -78,7 +78,7 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 	// For rollup environments, use RollupFinalitySubmitter for sparse randomness generation
 	finalitySubmitter := NewRollupFinalitySubmitter(consumerCon,
 		em,
-		rndCommitter.DefaultRandomnessCommitter.GetPubRandProofList,
+		rndCommitter.GetPubRandProofList,
 		service.NewDefaultFinalitySubmitterConfig(cfg.Common.MaxSubmissionRetries,
 			cfg.Common.ContextSigningHeight,
 			cfg.Common.SubmissionRetryInterval),
