@@ -356,7 +356,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	return res, nil
 }
 
-// CheckBlockFinalization checks if a block at given height is finalized
+// CheckBlockFinalization checks if a block at given height is finalized.
 func (ds *DefaultFinalitySubmitter) CheckBlockFinalization(ctx context.Context, height uint64) (bool, error) {
 	b, err := ds.ConsumerCtrl.QueryBlock(ctx, height)
 	if err != nil {
