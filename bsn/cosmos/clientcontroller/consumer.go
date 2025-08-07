@@ -346,8 +346,8 @@ func (wc *CosmwasmConsumerController) QueryLatestBlockHeight(ctx context.Context
 
 func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error) {
 	// Construct the query message
-	queryMsg := QueryMsgActivatedHeight{
-		ActivatedHeight: struct{}{},
+	queryMsg := QueryMsgFinalityConfig{
+		FinalityConfig: struct{}{},
 	}
 
 	// Marshal the query message to JSON
@@ -363,13 +363,13 @@ func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight(ctx con
 	}
 
 	// Unmarshal the response
-	var height uint64
-	err = json.Unmarshal(dataFromContract.Data, &height) // #nosec G115
+	var fcr FinalityConfigResponse
+	err = json.Unmarshal(dataFromContract.Data, &fcr) // #nosec G115
 	if err != nil {
 		return 0, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	return height, nil
+	return fcr.FinalityActivationHeight, nil
 }
 
 func (wc *CosmwasmConsumerController) QueryLatestBlock(ctx context.Context) (fptypes.BlockDescription, error) {
