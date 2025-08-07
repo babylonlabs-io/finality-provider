@@ -472,12 +472,12 @@ func TestRollupRandomnessCommitterShouldCommit(t *testing.T) {
 
 			rrc := &RollupRandomnessCommitter{
 				DefaultRandomnessCommitter: &DefaultRandomnessCommitter{
-					btcPk:        btcPk,
-					cfg:          cfg,
-					pubRandState: mockPubRandState,
-					consumerCon:  mockConsumerController,
-					logger:       logger,
-					metrics:      mockMetrics,
+					BtcPk:        btcPk,
+					Cfg:          cfg,
+					PubRandState: mockPubRandState,
+					ConsumerCon:  mockConsumerController,
+					Logger:       logger,
+					Metrics:      mockMetrics,
 				},
 				interval: tt.interval,
 			}

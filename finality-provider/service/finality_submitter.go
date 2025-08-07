@@ -26,13 +26,13 @@ var _ types.FinalitySignatureSubmitter = (*DefaultFinalitySubmitter)(nil)
 type PubRandProofListGetterFunc func(startHeight uint64, numPubRand uint64) ([][]byte, error)
 
 type DefaultFinalitySubmitter struct {
-	state               types.FinalityProviderState
-	em                  eotsmanager.EOTSManager
-	consumerCtrl        api.ConsumerController
-	proofListGetterFunc PubRandProofListGetterFunc
-	cfg                 *FinalitySubmitterConfig
-	logger              *zap.Logger
-	metrics             *metrics.FpMetrics
+	State               types.FinalityProviderState
+	Em                  eotsmanager.EOTSManager
+	ConsumerCtrl        api.ConsumerController
+	ProofListGetterFunc PubRandProofListGetterFunc
+	Cfg                 *FinalitySubmitterConfig
+	Logger              *zap.Logger
+	Metrics             *metrics.FpMetrics
 }
 
 type FinalitySubmitterConfig struct {
@@ -61,12 +61,12 @@ func NewDefaultFinalitySubmitter(
 	logger *zap.Logger,
 	metrics *metrics.FpMetrics) *DefaultFinalitySubmitter {
 	return &DefaultFinalitySubmitter{
-		em:                  em,
-		consumerCtrl:        consumerCtrl,
-		proofListGetterFunc: proofListGetterFunc,
-		cfg:                 cfg,
-		logger:              logger.With(zap.String("module", "finality_submitter")),
-		metrics:             metrics,
+		Em:                  em,
+		ConsumerCtrl:        consumerCtrl,
+		ProofListGetterFunc: proofListGetterFunc,
+		Cfg:                 cfg,
+		Logger:              logger.With(zap.String("module", "finality_submitter")),
+		Metrics:             metrics,
 	}
 }
 
@@ -75,34 +75,34 @@ func (ds *DefaultFinalitySubmitter) getBtcPkHex() string {
 }
 
 func (ds *DefaultFinalitySubmitter) getBtcPk() *btcec.PublicKey {
-	return ds.state.GetBtcPk()
+	return ds.State.GetBtcPk()
 }
 
 func (ds *DefaultFinalitySubmitter) getBtcPkBIP340() *bbntypes.BIP340PubKey {
-	return ds.state.GetBtcPkBIP340()
+	return ds.State.GetBtcPkBIP340()
 }
 
 func (ds *DefaultFinalitySubmitter) mustSetLastVotedHeight(height uint64) {
-	if err := ds.state.SetLastVotedHeight(height); err != nil {
-		ds.logger.Fatal("failed to update state after finality signature submitted",
+	if err := ds.State.SetLastVotedHeight(height); err != nil {
+		ds.Logger.Fatal("failed to update state after finality signature submitted",
 			zap.String("pk", ds.getBtcPkHex()), zap.Uint64("height", height), zap.Error(err))
 	}
 }
 
 func (ds *DefaultFinalitySubmitter) mustSetStatus(s proto.FinalityProviderStatus) {
-	if err := ds.state.SetStatus(s); err != nil {
-		ds.logger.Fatal("failed to set finality-provider status",
+	if err := ds.State.SetStatus(s); err != nil {
+		ds.Logger.Fatal("failed to set finality-provider status",
 			zap.String("pk", ds.getBtcPkHex()), zap.String("status", s.String()))
 	}
 }
 
 // InitState sets the finality provider state store.
 func (ds *DefaultFinalitySubmitter) InitState(state types.FinalityProviderState) error {
-	if ds.state != nil {
+	if ds.State != nil {
 		return fmt.Errorf("finality provider state is already set")
 	}
 
-	ds.state = state
+	ds.State = state
 
 	return nil
 }
@@ -117,12 +117,12 @@ func (ds *DefaultFinalitySubmitter) filterBlocksForVoting(ctx context.Context, b
 	var err error
 	for _, b := range blocks {
 		blk := b
-		if blk.GetHeight() <= ds.state.GetLastVotedHeight() {
-			ds.logger.Debug(
+		if blk.GetHeight() <= ds.State.GetLastVotedHeight() {
+			ds.Logger.Debug(
 				"the block height is lower than last processed height",
 				zap.String("pk", ds.getBtcPkHex()),
 				zap.Uint64("block_height", blk.GetHeight()),
-				zap.Uint64("last_voted_height", ds.state.GetLastVotedHeight()),
+				zap.Uint64("last_voted_height", ds.State.GetLastVotedHeight()),
 			)
 
 			continue
@@ -135,7 +135,7 @@ func (ds *DefaultFinalitySubmitter) filterBlocksForVoting(ctx context.Context, b
 			return nil, fmt.Errorf("failed to get voting power for height %d: %w", blkHeight, err)
 		}
 		if !hasPower {
-			ds.logger.Debug(
+			ds.Logger.Debug(
 				"the finality-provider does not have voting power",
 				zap.String("pk", ds.getBtcPkHex()),
 				zap.Uint64("block_height", blkHeight),
@@ -143,11 +143,11 @@ func (ds *DefaultFinalitySubmitter) filterBlocksForVoting(ctx context.Context, b
 
 			// the finality provider does not have voting power
 			// and it will never will at this block, so continue
-			ds.metrics.IncrementFpTotalBlocksWithoutVotingPower(ds.getBtcPkHex())
+			ds.Metrics.IncrementFpTotalBlocksWithoutVotingPower(ds.getBtcPkHex())
 
 			continue
 		}
-		ds.logger.Debug(
+		ds.Logger.Debug(
 			"the finality-provider has voting power",
 			zap.String("pk", ds.getBtcPkHex()),
 			zap.Uint64("block_height", blkHeight),
@@ -157,11 +157,11 @@ func (ds *DefaultFinalitySubmitter) filterBlocksForVoting(ctx context.Context, b
 	}
 
 	// update fp status according to the power for the last block
-	if hasPower && ds.state.GetStatus() != proto.FinalityProviderStatus_ACTIVE {
+	if hasPower && ds.State.GetStatus() != proto.FinalityProviderStatus_ACTIVE {
 		ds.mustSetStatus(proto.FinalityProviderStatus_ACTIVE)
 	}
 
-	if !hasPower && ds.state.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
+	if !hasPower && ds.State.GetStatus() == proto.FinalityProviderStatus_ACTIVE {
 		ds.mustSetStatus(proto.FinalityProviderStatus_INACTIVE)
 	}
 
@@ -183,10 +183,10 @@ func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 	}
 
 	if len(blocks) == 0 {
-		ds.logger.Debug(
+		ds.Logger.Debug(
 			"no blocks to vote for after filtering",
 			zap.String("pk", ds.getBtcPkHex()),
-			zap.Uint64("last_voted_height", ds.state.GetLastVotedHeight()),
+			zap.Uint64("last_voted_height", ds.State.GetLastVotedHeight()),
 		)
 
 		return nil, nil // No blocks to vote for
@@ -199,7 +199,7 @@ func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 	for {
 		res, err := ds.submitBatchFinalitySignaturesOnce(ctx, blocks)
 		if err != nil {
-			ds.logger.Debug(
+			ds.Logger.Debug(
 				"failed to submit finality signature to the consumer chain",
 				zap.String("pk", ds.getBtcPkHex()),
 				zap.Uint32("current_failures", failedCycles),
@@ -218,7 +218,7 @@ func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 			}
 
 			failedCycles++
-			if failedCycles > ds.cfg.MaxSubmissionRetries {
+			if failedCycles > ds.Cfg.MaxSubmissionRetries {
 				return nil, fmt.Errorf("reached max failed cycles with err: %w", err)
 			}
 		} else {
@@ -232,24 +232,24 @@ func (ds *DefaultFinalitySubmitter) SubmitBatchFinalitySignatures(ctx context.Co
 			return nil, fmt.Errorf("failed to query block finalization at height %v: %w", targetHeight, err)
 		}
 		if finalized {
-			ds.logger.Debug(
+			ds.Logger.Debug(
 				"the block is already finalized, skip submission",
 				zap.String("pk", ds.getBtcPkHex()),
 				zap.Uint64("target_height", targetHeight),
 			)
 
-			ds.metrics.IncrementFpTotalFailedVotes(ds.getBtcPkHex())
+			ds.Metrics.IncrementFpTotalFailedVotes(ds.getBtcPkHex())
 
 			return nil, nil
 		}
 
 		// Wait for the retry interval
 		select {
-		case <-time.After(ds.cfg.SubmissionRetryInterval):
+		case <-time.After(ds.Cfg.SubmissionRetryInterval):
 			// Continue to next retry iteration
 			continue
 		case <-ctx.Done():
-			ds.logger.Debug("the finality-provider instance is closing", zap.String("pk", ds.getBtcPkHex()))
+			ds.Logger.Debug("the finality-provider instance is closing", zap.String("pk", ds.getBtcPkHex()))
 
 			return nil, ErrFinalityProviderShutDown
 		}
@@ -280,7 +280,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 		prList = append(prList, pr[0])
 
 		// Get proof for this specific height
-		proofs, err := ds.proofListGetterFunc(block.GetHeight(), 1)
+		proofs, err := ds.ProofListGetterFunc(block.GetHeight(), 1)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get public randomness inclusion proof for height %d: %w\nplease recover the randomness proof from db", block.GetHeight(), err)
 		}
@@ -304,7 +304,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 				return nil, err
 			}
 			// Skip this block if we encounter FailedPrecondition
-			ds.logger.Warn("encountered FailedPrecondition error, skipping block",
+			ds.Logger.Warn("encountered FailedPrecondition error, skipping block",
 				zap.Uint64("height", b.GetHeight()),
 				zap.String("hash", hex.EncodeToString(b.GetHash())),
 				zap.Error(err))
@@ -321,13 +321,13 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 
 	// If all blocks were skipped, return early
 	if len(validBlocks) == 0 {
-		ds.logger.Info("all blocks were skipped due to double sign errors")
+		ds.Logger.Info("all blocks were skipped due to double sign errors")
 
 		return nil, nil
 	}
 
 	// send finality signature to the consumer chain
-	res, err := ds.consumerCtrl.SubmitBatchFinalitySigs(ctx, api.NewSubmitBatchFinalitySigsRequest(
+	res, err := ds.ConsumerCtrl.SubmitBatchFinalitySigs(ctx, api.NewSubmitBatchFinalitySigsRequest(
 		ds.getBtcPk(),
 		validBlocks,
 		validPrList,
@@ -348,7 +348,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 
 	// update the metrics with voted blocks
 	for _, b := range validBlocks {
-		ds.metrics.RecordFpVotedHeight(ds.getBtcPkHex(), b.GetHeight())
+		ds.Metrics.RecordFpVotedHeight(ds.getBtcPkHex(), b.GetHeight())
 	}
 
 	// update state with the highest height of this batch
@@ -360,7 +360,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 
 // checkBlockFinalization checks if a block at given height is finalized
 func (ds *DefaultFinalitySubmitter) checkBlockFinalization(ctx context.Context, height uint64) (bool, error) {
-	b, err := ds.consumerCtrl.QueryBlock(ctx, height)
+	b, err := ds.ConsumerCtrl.QueryBlock(ctx, height)
 	if err != nil {
 		return false, fmt.Errorf("failed to query block at height %d: %w", height, err)
 	}
@@ -371,14 +371,14 @@ func (ds *DefaultFinalitySubmitter) checkBlockFinalization(ctx context.Context, 
 func (ds *DefaultFinalitySubmitter) signFinalitySig(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
 	// build proper finality signature request
 	var msgToSign []byte
-	if b.GetHeight() >= ds.cfg.ContextSigningHeight {
-		signCtx := ds.consumerCtrl.GetFpFinVoteContext()
+	if b.GetHeight() >= ds.Cfg.ContextSigningHeight {
+		signCtx := ds.ConsumerCtrl.GetFpFinVoteContext()
 		msgToSign = b.MsgToSign(signCtx)
 	} else {
 		msgToSign = b.MsgToSign("")
 	}
 
-	sig, err := ds.em.SignEOTS(ds.getBtcPkBIP340().MustMarshal(), ds.state.GetChainID(), msgToSign, b.GetHeight())
+	sig, err := ds.Em.SignEOTS(ds.getBtcPkBIP340().MustMarshal(), ds.State.GetChainID(), msgToSign, b.GetHeight())
 	if err != nil {
 		if strings.Contains(err.Error(), failedPreconditionErrStr) {
 			return nil, ErrFailedPrecondition
@@ -391,9 +391,9 @@ func (ds *DefaultFinalitySubmitter) signFinalitySig(b types.BlockDescription) (*
 }
 
 func (ds *DefaultFinalitySubmitter) GetPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
-	pubRandList, err := ds.em.CreateRandomnessPairList(
+	pubRandList, err := ds.Em.CreateRandomnessPairList(
 		ds.getBtcPkBIP340().MustMarshal(),
-		ds.state.GetChainID(),
+		ds.State.GetChainID(),
 		startHeight,
 		numPubRand,
 	)
@@ -411,7 +411,7 @@ func (ds *DefaultFinalitySubmitter) getVotingPowerWithRetry(ctx context.Context,
 	)
 
 	if err := retry.Do(func() error {
-		hasPower, err = ds.consumerCtrl.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
+		hasPower, err = ds.ConsumerCtrl.QueryFinalityProviderHasPower(ctx, api.NewQueryFinalityProviderHasPowerRequest(
 			ds.getBtcPk(),
 			height,
 		))
@@ -421,7 +421,7 @@ func (ds *DefaultFinalitySubmitter) getVotingPowerWithRetry(ctx context.Context,
 
 		return nil
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
-		ds.logger.Debug(
+		ds.Logger.Debug(
 			"failed to query the voting power",
 			zap.Uint("attempt", n+1),
 			zap.Uint("max_attempts", RtyAttNum),
