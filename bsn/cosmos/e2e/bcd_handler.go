@@ -196,13 +196,11 @@ func (w *BcdNodeHandler) Stop(t *testing.T) {
 	}
 
 	// Stop BCD node
-	err := w.stop()
-	if err != nil {
+	if err := w.stop(); err != nil {
 		log.Printf("error stopping bcd process: %v", err)
 	}
 
-	err = w.cleanup()
-	require.NoError(t, err)
+	require.NoError(t, w.cleanup())
 }
 
 func (w *BcdNodeHandler) queryContractAddress() (string, error) {
@@ -796,7 +794,7 @@ func bcdStartCmd(t *testing.T, testDir string) *exec.Cmd {
 		"--home", testDir,
 		"--rpc.laddr", fmt.Sprintf("tcp://0.0.0.0:%d", bcdRpcPort),
 		"--p2p.laddr", fmt.Sprintf("tcp://0.0.0.0:%d", bcdP2pPort),
-		"--log_level=debug",
+		"--log_level=info",
 	}
 
 	f, err := os.Create(filepath.Join(testDir, "bcd.log"))

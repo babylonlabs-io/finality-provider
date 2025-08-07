@@ -31,7 +31,7 @@ import (
 // 5. Create zone concierge channel for consumer communication
 // 6. Register consumer finality provider (FP) to Babylon
 // 7. Wait for FP daemon to submit public randomness commits to smart contract
-// 8. Inject consumer delegation in BTC staking contract using admin (gives voting power to FP)
+// 8. Inject consumer delegationd  in BTC staking contract using admin (gives voting power to FP)
 // 9. Verify FP has positive total active sats (voting power) in smart contract
 // 10. Wait for current block to be BTC timestamped to finalize pub rand commits
 // 11. Wait for FP to vote on rollup blocks and submit finality signatures
@@ -42,6 +42,8 @@ import (
 // has started. This order is critical because the pub randomness loop takes time to initialize,
 // and without it, blocks won't get finalized properly.
 func TestConsumerFpLifecycle(t *testing.T) {
+	appparams.SetAddressPrefixes()
+
 	ctx, cancel := context.WithCancel(t.Context())
 	ctm := StartBcdTestManager(t, ctx)
 	defer func() {
@@ -135,6 +137,8 @@ func TestConsumerFpLifecycle(t *testing.T) {
 // 6. Execute the recover-proof command to restore proofs from smart contract
 // 7. Verify that public randomness proofs are successfully recovered in the database
 func TestConsumerRecoverRandProofCmd(t *testing.T) {
+	appparams.SetAddressPrefixes()
+
 	ctx, cancel := context.WithCancel(t.Context())
 	ctm := StartBcdTestManager(t, ctx)
 	defer func() {

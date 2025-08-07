@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
 	config2 "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
 	"strings"
 
@@ -91,6 +92,8 @@ func createLogger(t *testing.T, level zapcore.Level) *zap.Logger {
 }
 
 func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
+	appparams.SetAddressPrefixes()
+
 	testDir, err := base_test_manager.TempDir(t, "fp-e2e-test-*")
 	require.NoError(t, err)
 
@@ -270,6 +273,7 @@ func (ctm *BcdTestManager) Stop(t *testing.T) {
 	require.NoError(t, err)
 	err = os.RemoveAll(ctm.baseDir)
 	require.NoError(t, err)
+	ctm.BcdHandler.Stop(t)
 }
 
 // CreateConsumerFinalityProviders creates finality providers for a consumer chain
