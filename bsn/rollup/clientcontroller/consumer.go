@@ -689,7 +689,7 @@ func (cc *RollupBSNController) UnjailFinalityProvider(_ context.Context, _ *btce
 }
 
 func (cc *RollupBSNController) QueryPublicRandCommitList(_ context.Context, _ *btcec.PublicKey, _ uint64) ([]types.PubRandCommit, error) {
-	//TODO(lazar955): will implement in separate PR
+	// TODO(lazar955): will implement in separate PR
 	return nil, nil
 }
 
