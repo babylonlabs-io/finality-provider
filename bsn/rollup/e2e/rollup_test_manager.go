@@ -25,6 +25,7 @@ import (
 	ckpttypes "github.com/babylonlabs-io/babylon/v3/x/checkpointing/types"
 	rollupfpcontroller "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
 	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup/config"
+	rollupservice "github.com/babylonlabs-io/finality-provider/bsn/rollup/service"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
@@ -506,7 +507,7 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	contractConfig, err := ctm.RollupBSNController.QueryContractConfig(context.Background())
 	require.NoError(t, err)
 
-	rndCommitter := service.NewRollupRandomnessCommitter(
+	rndCommitter := rollupservice.NewRollupRandomnessCommitter(
 		service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore), ctm.RollupBSNController, ctm.ConsumerEOTSClient, ctm.logger, fpMetrics,
 		contractConfig.FinalitySignatureInterval)
@@ -514,11 +515,19 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	heightDeterminer := service.NewStartHeightDeterminer(ctm.RollupBSNController, fpCfg.PollerConfig, ctm.logger)
 
 	// For E2E tests, use RollupFinalitySubmitter to test sparse randomness generation
-	finalitySubmitter := service.NewRollupFinalitySubmitter(ctm.RollupBSNController, ctm.ConsumerEOTSClient, rndCommitter.GetPubRandProofList,
-		service.NewDefaultFinalitySubmitterConfig(fpCfg.MaxSubmissionRetries,
+	finalitySubmitter := rollupservice.NewRollupFinalitySubmitter(
+		ctm.RollupBSNController,
+		ctm.ConsumerEOTSClient,
+		rndCommitter.GetPubRandProofList,
+		service.NewDefaultFinalitySubmitterConfig(
+			fpCfg.MaxSubmissionRetries,
 			fpCfg.ContextSigningHeight,
-			fpCfg.SubmissionRetryInterval),
-		ctm.logger, fpMetrics, contractConfig.FinalitySignatureInterval)
+			fpCfg.SubmissionRetryInterval,
+		),
+		ctm.logger,
+		fpMetrics,
+		contractConfig.FinalitySignatureInterval,
+	)
 
 	fpInstance, err := service.NewFinalityProviderInstance(
 		consumerFpPk,

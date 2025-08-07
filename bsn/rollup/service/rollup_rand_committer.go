@@ -6,6 +6,7 @@ import (
 
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	service "github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -15,13 +16,13 @@ import (
 // RollupRandomnessCommitter is a randomness committer for rollup FPs that supports sparse generation
 // It generates randomness only for heights where the FP will vote (based on finality signature interval)
 type RollupRandomnessCommitter struct {
-	*DefaultRandomnessCommitter
+	*service.DefaultRandomnessCommitter
 	interval uint64
 }
 
 func NewRollupRandomnessCommitter(
-	cfg *RandomnessCommitterConfig,
-	pubRandState *PubRandState,
+	cfg *service.RandomnessCommitterConfig,
+	pubRandState *service.PubRandState,
 	consumerCon ccapi.ConsumerController,
 	em eotsmanager.EOTSManager,
 	logger *zap.Logger,
@@ -29,7 +30,7 @@ func NewRollupRandomnessCommitter(
 	interval uint64,
 ) *RollupRandomnessCommitter {
 	return &RollupRandomnessCommitter{
-		DefaultRandomnessCommitter: NewDefaultRandomnessCommitter(cfg, pubRandState, consumerCon, em, logger, metrics),
+		DefaultRandomnessCommitter: service.NewDefaultRandomnessCommitter(cfg, pubRandState, consumerCon, em, logger, metrics),
 		interval:                   interval,
 	}
 }
@@ -198,9 +199,7 @@ func (rrc *RollupRandomnessCommitter) Commit(ctx context.Context, startHeight ui
 
 	// Store them to database with interval-aware keys
 	// startHeight is already aligned, so proofs are stored at the correct voting heights
-	if err := rrc.PubRandState.addPubRandProofListWithInterval(
-		rrc.BtcPk.MustMarshal(),
-		rrc.Cfg.ChainID,
+	if err := rrc.AddPubRandProofListWithInterval(
 		startHeight, // Already aligned by ShouldCommit
 		uint64(rrc.Cfg.NumPubRand),
 		proofList,
@@ -210,7 +209,7 @@ func (rrc *RollupRandomnessCommitter) Commit(ctx context.Context, startHeight ui
 	}
 
 	// Sign the commitment using the aligned startHeight
-	schnorrSig, err := rrc.signPubRandCommit(startHeight, numPubRand, commitment)
+	schnorrSig, err := rrc.SignPubRandCommit(startHeight, numPubRand, commitment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign the Schnorr signature: %w", err)
 	}

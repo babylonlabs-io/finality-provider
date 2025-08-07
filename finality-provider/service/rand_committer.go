@@ -12,6 +12,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
+	"github.com/cometbft/cometbft/crypto/merkle"
 	"go.uber.org/zap"
 )
 
@@ -216,7 +217,7 @@ func (rc *DefaultRandomnessCommitter) Commit(ctx context.Context, startHeight ui
 	}
 
 	// sign the commitment
-	schnorrSig, err := rc.signPubRandCommit(startHeight, numPubRand, commitment)
+	schnorrSig, err := rc.SignPubRandCommit(startHeight, numPubRand, commitment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign the Schnorr signature: %w", err)
 	}
@@ -255,7 +256,7 @@ func (rc *DefaultRandomnessCommitter) getPubRandList(startHeight uint64, numPubR
 	return pubRandList, nil
 }
 
-func (rc *DefaultRandomnessCommitter) signPubRandCommit(startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
+func (rc *DefaultRandomnessCommitter) SignPubRandCommit(startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
 	var (
 		hash []byte
 		err  error
@@ -294,4 +295,11 @@ func (rc *DefaultRandomnessCommitter) GetPubRandProofList(height uint64, numPubR
 	}
 
 	return proofList, nil
+}
+func (rc *DefaultRandomnessCommitter) AddPubRandProofListWithInterval(startHeight uint64, numPubRand uint64, proofList []*merkle.Proof, interval uint64) error {
+	err := rc.PubRandState.addPubRandProofListWithInterval(rc.BtcPk.MustMarshal(), rc.Cfg.ChainID, startHeight, numPubRand, proofList, interval)
+	if err != nil {
+		return fmt.Errorf("failed to add public randomness proof list with interval: %w", err)
+	}
+	return nil
 }

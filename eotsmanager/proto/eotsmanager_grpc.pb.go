@@ -18,6 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type EOTSManagerClient interface {
+	// Ping is a request to ping the EOTSManager service
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	// CreateRandomnessPairList returns a list of Schnorr randomness pairs
 	CreateRandomnessPairList(ctx context.Context, in *CreateRandomnessPairListRequest, opts ...grpc.CallOption) (*CreateRandomnessPairListResponse, error)
@@ -131,6 +132,7 @@ func (c *eOTSManagerClient) Backup(ctx context.Context, in *BackupRequest, opts 
 // All implementations must embed UnimplementedEOTSManagerServer
 // for forward compatibility
 type EOTSManagerServer interface {
+	// Ping is a request to ping the EOTSManager service
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	// CreateRandomnessPairList returns a list of Schnorr randomness pairs
 	CreateRandomnessPairList(context.Context, *CreateRandomnessPairListRequest) (*CreateRandomnessPairListResponse, error)

@@ -20,6 +20,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// PingRequest is a request to ping the EOTSManager service
 type PingRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -58,6 +59,7 @@ func (*PingRequest) Descriptor() ([]byte, []int) {
 	return file_eotsmanager_proto_rawDescGZIP(), []int{0}
 }
 
+// PingResponse is a response to a ping request
 type PingResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -96,6 +98,7 @@ func (*PingResponse) Descriptor() ([]byte, []int) {
 	return file_eotsmanager_proto_rawDescGZIP(), []int{1}
 }
 
+// CreateKeyRequest is a request to create a new EOTS key
 type CreateKeyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -153,6 +156,7 @@ func (x *CreateKeyRequest) GetHdPath() string {
 	return ""
 }
 
+// CreateKeyResponse is a response to a create key request
 type CreateKeyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -201,6 +205,7 @@ func (x *CreateKeyResponse) GetPk() []byte {
 	return nil
 }
 
+// CreateRandomnessPairListRequest is a request to create a list of Schnorr randomness pairs
 type CreateRandomnessPairListRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -276,6 +281,7 @@ func (x *CreateRandomnessPairListRequest) GetNum() uint32 {
 	return 0
 }
 
+// CreateRandomnessPairListResponse is a response to a create randomness pair list request
 type CreateRandomnessPairListResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -324,6 +330,8 @@ func (x *CreateRandomnessPairListResponse) GetPubRandList() [][]byte {
 	return nil
 }
 
+// CreateRandomnessPairListWithIntervalRequest is a request to create a list of Schnorr randomness pairs
+// with a specified interval between heights
 type CreateRandomnessPairListWithIntervalRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -408,6 +416,7 @@ func (x *CreateRandomnessPairListWithIntervalRequest) GetInterval() uint64 {
 	return 0
 }
 
+// CreateRandomnessPairListWithIntervalResponse is a response to a create randomness pair list with interval request
 type CreateRandomnessPairListWithIntervalResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -456,6 +465,7 @@ func (x *CreateRandomnessPairListWithIntervalResponse) GetPubRandList() [][]byte
 	return nil
 }
 
+// SignEOTSRequest is a request to sign an EOTS with the EOTS private key and the relevant randomness
 type SignEOTSRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -531,6 +541,7 @@ func (x *SignEOTSRequest) GetHeight() uint64 {
 	return 0
 }
 
+// SignEOTSResponse is a response to a sign EOTS request
 type SignEOTSResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -579,6 +590,7 @@ func (x *SignEOTSResponse) GetSig() []byte {
 	return nil
 }
 
+// SignSchnorrSigRequest is a request to sign a Schnorr sig with the EOTS private key
 type SignSchnorrSigRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -636,6 +648,7 @@ func (x *SignSchnorrSigRequest) GetMsg() []byte {
 	return nil
 }
 
+// SignSchnorrSigResponse is a response to a sign Schnorr sig request
 type SignSchnorrSigResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -684,6 +697,7 @@ func (x *SignSchnorrSigResponse) GetSig() []byte {
 	return nil
 }
 
+// SaveEOTSKeyNameRequest is a request to save a new key name mapping for the EOTS public key
 type SaveEOTSKeyNameRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -742,6 +756,7 @@ func (x *SaveEOTSKeyNameRequest) GetEotsPk() []byte {
 	return nil
 }
 
+// SaveEOTSKeyNameResponse is a response to a save EOTS key name request
 type SaveEOTSKeyNameResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -780,6 +795,7 @@ func (*SaveEOTSKeyNameResponse) Descriptor() ([]byte, []int) {
 	return file_eotsmanager_proto_rawDescGZIP(), []int{13}
 }
 
+// UnlockKeyRequest is a request to unlock the keyring with the given passphrase
 type UnlockKeyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -837,6 +853,7 @@ func (x *UnlockKeyRequest) GetPassphrase() string {
 	return ""
 }
 
+// UnlockKeyResponse is a response to a unlock key request
 type UnlockKeyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -875,6 +892,7 @@ func (*UnlockKeyResponse) Descriptor() ([]byte, []int) {
 	return file_eotsmanager_proto_rawDescGZIP(), []int{15}
 }
 
+// BackupRequest is a request to backup the EOTSManager service
 type BackupRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -932,6 +950,7 @@ func (x *BackupRequest) GetBackupDir() string {
 	return ""
 }
 
+// BackupResponse is a response to a backup request
 type BackupResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

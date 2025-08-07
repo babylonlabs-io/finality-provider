@@ -60,7 +60,7 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 	logger.Info("using RollupRandomnessCommitter for rollup environment",
 		zap.Uint64("finality_signature_interval", contractConfig.FinalitySignatureInterval))
 
-	rndCommitter := service.NewRollupRandomnessCommitter(
+	rndCommitter := NewRollupRandomnessCommitter(
 		service.NewRandomnessCommitterConfig(cfg.Common.NumPubRand, int64(cfg.Common.TimestampingDelayBlocks), cfg.Common.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore),
 		consumerCon,
@@ -76,9 +76,9 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 		zap.Uint64("finality_signature_interval", contractConfig.FinalitySignatureInterval))
 
 	// For rollup environments, use RollupFinalitySubmitter for sparse randomness generation
-	finalitySubmitter := service.NewRollupFinalitySubmitter(consumerCon,
+	finalitySubmitter := NewRollupFinalitySubmitter(consumerCon,
 		em,
-		rndCommitter.GetPubRandProofList,
+		rndCommitter.DefaultRandomnessCommitter.GetPubRandProofList,
 		service.NewDefaultFinalitySubmitterConfig(cfg.Common.MaxSubmissionRetries,
 			cfg.Common.ContextSigningHeight,
 			cfg.Common.SubmissionRetryInterval),
