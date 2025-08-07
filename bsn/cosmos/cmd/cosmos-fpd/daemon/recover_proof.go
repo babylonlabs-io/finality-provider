@@ -40,7 +40,8 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to initialize the logger: %w", err)
 	}
 
-	wasmEncodingCfg := cosmwasmcfg.GetWasmdEncodingConfig()
+	// Create encoding config with the correct account prefix
+	wasmEncodingCfg := cosmwasmcfg.GetWasmdEncodingConfigWithPrefix(cfg.Cosmwasm.AccountPrefix)
 	cosmWasmCtrl, err := clientcontroller.NewCosmwasmConsumerController(cfg.Cosmwasm, wasmEncodingCfg, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create rpc client for the consumer chain cosmos: %w", err)

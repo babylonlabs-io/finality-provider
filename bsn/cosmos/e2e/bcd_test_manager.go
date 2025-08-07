@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	config2 "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
 	"strings"
 
 	sdkErr "cosmossdk.io/errors"
@@ -165,6 +166,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 		TxConfig:          tempApp.TxConfig(),
 		Amino:             tempApp.LegacyAmino(),
 	}
+	encodingCfg = config2.GetWasmdEncodingConfig()
 	bbnsdktypes.RegisterInterfaces(encodingCfg.InterfaceRegistry)
 
 	var wcc *cwcc.CosmwasmConsumerController
