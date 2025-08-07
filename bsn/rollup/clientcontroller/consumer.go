@@ -523,8 +523,44 @@ func (cc *RollupBSNController) QueryLatestBlock(ctx context.Context) (types.Bloc
 	return types.NewBlockInfo(l2LatestBlock.Number.Uint64(), l2LatestBlock.Hash().Bytes(), false), nil
 }
 
+// QueryFirstPubRandCommit returns the first public randomness commitment
+func (cc *RollupBSNController) QueryFirstPubRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*RollupPubRandCommit, error) {
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+	queryMsg := &QueryMsg{
+		FirstPubRandCommit: &PubRandCommit{
+			BtcPkHex: fpPubKey.MarshalHex(),
+		},
+	}
+
+	jsonData, err := json.Marshal(queryMsg)
+	if err != nil {
+		return nil, fmt.Errorf("failed marshaling to JSON: %w", err)
+	}
+
+	stateResp, err := cc.QuerySmartContractState(ctx, cc.Cfg.FinalityContractAddress, string(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+	if len(stateResp.Data) == 0 {
+		return nil, nil
+	}
+
+	var resp *RollupPubRandCommit
+	err = json.Unmarshal(stateResp.Data, &resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+	if resp == nil {
+		return nil, nil
+	}
+	if err := resp.Validate(); err != nil {
+		return nil, fmt.Errorf("failed to validate response: %w", err)
+	}
+
+	return resp, nil
+}
+
 // QueryLastPublicRandCommit returns the last public randomness commitments
-// It is fetched from the state of a CosmWasm contract OP finality gadget.
 func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	queryMsg := &QueryMsg{
