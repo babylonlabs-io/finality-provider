@@ -346,8 +346,8 @@ func (wc *CosmwasmConsumerController) QueryLatestBlockHeight(ctx context.Context
 
 func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error) {
 	// Construct the query message
-	queryMsg := QueryMsgActivatedHeight{
-		ActivatedHeight: struct{}{},
+	queryMsg := QueryMsgFinalityConfig{
+		FinalityConfig: struct{}{},
 	}
 
 	// Marshal the query message to JSON
@@ -357,21 +357,19 @@ func (wc *CosmwasmConsumerController) QueryFinalityActivationBlockHeight(ctx con
 	}
 
 	// Query the smart contract state
-	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.cfg.BtcStakingContractAddress, string(queryMsgBytes))
+	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.cfg.BtcFinalityContractAddress, string(queryMsgBytes))
 	if err != nil {
 		return 0, fmt.Errorf("failed to query smart contract state: %w", err)
 	}
 
 	// Unmarshal the response
-	var resp struct {
-		Height uint64 `json:"height"`
-	}
-	err = json.Unmarshal(dataFromContract.Data, &resp) // #nosec G115
+	var fcr FinalityConfigResponse
+	err = json.Unmarshal(dataFromContract.Data, &fcr) // #nosec G115
 	if err != nil {
 		return 0, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	return resp.Height, nil
+	return fcr.FinalityActivationHeight, nil
 }
 
 func (wc *CosmwasmConsumerController) QueryLatestBlock(ctx context.Context) (fptypes.BlockDescription, error) {

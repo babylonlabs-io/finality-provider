@@ -90,6 +90,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
   rollup: sparse pub rand commit leftovers
 * [#594](https://github.com/babylonlabs-io/finality-provider/pull/594)
   chore(rollup): remove allowlist requirement for starting rollup FP
+* [#595](https://github.com/babylonlabs-io/finality-provider/pull/595)
+  chore: bump bbn v3, contracts, bbn sdk
 
 ## v1.1.0-rc.1
 
