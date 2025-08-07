@@ -122,6 +122,7 @@ func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, cfg 
 			return fmt.Errorf("NumPubRand %d exceeds maximum uint32 value", commit.GetNumPubRand())
 		}
 
+		// #nosec G115 - already checked above
 		pubRandList, err := em.CreateRandomnessPairList(fpPk.MustMarshal(), []byte(chainID), commit.GetStartHeight(), uint32(commit.GetNumPubRand()))
 		if err != nil {
 			return fmt.Errorf("failed to get randomness from height %d to height %d: %w", commit.GetStartHeight(), commit.EndHeight(), err)
