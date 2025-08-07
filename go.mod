@@ -8,7 +8,7 @@ require (
 	github.com/avast/retry-go/v4 v4.5.1
 	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250801111417-fe7557c41640
 	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250801111417-fe7557c41640
-	github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250805a
+	github.com/babylonlabs-io/babylon/v3 v3.0.0-snapshot.250724
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.5
 	github.com/btcsuite/btcd/btcutil v1.1.6
