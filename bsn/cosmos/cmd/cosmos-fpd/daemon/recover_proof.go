@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"fmt"
+	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
 	cosmwasmcfg "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
@@ -41,7 +42,8 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	}
 
 	// Create encoding config with the correct account prefix
-	wasmEncodingCfg := cosmwasmcfg.GetWasmdEncodingConfigWithPrefix(cfg.Cosmwasm.AccountPrefix)
+	appparams.SetAddressPrefixes()
+	wasmEncodingCfg := cosmwasmcfg.GetWasmdEncodingConfig()
 	cosmWasmCtrl, err := clientcontroller.NewCosmwasmConsumerController(cfg.Cosmwasm, wasmEncodingCfg, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create rpc client for the consumer chain cosmos: %w", err)

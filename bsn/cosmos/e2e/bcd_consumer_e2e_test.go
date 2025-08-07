@@ -329,12 +329,17 @@ func TestConsumerRecoverRandProofCmd(t *testing.T) {
 	err = goflags.NewIniParser(fileParser).WriteFile(cfg.CfgFile(fpHomePath), goflags.IniIncludeDefaults)
 	require.NoError(t, err)
 
+	fpi, err := ctm.Fpa.GetFinalityProviderInfo(fp.GetBtcPkBIP340())
+	require.NoError(t, err)
+
 	cmd := daemon.CommandRecoverProof("cosmos")
 	cmd.SetArgs([]string{
 		fp.GetBtcPkHex(),
 		"--home=" + fpHomePath,
-		"--chain-id=" + bcdChainID,
+		"--chain-id=" + fpi.ChainId,
 	})
+	// wrangle the app params to ensure the address prefixes are set correctly
+	appparams.SetAddressPrefixes()
 	err = cmd.Execute()
 	require.NoError(t, err)
 
@@ -347,6 +352,6 @@ func TestConsumerRecoverRandProofCmd(t *testing.T) {
 
 	pubRandStore, err := store.NewPubRandProofStore(fpdb)
 	require.NoError(t, err)
-	_, err = pubRandStore.GetPubRandProof([]byte(bcdChainID), fp.GetBtcPkBIP340().MustMarshal(), finalizedBlock.GetHeight())
+	_, err = pubRandStore.GetPubRandProof([]byte(fpi.ChainId), fp.GetBtcPkBIP340().MustMarshal(), finalizedBlock.GetHeight())
 	require.NoError(t, err)
 }
