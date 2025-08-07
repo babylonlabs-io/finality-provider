@@ -222,7 +222,7 @@ func (bc *ClientWrapper) EditFinalityProvider(
 
 func (bc *ClientWrapper) QueryFinalityProvider(_ context.Context, fpPk *btcec.PublicKey) (*btcstakingtypes.QueryFinalityProviderResponse, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-	res, err := bc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+	res, err := bc.bbnClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
 	}
@@ -325,7 +325,7 @@ func (bc *ClientWrapper) QueryFinalityProviders() ([]*btcstakingtypes.FinalityPr
 
 	for {
 		// NOTE: empty BSN ID means querying all Babylon finality providers
-		res, err := bc.bbnClient.QueryClient.FinalityProviders("", pagination)
+		res, err := bc.bbnClient.FinalityProviders("", pagination)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query finality providers: %w", err)
 		}
@@ -347,7 +347,7 @@ func (bc *ClientWrapper) QueryConsumerFinalityProviders(bsnID string) ([]*btcsta
 	}
 
 	for {
-		res, err := bc.bbnClient.QueryClient.FinalityProviders(bsnID, pagination)
+		res, err := bc.bbnClient.FinalityProviders(bsnID, pagination)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query finality providers: %w", err)
 		}
@@ -363,7 +363,7 @@ func (bc *ClientWrapper) QueryConsumerFinalityProviders(bsnID string) ([]*btcsta
 }
 
 func (bc *ClientWrapper) QueryBtcLightClientTip() (*btclctypes.BTCHeaderInfoResponse, error) {
-	res, err := bc.bbnClient.QueryClient.BTCHeaderChainTip()
+	res, err := bc.bbnClient.BTCHeaderChainTip()
 	if err != nil {
 		return nil, fmt.Errorf("failed to query BTC tip: %w", err)
 	}
@@ -372,7 +372,7 @@ func (bc *ClientWrapper) QueryBtcLightClientTip() (*btclctypes.BTCHeaderInfoResp
 }
 
 func (bc *ClientWrapper) QueryCurrentEpoch() (uint64, error) {
-	res, err := bc.bbnClient.QueryClient.CurrentEpoch()
+	res, err := bc.bbnClient.CurrentEpoch()
 	if err != nil {
 		return 0, fmt.Errorf("failed to query BTC tip: %w", err)
 	}
@@ -381,7 +381,7 @@ func (bc *ClientWrapper) QueryCurrentEpoch() (uint64, error) {
 }
 
 func (bc *ClientWrapper) QueryVotesAtHeight(height uint64) ([]bbntypes.BIP340PubKey, error) {
-	res, err := bc.bbnClient.QueryClient.VotesAtHeight(height)
+	res, err := bc.bbnClient.VotesAtHeight(height)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query BTC delegations: %w", err)
 	}
@@ -405,7 +405,7 @@ func (bc *ClientWrapper) queryDelegationsWithStatus(status btcstakingtypes.BTCDe
 		Limit: limit,
 	}
 
-	res, err := bc.bbnClient.QueryClient.BTCDelegations(status, pagination)
+	res, err := bc.bbnClient.BTCDelegations(status, pagination)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query BTC delegations: %w", err)
 	}
@@ -415,13 +415,13 @@ func (bc *ClientWrapper) queryDelegationsWithStatus(status btcstakingtypes.BTCDe
 
 func (bc *ClientWrapper) QueryStakingParams() (*types.StakingParams, error) {
 	// query btc checkpoint params
-	ckptParamRes, err := bc.bbnClient.QueryClient.BTCCheckpointParams()
+	ckptParamRes, err := bc.bbnClient.BTCCheckpointParams()
 	if err != nil {
 		return nil, fmt.Errorf("failed to query params of the btccheckpoint module: %w", err)
 	}
 
 	// query btc staking params
-	stakingParamRes, err := bc.bbnClient.QueryClient.BTCStakingParams()
+	stakingParamRes, err := bc.bbnClient.BTCStakingParams()
 	if err != nil {
 		return nil, fmt.Errorf("failed to query staking params: %w", err)
 	}

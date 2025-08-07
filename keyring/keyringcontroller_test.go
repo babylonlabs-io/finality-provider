@@ -48,7 +48,9 @@ func FuzzCreatePoP(f *testing.F) {
 		require.NoError(t, err)
 		em, err := eotsmanager.NewLocalEOTSManager(eotsHome, eotsCfg.KeyringBackend, dbBackend, logger)
 		defer func() {
-			dbBackend.Close()
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
 			err := os.RemoveAll(eotsHome)
 			require.NoError(t, err)
 		}()

@@ -103,8 +103,8 @@ func (cc *RollupBSNController) ReliablySendMsg(ctx context.Context, msg sdk.Msg,
 	return cc.reliablySendMsgs(ctx, []sdk.Msg{msg}, expectedErrs, unrecoverableErrs)
 }
 
-// queryContractConfig queries the finality contract for its config
-func (cc *RollupBSNController) queryContractConfig(ctx context.Context) (*ContractConfig, error) {
+// QueryContractConfig queries the finality contract for its config
+func (cc *RollupBSNController) QueryContractConfig(ctx context.Context) (*ContractConfig, error) {
 	query := QueryMsg{
 		Config: &ContractConfig{},
 	}
@@ -303,14 +303,14 @@ func (cc *RollupBSNController) QueryFinalityProviderHasPower(
 
 // hasActiveBTCDelegation checks if the finality provider has any active BTC delegations
 func (cc *RollupBSNController) hasActiveBTCDelegation(fpBtcPkHex string) (bool, error) {
-	btcStakingParams, err := cc.bbnClient.QueryClient.BTCStakingParams()
+	btcStakingParams, err := cc.bbnClient.BTCStakingParams()
 	if err != nil {
 		return false, fmt.Errorf("failed to query BTC staking params: %w", err)
 	}
 
 	var nextKey []byte
 	for {
-		resp, err := cc.bbnClient.QueryClient.FinalityProviderDelegations(fpBtcPkHex, &sdkquerytypes.PageRequest{Key: nextKey, Limit: 100})
+		resp, err := cc.bbnClient.FinalityProviderDelegations(fpBtcPkHex, &sdkquerytypes.PageRequest{Key: nextKey, Limit: 100})
 		if err != nil {
 			return false, fmt.Errorf("failed to query finality provider delegations: %w", err)
 		}
@@ -523,8 +523,44 @@ func (cc *RollupBSNController) QueryLatestBlock(ctx context.Context) (types.Bloc
 	return types.NewBlockInfo(l2LatestBlock.Number.Uint64(), l2LatestBlock.Hash().Bytes(), false), nil
 }
 
+// QueryFirstPubRandCommit returns the first public randomness commitment
+func (cc *RollupBSNController) QueryFirstPubRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (*RollupPubRandCommit, error) {
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+	queryMsg := &QueryMsg{
+		FirstPubRandCommit: &PubRandCommit{
+			BtcPkHex: fpPubKey.MarshalHex(),
+		},
+	}
+
+	jsonData, err := json.Marshal(queryMsg)
+	if err != nil {
+		return nil, fmt.Errorf("failed marshaling to JSON: %w", err)
+	}
+
+	stateResp, err := cc.QuerySmartContractState(ctx, cc.Cfg.FinalityContractAddress, string(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+	if len(stateResp.Data) == 0 {
+		return nil, nil
+	}
+
+	var resp *RollupPubRandCommit
+	err = json.Unmarshal(stateResp.Data, &resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+	if resp == nil {
+		return nil, nil
+	}
+	if err := resp.Validate(); err != nil {
+		return nil, fmt.Errorf("failed to validate response: %w", err)
+	}
+
+	return resp, nil
+}
+
 // QueryLastPublicRandCommit returns the last public randomness commitments
-// It is fetched from the state of a CosmWasm contract OP finality gadget.
 func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	queryMsg := &QueryMsg{
@@ -589,6 +625,12 @@ func (cc *RollupBSNController) QueryPubRandCommitForHeight(ctx context.Context, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
+	if resp == nil {
+		return nil, nil
+	}
+	if err := resp.Validate(); err != nil {
+		return nil, fmt.Errorf("failed to validate response: %w", err)
+	}
 
 	return resp, nil
 }
@@ -596,7 +638,7 @@ func (cc *RollupBSNController) QueryPubRandCommitForHeight(ctx context.Context, 
 // isEligibleForFinalitySignature checks if finality signatures are allowed for the given height
 // based on the contract's BSN activation and interval requirements
 func (cc *RollupBSNController) isEligibleForFinalitySignature(ctx context.Context, height uint64) (bool, error) {
-	config, err := cc.queryContractConfig(ctx)
+	config, err := cc.QueryContractConfig(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to query contract config: %w", err)
 	}
@@ -628,7 +670,7 @@ func (cc *RollupBSNController) isEligibleForFinalitySignature(ctx context.Contex
 }
 
 func (cc *RollupBSNController) QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error) {
-	config, err := cc.queryContractConfig(ctx)
+	config, err := cc.QueryContractConfig(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to query contract config: %w", err)
 	}
@@ -672,7 +714,7 @@ func (cc *RollupBSNController) QueryFinalityProviderHighestVotedHeight(ctx conte
 
 func (cc *RollupBSNController) QueryFinalityProviderStatus(_ context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
-	res, err := cc.bbnClient.QueryClient.FinalityProvider(fpPubKey.MarshalHex())
+	res, err := cc.bbnClient.FinalityProvider(fpPubKey.MarshalHex())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query the finality provider %s: %w", fpPubKey.MarshalHex(), err)
 	}

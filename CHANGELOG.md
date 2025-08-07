@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v2.0.0-rc.0
+
 ### Bug Fixes
 
 * [#508](https://github.com/babylonlabs-io/finality-provider/pull/508) fix: fixes registration with sign ctx
@@ -78,8 +80,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#580](https://github.com/babylonlabs-io/finality-provider/pull/580) chore: bump bbn for v2 compatibility
 * [#572](https://github.com/babylonlabs-io/finality-provider/pull/572)
   chore(rollup): ensure pub randomness is timestamped
-* [#584](https://github.com/babylonlabs-io/finality-provider/pull/584) chore: bump go 1.24
-* [#586](https://github.com/babylonlabs-io/finality-provider/pull/586) chore: init fp metrics
+* [#583](https://github.com/babylonlabs-io/finality-provider/pull/583)
+  feat(rollup): sparse pub rand generation
+* [#584](https://github.com/babylonlabs-io/finality-provider/pull/584) chore:
+  bump go 1.24
+* [#586](https://github.com/babylonlabs-io/finality-provider/pull/586) chore:
+  init fp metrics
+* [#592](https://github.com/babylonlabs-io/finality-provider/pull/592)
+  chore(rollup): add unit tests for sparse pub randomness
+* [#593](https://github.com/babylonlabs-io/finality-provider/pull/593)
+  rollup: sparse pub rand commit leftovers
+* [#594](https://github.com/babylonlabs-io/finality-provider/pull/594)
+  chore(rollup): remove allowlist requirement for starting rollup FP
+* [#595](https://github.com/babylonlabs-io/finality-provider/pull/595)
+  chore: bump bbn v3, contracts, bbn sdk
 
 ## v1.1.0-rc.1
 

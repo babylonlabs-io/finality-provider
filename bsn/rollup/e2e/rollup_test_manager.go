@@ -25,6 +25,7 @@ import (
 	ckpttypes "github.com/babylonlabs-io/babylon/v3/x/checkpointing/types"
 	rollupfpcontroller "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
 	rollupfpconfig "github.com/babylonlabs-io/finality-provider/bsn/rollup/config"
+	rollupservice "github.com/babylonlabs-io/finality-provider/bsn/rollup/service"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
@@ -502,16 +503,31 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	fpMetrics := metrics.NewFpMetrics()
 	poller := service.NewChainPoller(ctm.logger, fpCfg.PollerConfig, ctm.RollupBSNController, fpMetrics)
 
-	rndCommitter := service.NewDefaultRandomnessCommitter(
+	// For E2E tests, use RollupRandomnessCommitter to test our sparse generation
+	contractConfig, err := ctm.RollupBSNController.QueryContractConfig(context.Background())
+	require.NoError(t, err)
+
+	rndCommitter := rollupservice.NewRollupRandomnessCommitter(
 		service.NewRandomnessCommitterConfig(fpCfg.NumPubRand, int64(fpCfg.TimestampingDelayBlocks), fpCfg.ContextSigningHeight),
-		service.NewPubRandState(pubRandStore), ctm.RollupBSNController, ctm.ConsumerEOTSClient, ctm.logger, fpMetrics)
+		service.NewPubRandState(pubRandStore), ctm.RollupBSNController, ctm.ConsumerEOTSClient, ctm.logger, fpMetrics,
+		contractConfig.FinalitySignatureInterval)
 
 	heightDeterminer := service.NewStartHeightDeterminer(ctm.RollupBSNController, fpCfg.PollerConfig, ctm.logger)
-	finalitySubmitter := service.NewDefaultFinalitySubmitter(ctm.RollupBSNController, ctm.ConsumerEOTSClient, rndCommitter.GetPubRandProofList,
-		service.NewDefaultFinalitySubmitterConfig(fpCfg.MaxSubmissionRetries,
+
+	// For E2E tests, use RollupFinalitySubmitter to test sparse randomness generation
+	finalitySubmitter := rollupservice.NewRollupFinalitySubmitter(
+		ctm.RollupBSNController,
+		ctm.ConsumerEOTSClient,
+		rndCommitter.GetPubRandProofList,
+		service.NewDefaultFinalitySubmitterConfig(
+			fpCfg.MaxSubmissionRetries,
 			fpCfg.ContextSigningHeight,
-			fpCfg.SubmissionRetryInterval),
-		ctm.logger, fpMetrics)
+			fpCfg.SubmissionRetryInterval,
+		),
+		ctm.logger,
+		fpMetrics,
+		contractConfig.FinalitySignatureInterval,
+	)
 
 	fpInstance, err := service.NewFinalityProviderInstance(
 		consumerFpPk,

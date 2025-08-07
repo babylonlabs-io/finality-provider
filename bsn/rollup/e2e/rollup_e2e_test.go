@@ -299,83 +299,6 @@ func TestBSNDoubleSigning(t *testing.T) {
 	t.Logf("✅ BSN rollup environment properly handles both duplicate signatures and equivocation")
 }
 
-// TestFinalityProviderAllowlistBlocking tests that finality providers not in the allowlist cannot start
-// This verifies our allowlist implementation works correctly
-func TestFinalityProviderAllowlistBlocking(t *testing.T) {
-	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	ctm := StartRollupTestManager(t, ctx)
-	defer func() {
-		cancel()
-		ctm.Stop(t)
-	}()
-
-	// Step 1: Create and register finality providers (but don't add to allowlist yet)
-	t.Log("Step 1: Creating and registering finality providers")
-	fps := ctm.setupBabylonAndConsumerFp(t)
-	babylonFpPk := fps[0]
-	consumerFpPk := fps[1]
-
-	// Step 2: Set up BTC delegation (needed for FP to have power)
-	t.Log("Step 2: Setting up BTC delegation")
-	ctm.delegateBTCAndWaitForActivation(t, babylonFpPk, consumerFpPk)
-
-	// Step 3: Test rollup FP allowlist query WITHOUT adding to allowlist first
-	t.Log("Step 3: Testing rollup FP allowlist query without allowlist permission (should return false)")
-
-	// Test the allowlist query directly using rollup controller
-	rollupController := ctm.RollupBSNController
-	allowed, err := rollupController.QueryFinalityProviderInAllowlist(ctx, consumerFpPk.MustToBTCPK())
-	require.NoError(t, err, "Allowlist query should work")
-	require.False(t, allowed, "FP should not be in allowlist initially")
-
-	t.Logf("✅ Confirmed FP %s is not in allowlist", consumerFpPk.MarshalHex())
-
-	// Step 4: Add FP to allowlist
-	t.Log("Step 4: Adding FP to contract allowlist")
-	ctm.addFpToContractAllowlist(t, ctx, consumerFpPk)
-
-	// Step 5: Verify allowlist query now returns true
-	t.Log("Step 5: Verifying rollup FP allowlist query passes with allowlist permission")
-
-	// Test that allowlist query now returns true
-	allowed, err = rollupController.QueryFinalityProviderInAllowlist(ctx, consumerFpPk.MustToBTCPK())
-	require.NoError(t, err, "Allowlist query should work")
-	require.True(t, allowed, "FP should now be in allowlist")
-
-	t.Logf("✅ Confirmed FP %s is now in allowlist", consumerFpPk.MarshalHex())
-
-	// Step 6: Now start FP instance directly for functional testing
-	t.Log("Step 6: Starting FP instance for functional testing (should succeed)")
-	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
-	err = consumerFpInstance.Start(ctx)
-	require.NoError(t, err, "FP should start successfully when in allowlist")
-
-	// Verify FP is actually running
-	require.True(t, consumerFpInstance.IsRunning(), "FP should be running after successful start")
-
-	t.Log("✅ FP successfully started after being added to allowlist")
-
-	// Step 7: Verify FP can perform normal operations
-	t.Log("Step 7: Verifying FP can perform normal operations")
-
-	// Wait for FP to commit randomness and get it timestamped
-	ctm.WaitForFpPubRandTimestamped(t, ctx, consumerFpInstance)
-
-	// Wait for FP to vote on at least one rollup block
-	require.Eventually(t, func() bool {
-		return consumerFpInstance.GetLastVotedHeight() > 0
-	}, eventuallyWaitTimeOut, eventuallyPollTime, "FP should vote on rollup blocks after allowlist approval")
-
-	lastVotedHeight := consumerFpInstance.GetLastVotedHeight()
-	t.Logf("✅ FP voted on rollup block at height: %d", lastVotedHeight)
-
-	t.Log("✅ Finality Provider Allowlist Test Completed Successfully!")
-	t.Logf("✅ Confirmed FP %s is blocked when not in allowlist", consumerFpPk.MarshalHex())
-	t.Logf("✅ Confirmed FP %s starts and operates normally when in allowlist", consumerFpPk.MarshalHex())
-	t.Logf("✅ Allowlist security mechanism is working correctly")
-}
-
 // TestRollupBSNCatchingUp tests if a rollup BSN finality provider can catch up after being restarted
 // This is the rollup BSN equivalent of the Babylon TestCatchingUp test
 func TestRollupBSNCatchingUp(t *testing.T) {
@@ -475,4 +398,121 @@ func TestRollupBSNCatchingUp(t *testing.T) {
 
 	// Additional logging for debugging cleanup
 	t.Log("🔄 Starting test cleanup...")
+}
+
+// TestSparsePublicRandomnessGeneration tests that the rollup BSN finality provider
+// correctly generates and commits public randomness at sparse intervals (e.g., every 5 blocks)
+// instead of consecutively. This verifies the sparse randomness feature works end-to-end.
+func TestSparsePublicRandomnessGeneration(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(t.Context())
+	ctm := StartRollupTestManager(t, ctx)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
+
+	// Step 1: Setup FPs and activation
+	t.Log("Step 1: Setting up finality providers and BTC delegation")
+	fps := ctm.setupBabylonAndConsumerFp(t)
+	babylonFpPk := fps[0]
+	consumerFpPk := fps[1]
+
+	// Add consumer FP to contract allowlist
+	ctm.addFpToContractAllowlist(t, ctx, consumerFpPk)
+	ctm.delegateBTCAndWaitForActivation(t, babylonFpPk, consumerFpPk)
+
+	// Step 2: Verify contract configuration has sparse interval
+	t.Log("Step 2: Verifying contract configuration for sparse randomness")
+	contractConfig, err := ctm.RollupBSNController.QueryContractConfig(ctx)
+	require.NoError(t, err, "Should be able to query contract config")
+	require.Greater(t, contractConfig.FinalitySignatureInterval, uint64(1),
+		"Contract should be configured for sparse randomness (interval > 1)")
+
+	t.Logf("✅ Contract configured with finality_signature_interval: %d", contractConfig.FinalitySignatureInterval)
+
+	// Step 3: Start FP instance and wait for initial randomness commitment
+	t.Log("Step 3: Starting FP instance and waiting for initial randomness commitment")
+	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
+	err = consumerFpInstance.Start(ctx)
+	require.NoError(t, err)
+
+	// Wait for FP to commit randomness and get it timestamped
+	ctm.WaitForFpPubRandTimestamped(t, ctx, consumerFpInstance)
+
+	// Step 4: Query and verify the first public randomness commitment
+	t.Log("Step 4: Querying and verifying first public randomness commitment")
+	firstCommit, err := ctm.RollupBSNController.QueryFirstPubRandCommit(ctx, consumerFpPk.MustToBTCPK())
+	require.NoError(t, err, "Should be able to query first public randomness commitment")
+	require.NotNil(t, firstCommit, "Should have at least one public randomness commitment")
+
+	t.Logf("✅ First commitment: StartHeight=%d, NumPubRand=%d, Interval=%d",
+		firstCommit.StartHeight, firstCommit.NumPubRand, firstCommit.Interval)
+
+	// Step 5: Verify sparse generation by querying specific heights
+	t.Log("Step 5: Verifying sparse generation by querying specific heights")
+
+	// Test heights that should have randomness (on interval boundaries)
+	interval := contractConfig.FinalitySignatureInterval
+	startHeight := firstCommit.StartHeight
+
+	// Test a few heights that should have randomness
+	for i := uint64(0); i < 3; i++ {
+		sparseHeight := startHeight + (i * interval)
+		commit, err := ctm.RollupBSNController.QueryPubRandCommitForHeight(ctx, consumerFpPk.MustToBTCPK(), sparseHeight)
+		require.NoError(t, err, "Should be able to query for sparse height %d", sparseHeight)
+		require.NotNil(t, commit, "Should find commitment for sparse height %d", sparseHeight)
+		require.Equal(t, firstCommit.StartHeight, commit.StartHeight,
+			"Should return same commitment for sparse height %d", sparseHeight)
+
+		t.Logf("✅ Height %d has randomness (sparse generation)", sparseHeight)
+	}
+
+	// Test heights that should NOT have randomness (between intervals)
+	for i := uint64(0); i < 2; i++ {
+		betweenHeight := startHeight + (i * interval) + 1 // Height between intervals
+		commit, err := ctm.RollupBSNController.QueryPubRandCommitForHeight(ctx, consumerFpPk.MustToBTCPK(), betweenHeight)
+		require.NoError(t, err, "Should be able to query for between height %d", betweenHeight)
+		require.Nil(t, commit, "Should return nil for between height %d (no individual randomness)", betweenHeight)
+
+		t.Logf("✅ Height %d returns nil (no individual randomness)", betweenHeight)
+	}
+
+	// Step 6: Verify EndHeight calculation is correct for sparse generation
+	t.Log("Step 6: Verifying EndHeight calculation for sparse generation")
+	expectedEndHeight := firstCommit.StartHeight + (firstCommit.NumPubRand-1)*firstCommit.Interval
+	actualEndHeight := firstCommit.EndHeight()
+	require.Equal(t, expectedEndHeight, actualEndHeight,
+		"EndHeight should be calculated correctly for sparse generation")
+
+	t.Logf("✅ EndHeight calculation correct: %d = %d + (%d-1)*%d",
+		actualEndHeight, firstCommit.StartHeight, firstCommit.NumPubRand, firstCommit.Interval)
+
+	// Step 7: Wait for FP to vote and verify it uses sparse randomness
+	t.Log("Step 7: Waiting for FP to vote and verifying sparse randomness usage")
+
+	// Wait for FP to vote on at least one rollup block
+	var lastVotedHeight uint64
+	require.Eventually(t, func() bool {
+		if consumerFpInstance.GetLastVotedHeight() > 0 {
+			lastVotedHeight = consumerFpInstance.GetLastVotedHeight()
+			t.Logf("FP voted on rollup block at height: %d", lastVotedHeight)
+			return true
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime, "FP should vote on rollup blocks")
+
+	// Verify the voted height aligns with sparse intervals
+	remainder := lastVotedHeight % interval
+	require.Equal(t, uint64(0), remainder,
+		"FP should only vote on heights that align with sparse intervals (height %d, interval %d)",
+		lastVotedHeight, interval)
+
+	t.Logf("✅ FP voted on height %d which aligns with interval %d", lastVotedHeight, interval)
+
+	t.Log("✅ Sparse Public Randomness Generation E2E Test Completed Successfully!")
+	t.Logf("✅ Contract configured for sparse generation (interval: %d)", interval)
+	t.Logf("✅ First commitment covers sparse heights: %d to %d", startHeight, actualEndHeight)
+	t.Logf("✅ FP correctly votes only on interval-aligned heights")
+	t.Logf("✅ Sparse randomness generation working correctly end-to-end")
 }

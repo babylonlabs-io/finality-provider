@@ -40,7 +40,9 @@ func FuzzEOTSStore(f *testing.F) {
 		require.NoError(t, err)
 
 		defer func() {
-			dbBackend.Close()
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
 			err := os.RemoveAll(homePath)
 			require.NoError(t, err)
 		}()
@@ -91,7 +93,9 @@ func FuzzSignStore(f *testing.F) {
 		require.NoError(t, err)
 
 		defer func() {
-			dbBackend.Close()
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
 			err := os.RemoveAll(homePath)
 			require.NoError(t, err)
 		}()
@@ -152,7 +156,9 @@ func FuzzListKeysEOTSStore(f *testing.F) {
 		require.NoError(t, err)
 
 		defer func() {
-			dbBackend.Close()
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
 		}()
 
 		expected := make(map[string][]byte)
@@ -203,7 +209,9 @@ func FuzzDeleteSignRecordsFromHeight(f *testing.F) {
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
-			dbBackend.Close()
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
 			err := os.RemoveAll(homePath)
 			require.NoError(t, err)
 		})
@@ -344,7 +352,9 @@ func FuzzEOTSStore_BackupWithConcurrentWrites(f *testing.F) {
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
-			dbBackend.Close()
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
 		})
 
 		// Write initial key
@@ -412,7 +422,9 @@ func FuzzEOTSStore_BackupWithConcurrentWrites(f *testing.F) {
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
-			dbBackendBkp.Close()
+			if err := dbBackendBkp.Close(); err != nil {
+				t.Errorf("Error closing backup database: %v", err)
+			}
 		})
 
 		vsBkp, err := store.NewEOTSStore(dbBackendBkp)
@@ -463,7 +475,11 @@ func TestEOTSStore_BackupTime(t *testing.T) {
 			dbBackend, err := cfg.GetDBBackend()
 			require.NoError(t, err)
 
-			defer dbBackend.Close()
+			defer func() {
+				if err := dbBackend.Close(); err != nil {
+					t.Errorf("Error closing database: %v", err)
+				}
+			}()
 
 			vs, err := store.NewEOTSStore(dbBackend)
 			require.NoError(t, err)
@@ -546,7 +562,11 @@ func TestEOTSStore_BackupTime(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to open backup DB: %v", err)
 			}
-			defer dbBackendBkp.Close()
+			defer func() {
+				if err := dbBackendBkp.Close(); err != nil {
+					t.Errorf("Error closing backup database: %v", err)
+				}
+			}()
 
 			vsBkp, err := store.NewEOTSStore(dbBackendBkp)
 			if err != nil {

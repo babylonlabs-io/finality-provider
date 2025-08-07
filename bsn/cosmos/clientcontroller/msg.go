@@ -188,7 +188,7 @@ type BlocksQuery struct {
 }
 
 type QueryMsgActivatedHeight struct {
-	ActivatedHeight struct{} `json:"activated_height"`
+	ActivationHeight struct{} `json:"activation_height"`
 }
 
 type QueryMsgFinalitySignature struct {
@@ -264,4 +264,20 @@ type FinalityProviderPowerQuery struct {
 
 type ConsumerFpPowerResponse struct {
 	Power uint64 `json:"power"`
+}
+
+type QueryMsgFinalityConfig struct {
+	FinalityConfig struct{} `json:"config"`
+}
+
+type FinalityConfigResponse struct {
+	Denom                      string `json:"denom"`
+	BabylonAddr                string `json:"babylon"`
+	StakingAddr                string `json:"staking"`
+	MaxActiveFinalityProviders uint32 `json:"max_active_finality_providers"`
+	MinPubRand                 uint64 `json:"min_pub_rand"`
+	RewardInterval             uint64 `json:"reward_interval"`
+	MissedBlocksWindow         uint64 `json:"missed_blocks_window"`
+	JailDuration               uint64 `json:"jail_duration"`
+	FinalityActivationHeight   uint64 `json:"finality_activation_height"`
 }

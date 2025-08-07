@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 
 	rollupfpcc "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
@@ -50,17 +51,32 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 		return nil, fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
 
-	rndCommitter := service.NewDefaultRandomnessCommitter(
+	// For rollup environments, always use RollupRandomnessCommitter
+	contractConfig, err := consumerCon.QueryContractConfig(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to query contract config: %w", err)
+	}
+
+	logger.Info("using RollupRandomnessCommitter for rollup environment",
+		zap.Uint64("finality_signature_interval", contractConfig.FinalitySignatureInterval))
+
+	rndCommitter := NewRollupRandomnessCommitter(
 		service.NewRandomnessCommitterConfig(cfg.Common.NumPubRand, int64(cfg.Common.TimestampingDelayBlocks), cfg.Common.ContextSigningHeight),
 		service.NewPubRandState(pubRandStore),
 		consumerCon,
 		em,
 		logger,
 		fpMetrics,
+		contractConfig.FinalitySignatureInterval,
 	)
 
 	heightDeterminer := service.NewStartHeightDeterminer(consumerCon, cfg.Common.PollerConfig, logger)
-	finalitySubmitter := service.NewDefaultFinalitySubmitter(consumerCon,
+
+	logger.Info("using RollupFinalitySubmitter for rollup environment",
+		zap.Uint64("finality_signature_interval", contractConfig.FinalitySignatureInterval))
+
+	// For rollup environments, use RollupFinalitySubmitter for sparse randomness generation
+	finalitySubmitter := NewRollupFinalitySubmitter(consumerCon,
 		em,
 		rndCommitter.GetPubRandProofList,
 		service.NewDefaultFinalitySubmitterConfig(cfg.Common.MaxSubmissionRetries,
@@ -68,6 +84,7 @@ func NewRollupBSNFinalityProviderAppFromConfig(
 			cfg.Common.SubmissionRetryInterval),
 		logger,
 		fpMetrics,
+		contractConfig.FinalitySignatureInterval,
 	)
 
 	fpApp, err := service.NewFinalityProviderApp(cfg.Common, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, db, logger)

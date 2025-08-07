@@ -90,6 +90,29 @@ func (c *EOTSManagerGRpcClient) CreateRandomnessPairList(uid, chainID []byte, st
 	return pubRandFieldValList, nil
 }
 
+func (c *EOTSManagerGRpcClient) CreateRandomnessPairListWithInterval(uid, chainID []byte, startHeight uint64, num uint32, interval uint64) ([]*btcec.FieldVal, error) {
+	req := &proto.CreateRandomnessPairListWithIntervalRequest{
+		Uid:         uid,
+		ChainId:     chainID,
+		StartHeight: startHeight,
+		Num:         num,
+		Interval:    interval,
+	}
+	res, err := c.client.CreateRandomnessPairListWithInterval(context.Background(), req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create randomness pair list with interval: %w", err)
+	}
+
+	pubRandFieldValList := make([]*btcec.FieldVal, 0, len(res.PubRandList))
+	for _, r := range res.PubRandList {
+		var fieldVal btcec.FieldVal
+		fieldVal.SetByteSlice(r)
+		pubRandFieldValList = append(pubRandFieldValList, &fieldVal)
+	}
+
+	return pubRandFieldValList, nil
+}
+
 func (c *EOTSManagerGRpcClient) SaveEOTSKeyName(pk *btcec.PublicKey, keyName string) error {
 	req := &proto.SaveEOTSKeyNameRequest{
 		KeyName: keyName,
