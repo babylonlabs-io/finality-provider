@@ -128,8 +128,11 @@ type RandomnessCommitter interface {
     GetFpRandCommitContext() string
     CommitPubRandList(ctx context.Context, req *CommitPubRandListRequest) (
         *types.TxResponse, error)
-    QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (
+    QueryLastPubRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (
         *types.PubRandCommit, error)
+    // QueryPubRandCommitList returns a list of public randomness commitments 
+    QueryPubRandCommitList(ctx context.Context, fpPk *btcec.PublicKey, startHeight uint64) (
+        []types.PubRandCommit, error)
 }
 
 type BlockQuerier[T types.BlockDescription] interface {
