@@ -50,15 +50,16 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	}
 
 	db, err := cfg.Common.DatabaseConfig.GetDBBackend()
+	if err != nil {
+		return fmt.Errorf("failed to create db backend: %w", err)
+	}
+
 	defer func() {
 		err := db.Close()
 		if err != nil {
 			panic(fmt.Errorf("failed to close db: %w", err))
 		}
 	}()
-	if err != nil {
-		return fmt.Errorf("failed to create db backend: %w", err)
-	}
 
 	pubRandStore, err := store.NewPubRandProofStore(db)
 	if err != nil {
