@@ -38,7 +38,7 @@ func (r *RollupPubRandCommit) GetCommitment() []byte {
 //
 // The ShouldCommit function is responsible for computing the next eligible start height
 // and ensuring no gaps or overlaps by using proper alignment logic.
-func (r *RollupPubRandCommit) EndHeight() uint64 {
+func (r *RollupPubRandCommit) GetEndHeight() uint64 {
 	return r.StartHeight + (r.NumPubRand-1)*r.Interval
 }
 

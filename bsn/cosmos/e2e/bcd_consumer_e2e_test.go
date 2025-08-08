@@ -31,7 +31,7 @@ import (
 // 5. Create zone concierge channel for consumer communication
 // 6. Register consumer finality provider (FP) to Babylon
 // 7. Wait for FP daemon to submit public randomness commits to smart contract
-// 8. Inject consumer delegationd  in BTC staking contract using admin (gives voting power to FP)
+// 8. Inject consumer delegation in BTC staking contract using admin (gives voting power to FP)
 // 9. Verify FP has positive total active sats (voting power) in smart contract
 // 10. Wait for current block to be BTC timestamped to finalize pub rand commits
 // 11. Wait for FP to vote on rollup blocks and submit finality signatures

@@ -560,8 +560,8 @@ func (cc *RollupBSNController) QueryFirstPubRandCommit(ctx context.Context, fpPk
 	return resp, nil
 }
 
-// QueryLastPublicRandCommit returns the last public randomness commitments
-func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error) {
+// QueryLastPubRandCommit returns the last public randomness commitments
+func (cc *RollupBSNController) QueryLastPubRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	queryMsg := &QueryMsg{
 		LastPubRandCommit: &PubRandCommit{
@@ -730,7 +730,7 @@ func (cc *RollupBSNController) UnjailFinalityProvider(_ context.Context, _ *btce
 	return nil, nil
 }
 
-func (cc *RollupBSNController) QueryPublicRandCommitList(_ context.Context, _ *btcec.PublicKey, _ uint64) ([]types.PubRandCommit, error) {
+func (cc *RollupBSNController) QueryPubRandCommitList(_ context.Context, _ *btcec.PublicKey, _ uint64) ([]types.PubRandCommit, error) {
 	// TODO(lazar955): will implement in separate PR
 	return nil, nil
 }

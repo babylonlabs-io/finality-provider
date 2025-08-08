@@ -27,7 +27,7 @@ func (c *CosmosPubRandCommit) GetCommitment() []byte {
 	return c.Commitment
 }
 
-func (c *CosmosPubRandCommit) EndHeight() uint64 { return c.StartHeight + c.NumPubRand - 1 }
+func (c *CosmosPubRandCommit) GetEndHeight() uint64 { return c.StartHeight + c.NumPubRand - 1 }
 
 func (c *CosmosPubRandCommit) Validate() error {
 	if c.NumPubRand < 1 {

@@ -11,7 +11,7 @@ import (
 // sources.
 type PubRandCommit interface {
 	GetStartHeight() uint64
-	EndHeight() uint64
+	GetEndHeight() uint64
 	GetNumPubRand() uint64
 	GetCommitment() []byte
 	Validate() error

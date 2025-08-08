@@ -265,8 +265,8 @@ func (bc *BabylonConsumerController) QueryBlock(_ context.Context, height uint64
 	return types.NewBlockInfo(height, res.Block.AppHash, res.Block.Finalized), nil
 }
 
-// QueryLastPublicRandCommit returns the last public randomness commitments
-func (bc *BabylonConsumerController) QueryLastPublicRandCommit(_ context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error) {
+// QueryLastPubRandCommit returns the last public randomness commitments
+func (bc *BabylonConsumerController) QueryLastPubRandCommit(_ context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error) {
 	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	pagination := &sdkquery.PageRequest{
@@ -420,9 +420,9 @@ func (bc *BabylonConsumerController) UnjailFinalityProvider(ctx context.Context,
 	return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }
 
-// QueryPublicRandCommitList returns the public randomness commitments list from the startHeight to the last commit
+// QueryPubRandCommitList returns the public randomness commitments list from the startHeight to the last commit
 // the returned commits are ordered in the accenting order of the start height
-func (bc *BabylonConsumerController) QueryPublicRandCommitList(_ context.Context, fpPk *btcec.PublicKey, startHeight uint64) ([]types.PubRandCommit, error) {
+func (bc *BabylonConsumerController) QueryPubRandCommitList(_ context.Context, fpPk *btcec.PublicKey, startHeight uint64) ([]types.PubRandCommit, error) {
 	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	pagination := &sdkquery.PageRequest{
@@ -458,7 +458,7 @@ func (bc *BabylonConsumerController) QueryPublicRandCommitList(_ context.Context
 			return nil, fmt.Errorf("failed to validate public randomness commitment: %w", err)
 		}
 
-		if startHeight <= commit.EndHeight() {
+		if startHeight <= commit.GetEndHeight() {
 			commitList = append(commitList, commit)
 		}
 

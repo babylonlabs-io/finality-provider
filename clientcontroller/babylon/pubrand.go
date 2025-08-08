@@ -29,7 +29,7 @@ func (b *BabylonPubRandCommit) GetCommitment() []byte {
 	return b.Commitment
 }
 
-func (b *BabylonPubRandCommit) EndHeight() uint64 { return b.StartHeight + b.NumPubRand - 1 }
+func (b *BabylonPubRandCommit) GetEndHeight() uint64 { return b.StartHeight + b.NumPubRand - 1 }
 
 func (b *BabylonPubRandCommit) Validate() error {
 	if b.NumPubRand < 1 {

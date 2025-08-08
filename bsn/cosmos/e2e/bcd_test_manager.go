@@ -715,7 +715,7 @@ func (ctm *BcdTestManager) waitForFinalizedBlock(t *testing.T, lastVotedHeight u
 
 func (ctm *BcdTestManager) waitForPubRandInContract(t *testing.T, fpPk *bbntypes.BIP340PubKey) {
 	require.Eventually(t, func() bool {
-		fpPubRandResp, err := ctm.BcdConsumerClient.QueryLastPublicRandCommit(t.Context(), fpPk.MustToBTCPK())
+		fpPubRandResp, err := ctm.BcdConsumerClient.QueryLastPubRandCommit(t.Context(), fpPk.MustToBTCPK())
 		if err != nil {
 			t.Logf("failed to query last committed public rand: %s", err.Error())
 			return false

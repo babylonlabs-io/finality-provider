@@ -268,8 +268,8 @@ func (wc *CosmwasmConsumerController) QueryBlock(ctx context.Context, height uin
 	return fptypes.NewBlockInfo(uint64(block.Block.Height), block.Block.AppHash, false), nil
 }
 
-// QueryLastPublicRandCommit returns the last public randomness commitments
-func (wc *CosmwasmConsumerController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (fptypes.PubRandCommit, error) {
+// QueryLastPubRandCommit returns the last public randomness commitments
+func (wc *CosmwasmConsumerController) QueryLastPubRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (fptypes.PubRandCommit, error) {
 	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	// Construct the query message
@@ -729,8 +729,8 @@ func (wc *CosmwasmConsumerController) QueryLastBTCTimestampedHeader(ctx context.
 	return &resp, nil
 }
 
-// QueryPublicRandCommitList returns the public randomness commitments list from the startHeight to the last commit
-func (wc *CosmwasmConsumerController) QueryPublicRandCommitList(ctx context.Context, fpPk *btcec.PublicKey, startHeight uint64) ([]fptypes.PubRandCommit, error) {
+// QueryPubRandCommitList returns the public randomness commitments list from the startHeight to the last commit
+func (wc *CosmwasmConsumerController) QueryPubRandCommitList(ctx context.Context, fpPk *btcec.PublicKey, startHeight uint64) ([]fptypes.PubRandCommit, error) {
 	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	// Construct the query message

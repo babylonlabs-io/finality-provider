@@ -111,7 +111,7 @@ func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, cfg 
 		return fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}
 
-	commitList, err := consumerCtrl.QueryPublicRandCommitList(cmd.Context(), fpPk.MustToBTCPK(), startHeight)
+	commitList, err := consumerCtrl.QueryPubRandCommitList(cmd.Context(), fpPk.MustToBTCPK(), startHeight)
 	if err != nil {
 		return fmt.Errorf("failed to query randomness commit list for fp %s: %w", fpPk.MarshalHex(), err)
 	}
@@ -125,7 +125,7 @@ func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, cfg 
 		// #nosec G115 - already checked above
 		pubRandList, err := em.CreateRandomnessPairList(fpPk.MustMarshal(), []byte(chainID), commit.GetStartHeight(), uint32(commit.GetNumPubRand()))
 		if err != nil {
-			return fmt.Errorf("failed to get randomness from height %d to height %d: %w", commit.GetStartHeight(), commit.EndHeight(), err)
+			return fmt.Errorf("failed to get randomness from height %d to height %d: %w", commit.GetStartHeight(), commit.GetEndHeight(), err)
 		}
 		// generate commitment and proof for each public randomness
 		commitRoot, proofList := types.GetPubRandCommitAndProofs(pubRandList)
