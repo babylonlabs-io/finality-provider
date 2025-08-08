@@ -4,7 +4,7 @@
 
 1. [Introduction](#1-introduction)
 2. [Core constructor](#2-core-constructor)
-   1. [Default Usage](#21-default-usage)
+   1. [Using Built-in Implementations](#21-using-built-in-implementations)
    2. [Custom Usage](#22-custom-usage)
 3. [Interfaces](#3-interfaces)
    1. [Communication Level Interfaces](#31-communication-level-interfaces)
