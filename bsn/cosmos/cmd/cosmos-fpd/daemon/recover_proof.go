@@ -71,7 +71,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
 
-	return fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, cfg.Common, cosmWasmCtrl, args,
+	err = fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, cfg.Common, cosmWasmCtrl, args,
 		func(chainID []byte, pk []byte, commit types.PubRandCommit, proofList []*merkle.Proof) error {
 			if err := pubRandStore.AddPubRandProofList(chainID, pk, commit.GetStartHeight(), commit.GetNumPubRand(), proofList); err != nil {
 				return fmt.Errorf("failed to save public randomness to DB: %w", err)
@@ -79,6 +79,12 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 
 			return nil
 		}, func(em *eotsclient.EOTSManagerGRpcClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error) {
-			return em.CreateRandomnessPairList(fpPk, chainID, commit.GetStartHeight(), uint32(commit.GetNumPubRand()))
+			return em.CreateRandomnessPairList(fpPk, chainID, commit.GetStartHeight(), uint32(commit.GetNumPubRand())) // #nosec G115 - already checked by caller
 		})
+
+	if err != nil {
+		return fmt.Errorf("failed to run recover proof command: %w", err)
+	}
+
+	return nil
 }

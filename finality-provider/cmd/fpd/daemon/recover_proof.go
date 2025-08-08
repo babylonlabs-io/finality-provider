@@ -95,7 +95,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 
 			return nil
 		}, func(em *eotsclient.EOTSManagerGRpcClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error) {
-			return em.CreateRandomnessPairList(fpPk, chainID, commit.GetStartHeight(), uint32(commit.GetNumPubRand()))
+			return em.CreateRandomnessPairList(fpPk, chainID, commit.GetStartHeight(), uint32(commit.GetNumPubRand())) // #nosec G115 - already checked by caller
 		})
 }
 

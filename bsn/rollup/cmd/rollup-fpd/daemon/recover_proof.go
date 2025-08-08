@@ -66,7 +66,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
 
-	return fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, cfg.Common, rollupCtrl, args,
+	err = fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, cfg.Common, rollupCtrl, args,
 		func(chainID []byte, pk []byte, commit types.PubRandCommit, proofList []*merkle.Proof) error {
 			concreteCommit, ok := commit.(*rollupfpcc.RollupPubRandCommit)
 			if !ok {
@@ -84,6 +84,12 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 				return nil, fmt.Errorf("expected RollupPubRandCommit, got %T", commit)
 			}
 
-			return em.CreateRandomnessPairListWithInterval(fpPk, chainID, commit.GetStartHeight(), uint32(commit.GetNumPubRand()), concreteCommit.Interval)
+			return em.CreateRandomnessPairListWithInterval(fpPk, chainID, commit.GetStartHeight(), uint32(commit.GetNumPubRand()), concreteCommit.Interval) // #nosec G115 - already checked by caller
 		})
+
+	if err != nil {
+		return fmt.Errorf("failed to run recover proof command: %w", err)
+	}
+
+	return nil
 }
