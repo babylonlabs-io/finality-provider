@@ -2,10 +2,12 @@ package daemon
 
 import (
 	"fmt"
+	rollupfpcc "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
+	"github.com/babylonlabs-io/finality-provider/log"
 	"path/filepath"
 
 	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup/config"
-	clientctx "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/clientctx"
 	fpdaemon "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
 	"github.com/babylonlabs-io/finality-provider/util"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -32,7 +34,17 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	if err := fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, homePath, cfg.Common, args); err != nil {
+	logger, err := log.NewRootLoggerWithFile(rollupfpcfg.LogFile(homePath), cfg.Common.LogLevel)
+	if err != nil {
+		return fmt.Errorf("failed to initialize the logger: %w", err)
+	}
+
+	rollupCtrl, err := rollupfpcc.NewRollupBSNController(cfg, logger)
+	if err != nil {
+		return fmt.Errorf("failed to create rpc client for the consumer chain rollup: %w", err)
+	}
+
+	if err := fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, cfg.Common, rollupCtrl, args); err != nil {
 		return fmt.Errorf("failed to run recover proof command: %w", err)
 	}
 

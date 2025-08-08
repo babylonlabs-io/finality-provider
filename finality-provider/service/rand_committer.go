@@ -163,13 +163,13 @@ func (rc *DefaultRandomnessCommitter) GetLastCommittedHeight(ctx context.Context
 		return 0, nil
 	}
 
-	return pubRandCommit.EndHeight(), nil
+	return pubRandCommit.GetEndHeight(), nil
 }
 
 func (rc *DefaultRandomnessCommitter) lastCommittedPublicRandWithRetry(ctx context.Context) (types.PubRandCommit, error) {
 	var response types.PubRandCommit
 	if err := retry.Do(func() error {
-		resp, err := rc.ConsumerCon.QueryLastPublicRandCommit(ctx, rc.BtcPk.MustToBTCPK())
+		resp, err := rc.ConsumerCon.QueryLastPubRandCommit(ctx, rc.BtcPk.MustToBTCPK())
 		if err != nil {
 			return fmt.Errorf("failed to query the last committed public randomness: %w", err)
 		}

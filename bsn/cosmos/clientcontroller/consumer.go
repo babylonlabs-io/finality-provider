@@ -31,24 +31,6 @@ import (
 
 var _ api.ConsumerController = &CosmwasmConsumerController{}
 
-// CosmosPubRandCommit represents the Cosmos-specific public randomness commitment response
-type CosmosPubRandCommit struct {
-	StartHeight uint64 `json:"start_height"`
-	NumPubRand  uint64 `json:"num_pub_rand"`
-	Commitment  []byte `json:"commitment"`
-	Height      uint64 `json:"height"`
-}
-
-// Interface implementation
-func (c *CosmosPubRandCommit) EndHeight() uint64 { return c.StartHeight + c.NumPubRand - 1 }
-func (c *CosmosPubRandCommit) Validate() error {
-	if c.NumPubRand < 1 {
-		return fmt.Errorf("NumPubRand must be >= 1, got %d", c.NumPubRand)
-	}
-
-	return nil
-}
-
 //nolint:revive
 type CosmwasmConsumerController struct {
 	cwClient *cwcclient.Client
@@ -286,8 +268,8 @@ func (wc *CosmwasmConsumerController) QueryBlock(ctx context.Context, height uin
 	return fptypes.NewBlockInfo(uint64(block.Block.Height), block.Block.AppHash, false), nil
 }
 
-// QueryLastPublicRandCommit returns the last public randomness commitments
-func (wc *CosmwasmConsumerController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (fptypes.PubRandCommit, error) {
+// QueryLastPubRandCommit returns the last public randomness commitments
+func (wc *CosmwasmConsumerController) QueryLastPubRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (fptypes.PubRandCommit, error) {
 	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 
 	// Construct the query message
@@ -745,6 +727,53 @@ func (wc *CosmwasmConsumerController) QueryLastBTCTimestampedHeader(ctx context.
 	}
 
 	return &resp, nil
+}
+
+// QueryPubRandCommitList returns the public randomness commitments list from the startHeight to the last commit
+func (wc *CosmwasmConsumerController) QueryPubRandCommitList(ctx context.Context, fpPk *btcec.PublicKey, startHeight uint64) ([]fptypes.PubRandCommit, error) {
+	fpBtcPk := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+
+	// Construct the query message
+	queryMsgStruct := QueryMsgPubRandCommits{
+		PubRandCommit: PubRandCommitQuery{
+			BtcPkHex:   fpBtcPk.MarshalHex(),
+			StartAfter: startHeight,
+			Reverse:    false,
+		},
+	}
+
+	queryMsgBytes, err := json.Marshal(queryMsgStruct)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query message: %w", err)
+	}
+
+	// Query the smart contract state
+	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.cfg.BtcFinalityContractAddress, string(queryMsgBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+
+	var commits []CosmosPubRandCommit
+	if err = json.Unmarshal(dataFromContract.Data.Bytes(), &commits); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+	for _, commit := range commits {
+		if err := commit.Validate(); err != nil {
+			return nil, fmt.Errorf("failed to validate pub rand commit: %w", err)
+		}
+	}
+
+	// sort the commits by StartHeight in ascending order
+	sort.Slice(commits, func(i, j int) bool {
+		return commits[i].StartHeight < commits[j].StartHeight
+	})
+
+	cmts := make([]fptypes.PubRandCommit, len(commits))
+	for i, commit := range commits {
+		cmts[i] = &commit
+	}
+
+	return cmts, nil
 }
 
 func (wc *CosmwasmConsumerController) MustQueryBabylonContracts(ctx context.Context) *BabylonContracts {

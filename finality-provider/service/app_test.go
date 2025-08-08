@@ -79,7 +79,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(gomock.Any(),
 			gomock.Any()).Return(false, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLastPubRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		mockBabylonController.EXPECT().GetFpPopContextV0().Return("").AnyTimes()
 
@@ -184,7 +184,7 @@ func FuzzSyncFinalityProviderStatus(f *testing.F) {
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
 
-		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLastPubRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryLatestFinalizedBlock(gomock.Any()).Return(nil, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryLatestBlock(gomock.Any()).Return(types.NewBlockInfo(currentHeight, testutil.GenRandomByteArray(r, 32), false), nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryBlock(gomock.Any(), gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
@@ -276,7 +276,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		fpCfg.SubmissionRetryInterval = time.Millisecond * 10
 		fpCfg.SignatureSubmissionInterval = time.Millisecond * 10
 
-		mockConsumerController.EXPECT().QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLastPubRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryLatestFinalizedBlock(gomock.Any()).Return(nil, nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryLatestBlock(gomock.Any()).Return(types.NewBlockInfo(currentHeight, testutil.GenRandomByteArray(r, 32), false), nil).AnyTimes()
 		mockConsumerController.EXPECT().QueryBlocks(gomock.Any(), gomock.Any()).Return(nil, errors.New("chain not online")).AnyTimes()
