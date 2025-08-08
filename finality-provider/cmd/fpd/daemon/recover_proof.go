@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cometbft/cometbft/crypto/merkle"
 	"math"
 	"path/filepath"
@@ -86,16 +87,23 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
 
-	return RunCommandRecoverProofWithConfig(ctx, cmd, cfg, bcc, func(chainID []byte, pk []byte, commit types.PubRandCommit, proofList []*merkle.Proof) error {
-		if err := pubRandStore.AddPubRandProofList(chainID, pk, commit.GetStartHeight(), commit.GetNumPubRand(), proofList); err != nil {
-			return fmt.Errorf("failed to save public randomness to DB: %w", err)
-		}
+	return RunCommandRecoverProofWithConfig(ctx, cmd, cfg, bcc, args,
+		func(chainID []byte, pk []byte, commit types.PubRandCommit, proofList []*merkle.Proof) error {
+			if err := pubRandStore.AddPubRandProofList(chainID, pk, commit.GetStartHeight(), commit.GetNumPubRand(), proofList); err != nil {
+				return fmt.Errorf("failed to save public randomness to DB: %w", err)
+			}
 
-		return nil
-	}, args)
+			return nil
+		}, func(em *eotsclient.EOTSManagerGRpcClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error) {
+			return em.CreateRandomnessPairList(fpPk, chainID, commit.GetStartHeight(), uint32(commit.GetNumPubRand()))
+		})
 }
 
-func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, cfg *fpcfg.Config, consumerCtrl api.ConsumerController, addPubRandProofListFunc service.AddProofListFunc, args []string) error {
+func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, cfg *fpcfg.Config,
+	consumerCtrl api.ConsumerController, args []string,
+	addPubRandProofListFunc service.AddProofListFunc,
+	createRandomnessFunc service.CreateRandomnessFunc,
+) error {
 	chainID, err := cmd.Flags().GetString(flags.FlagChainID)
 	if err != nil {
 		return fmt.Errorf("failed to read chain id flag: %w", err)
@@ -131,7 +139,7 @@ func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, cfg 
 		}
 
 		// #nosec G115 - already checked above
-		pubRandList, err := em.CreateRandomnessPairList(fpPk.MustMarshal(), []byte(chainID), commit.GetStartHeight(), uint32(commit.GetNumPubRand()))
+		pubRandList, err := createRandomnessFunc(em, fpPk.MustMarshal(), []byte(chainID), commit)
 		if err != nil {
 			return fmt.Errorf("failed to get randomness from height %d to height %d: %w", commit.GetStartHeight(), commit.GetEndHeight(), err)
 		}

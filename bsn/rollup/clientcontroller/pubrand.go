@@ -28,7 +28,7 @@ func (r *RollupPubRandCommit) GetCommitment() []byte {
 	return r.Commitment
 }
 
-// EndHeight returns the last height for which randomness actually exists in this commitment.
+// GetEndHeight - returns the last height for which randomness actually exists in this commitment.
 // For sparse commitments, randomness is generated only at specific intervals, not consecutively.
 //
 // Example with StartHeight=60, NumPubRand=5, Interval=5:

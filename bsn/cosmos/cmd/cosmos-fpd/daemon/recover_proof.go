@@ -6,9 +6,11 @@ import (
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
 	cosmwasmcfg "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
+	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/log"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cometbft/cometbft/crypto/merkle"
 	"path/filepath"
 
@@ -68,11 +70,14 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
 
-	return fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, cfg.Common, cosmWasmCtrl, func(chainID []byte, pk []byte, commit types.PubRandCommit, proofList []*merkle.Proof) error {
-		if err := pubRandStore.AddPubRandProofList(chainID, pk, commit.GetStartHeight(), commit.GetNumPubRand(), proofList); err != nil {
-			return fmt.Errorf("failed to save public randomness to DB: %w", err)
-		}
+	return fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, cfg.Common, cosmWasmCtrl, args,
+		func(chainID []byte, pk []byte, commit types.PubRandCommit, proofList []*merkle.Proof) error {
+			if err := pubRandStore.AddPubRandProofList(chainID, pk, commit.GetStartHeight(), commit.GetNumPubRand(), proofList); err != nil {
+				return fmt.Errorf("failed to save public randomness to DB: %w", err)
+			}
 
-		return nil
-	}, args)
+			return nil
+		}, func(em *eotsclient.EOTSManagerGRpcClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error) {
+			return em.CreateRandomnessPairList(fpPk, chainID, commit.GetStartHeight(), uint32(commit.GetNumPubRand()))
+		})
 }
