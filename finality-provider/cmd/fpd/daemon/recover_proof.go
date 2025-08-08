@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
+	"github.com/cometbft/cometbft/crypto/merkle"
 	"math"
 	"path/filepath"
 
@@ -68,10 +70,32 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to create Babylon rpc client: %w", err)
 	}
 
-	return RunCommandRecoverProofWithConfig(ctx, cmd, cfg, bcc, args)
+	db, err := cfg.DatabaseConfig.GetDBBackend()
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			panic(fmt.Errorf("failed to close db: %w", err))
+		}
+	}()
+	if err != nil {
+		return fmt.Errorf("failed to create db backend: %w", err)
+	}
+
+	pubRandStore, err := store.NewPubRandProofStore(db)
+	if err != nil {
+		return fmt.Errorf("failed to initiate public randomness store: %w", err)
+	}
+
+	return RunCommandRecoverProofWithConfig(ctx, cmd, cfg, bcc, func(chainID []byte, pk []byte, commit types.PubRandCommit, proofList []*merkle.Proof) error {
+		if err := pubRandStore.AddPubRandProofList(chainID, pk, commit.GetStartHeight(), commit.GetNumPubRand(), proofList); err != nil {
+			return fmt.Errorf("failed to save public randomness to DB: %w", err)
+		}
+
+		return nil
+	}, args)
 }
 
-func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, cfg *fpcfg.Config, consumerCtrl api.ConsumerController, args []string) error {
+func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, cfg *fpcfg.Config, consumerCtrl api.ConsumerController, addPubRandProofListFunc service.AddProofListFunc, args []string) error {
 	chainID, err := cmd.Flags().GetString(flags.FlagChainID)
 	if err != nil {
 		return fmt.Errorf("failed to read chain id flag: %w", err)
@@ -88,22 +112,6 @@ func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, cfg 
 	startHeight, err := cmd.Flags().GetUint64("start-height")
 	if err != nil {
 		return fmt.Errorf("failed to get start height flag: %w", err)
-	}
-
-	db, err := cfg.DatabaseConfig.GetDBBackend()
-	defer func() {
-		err := db.Close()
-		if err != nil {
-			panic(fmt.Errorf("failed to close db: %w", err))
-		}
-	}()
-	if err != nil {
-		return fmt.Errorf("failed to create db backend: %w", err)
-	}
-
-	pubRandStore, err := store.NewPubRandProofStore(db)
-	if err != nil {
-		return fmt.Errorf("failed to initiate public randomness store: %w", err)
 	}
 
 	em, err := eotsclient.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress, cfg.HMACKey)
@@ -134,7 +142,7 @@ func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, cfg 
 		}
 
 		// store them to database
-		if err := pubRandStore.AddPubRandProofList([]byte(chainID), fpPk.MustMarshal(), commit.GetStartHeight(), commit.GetNumPubRand(), proofList); err != nil {
+		if err := addPubRandProofListFunc([]byte(chainID), fpPk.MustMarshal(), commit, proofList); err != nil {
 			return fmt.Errorf("failed to save public randomness to DB: %w", err)
 		}
 	}

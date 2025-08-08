@@ -2,10 +2,13 @@ package service
 
 import (
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/types"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/cometbft/cometbft/crypto/merkle"
 )
+
+type AddProofListFunc func(chainID []byte, pk []byte, commit types.PubRandCommit, proofList []*merkle.Proof) error
 
 type PubRandState struct {
 	s *store.PubRandProofStore

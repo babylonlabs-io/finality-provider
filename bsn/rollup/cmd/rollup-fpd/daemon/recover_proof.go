@@ -3,7 +3,10 @@ package daemon
 import (
 	"fmt"
 	rollupfpcc "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/log"
+	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/cometbft/cometbft/crypto/merkle"
 	"path/filepath"
 
 	rollupfpcfg "github.com/babylonlabs-io/finality-provider/bsn/rollup/config"
@@ -44,9 +47,32 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to create rpc client for the consumer chain rollup: %w", err)
 	}
 
-	if err := fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, cfg.Common, rollupCtrl, args); err != nil {
-		return fmt.Errorf("failed to run recover proof command: %w", err)
+	db, err := cfg.Common.DatabaseConfig.GetDBBackend()
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			panic(fmt.Errorf("failed to close db: %w", err))
+		}
+	}()
+	if err != nil {
+		return fmt.Errorf("failed to create db backend: %w", err)
 	}
 
-	return nil
+	pubRandStore, err := store.NewPubRandProofStore(db)
+	if err != nil {
+		return fmt.Errorf("failed to initiate public randomness store: %w", err)
+	}
+
+	return fpdaemon.RunCommandRecoverProofWithConfig(ctx, cmd, cfg.Common, rollupCtrl, func(chainID []byte, pk []byte, commit types.PubRandCommit, proofList []*merkle.Proof) error {
+		concreteCommit, ok := commit.(*rollupfpcc.RollupPubRandCommit)
+		if !ok {
+			return fmt.Errorf("expected RollupPubRandCommit, got %T", commit)
+		}
+
+		if err := pubRandStore.AddPubRandProofListWithInterval(chainID, pk, commit.GetStartHeight(), commit.GetNumPubRand(), proofList, concreteCommit.Interval); err != nil {
+			return fmt.Errorf("failed to save public randomness to DB: %w", err)
+		}
+
+		return nil
+	}, args)
 }
