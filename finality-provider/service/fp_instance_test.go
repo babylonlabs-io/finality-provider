@@ -80,7 +80,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 			Commitment:  datagen.GenRandomByteArray(r, 32),
 			EpochNum:    5, // Mock epoch number
 		}
-		mockConsumerController.EXPECT().QueryLastPublicRandCommit(t.Context(), gomock.Any()).Return(lastCommittedPubRand, nil).AnyTimes()
+		mockConsumerController.EXPECT().QueryLastPubRandCommit(t.Context(), gomock.Any()).Return(lastCommittedPubRand, nil).AnyTimes()
 		// mock voting power and commit pub rand
 		mockConsumerController.EXPECT().QueryFinalityProviderHasPower(t.Context(), gomock.Any()).
 			Return(true, nil).AnyTimes()
@@ -285,7 +285,7 @@ func setupBenchmarkEnvironment(t *testing.T, seed int64, numPubRand uint32) (*ty
 	mockConsumerController.EXPECT().
 		CommitPubRandList(t.Context(), req).
 		Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
-	mockConsumerController.EXPECT().QueryLastPublicRandCommit(t.Context(), gomock.Any()).Return(nil, nil).AnyTimes()
+	mockConsumerController.EXPECT().QueryLastPubRandCommit(t.Context(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	return startingBlock, fpIns, cleanUp
 }

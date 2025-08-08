@@ -7,6 +7,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
+	config2 "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
 	"strings"
 
 	sdkErr "cosmossdk.io/errors"
@@ -90,6 +92,8 @@ func createLogger(t *testing.T, level zapcore.Level) *zap.Logger {
 }
 
 func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
+	appparams.SetAddressPrefixes()
+
 	testDir, err := base_test_manager.TempDir(t, "fp-e2e-test-*")
 	require.NoError(t, err)
 
@@ -167,6 +171,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 		TxConfig:          tempApp.TxConfig(),
 		Amino:             tempApp.LegacyAmino(),
 	}
+	encodingCfg = config2.GetWasmdEncodingConfig()
 	bbnsdktypes.RegisterInterfaces(encodingCfg.InterfaceRegistry)
 
 	var wcc *cwcc.CosmwasmConsumerController
@@ -268,6 +273,7 @@ func (ctm *BcdTestManager) Stop(t *testing.T) {
 	require.NoError(t, err)
 	err = os.RemoveAll(ctm.baseDir)
 	require.NoError(t, err)
+	ctm.BcdHandler.Stop(t)
 }
 
 // CreateConsumerFinalityProviders creates finality providers for a consumer chain
@@ -643,4 +649,81 @@ func (ctm *BcdTestManager) WaitForTimestampedHeight(t *testing.T, ctx context.Co
 	}, 2*e2eutils.EventuallyWaitTimeOut, 5*time.Second, "BTC timestamped header height should reach target height %d", height)
 
 	t.Logf("WaitForTimestampedHeight: target height %d is now timestamped", height)
+}
+
+func (ctm *BcdTestManager) waitForCastVote(t *testing.T, fpi *service.FinalityProviderInstance) uint64 {
+	var lastVotedHeight uint64
+	require.Eventually(t, func() bool {
+		if fpi.GetLastVotedHeight() > 0 {
+			lastVotedHeight = fpi.GetLastVotedHeight()
+			t.Logf("FP voted on block at height: %d", lastVotedHeight)
+			return true
+		}
+
+		return false
+	}, e2eutils.EventuallyWaitTimeOut, 2*time.Second, "FP should automatically vote on rollup blocks")
+
+	return lastVotedHeight
+}
+
+func (ctm *BcdTestManager) waitForFinalitySignatureInContract(t *testing.T, fpPk *bbntypes.BIP340PubKey, lastVotedHeight uint64) {
+	require.Eventually(t, func() bool {
+		fpSigsResponse, err := ctm.BcdConsumerClient.QueryFinalitySignature(t.Context(), fpPk.MarshalHex(), lastVotedHeight)
+		if err != nil {
+			t.Logf("failed to query finality signature: %s", err.Error())
+			return false
+		}
+		if fpSigsResponse == nil || len(fpSigsResponse.Signature) == 0 {
+			t.Logf("finality signature not found for height %d", lastVotedHeight)
+			return false
+		}
+
+		return true
+	}, e2eutils.EventuallyWaitTimeOut, 3*time.Second)
+}
+
+func (ctm *BcdTestManager) waitForFinalizedBlock(t *testing.T, lastVotedHeight uint64) types.BlockDescription {
+	var finalizedBlock types.BlockDescription
+	// wait for the block to be finalized
+	require.Eventually(t, func() bool {
+		lastFin, err := ctm.BcdConsumerClient.QueryLatestFinalizedBlock(t.Context())
+		require.NoError(t, err)
+		if lastFin != nil {
+			t.Logf("Latest finalized block height: %d is finalized %v", lastFin.GetHeight(), lastFin.IsFinalized())
+		}
+		idxBlockedResponse, err := ctm.BcdConsumerClient.QueryIndexedBlock(t.Context(), lastVotedHeight)
+		if err != nil {
+			t.Logf("failed to query indexed block: %s", err.Error())
+			return false
+		}
+		if idxBlockedResponse == nil {
+			return false
+		}
+
+		// Additional if statement to check finalization status
+		if idxBlockedResponse.Finalized {
+			t.Logf("Block at height %d is now finalized", lastVotedHeight)
+			finalizedBlock = lastFin
+			return true
+		}
+
+		return false
+	}, e2eutils.EventuallyWaitTimeOut, 2*time.Second)
+
+	return finalizedBlock
+}
+
+func (ctm *BcdTestManager) waitForPubRandInContract(t *testing.T, fpPk *bbntypes.BIP340PubKey) {
+	require.Eventually(t, func() bool {
+		fpPubRandResp, err := ctm.BcdConsumerClient.QueryLastPubRandCommit(t.Context(), fpPk.MustToBTCPK())
+		if err != nil {
+			t.Logf("failed to query last committed public rand: %s", err.Error())
+			return false
+		}
+		if fpPubRandResp == nil {
+			return false
+		}
+
+		return true
+	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 }

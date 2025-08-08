@@ -104,7 +104,7 @@ func TestRollupRandomnessCommitterShouldCommit(t *testing.T) {
 			name:                 "sufficient_coverage_no_commit",
 			activationHeight:     100,
 			currentHeight:        110,
-			lastCommittedHeight:  130, // EndHeight = 130, covers voting up to 130
+			lastCommittedHeight:  130, // GetEndHeight = 130, covers voting up to 130
 			interval:             5,
 			numPubRand:           3, // Required: 110 + 3*5 = 125
 			timestampingDelay:    0,
@@ -440,13 +440,13 @@ func TestRollupRandomnessCommitterShouldCommit(t *testing.T) {
 					Commitment:   []byte("mock-commitment"),
 				}
 				mockConsumerController.EXPECT().
-					QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).
+					QueryLastPubRandCommit(gomock.Any(), gomock.Any()).
 					Return(mockPubRandCommit, nil).
 					AnyTimes()
 			} else {
 				// No previous commits
 				mockConsumerController.EXPECT().
-					QueryLastPublicRandCommit(gomock.Any(), gomock.Any()).
+					QueryLastPubRandCommit(gomock.Any(), gomock.Any()).
 					Return(nil, nil).
 					AnyTimes()
 			}

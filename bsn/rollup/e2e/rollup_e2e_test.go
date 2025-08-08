@@ -478,14 +478,14 @@ func TestSparsePublicRandomnessGeneration(t *testing.T) {
 		t.Logf("✅ Height %d returns nil (no individual randomness)", betweenHeight)
 	}
 
-	// Step 6: Verify EndHeight calculation is correct for sparse generation
-	t.Log("Step 6: Verifying EndHeight calculation for sparse generation")
+	// Step 6: Verify GetEndHeight calculation is correct for sparse generation
+	t.Log("Step 6: Verifying GetEndHeight calculation for sparse generation")
 	expectedEndHeight := firstCommit.StartHeight + (firstCommit.NumPubRand-1)*firstCommit.Interval
-	actualEndHeight := firstCommit.EndHeight()
+	actualEndHeight := firstCommit.GetEndHeight()
 	require.Equal(t, expectedEndHeight, actualEndHeight,
-		"EndHeight should be calculated correctly for sparse generation")
+		"GetEndHeight should be calculated correctly for sparse generation")
 
-	t.Logf("✅ EndHeight calculation correct: %d = %d + (%d-1)*%d",
+	t.Logf("✅ GetEndHeight calculation correct: %d = %d + (%d-1)*%d",
 		actualEndHeight, firstCommit.StartHeight, firstCommit.NumPubRand, firstCommit.Interval)
 
 	// Step 7: Wait for FP to vote and verify it uses sparse randomness
