@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Improvements
 
 * [#598](https://github.com/babylonlabs-io/finality-provider/pull/598) chore: recover-rand-proof cosmos
+* [#600](https://github.com/babylonlabs-io/finality-provider/pull/600) chore: recover rand proof rollups
 
 ## v2.0.0-rc.0
 
