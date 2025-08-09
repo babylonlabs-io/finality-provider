@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -62,13 +63,18 @@ func getHashToSignForCommitPubRandWithContext(signingContext string, startHeight
 	return hasher.Sum(nil), nil
 }
 
-func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
+func (fp *FinalityProviderInstance) SignPubRandCommit(ctx context.Context, startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
 	var (
 		hash []byte
 		err  error
 	)
 
-	if startHeight >= fp.cfg.ContextSigningHeight {
+	latestHeight, err := LatestBlockHeightWithRetry(ctx, fp.consumerCon, fp.logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query the latest block: %w", err)
+	}
+
+	if latestHeight >= fp.cfg.ContextSigningHeight {
 		signCtx := fp.consumerCon.GetFpRandCommitContext()
 		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
 		if err != nil {
@@ -90,10 +96,14 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(startHeight uint64, numPub
 	return sig, nil
 }
 
-func (fp *FinalityProviderInstance) SignFinalitySig(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
+func (fp *FinalityProviderInstance) SignFinalitySig(ctx context.Context, b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
+	latestHeight, err := LatestBlockHeightWithRetry(ctx, fp.consumerCon, fp.logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query the latest block: %w", err)
+	}
 	// build proper finality signature request
 	var msgToSign []byte
-	if b.GetHeight() >= fp.cfg.ContextSigningHeight {
+	if latestHeight >= fp.cfg.ContextSigningHeight {
 		signCtx := fp.consumerCon.GetFpFinVoteContext()
 		msgToSign = b.MsgToSign(signCtx)
 	} else {

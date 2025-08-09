@@ -407,7 +407,7 @@ func (app *FinalityProviderApp) CreateFinalityProvider(
 		return nil, fmt.Errorf("eots pk cannot be nil")
 	}
 
-	pop, err := app.CreatePop(fpAddr, eotsPk)
+	pop, err := app.CreatePop(ctx, fpAddr, eotsPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proof-of-possession of the finality-provider: %w", err)
 	}
@@ -527,7 +527,7 @@ func (app *FinalityProviderApp) UnjailFinalityProvider(ctx context.Context, fpPk
 	}
 }
 
-func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntypes.BIP340PubKey) (*bstypes.ProofOfPossessionBTC, error) {
+func (app *FinalityProviderApp) CreatePop(ctx context.Context, fpAddress sdk.AccAddress, fpPk *bbntypes.BIP340PubKey) (*bstypes.ProofOfPossessionBTC, error) {
 	pop := &bstypes.ProofOfPossessionBTC{
 		BtcSigType: bstypes.BTCSigType_BIP340, // by default, we use BIP-340 encoding for BTC signature
 	}
@@ -535,9 +535,12 @@ func (app *FinalityProviderApp) CreatePop(fpAddress sdk.AccAddress, fpPk *bbntyp
 	// NOTE: *schnorr.Sign has to take the hash of the message.
 	// So we have to hash the address before signing
 	hasher := tmhash.New()
-	nextHeight := app.poller.NextHeight()
+	latestHeight, err := LatestBlockHeightWithRetry(ctx, app.consumerCon, app.logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query the latest block height: %w", err)
+	}
 	//  nextHeight-1 might underflow if the nextHeight is 0
-	if nextHeight >= app.config.ContextSigningHeight {
+	if latestHeight >= app.config.ContextSigningHeight {
 		signCtx := app.cc.GetFpPopContextV0()
 		if _, err := hasher.Write([]byte(signCtx)); err != nil {
 			return nil, fmt.Errorf("failed to write signing context to the hash: %w", err)

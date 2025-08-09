@@ -120,9 +120,13 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 		return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %w", err)
 	}
 
-	eotsSignerFunc := func(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
+	eotsSignerFunc := func(ctx context.Context, b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
+		latestHeight, err := LatestBlockHeightWithRetry(ctx, th.fp.consumerCon, th.fp.logger)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query the latest block: %w", err)
+		}
 		var msgToSign []byte
-		if b.GetHeight() >= th.fp.cfg.ContextSigningHeight {
+		if latestHeight >= th.fp.cfg.ContextSigningHeight {
 			signCtx := th.fp.consumerCon.GetFpFinVoteContext()
 			msgToSign = b.MsgToSign(signCtx)
 		} else {
@@ -142,7 +146,7 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 	}
 
 	// sign block
-	eotsSig, err := eotsSignerFunc(b)
+	eotsSig, err := eotsSignerFunc(ctx, b)
 	if err != nil {
 		return nil, nil, err
 	}

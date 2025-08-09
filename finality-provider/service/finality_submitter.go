@@ -296,7 +296,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 
 	// Process each block and collect only valid items
 	for i, b := range blocks {
-		eotsSig, err := ds.SignFinalitySig(b)
+		eotsSig, err := ds.SignFinalitySig(ctx, b)
 		if err != nil {
 			if !errors.Is(err, ErrFailedPrecondition) {
 				return nil, err
@@ -366,10 +366,15 @@ func (ds *DefaultFinalitySubmitter) CheckBlockFinalization(ctx context.Context, 
 	return b.IsFinalized(), nil
 }
 
-func (ds *DefaultFinalitySubmitter) SignFinalitySig(b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
+func (ds *DefaultFinalitySubmitter) SignFinalitySig(ctx context.Context, b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
 	// build proper finality signature request
+	latestHeight, err := LatestBlockHeightWithRetry(ctx, ds.ConsumerCtrl, ds.Logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query the latest block: %w", err)
+	}
+
 	var msgToSign []byte
-	if b.GetHeight() >= ds.Cfg.ContextSigningHeight {
+	if latestHeight >= ds.Cfg.ContextSigningHeight {
 		signCtx := ds.ConsumerCtrl.GetFpFinVoteContext()
 		msgToSign = b.MsgToSign(signCtx)
 	} else {
