@@ -180,7 +180,7 @@ func (rfs *RollupFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	var validSigList []*btcec.ModNScalar
 
 	for i, b := range blocks {
-		eotsSig, err := rfs.SignFinalitySig(b)
+		eotsSig, err := rfs.SignFinalitySig(ctx, b)
 		if err != nil {
 			if !errors.Is(err, service.ErrFailedPrecondition) {
 				return nil, fmt.Errorf("failed to sign finality signature for height %d: %w", b.GetHeight(), err)
