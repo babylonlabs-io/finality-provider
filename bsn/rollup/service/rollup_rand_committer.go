@@ -209,7 +209,7 @@ func (rrc *RollupRandomnessCommitter) Commit(ctx context.Context, startHeight ui
 	}
 
 	// Sign the commitment using the aligned startHeight
-	schnorrSig, err := rrc.SignPubRandCommit(startHeight, numPubRand, commitment)
+	schnorrSig, err := rrc.SignPubRandCommit(ctx, startHeight, numPubRand, commitment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign the Schnorr signature: %w", err)
 	}
