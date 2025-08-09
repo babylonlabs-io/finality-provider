@@ -77,7 +77,7 @@ func (fp *FinalityProviderInstance) commitPubRandPairsWithTiming(ctx context.Con
 
 	// Measure CommitPubRandList
 	commitListStart := time.Now()
-	schnorrSig, err := fp.SignPubRandCommit(startHeight, numPubRand, commitment)
+	schnorrSig, err := fp.SignPubRandCommit(ctx, startHeight, numPubRand, commitment)
 	if err != nil {
 		return nil, timing, fmt.Errorf("failed to sign the Schnorr signature: %w", err)
 	}

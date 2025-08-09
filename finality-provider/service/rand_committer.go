@@ -216,7 +216,7 @@ func (rc *DefaultRandomnessCommitter) Commit(ctx context.Context, startHeight ui
 	}
 
 	// sign the commitment
-	schnorrSig, err := rc.SignPubRandCommit(startHeight, numPubRand, commitment)
+	schnorrSig, err := rc.SignPubRandCommit(ctx, startHeight, numPubRand, commitment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign the Schnorr signature: %w", err)
 	}
@@ -255,13 +255,18 @@ func (rc *DefaultRandomnessCommitter) getPubRandList(startHeight uint64, numPubR
 	return pubRandList, nil
 }
 
-func (rc *DefaultRandomnessCommitter) SignPubRandCommit(startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
+func (rc *DefaultRandomnessCommitter) SignPubRandCommit(ctx context.Context, startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
 	var (
 		hash []byte
 		err  error
 	)
 
-	if startHeight >= rc.Cfg.ContextSigningHeight {
+	latestHeight, err := LatestBlockHeightWithRetry(ctx, rc.ConsumerCon, rc.Logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query the latest block: %w", err)
+	}
+
+	if latestHeight >= rc.Cfg.ContextSigningHeight {
 		signCtx := rc.ConsumerCon.GetFpRandCommitContext()
 		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
 		if err != nil {

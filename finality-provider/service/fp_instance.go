@@ -523,3 +523,28 @@ func (fp *FinalityProviderInstance) mustSetStatus(s proto.FinalityProviderStatus
 			zap.String("pk", fp.GetBtcPkHex()), zap.String("status", s.String()))
 	}
 }
+
+func LatestBlockHeightWithRetry(ctx context.Context, cc ccapi.ConsumerController, logger *zap.Logger) (uint64, error) {
+	var latestBlock types.BlockDescription
+	var err error
+
+	retryErr := retry.Do(func() error {
+		latestBlock, err = cc.QueryLatestBlock(ctx)
+		if latestBlock == nil || err != nil {
+			return fmt.Errorf("failed to query latest block height: %w", err)
+		}
+
+		return nil
+	}, RtyAtt, RtyDel, RtyErr,
+		retry.OnRetry(func(n uint, err error) {
+			logger.Debug("retrying latest block height query",
+				zap.Uint("attempt", n+1),
+				zap.Error(err))
+		}),
+	)
+	if retryErr != nil {
+		return 0, fmt.Errorf("failed to query latest block height: %w", retryErr)
+	}
+
+	return latestBlock.GetHeight(), nil
+}
