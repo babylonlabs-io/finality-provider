@@ -66,6 +66,8 @@ type OpL2ConsumerTestManager struct {
 	BabylonEOTSClient   *client.EOTSManagerGRpcClient
 	ConsumerEOTSClient  *client.EOTSManagerGRpcClient
 	AnvilResource       *dockertest.Resource
+	rollupConfig        *rollupfpconfig.RollupFPConfig
+	fpConfig            *fpcfg.Config
 	logger              *zap.Logger
 }
 
@@ -147,6 +149,8 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 		BabylonEOTSClient:   EOTSClients[0],
 		ConsumerEOTSClient:  EOTSClients[1],
 		AnvilResource:       anvil,
+		rollupConfig:        rollupFpCfg,
+		fpConfig:            babylonFpCfg,
 		logger:              logger,
 	}
 

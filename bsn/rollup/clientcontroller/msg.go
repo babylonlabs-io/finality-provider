@@ -83,3 +83,14 @@ type Proof struct {
 
 // AllowedFinalityProvidersResponse represents the response from querying allowed finality providers
 type AllowedFinalityProvidersResponse []string
+
+type QueryMsgListPubRandCommit struct {
+	ListPubRandCommit PubRandCommitQuery `json:"list_pub_rand_commit"`
+}
+
+type PubRandCommitQuery struct {
+	BtcPkHex   string `json:"btc_pk_hex"`
+	StartAfter uint64 `json:"start_after,omitempty"`
+	Limit      uint32 `json:"limit,omitempty"`
+	Reverse    bool   `json:"reverse,omitempty"`
+}
