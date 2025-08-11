@@ -12,10 +12,10 @@ type ConsumerFpsResponse struct {
 // https://github.com/babylonchain/babylon-contract/blob/v0.5.3/contracts/btc-staking/src/msg.rs
 // https://github.com/babylonchain/babylon-contract/blob/v0.5.3/contracts/btc-staking/schema/btc-staking.json
 type SingleConsumerFpResponse struct {
-	BtcPkHex             string `json:"btc_pk_hex"`
-	SlashedBabylonHeight uint64 `json:"slashed_babylon_height"`
-	SlashedBtcHeight     uint32 `json:"slashed_btc_height"`
-	ConsumerID           string `json:"consumer_id"`
+	BtcPkHex         string `json:"btc_pk_hex"`
+	SlashedHeight    uint64 `json:"slashed_height"`
+	SlashedBtcHeight uint32 `json:"slashed_btc_height"`
+	ConsumerID       string `json:"consumer_id"`
 }
 
 type ConsumerDelegationsResponse struct {
@@ -157,6 +157,11 @@ type ExecMsg struct {
 	SubmitFinalitySignature *SubmitFinalitySignature `json:"submit_finality_signature,omitempty"`
 	BtcStaking              *BtcStaking              `json:"btc_staking,omitempty"`
 	CommitPublicRandomness  *CommitPublicRandomness  `json:"commit_public_randomness,omitempty"`
+	Unjail                  *UnjailMsg               `json:"unjail,omitempty"`
+}
+
+type UnjailMsg struct {
+	FPPubKeyHex string `json:"fp_pubkey_hex"`
 }
 
 type FinalityProviderInfo struct {
@@ -202,6 +207,14 @@ type FinalitySignatureQuery struct {
 
 type QueryMsgFinalityProviders struct {
 	FinalityProviders struct{} `json:"finality_providers"`
+}
+
+type QueryMsgFinalityProvider struct {
+	FinalityProvider FinalityProvider `json:"finality_provider"`
+}
+
+type FinalityProvider struct {
+	BtcPkHex string `json:"btc_pk_hex"`
 }
 
 type QueryMsgDelegations struct {
@@ -280,4 +293,15 @@ type FinalityConfigResponse struct {
 	MissedBlocksWindow         uint64 `json:"missed_blocks_window"`
 	JailDuration               uint64 `json:"jail_duration"`
 	FinalityActivationHeight   uint64 `json:"finality_activation_height"`
+}
+
+type QueryMsgSigningInfo struct {
+	SigningInfo FinalityProvider `json:"signing_info"`
+}
+
+type SigningInfoResponse struct {
+	FpBtcPkHex       string  `json:"fp_btc_pk_hex"`
+	StartHeight      uint64  `json:"start_height"`
+	LastSignedHeight uint64  `json:"last_signed_height"`
+	JailedUntil      *uint64 `json:"jailed_until,omitempty"`
 }
