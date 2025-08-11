@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/testutil"
 	"io"
 	"log"
 	"os"
@@ -22,16 +23,13 @@ import (
 )
 
 const (
-	bcdRpcPort    int = 3990
-	bcdP2pPort    int = 3991
-	bcdChainID        = "bcd-test"
-	bcdConsumerID     = "07-tendermint-0"
+	bcdChainID    = "bcd-test"
+	bcdConsumerID = "07-tendermint-0"
 
 	// Relayer constants
-	relayerAPIPort int = 5183
-	babylonKey         = "babylon-key"
-	consumerKey        = "bcd-key"
-	pathName           = "bcd"
+	babylonKey  = "babylon-key"
+	consumerKey = "bcd-key"
+	pathName    = "bcd"
 )
 
 type BcdNodeHandler struct {
@@ -42,6 +40,10 @@ type BcdNodeHandler struct {
 	dataDir         string
 	relayerHomeDir  string
 	contractAddress string
+	bcdRpcPort      int
+	bcdP2pPort      int
+	bcdGrpcPort     int
+	relayerAPIPort  int
 
 	babylonChainID string
 	babylonNodeRPC string
@@ -106,7 +108,12 @@ func NewBcdNodeHandler(t *testing.T) *BcdNodeHandler {
 	require.NoError(t, err)
 
 	setupBcd(t, testDir)
-	cmd := bcdStartCmd(t, testDir)
+
+	rpcPort := testutil.AllocateUniquePort(t)
+	p2pPort := testutil.AllocateUniquePort(t)
+	grpcPort := testutil.AllocateUniquePort(t)
+
+	cmd := bcdStartCmd(t, testDir, rpcPort, p2pPort, grpcPort)
 	t.Log("Starting bcd with command:", cmd.String())
 	t.Log("Test directory:", testDir)
 	t.Log("Relayer directory:", relayerDir)
@@ -117,6 +124,9 @@ func NewBcdNodeHandler(t *testing.T) *BcdNodeHandler {
 		relayerPidFile: "",
 		dataDir:        testDir,
 		relayerHomeDir: relayerDir,
+		bcdP2pPort:     p2pPort,
+		bcdRpcPort:     rpcPort,
+		bcdGrpcPort:    grpcPort,
 		// These should be set by the caller based on their setup
 		babylonChainID: "chain-test",
 		babylonNodeRPC: "http://localhost:26657", // Default, should be configured
@@ -152,6 +162,8 @@ func (w *BcdNodeHandler) StartRelayer(t *testing.T) error {
 		}
 		w.contractAddress = contractAddr
 	}
+
+	w.relayerAPIPort = testutil.AllocateUniquePort(t)
 
 	// Setup relayer
 	if err := w.setupRelayer(t); err != nil {
@@ -300,8 +312,8 @@ paths:
             chain-id: %s
         dst:
             chain-id: %s
-`, relayerAPIPort, babylonKey, w.babylonChainID, w.babylonNodeRPC,
-		consumerKey, bcdChainID, bcdRpcPort,
+`, w.relayerAPIPort, babylonKey, w.babylonChainID, w.babylonNodeRPC,
+		consumerKey, bcdChainID, w.bcdRpcPort,
 		pathName, w.babylonChainID, bcdChainID)
 
 	configPath := filepath.Join(w.relayerHomeDir, "config", "config.yaml")
@@ -585,7 +597,7 @@ func (w *BcdNodeHandler) stopRelayer() error {
 }
 
 func (w *BcdNodeHandler) GetRpcUrl() string {
-	return fmt.Sprintf("http://localhost:%d", bcdRpcPort)
+	return fmt.Sprintf("http://localhost:%d", w.bcdRpcPort)
 }
 
 func (w *BcdNodeHandler) GetHomeDir() string {
@@ -788,12 +800,13 @@ func setupBcd(t *testing.T, testDir string) {
 	require.NoError(t, err)
 }
 
-func bcdStartCmd(t *testing.T, testDir string) *exec.Cmd {
+func bcdStartCmd(t *testing.T, testDir string, rpcPort, p2pPort, grpcPort int) *exec.Cmd {
 	args := []string{
 		"start",
 		"--home", testDir,
-		"--rpc.laddr", fmt.Sprintf("tcp://0.0.0.0:%d", bcdRpcPort),
-		"--p2p.laddr", fmt.Sprintf("tcp://0.0.0.0:%d", bcdP2pPort),
+		"--rpc.laddr", fmt.Sprintf("tcp://0.0.0.0:%d", rpcPort),
+		"--p2p.laddr", fmt.Sprintf("tcp://0.0.0.0:%d", p2pPort),
+		"--grpc.address", fmt.Sprintf("0.0.0.0:%d", grpcPort),
 		"--log_level=info",
 	}
 
