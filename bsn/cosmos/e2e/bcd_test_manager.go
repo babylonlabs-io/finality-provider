@@ -1,3 +1,5 @@
+//go:build e2e_bcd
+
 package e2etest_bcd
 
 import (
@@ -90,7 +92,7 @@ type BcdTestManager struct {
 //
 // This creates a race condition when tests run in parallel (t.Parallel()):
 //   - Test A calls SetAddressPrefixes() to set "bbn" prefix
-//   - Test B calls SetAddressPrefixes() to set "bbnc" prefix  
+//   - Test B calls SetAddressPrefixes() to set "bbnc" prefix
 //   - Both tests read the global config simultaneously, causing unpredictable behavior
 //
 // The mutex ensures that only one goroutine can modify address prefixes at a time,
