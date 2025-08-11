@@ -4,7 +4,13 @@ package e2etest_rollup
 
 import (
 	"context"
+	"github.com/babylonlabs-io/finality-provider/bsn/rollup/cmd/rollup-fpd/daemon"
+	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	goflags "github.com/jessevdk/go-flags"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -515,4 +521,89 @@ func TestSparsePublicRandomnessGeneration(t *testing.T) {
 	t.Logf("✅ First commitment covers sparse heights: %d to %d", startHeight, actualEndHeight)
 	t.Logf("✅ FP correctly votes only on interval-aligned heights")
 	t.Logf("✅ Sparse randomness generation working correctly end-to-end")
+}
+
+// TestRollupFinalityProviderRecoverRandProofCmd tests the recover-proof command functionality for rollup chains.
+// This test verifies that the recover-proof command can successfully restore public randomness proofs
+// from a rollup chain back to the local database after a database loss scenario.
+//
+// The test ensures that finality providers can recover their cryptographic proofs from the rollup
+// chain after losing their local database, maintaining the integrity of the finality voting process
+// for rollup-based consumer chains.
+func TestRollupFinalityProviderRecoverRandProofCmd(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(t.Context())
+	ctm := StartRollupTestManager(t, ctx)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
+
+	fps := ctm.setupBabylonAndConsumerFp(t)
+	babylonFpPk := fps[0]
+	consumerFpPk := fps[1]
+
+	require.Eventually(t, func() bool {
+		babylonFps, err := ctm.BabylonController.QueryFinalityProviders()
+		if err != nil {
+			t.Logf("Failed to query Babylon FPs: %v", err)
+			return false
+		}
+		consumerFps, err := ctm.BabylonController.QueryConsumerFinalityProviders(rollupBSNID)
+		if err != nil {
+			t.Logf("Failed to query consumer FPs: %v", err)
+			return false
+		}
+		return len(babylonFps) >= 1 && len(consumerFps) >= 1
+	}, eventuallyWaitTimeOut, eventuallyPollTime, "Both Babylon and consumer FPs should be registered")
+
+	ctm.addFpToContractAllowlist(t, ctx, consumerFpPk)
+	ctm.delegateBTCAndWaitForActivation(t, babylonFpPk, consumerFpPk)
+	consumerFpInstance := ctm.getConsumerFpInstance(t, consumerFpPk)
+	err := consumerFpInstance.Start(ctx)
+	require.NoError(t, err)
+	ctm.WaitForFpPubRandTimestamped(t, ctx, consumerFpInstance)
+
+	var lastVotedHeight uint64
+	require.Eventually(t, func() bool {
+		if consumerFpInstance.GetLastVotedHeight() > 0 {
+			lastVotedHeight = consumerFpInstance.GetLastVotedHeight()
+			t.Logf("FP voted on block at height: %d", lastVotedHeight)
+			return true
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime, "FP should automatically vote on rollup blocks")
+
+	dbPath := filepath.Join(ctm.rollupConfig.Common.DatabaseConfig.DBPath, ctm.rollupConfig.Common.DatabaseConfig.DBFileName)
+	err = os.Remove(dbPath)
+	require.NoError(t, err)
+	// create the config file
+
+	ctm.rollupConfig.Common.EOTSManagerAddress = ctm.EOTSServerHandler.Config().RPCListener
+	fpHomePath := filepath.Dir(ctm.rollupConfig.Common.DatabaseConfig.DBPath)
+	fileParser := goflags.NewParser(ctm.rollupConfig, goflags.Default)
+	err = goflags.NewIniParser(fileParser).WriteFile(cfg.CfgFile(fpHomePath), goflags.IniIncludeDefaults)
+	require.NoError(t, err)
+
+	chainID := string(consumerFpInstance.GetChainID())
+	cmd := daemon.CommandRecoverProof("rollup-fpd")
+	cmd.SetArgs([]string{
+		consumerFpInstance.GetBtcPkHex(),
+		"--home=" + fpHomePath,
+		"--chain-id=" + chainID,
+	})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	// assert db exists
+	_, err = os.Stat(dbPath)
+	require.NoError(t, err)
+
+	fpdb, err := ctm.rollupConfig.Common.DatabaseConfig.GetDBBackend()
+	require.NoError(t, err)
+
+	pubRandStore, err := store.NewPubRandProofStore(fpdb)
+	require.NoError(t, err)
+	_, err = pubRandStore.GetPubRandProof([]byte(chainID), consumerFpInstance.GetBtcPkBIP340().MustMarshal(), lastVotedHeight)
+	require.NoError(t, err)
 }
