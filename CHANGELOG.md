@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Improvements
 
 * [#606](https://github.com/babylonlabs-io/finality-provider/pull/606) chore: make cosmos e2e run in parallel
+* [#607](https://github.com/babylonlabs-io/finality-provider/pull/607) chore: impl missing methods in cc for cosmos
 
 ## v2.0.0-rc.1
 
