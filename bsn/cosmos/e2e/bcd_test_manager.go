@@ -7,9 +7,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
 	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
 	config2 "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
 	"strings"
+	"sync"
 
 	sdkErr "cosmossdk.io/errors"
 	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
@@ -46,12 +48,6 @@ import (
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	dbm "github.com/cosmos/cosmos-db"
-	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	bbncc "github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
@@ -63,6 +59,10 @@ import (
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
+	dbm "github.com/cosmos/cosmos-db"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 type BcdTestManager struct {
@@ -83,16 +83,37 @@ type BcdTestManager struct {
 	babylonKeyDir     string
 }
 
-func createLogger(t *testing.T, level zapcore.Level) *zap.Logger {
-	config := zap.NewDevelopmentConfig()
-	config.Level = zap.NewAtomicLevelAt(level)
-	logger, err := config.Build()
-	require.NoError(t, err)
-	return logger
+// addressPrefixMutex serializes access to Cosmos SDK address prefix configuration.
+//
+// The Cosmos SDK uses a global singleton configuration (sdk.GetConfig()) to store
+// address prefixes for bech32 encoding. Functions like appparams.SetAddressPrefixes()
+// and bbnappparams.SetAddressPrefixes() modify this global state by calling
+// sdk.GetConfig().SetBech32PrefixForAccount() and related methods.
+//
+// This creates a race condition when tests run in parallel (t.Parallel()):
+//   - Test A calls SetAddressPrefixes() to set "bbn" prefix
+//   - Test B calls SetAddressPrefixes() to set "bbnc" prefix
+//   - Both tests read the global config simultaneously, causing unpredictable behavior
+//
+// The mutex ensures that only one goroutine can modify address prefixes at a time,
+// preventing race conditions while still allowing tests to run in parallel.
+// The critical sections are kept minimal to reduce lock contention.
+var addressPrefixMutex sync.Mutex
+
+func setBbnAddressPrefixesSafely() {
+	addressPrefixMutex.Lock()
+	defer addressPrefixMutex.Unlock()
+	appparams.SetAddressPrefixes()
+}
+
+func setBbncAppPrefixesSafely() {
+	addressPrefixMutex.Lock()
+	defer addressPrefixMutex.Unlock()
+	bbnappparams.SetAddressPrefixes()
 }
 
 func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
-	appparams.SetAddressPrefixes()
+	setBbnAddressPrefixesSafely()
 
 	testDir, err := base_test_manager.TempDir(t, "fp-e2e-test-*")
 	require.NoError(t, err)
@@ -159,9 +180,10 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	cosmwasmConfig.BtcFinalityContractAddress = datagen.GenRandomAccount().GetAddress().String()
 	cosmwasmConfig.AccountPrefix = "bbnc"
 	cosmwasmConfig.ChainID = bcdChainID
-	cosmwasmConfig.RPCAddr = fmt.Sprintf("http://localhost:%d", bcdRpcPort)
+	cosmwasmConfig.RPCAddr = fmt.Sprintf("http://localhost:%d", wh.bcdRpcPort)
 	cosmwasmConfig.GasPrices = "0.01ustake"
 	cosmwasmConfig.GasAdjustment = 2.0
+	cosmwasmConfig.GRPCAddr = fmt.Sprintf("tcp://localhost:%d", wh.bcdGrpcPort)
 
 	// tempApp := bcdapp.NewTmpApp() // TODO: investigate why wasmapp works and bcdapp doesn't
 	tempApp := wasmapp.NewWasmApp(sdklogs.NewNopLogger(), dbm.NewMemDB(), nil, false, simtestutil.NewAppOptionsWithFlagHome(t.TempDir()), []wasmkeeper.Option{})
