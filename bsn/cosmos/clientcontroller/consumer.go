@@ -369,8 +369,9 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderHighestVotedHeight(_ 
 }
 
 func (wc *CosmwasmConsumerController) QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
+	btcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
 	queryMsgStruct := QueryMsgFinalityProvider{
-		FinalityProvider{BtcPkHex: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()},
+		FinalityProvider{BtcPkHex: btcPkHex},
 	}
 
 	queryMsgBytes, err := json.Marshal(queryMsgStruct)
@@ -389,7 +390,7 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderStatus(ctx context.Co
 	}
 
 	queryMsgSigningInfo := QueryMsgSigningInfo{
-		FinalityProvider{BtcPkHex: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()},
+		FinalityProvider{BtcPkHex: btcPkHex},
 	}
 
 	queryMsgBytes, err = json.Marshal(queryMsgSigningInfo)
