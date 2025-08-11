@@ -55,7 +55,7 @@ using them to produce EOTS signatures.
 
 > ⚡ **Note:** EOTS stands for Extractable One Time Signature. You can read more about it
 in
-the [Babylon BTC Staking Litepaper](https://docs.babylonchain.io/assets/files/btc_staking_litepaper-32bfea0c243773f0bfac63e148387aef.pdf).
+the [Babylon BTC Staking Litepaper](https://docs.babylonlabs.io/assets/files/btc_staking_litepaper-32bfea0c243773f0bfac63e148387aef.pdf).
 In short, the EOTS manager generates EOTS public/private randomness pairs. The
 finality provider commits the public part of these pairs to Babylon Genesis for every future
 block height that they intend to provide a finality signature for. If the finality
