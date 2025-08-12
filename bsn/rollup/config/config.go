@@ -15,6 +15,7 @@ const (
 	defaultConfigFileName = "fpd.conf"
 	defaultLogDirname     = "logs"
 	defaultLogFilename    = "fpd.log"
+	defaultPollSize       = uint32(100)
 )
 
 type RollupFPConfig struct {
@@ -82,6 +83,7 @@ func LoadConfig(homePath string) (*RollupFPConfig, error) {
 
 func DefaultConfigWithHome(homePath string) RollupFPConfig {
 	cfg := fpcfg.DefaultConfigWithHome(homePath)
+	cfg.PollerConfig.PollSize = defaultPollSize
 
 	return RollupFPConfig{
 		Common: &cfg,
