@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug fixes
+
+* [#622](https://github.com/babylonlabs-io/finality-provider/pull/622) fix: bbn tip height unused
+
 ### Improvements
 
 * [#606](https://github.com/babylonlabs-io/finality-provider/pull/606) chore: make cosmos e2e run in parallel
