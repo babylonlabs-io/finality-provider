@@ -316,7 +316,9 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(ctx context.Context, 
 	require.NoError(t, err)
 
 	// inject fp in smart contract using admin
+	addressPrefixMutex.Lock() // we read the address prefix, so we need to lock it
 	fpMsg := e2eutils.GenBtcStakingFpExecMsg(eotsPubKey.MarshalHex())
+	addressPrefixMutex.Unlock()
 	fpMsgBytes, err := json.Marshal(fpMsg)
 	require.NoError(t, err)
 	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, fpMsgBytes)
