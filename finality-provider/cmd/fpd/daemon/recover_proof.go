@@ -3,6 +3,7 @@ package daemon
 import (
 	"bytes"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"math"
 	"path/filepath"
 
@@ -57,10 +58,20 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	return RunCommandRecoverProofWithConfig(ctx, cmd, homePath, cfg, args)
+	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.LogLevel)
+	if err != nil {
+		return fmt.Errorf("failed to initialize the logger: %w", err)
+	}
+
+	bcc, err := babylon.NewBabylonConsumerController(cfg.BabylonConfig, logger)
+	if err != nil {
+		return fmt.Errorf("failed to create Babylon rpc client: %w", err)
+	}
+
+	return RunCommandRecoverProofWithConfig(ctx, cmd, cfg, bcc, args)
 }
 
-func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, homePath string, cfg *fpcfg.Config, args []string) error {
+func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, cfg *fpcfg.Config, consumerCtrl api.ConsumerController, args []string) error {
 	chainID, err := cmd.Flags().GetString(flags.FlagChainID)
 	if err != nil {
 		return fmt.Errorf("failed to read chain id flag: %w", err)
@@ -77,11 +88,6 @@ func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, home
 	startHeight, err := cmd.Flags().GetUint64("start-height")
 	if err != nil {
 		return fmt.Errorf("failed to get start height flag: %w", err)
-	}
-
-	logger, err := log.NewRootLoggerWithFile(fpcfg.LogFile(homePath), cfg.LogLevel)
-	if err != nil {
-		return fmt.Errorf("failed to initialize the logger: %w", err)
 	}
 
 	db, err := cfg.DatabaseConfig.GetDBBackend()
@@ -105,34 +111,30 @@ func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, home
 		return fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}
 
-	bcc, err := babylon.NewBabylonConsumerController(cfg.BabylonConfig, logger)
-	if err != nil {
-		return fmt.Errorf("failed to create Babylon rpc client: %w", err)
-	}
-
-	commitList, err := bcc.QueryPublicRandCommitList(fpPk.MustToBTCPK(), startHeight)
+	commitList, err := consumerCtrl.QueryPubRandCommitList(cmd.Context(), fpPk.MustToBTCPK(), startHeight)
 	if err != nil {
 		return fmt.Errorf("failed to query randomness commit list for fp %s: %w", fpPk.MarshalHex(), err)
 	}
 
 	for _, commit := range commitList {
 		// to bypass gosec check of overflow risk
-		if commit.NumPubRand > uint64(math.MaxUint32) {
-			return fmt.Errorf("NumPubRand %d exceeds maximum uint32 value", commit.NumPubRand)
+		if commit.GetNumPubRand() > uint64(math.MaxUint32) {
+			return fmt.Errorf("NumPubRand %d exceeds maximum uint32 value", commit.GetNumPubRand())
 		}
 
-		pubRandList, err := em.CreateRandomnessPairList(fpPk.MustMarshal(), []byte(chainID), commit.StartHeight, uint32(commit.NumPubRand))
+		// #nosec G115 - already checked above
+		pubRandList, err := em.CreateRandomnessPairList(fpPk.MustMarshal(), []byte(chainID), commit.GetStartHeight(), uint32(commit.GetNumPubRand()))
 		if err != nil {
-			return fmt.Errorf("failed to get randomness from height %d to height %d: %w", commit.StartHeight, commit.EndHeight(), err)
+			return fmt.Errorf("failed to get randomness from height %d to height %d: %w", commit.GetStartHeight(), commit.GetEndHeight(), err)
 		}
 		// generate commitment and proof for each public randomness
 		commitRoot, proofList := types.GetPubRandCommitAndProofs(pubRandList)
-		if !bytes.Equal(commitRoot, commit.Commitment) {
-			return fmt.Errorf("the commit root on Babylon does not match the local one, expected: %x, got: %x", commit.Commitment, commitRoot)
+		if !bytes.Equal(commitRoot, commit.GetCommitment()) {
+			return fmt.Errorf("the commit root on Babylon does not match the local one, expected: %x, got: %x", commit.GetCommitment(), commitRoot)
 		}
 
 		// store them to database
-		if err := pubRandStore.AddPubRandProofList([]byte(chainID), fpPk.MustMarshal(), commit.StartHeight, commit.NumPubRand, proofList); err != nil {
+		if err := pubRandStore.AddPubRandProofList([]byte(chainID), fpPk.MustMarshal(), commit.GetStartHeight(), commit.GetNumPubRand(), proofList); err != nil {
 			return fmt.Errorf("failed to save public randomness to DB: %w", err)
 		}
 	}

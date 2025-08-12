@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	// ref: https://github.com/babylonlabs-io/rollup-bsn-contracts/blob/main/contracts/finality/src/error.rs#L87
+	// ErrBSNDuplicatedFinalitySig - ref: https://github.com/babylonlabs-io/rollup-bsn-contracts/blob/main/contracts/finality/src/error.rs#L87
 	ErrBSNDuplicatedFinalitySig = sdkErr.Register("bsn_rollup", 1001, "Duplicated finality signature")
 )
 
@@ -560,8 +560,8 @@ func (cc *RollupBSNController) QueryFirstPubRandCommit(ctx context.Context, fpPk
 	return resp, nil
 }
 
-// QueryLastPublicRandCommit returns the last public randomness commitments
-func (cc *RollupBSNController) QueryLastPublicRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error) {
+// QueryLastPubRandCommit returns the last public randomness commitments
+func (cc *RollupBSNController) QueryLastPubRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types.PubRandCommit, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
 	queryMsg := &QueryMsg{
 		LastPubRandCommit: &PubRandCommit{
@@ -727,6 +727,11 @@ func (cc *RollupBSNController) QueryFinalityProviderStatus(_ context.Context, fp
 
 func (cc *RollupBSNController) UnjailFinalityProvider(_ context.Context, _ *btcec.PublicKey) (*types.TxResponse, error) {
 	// always return nil, there is no jail/unjail feature in rollup BSN
+	return nil, nil
+}
+
+func (cc *RollupBSNController) QueryPubRandCommitList(_ context.Context, _ *btcec.PublicKey, _ uint64) ([]types.PubRandCommit, error) {
+	// TODO(lazar955): will implement in separate PR
 	return nil, nil
 }
 
