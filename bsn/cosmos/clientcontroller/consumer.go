@@ -368,17 +368,75 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderHighestVotedHeight(_ 
 	return 0, nil
 }
 
-func (wc *CosmwasmConsumerController) QueryFinalityProviderStatus(_ context.Context, _ *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
-	// TODO: implement slashed or jailed feature in OP stack L2
+func (wc *CosmwasmConsumerController) QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
+	btcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
+	queryMsgStruct := QueryMsgFinalityProvider{
+		FinalityProvider{BtcPkHex: btcPkHex},
+	}
+
+	queryMsgBytes, err := json.Marshal(queryMsgStruct)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query message: %w", err)
+	}
+
+	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.cfg.BtcStakingContractAddress, string(queryMsgBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+
+	var resp SingleConsumerFpResponse
+	if err = json.Unmarshal(dataFromContract.Data, &resp); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	queryMsgSigningInfo := QueryMsgSigningInfo{
+		FinalityProvider{BtcPkHex: btcPkHex},
+	}
+
+	queryMsgBytes, err = json.Marshal(queryMsgSigningInfo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query message: %w", err)
+	}
+
+	dataFromContract, err = wc.QuerySmartContractState(ctx, wc.cfg.BtcFinalityContractAddress, string(queryMsgBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+
+	var respSigningInfo SigningInfoResponse
+	if err = json.Unmarshal(dataFromContract.Data, &respSigningInfo); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	jailed := false
+	if respSigningInfo.JailedUntil != nil && *respSigningInfo.JailedUntil > 0 {
+		jailed = true
+	}
+
 	return &api.FinalityProviderStatusResponse{
-		Slashed: false,
-		Jailed:  false,
+		Slashed: resp.SlashedBtcHeight > 0,
+		Jailed:  jailed,
 	}, nil
 }
 
-func (wc *CosmwasmConsumerController) UnjailFinalityProvider(_ context.Context, _ *btcec.PublicKey) (*fptypes.TxResponse, error) {
-	// TODO: implement unjail feature in OP stack L2
-	return nil, nil
+func (wc *CosmwasmConsumerController) UnjailFinalityProvider(ctx context.Context, fpPk *btcec.PublicKey) (*fptypes.TxResponse, error) {
+	msg := ExecMsg{
+		Unjail: &UnjailMsg{
+			FPPubKeyHex: bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex(),
+		},
+	}
+
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal ExecMsg: %w", err)
+	}
+
+	res, err := wc.ExecuteBTCFinalityContract(ctx, msgBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute UnjailFinalityProvider in BTC finality contract: %w", err)
+	}
+
+	return &fptypes.TxResponse{TxHash: res.TxHash}, nil
 }
 
 func (wc *CosmwasmConsumerController) QueryFinalitySignature(ctx context.Context, fpBtcPkHex string, height uint64) (*FinalitySignatureResponse, error) {
