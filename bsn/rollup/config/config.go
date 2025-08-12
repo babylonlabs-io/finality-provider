@@ -15,7 +15,8 @@ const (
 	defaultConfigFileName = "fpd.conf"
 	defaultLogDirname     = "logs"
 	defaultLogFilename    = "fpd.log"
-	defaultPollSize       = uint32(100)
+	// defaultPollSize is different from the default in fpcfg.Config to avoid rate limiting
+	defaultPollSize = uint32(100)
 )
 
 type RollupFPConfig struct {
