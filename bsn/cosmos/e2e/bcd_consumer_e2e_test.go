@@ -5,7 +5,6 @@ package e2etest_bcd
 import (
 	"context"
 	"encoding/json"
-	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
 	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/cmd/cosmos-fpd/daemon"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
@@ -42,7 +41,8 @@ import (
 // has started. This order is critical because the pub randomness loop takes time to initialize,
 // and without it, blocks won't get finalized properly.
 func TestConsumerFpLifecycle(t *testing.T) {
-	appparams.SetAddressPrefixes()
+	t.Parallel()
+	setBbnAddressPrefixesSafely()
 
 	ctx, cancel := context.WithCancel(t.Context())
 	ctm := StartBcdTestManager(t, ctx)
@@ -85,9 +85,9 @@ func TestConsumerFpLifecycle(t *testing.T) {
 
 	// inject delegation in smart contract using admin
 	// HACK: set account prefix to ensure the staker's address uses bbn prefix
-	appparams.SetAddressPrefixes()
+	setBbnAddressPrefixesSafely()
 	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
-	bbnappparams.SetAddressPrefixes()
+	setBbncAppPrefixesSafely()
 	delMsgBytes, err := json.Marshal(delMsg)
 	require.NoError(t, err)
 	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, delMsgBytes)
@@ -137,7 +137,8 @@ func TestConsumerFpLifecycle(t *testing.T) {
 // 6. Execute the recover-proof command to restore proofs from smart contract
 // 7. Verify that public randomness proofs are successfully recovered in the database
 func TestConsumerRecoverRandProofCmd(t *testing.T) {
-	appparams.SetAddressPrefixes()
+	t.Parallel()
+	setBbnAddressPrefixesSafely()
 
 	ctx, cancel := context.WithCancel(t.Context())
 	ctm := StartBcdTestManager(t, ctx)
@@ -176,9 +177,9 @@ func TestConsumerRecoverRandProofCmd(t *testing.T) {
 
 	// inject delegation in smart contract using admin
 	// HACK: set account prefix to ensure the staker's address uses bbn prefix
-	appparams.SetAddressPrefixes()
+	setBbnAddressPrefixesSafely()
 	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
-	bbnappparams.SetAddressPrefixes()
+	setBbncAppPrefixesSafely()
 	delMsgBytes, err := json.Marshal(delMsg)
 	require.NoError(t, err)
 	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, delMsgBytes)
