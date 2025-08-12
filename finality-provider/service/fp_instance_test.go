@@ -187,6 +187,7 @@ func startFinalityProviderAppWithRegisteredFp(
 
 	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, db, logger)
 	require.NoError(t, err)
+	// nolint:usetesting // t.context is nil
 	ctx, cancel := context.WithCancel(context.Background())
 	err = app.Start(ctx)
 	require.NoError(t, err)
@@ -303,6 +304,7 @@ func BenchmarkCommitPubRand(b *testing.B) {
 
 			var totalTiming service.CommitPubRandTiming
 			for i := 0; i < b.N; i++ {
+				// nolint:usetesting
 				res, timing, err := fpIns.HelperCommitPubRand(context.Background(), startingBlock.GetHeight())
 				if err != nil {
 					b.Fatalf("unexpected error: %v", err)
