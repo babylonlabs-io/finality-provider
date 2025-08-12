@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#606](https://github.com/babylonlabs-io/finality-provider/pull/606) chore: make cosmos e2e run in parallel
 * [#607](https://github.com/babylonlabs-io/finality-provider/pull/607) chore: impl missing methods in cc for cosmos
 * [#608](https://github.com/babylonlabs-io/finality-provider/pull/608) chore: fix data race in bcd e2e
+* [#610](https://github.com/babylonlabs-io/finality-provider/pull/610) chore: default poll size rollup
 
 ## v2.0.0-rc.1
 
