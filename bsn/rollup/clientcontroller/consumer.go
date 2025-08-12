@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"sort"
 
 	sdkErr "cosmossdk.io/errors"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
@@ -730,9 +731,55 @@ func (cc *RollupBSNController) UnjailFinalityProvider(_ context.Context, _ *btce
 	return nil, nil
 }
 
-func (cc *RollupBSNController) QueryPubRandCommitList(_ context.Context, _ *btcec.PublicKey, _ uint64) ([]types.PubRandCommit, error) {
-	// TODO(lazar955): will implement in separate PR
-	return nil, nil
+func (cc *RollupBSNController) QueryPubRandCommitList(ctx context.Context, fpPk *btcec.PublicKey, startHeight uint64) ([]types.PubRandCommit, error) {
+	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)
+	queryMsg := &QueryMsgListPubRandCommit{
+		ListPubRandCommit: PubRandCommitQuery{
+			BtcPkHex:   fpPubKey.MarshalHex(),
+			StartAfter: startHeight,
+			Reverse:    false,
+		},
+	}
+
+	jsonData, err := json.Marshal(queryMsg)
+	if err != nil {
+		return nil, fmt.Errorf("failed marshaling to JSON: %w", err)
+	}
+
+	stateResp, err := cc.QuerySmartContractState(ctx, cc.Cfg.FinalityContractAddress, string(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+	if len(stateResp.Data) == 0 {
+		return nil, nil
+	}
+
+	var resp []RollupPubRandCommit
+
+	if err = json.Unmarshal(stateResp.Data, &resp); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+	if resp == nil {
+		return nil, nil
+	}
+
+	for _, commit := range resp {
+		if err := commit.Validate(); err != nil {
+			return nil, fmt.Errorf("failed to validate pub rand commit: %w", err)
+		}
+	}
+
+	// sort the commits by StartHeight in ascending order
+	sort.Slice(resp, func(i, j int) bool {
+		return resp[i].StartHeight < resp[j].StartHeight
+	})
+
+	cmts := make([]types.PubRandCommit, len(resp))
+	for i, commit := range resp {
+		cmts[i] = &commit
+	}
+
+	return cmts, nil
 }
 
 // QueryFinalityProviderInAllowlist queries whether the finality provider is in the allowlist

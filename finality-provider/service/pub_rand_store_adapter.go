@@ -2,10 +2,16 @@ package service
 
 import (
 	"fmt"
+	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/btcsuite/btcd/btcec/v2"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/cometbft/cometbft/crypto/merkle"
 )
+
+type AddProofListFunc func(chainID []byte, pk []byte, commit types.PubRandCommit, proofList []*merkle.Proof) error
+type CreateRandomnessFunc func(em *eotsclient.EOTSManagerGRpcClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error)
 
 type PubRandState struct {
 	s *store.PubRandProofStore
