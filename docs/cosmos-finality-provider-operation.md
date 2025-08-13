@@ -83,7 +83,7 @@ Instructions for setting up the three keys can be found in the following places:
 
 ## 4. Setting up the Finality Provider
 
-> ⚠️ **Critical**: One finality provider can serve only one Cosmos BSN.  
+> ⚠️ **Critical**: One finality provider can serve only one BSN.  
 > Each finality provider must use a unique EOTS key
 
 ### 4.1. Initialize the Finality Provider Daemon
@@ -127,8 +127,8 @@ If the home directory already exists, `init` will not succeed.
   * Public randomness proofs
   * Last voted block height
 
-**keyring-directory**: Contains account keys for both Babylon Genesis and 
-Consumer BSN chains used for:
+* **keyring-directory**: Contains account keys for both Babylon Genesis and 
+  Consumer BSN chains used for:
   * Babylon Genesis key: Registration, withdrawing rewards, 
     managing finality provider
   * Consumer BSN key: Submitting finality signatures and randomness to contracts
@@ -138,3 +138,57 @@ Consumer BSN chains used for:
   * Signature submissions
   * Error messages and debugging information
   * Service status updates
+
+### 4.2. Add keys for Babylon Genesis and Consumer BSN accounts
+
+Each finality provider maintains all accounts in the keyring:
+
+1. **Babylon Genesis account**: Used to register with Babylon and receive BTC 
+   Staking reward commissions
+2. **Consumer BSN account**: Used for submitting finality signatures and public 
+   randomness submissions to consumer BSN contracts
+
+Since these keys are accessed by an automated daemon process, they must be stored
+unencrypted on disk and associated with the `test` keyring backend.
+This ensures that the finality provider daemon can promptly submit transactions 
+on both chains.
+
+> **Note:** All finality provider transactions including **registration** and 
+> **signature submissions** require gas. 
+> Keep only the minimum needed balance in operational accounts and move the rest 
+> to more secure storage.
+
+> ⚠️ **Important**: Both accounts need to be funded:
+> - **Babylon Genesis account**: Fund with Babylon tokens for **registration gas fees**
+> - **Consumer BSN account**: Fund with consumer chain tokens 
+    for **finality signature and public randomness submission gas fees**
+
+> ⚠️ **Notice:** Do not reuse the same keys across multiple finality providers.  
+> Doing so can cause **sequence number mismatches** and lead to **failed transactions** or 
+> **unexpected outages**. Use **unique keys per finality provider**.
+
+> 💡 **Recommendation**: Use different key names for each chain to avoid confusion and 
+> ensure proper key management.
+
+Use the following command to add key to your finality provider:
+```shell
+cosmos-fpd keys add <key-name> --keyring-backend test --home <path>
+```
+> **Note**: The same command is used to generate both the Babylon Genesis and 
+  Consumer BSN accounts.
+> Use different key names to distinguish them in your keyring.
+
+The above `keys add` commands will create new key pairs and store them in your 
+keyring.
+The output should look similar to the one below:
+
+``` json
+{
+  "address": "bbn19gulf0a4yz87twpjl8cxnerc2wr2xqm9fsygn9",
+  "name": "babylon-fp-key",
+  "pubkey": {
+    "@type": "/cosmos.crypto.secp256k1.PubKey",
+    "key": "AhZAL00gKplLQKpLMiXPBqaKCoiessoewOaEATKd4Rcy"
+  },
+  "type": "local"
+}
