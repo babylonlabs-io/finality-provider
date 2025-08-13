@@ -192,3 +192,143 @@ The output should look similar to the one below:
   },
   "type": "local"
 }
+```
+
+### 4.3. Configure Your Finality Provider
+
+Edit the `fpd.conf` file in your finality provider home directory with the
+following parameters:
+
+```shell
+[wasm]
+Key = <consumer-bsn-operation-key> ## # key used for submission
+ChainID = <cosnumer-bsn-chain-ID> ## consumer BSN chainID
+RPCAddr = <consumer-bsn-rpc> ## consumer BSN rpc address
+GRPCAddr = <consumer-bsn-grpc> ## consumer BSN GRPC address
+AccountPrefix = <consumer-bsn-prefix> ## consumer BSN account prefix
+BtcStakingContractAddress = <contract-addr> ## Staking contract address
+BtcFinalityContractAddress = <contract-addr> ## Finality contract address
+
+
+[babylon]
+Key = <finality-provider-key-name-signer> # the key you used above
+ChainID = <babylon-genesis-chain-id> # chain ID of the Babylon Genesis
+RPCAddr = http://127.0.0.1:26657 # Your Babylon Genesis node's RPC endpoint
+KeyDirectory = <path> # The `--home` path to the directory where the keyring is stored
+```
+
+> ⚠️ **Important**: Operating a finality provider requires direct 
+> connections to a Cosmos BSN node. 
+> It is **highly recommended** to operate your own instances of
+> full nodes instead of relying on third parties.
+
+Configuration parameters explained:
+
+**[wasm] section** (Consumer BSN operations):
+* `Key`: Your Consumer BSN key name for submitting signatures and randomness
+* `ChainID`: The Consumer BSN chain ID
+* `RPCAddr`: Your Consumer BSN node's RPC endpoint
+* `GRPCAddr`: Your Consumer BSN node's gRPC endpoint
+* `AccountPrefix`: Consumer BSN account prefix for address derivation
+* `BtcStakingContractAddress`: Address of the BTC staking contract on Consumer BSN
+* `BtcFinalityContractAddress`: Address of the finality contract on Consumer BSN
+
+**[babylon] section** (Babylon Genesis operations):
+* `Key`: Your Babylon Genesis key name for registration and rewards
+* `ChainID`: The Babylon Genesis chain ID
+* `RPCAddr`: Your Babylon Genesis node's RPC endpoint
+* `KeyDirectory`: Path to your keyring directory (same as `--home` path)
+
+Please verify the Babylon Gensis `chain-id` and other network parameters from 
+the official
+[Babylon Genesis Networks repository](https://github.com/babylonlabs-io/networks).
+
+Another notable configurable parameter is `NumPubRand`, which is the number of 
+public randomness values that will be generated and submitted in one commit to 
+Babylon Genesis. This value is set to `50,000` by default, which is sufficient 
+for roughly 5 days of usage with block production time at `10s`. Depending on 
+the Consumer BSN block production time, **this value should be adapted**. Larger 
+values can be set to tolerate longer downtime, but will increase the size of 
+Merkle proofs for each randomness, resulting in higher gas fees when submitting 
+future finality signatures and larger storage requirements.
+
+### 4.4. Starting the Finality Provider Daemon
+
+The finality provider daemon (`cosmos-fpd`) needs to be running before 
+proceeding with registration or voting participation.
+
+Start the daemon with:
+
+``` shell
+cosmos-fpd start --home <path>
+```
+
+An example of the `--home` flag is `--home ./fpHome`.
+
+The command flags:
+
+* `start`: Runs the `cosmos-fpd` daemon
+* `--home`: Specifies the directory for daemon data and configuration
+* `--eots-pk`: The finality provider instance that will be started identified
+  by the EOTS public key.
+
+It will start the finality provider daemon listening for registration and other
+operations. If there is already a finality provider created (described in a
+later [section](#51-create-finality-provider)), `cosmos-fpd start` will also start
+the finality provider. If there are multiple finality providers created,
+`--eots-pk` is required.
+
+The daemon will establish a connection with the Csosmos BSN node, 
+Babylon Genesis node and the Cosmos BSN contracts, and
+boot up its RPC server for executing CLI requests.
+
+You should see logs indicating successful startup:
+
+```shell
+[INFO] Starting FinalityProviderApp
+[INFO] RPC server listening...
+```
+
+> ⚠️ **Important**: The daemon needs to run continuously. It's recommended to set
+> up a system service (like `systemd` on Linux or `launchd` on macOS) to manage
+> the daemon process, handle automatic restarts, and collect logs.
+
+The above will start the Finality provider RPC server at the address specified
+in `fpd.conf` under the `RPCListener` field, which has a default value
+of `127.0.0.1:12581`. You can change this value in the configuration file or
+override this value and specify a custom address using
+the `--rpc-listener` flag.
+
+All the available CLI options can be viewed using the `--help` flag. These
+options can also be set in the configuration file.
+
+### 4.5. Interaction with the EOTS Manager
+
+There are two pieces to a finality provider entity: the EOTS manager and the
+finality provider instance. These components work together and are managed by
+separate daemons (`eotsd` and `cosmos-fpd`).
+
+The EOTS manager is responsible for managing the keys for finality providers and
+handles operations such as key management, signature generation, and randomness
+commitments. Whereas the finality provider is responsible for creating and
+registering finality providers, monitoring the Cosmos BSN, and
+submitting finality votes on the finality contract deployed on Cosmos BSN.
+
+The interactions between the EOTS Manager and the finality provider happen
+through RPC calls. These calls handle key operations, signature generation,
+and randomness commitments. An easy way to think about it is the EOTS Manager
+maintains the keys while the FP daemon coordinates any interactions with the
+Cosmos BSN and the CosmWasm contracts deployed on Cosmos BSN.
+
+The EOTS Manager is designed to handle multiple finality provider keys, operating
+as a centralized key management system. When starting a finality provider instance,
+you specify which EOTS key to use through the `--eots-pk` flag. This allows you
+to run different finality provider instances using different keys from the same
+EOTS Manager. Note that someone having access to your EOTS Manager
+RPC will have access to all the EOTS keys held within it.
+
+For example, after registering a finality provider, you can start its daemon by
+providing the EOTS public key `cosmos-fpd start --eots-pk <hex-string-of-eots-public-key>`.
+
+> ⚠️ **Note**: A single finality provider daemon can only run with a single
+> finality provider instance at a time.
