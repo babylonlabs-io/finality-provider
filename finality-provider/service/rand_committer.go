@@ -101,7 +101,7 @@ func (rc *DefaultRandomnessCommitter) ShouldCommit(ctx context.Context) (bool, u
 		return false, 0, fmt.Errorf("failed to get last committed height: %w", err)
 	}
 
-	tipBlock, err := rc.ConsumerCon.QueryLatestBlock(ctx)
+	tipBlock, err := rc.getLatestBlockHeightWithRetry(ctx)
 	if tipBlock == nil || err != nil {
 		return false, 0, fmt.Errorf("failed to get the last block: %w", err)
 	}
@@ -307,4 +307,32 @@ func (rc *DefaultRandomnessCommitter) AddPubRandProofListWithInterval(startHeigh
 	}
 
 	return nil
+}
+
+func (rc *DefaultRandomnessCommitter) getLatestBlockHeightWithRetry(ctx context.Context) (types.BlockDescription, error) {
+	var (
+		latestBlock types.BlockDescription
+		err         error
+	)
+
+	if err := retry.Do(func() error {
+		latestBlock, err = rc.ConsumerCon.QueryLatestBlock(ctx)
+		if latestBlock == nil || err != nil {
+			return fmt.Errorf("failed to query latest block height: %w", err)
+		}
+
+		return nil
+	}, retry.Context(ctx), RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
+		rc.Logger.Debug(
+			"failed to query the consumer chain for the latest block",
+			zap.Uint("attempt", n+1),
+			zap.Uint("max_attempts", RtyAttNum),
+			zap.Error(err),
+		)
+	})); err != nil {
+		return nil, fmt.Errorf("failed to get latest block height after retries: %w", err)
+	}
+	rc.Metrics.RecordBabylonTipHeight(latestBlock.GetHeight())
+
+	return latestBlock, nil
 }
