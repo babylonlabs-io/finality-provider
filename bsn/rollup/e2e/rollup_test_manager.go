@@ -55,7 +55,7 @@ const (
 
 type BaseTestManager = base_test_manager.BaseTestManager
 
-type OpL2ConsumerTestManager struct {
+type RollupConsumerTestManager struct {
 	BaseTestManager
 	BaseDir             string
 	manager             *container.Manager
@@ -75,7 +75,7 @@ type OpL2ConsumerTestManager struct {
 // - starts Babylon node and wait for it starts
 // - deploys finality gadget cw contract
 // - creates and starts Babylon and consumer FPs without any FP instances
-func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTestManager {
+func StartRollupTestManager(t *testing.T, ctx context.Context) *RollupConsumerTestManager {
 	// Setup base dir and logger
 	testDir, err := base_test_manager.TempDir(t, "op-fp-e2e-test-*")
 	require.NoError(t, err)
@@ -135,7 +135,7 @@ func StartRollupTestManager(t *testing.T, ctx context.Context) *OpL2ConsumerTest
 	consumerFpApp := base_test_manager.CreateAndStartFpApp(t, ctx, logger, rollupFpCfg.Common, rollupBSNController, EOTSClients[1])
 	t.Log(log.Prefix("Started BSN FP App"))
 
-	ctm := &OpL2ConsumerTestManager{
+	ctm := &RollupConsumerTestManager{
 		BaseTestManager: BaseTestManager{
 			BabylonController: babylonController,
 			CovenantPrivKeys:  covenantPrivKeys,
@@ -317,7 +317,7 @@ func createRollupFpConfig(
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	// set consumer FP config
-	opConsumerCfg := &rollupfpconfig.RollupFPConfig{
+	rollupConsumerCfg := &rollupfpconfig.RollupFPConfig{
 		// it will be updated later
 		FinalityContractAddress: "",
 		// use local anvil node with dynamically allocated port
@@ -325,9 +325,9 @@ func createRollupFpConfig(
 		Common:               cfg,
 	}
 
-	t.Logf(log.Prefix("Using Anvil RPC address: %s"), opConsumerCfg.RollupNodeRPCAddress)
+	t.Logf(log.Prefix("Using Anvil RPC address: %s"), rollupConsumerCfg.RollupNodeRPCAddress)
 
-	return opConsumerCfg
+	return rollupConsumerCfg
 }
 
 func deployCwContract(t *testing.T, bbnClient *bbnclient.Client, ctx context.Context) string {
@@ -372,7 +372,7 @@ func deployCwContract(t *testing.T, bbnClient *bbnclient.Client, ctx context.Con
 	return listContractsResponse.Contracts[0]
 }
 
-func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*bbntypes.BIP340PubKey {
+func (ctm *RollupConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*bbntypes.BIP340PubKey {
 	babylonCfg := ctm.BabylonFpApp.GetConfig()
 	babylonKeyName := babylonCfg.BabylonConfig.Key
 
@@ -433,7 +433,7 @@ func (ctm *OpL2ConsumerTestManager) setupBabylonAndConsumerFp(t *testing.T) []*b
 	return []*bbntypes.BIP340PubKey{babylonFpPk, consumerFpPk}
 }
 
-func (ctm *OpL2ConsumerTestManager) addFpToContractAllowlist(t *testing.T, ctx context.Context, fpPk *bbntypes.BIP340PubKey) {
+func (ctm *RollupConsumerTestManager) addFpToContractAllowlist(t *testing.T, ctx context.Context, fpPk *bbntypes.BIP340PubKey) {
 	// Create the AddToAllowlist message following the same pattern as local deployment
 	addToAllowlistMsg := map[string]interface{}{
 		"add_to_allowlist": map[string]interface{}{
@@ -493,7 +493,7 @@ func (ctm *OpL2ConsumerTestManager) addFpToContractAllowlist(t *testing.T, ctx c
 	}, eventuallyWaitTimeOut, eventuallyPollTime, "FP should be added to contract allowlist")
 }
 
-func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
+func (ctm *RollupConsumerTestManager) getConsumerFpInstance(
 	t *testing.T,
 	consumerFpPk *bbntypes.BIP340PubKey,
 ) *service.FinalityProviderInstance {
@@ -553,7 +553,7 @@ func (ctm *OpL2ConsumerTestManager) getConsumerFpInstance(
 	return fpInstance
 }
 
-func (ctm *OpL2ConsumerTestManager) delegateBTCAndWaitForActivation(t *testing.T, babylonFpPk *bbntypes.BIP340PubKey, consumerFpPk *bbntypes.BIP340PubKey) {
+func (ctm *RollupConsumerTestManager) delegateBTCAndWaitForActivation(t *testing.T, babylonFpPk *bbntypes.BIP340PubKey, consumerFpPk *bbntypes.BIP340PubKey) {
 	// send a BTC delegation
 	ctm.InsertBTCDelegation(t, []*btcec.PublicKey{babylonFpPk.MustToBTCPK(), consumerFpPk.MustToBTCPK()},
 		e2eutils.StakingTime, e2eutils.StakingAmount)
@@ -570,7 +570,7 @@ func (ctm *OpL2ConsumerTestManager) delegateBTCAndWaitForActivation(t *testing.T
 	ctm.WaitForNActiveDels(t, 1)
 }
 
-func (ctm *OpL2ConsumerTestManager) queryCwContract(
+func (ctm *RollupConsumerTestManager) queryCwContract(
 	t *testing.T,
 	queryMsg map[string]interface{},
 	ctx context.Context,
@@ -596,7 +596,7 @@ func (ctm *OpL2ConsumerTestManager) queryCwContract(
 	return queryResponse
 }
 
-func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
+func (ctm *RollupConsumerTestManager) Stop(t *testing.T) {
 	// Stop all FP apps with error handling
 	if ctm.BabylonFpApp != nil {
 		err := ctm.BabylonFpApp.Stop()
@@ -631,7 +631,7 @@ func (ctm *OpL2ConsumerTestManager) Stop(t *testing.T) {
 
 // WaitForFpPubRandTimestamped waits for the FP to commit public randomness and get it timestamped
 // This is a rollup-specific version that works with the rollup controller
-func (ctm *OpL2ConsumerTestManager) WaitForFpPubRandTimestamped(t *testing.T, ctx context.Context, fpIns *service.FinalityProviderInstance) {
+func (ctm *RollupConsumerTestManager) WaitForFpPubRandTimestamped(t *testing.T, ctx context.Context, fpIns *service.FinalityProviderInstance) {
 	var lastCommittedHeight uint64
 	var err error
 
@@ -660,7 +660,7 @@ func (ctm *OpL2ConsumerTestManager) WaitForFpPubRandTimestamped(t *testing.T, ct
 
 // WaitForNRollupBlocks waits for the rollup chain to produce N more blocks
 // This is the BSN equivalent of the Babylon test's WaitForNBlocks function
-func (ctm *OpL2ConsumerTestManager) WaitForNRollupBlocks(t *testing.T, ctx context.Context, n int) uint64 {
+func (ctm *RollupConsumerTestManager) WaitForNRollupBlocks(t *testing.T, ctx context.Context, n int) uint64 {
 	beforeHeight, err := ctm.RollupBSNController.QueryLatestBlock(ctx)
 	require.NoError(t, err)
 
