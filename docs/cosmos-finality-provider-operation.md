@@ -4,9 +4,10 @@ This is an operational guide intended for technical Cosmos finality provider
 administrators of Cosmos BSNs. This guide covers the complete
 lifecycle of running a Cosmos finality provider, including:
 
-* Managing keys (EOTS key for EOTS signatures and Babylon Genesis key for rewards).
+* Managing keys (EOTS key for EOTS signatures, Babylon Genesis key for rewards, 
+  and Consumer BSN key for submissions).
 * Registering a Cosmos finality provider on Babylon Genesis.
-* Operating a Cosmnos finality provider.
+* Operating a Cosmos finality provider.
 * Withdrawing Cosmos finality provider commission rewards.
 
 Please review the [high-level explainer](../README.md) before proceeding to
@@ -15,7 +16,7 @@ gain an overall understanding of the finality provider.
 > **⚠️ Important**: Cosmos BSN integration requires the deployment of 
 > [CosmWasm smart contracts]() 
 > on the consumer Cosmos chain that are responsible for receiving finality 
-> signatures and maintaining the finality status of consumer chain blocks.
+> signatures and maintaining the finality status of consumer BSN blocks.
 > Cosmos Finality providers register with Babylon Genesis for the consumer BSN, 
 > then query blocks from the consumer BSN and submit signatures to the CosmWasm 
 > contracts on the consumer BSN.
@@ -65,17 +66,17 @@ Operating a finality provider involves managing multiple keys, each serving dist
 purposes. Understanding these keys, their relationships, and security implications is 
 crucial for secure operation.
 
-| Aspect | EOTS Key                                                                                                                                                            | Babylon Genesis Key                                                                                                                                             | Consumer Chain Key                                                                                 |
+| Aspect | EOTS Key                                                                                                                                                            | Babylon Genesis Key                                                                                                                                             | Consumer BSN Key                                                                                 |
 |--------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| **Functions** | • Unique identifier of a finality provider for BTC staking<br>• Initial registration<br>• Signs finality votes and Schnorr signatures<br>• Generates randomness<br> | • Unique identifier of a finality provider for Babylon Genesis<br>• Initial registration<br>• Withdrawing accumulated rewards<br>• Setting withdrawal addresses | • Submits finality signatures to consumer BSN contracts<br>• Submits public randomness commitments<br>• Pays transaction fees on consumer chain |
+| **Functions** | • Unique identifier of a finality provider for BTC staking<br>• Initial registration<br>• Signs finality votes and Schnorr signatures<br>• Generates randomness<br> | • Unique identifier of a finality provider for Babylon Genesis<br>• Initial registration<br>• Withdrawing accumulated rewards<br>• Setting withdrawal addresses | • Submits finality signatures to consumer BSN contracts<br>• Submits public randomness commitments<br>• Pays transaction fees on consumer BSN |
 | **Managed By** | `eotsd`                                                                                                                                                             | `cosmos-fpd`                                                                                                       | `cosmos-fpd`                                                                                              |
 | **Mutability** | Immutable after registration                                                                                                                                        | Immutable after registration                                                                                                                                    | Rotatable                                                                                               |
-| **Key Relationships** | Permanently paired with Babylon Genesis Key during registration                                                                                                     | Permanently paired with EOTS Key during registration                                                            | • Not associated with the other keys<br>• Should be set after the finality provider is registered   |
+| **Key Relationships** | Permanently paired with Babylon Genesis Key during registration                                                                                                     | Permanently paired with EOTS Key during registration                                                            | • Not associated with the other keys<br>• Must exist after registration before submissions start   |
 | **Recommended Practices** | • Store backups in multiple secure locations<br>• Use dedicated machine for EOTS Manager                                                                            | • Store backups in multiple secure locations<br>• Only use for Babylon chain operations and reward withdrawals                          | • Maintain sufficient balance for transaction fees<br>• Monitor consumer chain and key balance, fund it when needed       |
 | **Security Implications** | • Loss is irrecoverable<br>• Cannot participate finality voting                                                                                                     | • Loss is irrecoverable<br>• Cannot withdraw rewards                                                                                                            | • Temporary service disruption<br>• Can be replaced with a new key<br>• Loss of remaining balance        |
 
-Instructions of setting up the four keys can be found in the following places:
+Instructions for setting up the three keys can be found in the following places:
 
 - [EOTS Daemon Setup - Add an EOTS Key](./eots-daemon.md#22-add-an-eots-key)
 - [4.2. Add key for the Babylon Genesis account](#42-add-key-for-the-babylon-genesis-account)
-- [4.3. Add key for the Consumer Chain account](#43-add-key-for-the-consumer-chain-account)
+- [4.3. Add key for the Consumer BSN account](#43-add-key-for-the-consumer-chain-account)
