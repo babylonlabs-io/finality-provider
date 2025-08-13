@@ -423,35 +423,6 @@ func (fp *FinalityProviderInstance) GetLastCommittedHeight(ctx context.Context) 
 	return height, nil
 }
 
-// nolint:unused
-func (fp *FinalityProviderInstance) getLatestBlockHeightWithRetry() (uint64, error) {
-	var (
-		latestBlock types.BlockDescription
-		err         error
-	)
-
-	if err := retry.Do(func() error {
-		latestBlock, err = fp.consumerCon.QueryLatestBlock(context.Background())
-		if latestBlock == nil || err != nil {
-			return fmt.Errorf("failed to query latest block height: %w", err)
-		}
-
-		return nil
-	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
-		fp.logger.Debug(
-			"failed to query the consumer chain for the latest block",
-			zap.Uint("attempt", n+1),
-			zap.Uint("max_attempts", RtyAttNum),
-			zap.Error(err),
-		)
-	})); err != nil {
-		return 0, fmt.Errorf("failed to get latest block height after retries: %w", err)
-	}
-	fp.metrics.RecordBabylonTipHeight(latestBlock.GetHeight())
-
-	return latestBlock.GetHeight(), nil
-}
-
 func (fp *FinalityProviderInstance) GetVotingPowerWithRetry(height uint64) (bool, error) {
 	var (
 		hasPower bool
