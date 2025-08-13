@@ -332,3 +332,88 @@ providing the EOTS public key `cosmos-fpd start --eots-pk <hex-string-of-eots-pu
 
 > ⚠️ **Note**: A single finality provider daemon can only run with a single
 > finality provider instance at a time.
+
+## 6. Recovery and Backup
+
+### 6.1. Critical Assets
+
+The following assets **must** be backed up frequently to prevent loss of service or funds:
+
+* **keyring-directory**: Contains account keys for both Babylon Genesis and 
+  Consumer BSN chains used for:
+  * Babylon Genesis key: Registration, withdrawing rewards, 
+    managing finality provider
+  * Consumer BSN key: Submitting finality signatures and randomness to contracts
+* **finality-provider.db**: Contains operational data including:
+  * Public randomness proofs
+  * State info of the finality provider
+  * Loss of anti-slashing protection
+
+### 6.2. Backup Recommendations
+
+1. Regular Backups:
+   * Daily backup of keyring directories
+   * Weekly backup of full database files
+   * Store backups in encrypted format
+   * Keep multiple backup copies in separate locations
+
+2. Critical Times for Backup:
+   * After initial setup
+   * Before any major updates
+   * After key operations
+   * After configuration changes
+
+3. Recovery Testing:
+   * Regularly test recovery procedures
+   * Maintain documented recovery process
+   * Practice key restoration in test environment
+
+> 🔒 **Security Note**: While database files can be recreated, loss of private
+> keys in the keyring directories is **irrecoverable** and will result in
+> permanent loss of your finality provider position and accumulated rewards.
+
+### 6.3. Recover finality-provider db
+
+The `finality-provider.db` file contains both the finality provider's running
+status and the public randomness merkle proof. Either information loss
+compromised will lead to service halt, but they are recoverable.
+
+#### 6.3.1. Recover local status of a finality provider
+
+The local status of a finality provider is defined as follows:
+
+```go
+type StoredFinalityProvider struct {
+  FPAddr          string
+  BtcPk           *btcec.PublicKey
+  Description     *stakingtypes.Description
+  Commission      *sdkmath.LegacyDec
+  ChainID         string
+  LastVotedHeight uint64
+  Status          proto.FinalityProviderStatus
+}
+```
+
+It can be recovered by downloading the finality provider's info from Babylon Genesis. 
+Specifically, this can be achieved by repeating the 
+[creation process](#51-create-finality-provider). The `create-finality-provider`
+cmd will download the info of the finality provider locally if it is already
+registered on Babylon.
+
+#### 6.3.2. Recover public randomness proof
+
+Every finality vote must contain the public randomness proof to prove that the
+randomness used in the signature is already committed on the finality contract. Loss of
+public randomness proof leads to direct failure of the vote submission.
+
+To recover the public randomness proof, the following steps should be followed:
+
+1. Ensure the `cosmos-fpd` is stopped.
+2. Run the recovery command
+`cosmos-fpd recover-rand-proof [eots-pk-hex] --start-height [height-to-recover] --chain-id [chain-id]`
+where `start-height` is the height from which you want to recover from. If
+the `start-height` is not specified, the command will recover all the proofs
+from the first commit on Babylon, which incurs longer time for recovery.
+The `chain-id` must be specified exactly the same as the `chain-id` used when
+creating the finality provider.
+4. Restart the finality provider
