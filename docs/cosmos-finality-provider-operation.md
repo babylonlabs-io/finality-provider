@@ -80,3 +80,61 @@ Instructions for setting up the three keys can be found in the following places:
 - [EOTS Daemon Setup - Add an EOTS Key](./eots-daemon.md#22-add-an-eots-key)
 - [4.2. Add key for the Babylon Genesis account](#42-add-key-for-the-babylon-genesis-account)
 - [4.3. Add key for the Consumer BSN account](#43-add-key-for-the-consumer-chain-account)
+
+## 4. Setting up the Finality Provider
+
+> ⚠️ **Critical**: One finality provider can serve only one Cosmos BSN.  
+> Each finality provider must use a unique EOTS key
+
+### 4.1. Initialize the Finality Provider Daemon
+
+To initialize the finality provider daemon home directory,
+use the following command:
+
+```shell
+consumer-fpd init --home <path>
+```
+
+If the home directory already exists, `init` will not succeed.
+
+> ⚡ Running this command with `--force` will overwrite the existing config file.
+> Please ensure you have a backup of the existing config file before running
+> this command.
+
+**Home directory structure:**
+
+```shell
+~/.fpd/
+│   fpd.conf       # Configuration file for the finality provider
+├── data/
+│   └── finality-provider.db         # Database containing finality provider data
+├── keyring-*/         # Directory containing Babylon Genesis keys
+└── logs/
+    └── fpd.log        # Log file for the finality provider daemon
+```
+
+* **fpd.conf**: The main configuration file that defines:
+  * Babylon Genesis Network settings (chain-id, node endpoints)
+  * Cosmos BSN Network details (keys,node endpoints, cosmos bsn contracts address)
+  * EOTS manager connection settings
+  * Database configuration
+  * Logging settings
+  * RPC listener settings
+  * Metrics configuration
+
+* **finality-provider.db**: A bbolt database that stores:
+  * Finality provider registration data
+  * Public randomness proofs
+  * Last voted block height
+
+**keyring-directory**: Contains account keys for both Babylon Genesis and 
+Consumer BSN chains used for:
+  * Babylon Genesis key: Registration, withdrawing rewards, 
+    managing finality provider
+  * Consumer BSN key: Submitting finality signatures and randomness to contracts
+
+* **fpd.log**: Contains detailed logs including:
+  * Block monitoring events
+  * Signature submissions
+  * Error messages and debugging information
+  * Service status updates
