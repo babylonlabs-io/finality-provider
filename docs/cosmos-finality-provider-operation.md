@@ -269,7 +269,7 @@ Configuration parameters explained:
 * `RPCAddr`: Your Babylon Genesis node's RPC endpoint
 * `KeyDirectory`: Path to your keyring directory (same as `--home` path)
 
-Please verify the Babylon Gensis `chain-id` and other network parameters from 
+Please verify the Babylon Genesis `chain-id` and other network parameters from 
 the official
 [Babylon Genesis Networks repository](https://github.com/babylonlabs-io/networks).
 
