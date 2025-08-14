@@ -49,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#607](https://github.com/babylonlabs-io/finality-provider/pull/607) chore: impl missing methods in cc for cosmos
 * [#608](https://github.com/babylonlabs-io/finality-provider/pull/608) chore: fix data race in bcd e2e
 * [#610](https://github.com/babylonlabs-io/finality-provider/pull/610) chore: default poll size rollup
+* [#625](https://github.com/babylonlabs-io/finality-provider/pull/625) chore: cfg validation
 
 ## v2.0.0-rc.1
 
