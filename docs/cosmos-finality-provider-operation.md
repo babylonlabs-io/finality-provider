@@ -175,10 +175,10 @@ If the home directory already exists, `init` will not succeed.
 
 Each finality provider maintains all accounts in the keyring:
 
-1. **Babylon Genesis account**: Used to register with Babylon and receive BTC 
-   Staking reward commissions
+1. **Babylon Genesis account**: Used to register for Cosmos BSN on Babylon 
+Genesis and receive BTC staking reward commissions
 2. **Cosmos BSN account**: Used for submitting finality signatures and public
-randomness submissions to Cosmos BSN contracts
+randomness to CosmWasm contracts on Cosmos BSN
 
 Since these keys are accessed by an automated daemon process, they must be stored
 unencrypted on disk and associated with the `test` keyring backend.
@@ -234,7 +234,7 @@ following parameters:
 
 ```shell
 [wasm]
-Key = <consumer-bsn-operation-key> ## # key used for submission
+Key = <cosmos-bsn-operation-key> ## # key used for submission
 ChainID = <cosmos-bsn-chain-ID> ## Cosmos BSN chainID
 RPCAddr = <cosmos-bsn-rpc> ## Cosmos BSN rpc address
 GRPCAddr = <cosmos-bsn-grpc> ## Cosmos BSN GRPC address
@@ -255,28 +255,7 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > It is **highly recommended** to operate your own instances of
 > full nodes instead of relying on third parties.
 
-<<<<<<< Updated upstream
-Configuration parameters explained:
-
-**[wasm] section** (Cosmos BSN operations):
-* `Key`: Your Cosmos BSN key name for submitting signatures and randomness
-* `ChainID`: The Cosmos BSN chain ID
-* `RPCAddr`: Your Cosmos BSN node's RPC endpoint
-* `GRPCAddr`: Your Cosmos BSN node's gRPC endpoint
-* `AccountPrefix`: Cosmos BSN account prefix for address derivation
-* `BtcStakingContractAddress`: Address of the BTC staking contract on Cosmos BSN
-* `BtcFinalityContractAddress`: Address of the finality contract on Cosmos BSN
-
-**[babylon] section** (Babylon Genesis operations):
-* `Key`: Your Babylon Genesis key name for registration and rewards
-* `ChainID`: The Babylon Genesis chain ID
-* `RPCAddr`: Your Babylon Genesis node's RPC endpoint
-* `KeyDirectory`: Path to your keyring directory (same as `--home` path)
-
-Please verify the Babylon Genesis `chain-id` and other network parameters from 
-=======
 Please verify the Babylon Gensis `chain-id` and other network parameters from 
->>>>>>> Stashed changes
 the official
 [Babylon Genesis Networks repository](https://github.com/babylonlabs-io/networks).
 
