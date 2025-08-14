@@ -406,7 +406,7 @@ Required parameters:
 
 > ⚠️ **Important**: The EOTS key and the Babylon Genesis key used in registration is
 > unique to the finality provider after registration. Either key cannot be
-> rotated. The EOTS key is for sending finality signatures while the latter is
+> rotated. The EOTS key is for signing finality signatures while the latter is
 > for withdrawing rewards. You **MUST** keep both keys safe.
 
 Optional parameters:
