@@ -294,7 +294,7 @@ later [section](#51-create-finality-provider)), `cosmos-fpd start` will also sta
 the finality provider. If there are multiple finality providers created,
 `--eots-pk` is required.
 
-The daemon will establish a connection with the Csosmos BSN node, 
+The daemon will establish a connection with the Cosmos BSN node, 
 Babylon Genesis node and the Cosmos BSN contracts, and
 boot up its RPC server for executing CLI requests.
 
@@ -481,7 +481,7 @@ cosmos-fpd reward-gauges <address> --node <babylon-genesis-rpc-address>
 Parameters:
 
 * `<address>`: The Babylon Genesis address of the stakeholder in bech32 string.
-* `--node <babylon-genesis-rpc-address>`: <host>:<port> to Babylon Genesis
+* `--node <babylon-genesis-rpc-address>`: host:port to Babylon Genesis
 RPC interface for this chain (default `tcp://localhost:26657`)
 
 #### 5.2.2. Withdraw Rewards
@@ -530,7 +530,7 @@ The default beneficiary is the address that corresponds to the registration key.
 To change the beneficiary address, use the following command:
 
 ```shell
-fpd set-withdraw-addr <beneficiary-address> --from <registered-bbn-address>
+cosmos-fpd set-withdraw-addr <beneficiary-address> --from <registered-bbn-address>
 --keyring-backend test --home <home-dir> --fees <fees>
 --node <babylon-genesis-rpc-address>
 ```
