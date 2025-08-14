@@ -64,11 +64,11 @@ process described in [EOTS Daemon Setup](./eots-daemon.md). This includes:
 * Adding your EOTS key to the daemon
 * Starting the EOTS daemon service
 
-> ⚠️ **Critical**: The EOTS daemon must be running and accessible before you can 
-> operate a finality provider.
-
-> ⚠️ **Important**: Each Finality Provider must generate a new EOTS key.
-> EOTS keys cannot be reused across different finality providers.
+⚠️ **Important considerations:**
+* The EOTS daemon must be running and accessible before you can operate a 
+  finality provider
+* Each Finality Provider must generate a new EOTS key - EOTS keys cannot be 
+  reused across different finality providers
 
 ## 2. System Requirements
 
@@ -114,7 +114,9 @@ Instructions for setting up the three keys can be found in the following places:
 ## 4. Setting up the Finality Provider
 
 > ⚠️ **Critical**: One finality provider can serve only one BSN.  
-> Each finality provider must use a unique EOTS key
+> Each finality provider must use a unique EOTS key. Reusing an EOTS key across 
+> multiple FPs is dangerous, if one FP is slashed, all other FPs using the same 
+> EOTS key will also be subject to slashing.
 
 ### 4.1. Initialize the Finality Provider Daemon
 
@@ -193,8 +195,9 @@ on both chains.
 > - **Cosmos BSN account**: Fund with Cosmos chain tokens 
     for **finality signature and public randomness submission gas fees**
 
-> ⚠️ **Notice:** Do not reuse the same keys across multiple finality providers.  
-> Doing so can cause **sequence number mismatches** and lead to **failed transactions** or 
+> ⚠️ **Notice:** Do not reuse the same **Cosmos BSN** keys across multiple finality 
+> providers. Doing so can cause **sequence number mismatches** and lead 
+> to **failed transactions** or 
 > **unexpected outages**. Use **unique keys per finality provider**.
 
 > 💡 **Recommendation**: Use different key names for each chain to avoid confusion and 
@@ -252,6 +255,7 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > It is **highly recommended** to operate your own instances of
 > full nodes instead of relying on third parties.
 
+<<<<<<< Updated upstream
 Configuration parameters explained:
 
 **[wasm] section** (Cosmos BSN operations):
@@ -270,6 +274,9 @@ Configuration parameters explained:
 * `KeyDirectory`: Path to your keyring directory (same as `--home` path)
 
 Please verify the Babylon Genesis `chain-id` and other network parameters from 
+=======
+Please verify the Babylon Gensis `chain-id` and other network parameters from 
+>>>>>>> Stashed changes
 the official
 [Babylon Genesis Networks repository](https://github.com/babylonlabs-io/networks).
 
