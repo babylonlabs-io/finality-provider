@@ -14,7 +14,7 @@ Please review the [high-level explainer](../README.md) before proceeding to
 gain an overall understanding of the finality provider.
 
 > **⚠️ Important**: Cosmos BSN integration requires the deployment of 
-> [CosmWasm smart contracts](https://github.com/babylonlabs-io/babylon-contract) 
+> [CosmWasm BSN contracts](https://github.com/babylonlabs-io/cosmos-bsn-contracts) 
 > on the consumer Cosmos chain that are responsible for receiving finality 
 > signatures and maintaining the finality status of Cosmos BSN blocks.
 > Cosmos Finality providers register with Babylon Genesis for the Cosmos BSN,
