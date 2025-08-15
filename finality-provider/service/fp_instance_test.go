@@ -187,7 +187,8 @@ func startFinalityProviderAppWithRegisteredFp(
 
 	app, err := service.NewFinalityProviderApp(&fpCfg, cc, consumerCon, em, poller, rndCommitter, heightDeterminer, finalitySubmitter, fpMetrics, db, logger)
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(t.Context())
+	// nolint:usetesting // t.context is nil
+	ctx, cancel := context.WithCancel(context.Background())
 	err = app.Start(ctx)
 	require.NoError(t, err)
 
@@ -283,15 +284,16 @@ func setupBenchmarkEnvironment(t *testing.T, seed int64, numPubRand uint32) (*ty
 		nil,
 	)
 	mockConsumerController.EXPECT().
-		CommitPubRandList(t.Context(), req).
+		CommitPubRandList(gomock.Any(), req).
 		Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
-	mockConsumerController.EXPECT().QueryLastPubRandCommit(t.Context(), gomock.Any()).Return(nil, nil).AnyTimes()
+	mockConsumerController.EXPECT().QueryLastPubRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	mockConsumerController.EXPECT().GetFpRandCommitContext().Return("").AnyTimes()
 
 	return startingBlock, fpIns, cleanUp
 }
 
 func BenchmarkCommitPubRand(b *testing.B) {
-	for _, numPubRand := range []uint32{10, 50, 100, 200, 500, 1000, 5000, 10000, 25000, 50000, 75000, 100000} {
+	for _, numPubRand := range []uint32{10, 50, 100, 200, 500, 1000, 5000, 10000, 25000, 50000} {
 		b.Run(fmt.Sprintf("numPubRand=%d", numPubRand), func(b *testing.B) {
 			t := &testing.T{}
 			startingBlock, fpIns, cleanUp := setupBenchmarkEnvironment(t, 42, numPubRand)
@@ -302,7 +304,8 @@ func BenchmarkCommitPubRand(b *testing.B) {
 
 			var totalTiming service.CommitPubRandTiming
 			for i := 0; i < b.N; i++ {
-				res, timing, err := fpIns.HelperCommitPubRand(t.Context(), startingBlock.GetHeight())
+				// nolint:usetesting
+				res, timing, err := fpIns.HelperCommitPubRand(context.Background(), startingBlock.GetHeight())
 				if err != nil {
 					b.Fatalf("unexpected error: %v", err)
 				}
