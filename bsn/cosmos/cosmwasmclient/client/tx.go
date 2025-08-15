@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"sync"
 
 	"cosmossdk.io/errors"
@@ -95,6 +96,8 @@ func (c *Client) ReliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedE
 	if err := retry.Do(func() error {
 		var sendMsgErr error
 		krErr := c.accessKeyWithLock(func() {
+			service.LockAddressPrefix()
+			defer service.UnlockAddressPrefix()
 			sendMsgErr = c.provider.SendMessagesToMempool(ctx, relayerMsgs, "", ctx, []func(*babylonclient.RelayerTxResponse, error){callback})
 		})
 		if krErr != nil {

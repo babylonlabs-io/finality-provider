@@ -4,24 +4,22 @@ package e2etest_bcd
 
 import (
 	"context"
+	sdkErr "cosmossdk.io/errors"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
-	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
-	config2 "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
-	"strings"
-	"sync"
-
-	sdkErr "cosmossdk.io/errors"
 	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
 	bbnsdktypes "github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
+	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
 	cwcc "github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
+	config2 "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
+	"strings"
 
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -38,6 +36,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 
 	sdklogs "cosmossdk.io/log"
@@ -53,7 +52,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/itest/container"
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
@@ -97,18 +95,15 @@ type BcdTestManager struct {
 //
 // The mutex ensures that only one goroutine can modify address prefixes at a time,
 // preventing race conditions while still allowing tests to run in parallel.
-// The critical sections are kept minimal to reduce lock contention.
-var addressPrefixMutex sync.Mutex
-
 func setBbnAddressPrefixesSafely() {
-	addressPrefixMutex.Lock()
-	defer addressPrefixMutex.Unlock()
+	service.LockAddressPrefix()
+	defer service.UnlockAddressPrefix()
 	appparams.SetAddressPrefixes()
 }
 
 func setBbncAppPrefixesSafely() {
-	addressPrefixMutex.Lock()
-	defer addressPrefixMutex.Unlock()
+	service.LockAddressPrefix()
+	defer service.UnlockAddressPrefix()
 	bbnappparams.SetAddressPrefixes()
 }
 
@@ -316,9 +311,9 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(ctx context.Context, 
 	require.NoError(t, err)
 
 	// inject fp in smart contract using admin
-	addressPrefixMutex.Lock() // we read the address prefix, so we need to lock it
+	service.LockAddressPrefix() // we read the address prefix, so we need to lock it
 	fpMsg := e2eutils.GenBtcStakingFpExecMsg(eotsPubKey.MarshalHex())
-	addressPrefixMutex.Unlock()
+	service.UnlockAddressPrefix()
 	fpMsgBytes, err := json.Marshal(fpMsg)
 	require.NoError(t, err)
 	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, fpMsgBytes)
