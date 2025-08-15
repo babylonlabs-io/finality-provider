@@ -191,6 +191,19 @@ func (cfg *Config) Validate() error {
 		return fmt.Errorf("invalid babylon config: %w", err)
 	}
 
+	if cfg.SignatureSubmissionInterval <= 0 {
+		return fmt.Errorf("invalid signature submission interval: %d", cfg.SignatureSubmissionInterval)
+	}
+	if cfg.RandomnessCommitInterval <= 0 {
+		return fmt.Errorf("invalid randomness commit interval: %d", cfg.RandomnessCommitInterval)
+	}
+	if cfg.SubmissionRetryInterval <= 0 {
+		return fmt.Errorf("invalid submission retry interval: %d", cfg.SubmissionRetryInterval)
+	}
+	if cfg.BatchSubmissionSize == 0 {
+		return fmt.Errorf("invalid batch submission size: %d", cfg.BatchSubmissionSize)
+	}
+
 	// All good, return the sanitized result.
 	return nil
 }
