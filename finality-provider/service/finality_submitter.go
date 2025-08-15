@@ -310,6 +310,11 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 			continue
 		}
 
+		ds.Logger.Debug("signed finality block",
+			zap.Uint64("height", b.GetHeight()),
+			zap.String("hash", hex.EncodeToString(b.GetHash())),
+		)
+
 		// If signature is valid, append all corresponding items
 		validBlocks = append(validBlocks, b)
 		validPrList = append(validPrList, prList[i])
