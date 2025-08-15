@@ -12,19 +12,21 @@ import (
 // The mutex is only active during testing to avoid performance impact in production.
 var addressPrefixMutex sync.Mutex
 
-// testMode is cached once at startup to avoid repeated flag lookups
-var testMode = flag.Lookup("test.v") != nil
+// isTestMode returns true if running in test mode
+func isTestMode() bool {
+	return flag.Lookup("test.v") != nil
+}
 
 // LockAddressPrefix locks the SDK address prefix mutex only during testing
 func LockAddressPrefix() {
-	if testMode {
+	if isTestMode() {
 		addressPrefixMutex.Lock()
 	}
 }
 
 // UnlockAddressPrefix unlocks the SDK address prefix mutex only during testing
 func UnlockAddressPrefix() {
-	if testMode {
+	if isTestMode() {
 		addressPrefixMutex.Unlock()
 	}
 }
