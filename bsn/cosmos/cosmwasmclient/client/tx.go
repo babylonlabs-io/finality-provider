@@ -96,8 +96,8 @@ func (c *Client) ReliablySendMsgs(ctx context.Context, msgs []sdk.Msg, expectedE
 	if err := retry.Do(func() error {
 		var sendMsgErr error
 		krErr := c.accessKeyWithLock(func() {
-			service.LockConfig()
-			defer service.UnlockConfig()
+			service.LockAddressPrefix()
+			defer service.UnlockAddressPrefix()
 			sendMsgErr = c.provider.SendMessagesToMempool(ctx, relayerMsgs, "", ctx, []func(*babylonclient.RelayerTxResponse, error){callback})
 		})
 		if krErr != nil {

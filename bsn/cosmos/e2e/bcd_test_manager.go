@@ -96,14 +96,14 @@ type BcdTestManager struct {
 // The mutex ensures that only one goroutine can modify address prefixes at a time,
 // preventing race conditions while still allowing tests to run in parallel.
 func setBbnAddressPrefixesSafely() {
-	service.LockConfig()
-	defer service.UnlockConfig()
+	service.LockAddressPrefix()
+	defer service.UnlockAddressPrefix()
 	appparams.SetAddressPrefixes()
 }
 
 func setBbncAppPrefixesSafely() {
-	service.LockConfig()
-	defer service.UnlockConfig()
+	service.LockAddressPrefix()
+	defer service.UnlockAddressPrefix()
 	bbnappparams.SetAddressPrefixes()
 }
 
@@ -311,9 +311,9 @@ func (ctm *BcdTestManager) CreateConsumerFinalityProviders(ctx context.Context, 
 	require.NoError(t, err)
 
 	// inject fp in smart contract using admin
-	service.LockConfig() // we read the address prefix, so we need to lock it
+	service.LockAddressPrefix() // we read the address prefix, so we need to lock it
 	fpMsg := e2eutils.GenBtcStakingFpExecMsg(eotsPubKey.MarshalHex())
-	service.UnlockConfig()
+	service.UnlockAddressPrefix()
 	fpMsgBytes, err := json.Marshal(fpMsg)
 	require.NoError(t, err)
 	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, fpMsgBytes)
