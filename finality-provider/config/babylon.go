@@ -60,6 +60,18 @@ func (cfg *BBNConfig) Validate() error {
 		return fmt.Errorf("block-timeout can't be negative")
 	}
 
+	if cfg.AccountPrefix == "" {
+		return fmt.Errorf("account-prefix must not be empty")
+	}
+
+	if cfg.GasAdjustment == 0 {
+		return fmt.Errorf("gas-adjustment must be greater than 0")
+	}
+
+	if cfg.GasPrices == "" {
+		return fmt.Errorf("gas-prices must not be empty")
+	}
+
 	return nil
 }
 
