@@ -100,7 +100,6 @@ func buildKeys(chainID, pk []byte, startHeight uint64, num uint64, options ...Ke
 	}
 
 	return keys
-
 }
 
 func (s *PubRandProofStore) AddPubRandProofList(
