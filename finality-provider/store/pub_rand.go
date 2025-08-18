@@ -102,6 +102,10 @@ func buildKeys(chainID, pk []byte, startHeight uint64, num uint64, options ...Ke
 	return keys
 }
 
+// AddPubRandProofList adds a list of public randomness proofs to the store.
+// By default, it creates keys for consecutive heights starting from height.
+// Use WithInterval() option to specify a custom interval between heights.
+// For example, with height=100, numPubRand=3, WithInterval(5), it generates keys for heights [100, 105, 110].
 func (s *PubRandProofStore) AddPubRandProofList(
 	chainID []byte,
 	pk []byte,
