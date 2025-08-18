@@ -23,21 +23,10 @@ func NewPubRandState(s *store.PubRandProofStore) *PubRandState {
 
 func (st *PubRandState) addPubRandProofList(
 	pk, chainID []byte, height uint64, numPubRand uint64,
-	proofList []*merkle.Proof,
+	proofList []*merkle.Proof, options ...store.KeyBuildOption,
 ) error {
-	if err := st.s.AddPubRandProofList(chainID, pk, height, numPubRand, proofList); err != nil {
+	if err := st.s.AddPubRandProofList(chainID, pk, height, numPubRand, proofList, options...); err != nil {
 		return fmt.Errorf("failed to add pub rand proof list: %w", err)
-	}
-
-	return nil
-}
-
-func (st *PubRandState) addPubRandProofListWithInterval(
-	pk, chainID []byte, startHeight uint64, numPubRand uint64,
-	proofList []*merkle.Proof, interval uint64,
-) error {
-	if err := st.s.AddPubRandProofListWithInterval(chainID, pk, startHeight, numPubRand, proofList, interval); err != nil {
-		return fmt.Errorf("failed to add pub rand proof list with interval: %w", err)
 	}
 
 	return nil
