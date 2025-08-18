@@ -82,12 +82,11 @@ func WithInterval(interval uint64) KeyBuildOption {
 	}
 }
 
-func buildKeys(chainID, pk []byte, height uint64, num uint64, options ...KeyBuildOption) [][]byte {
+func buildKeys(chainID, pk []byte, startHeight uint64, num uint64, options ...KeyBuildOption) [][]byte {
 	opts := &KeyBuildOptions{
-		interval: 1, // default interval of 1 means consecutive heights
+		interval: 1, // a default interval of 1 means consecutive heights
 	}
 
-	// Apply options
 	for _, option := range options {
 		option(opts)
 	}
@@ -95,7 +94,7 @@ func buildKeys(chainID, pk []byte, height uint64, num uint64, options ...KeyBuil
 	keys := make([][]byte, 0, num)
 
 	for i := uint64(0); i < num; i++ {
-		height := height + i*opts.interval
+		height := startHeight + i*opts.interval
 		key := getKey(chainID, pk, height)
 		keys = append(keys, key)
 	}
