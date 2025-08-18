@@ -7,6 +7,7 @@ import (
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -301,7 +302,7 @@ func (rc *DefaultRandomnessCommitter) GetPubRandProofList(height uint64, numPubR
 	return proofList, nil
 }
 func (rc *DefaultRandomnessCommitter) AddPubRandProofListWithInterval(startHeight uint64, numPubRand uint64, proofList []*merkle.Proof, interval uint64) error {
-	err := rc.PubRandState.addPubRandProofListWithInterval(rc.BtcPk.MustMarshal(), rc.Cfg.ChainID, startHeight, numPubRand, proofList, interval)
+	err := rc.PubRandState.addPubRandProofList(rc.BtcPk.MustMarshal(), rc.Cfg.ChainID, startHeight, numPubRand, proofList, store.WithInterval(interval))
 	if err != nil {
 		return fmt.Errorf("failed to add public randomness proof list with interval: %w", err)
 	}
