@@ -116,7 +116,7 @@ Instructions for setting up the three keys can be found in the following places:
 > ⚠️ **Critical**: One finality provider can serve only one BSN.  
 > Each finality provider must use a unique EOTS key. Reusing an EOTS key across 
 > multiple FPs is dangerous, if one FP is slashed, all other FPs using the same 
-> EOTS key will also be subject to slashing.
+> EOTS key will also be subjected to slashing.
 
 ### 4.1. Initialize the Finality Provider Daemon
 
