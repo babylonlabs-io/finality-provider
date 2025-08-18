@@ -68,27 +68,40 @@ func getPrefixKey(chainID, pk []byte) []byte {
 	return prefix
 }
 
-func buildKeys(chainID, pk []byte, height uint64, num uint64) [][]byte {
-	keys := make([][]byte, 0, num)
-
-	for i := uint64(0); i < num; i++ {
-		key := getKey(chainID, pk, height+i)
-		keys = append(keys, key)
-	}
-
-	return keys
+type KeyBuildOptions struct {
+	interval uint64
 }
 
-func buildKeysWithInterval(chainID, pk []byte, startHeight uint64, num uint64, interval uint64) [][]byte {
+// KeyBuildOption is a function that modifies KeyBuildOptions
+type KeyBuildOption func(*KeyBuildOptions)
+
+// WithInterval sets the interval between consecutive heights
+func WithInterval(interval uint64) KeyBuildOption {
+	return func(opts *KeyBuildOptions) {
+		opts.interval = interval
+	}
+}
+
+func buildKeys(chainID, pk []byte, height uint64, num uint64, options ...KeyBuildOption) [][]byte {
+	opts := &KeyBuildOptions{
+		interval: 1, // default interval of 1 means consecutive heights
+	}
+
+	// Apply options
+	for _, option := range options {
+		option(opts)
+	}
+
 	keys := make([][]byte, 0, num)
 
 	for i := uint64(0); i < num; i++ {
-		height := startHeight + i*interval // 100, 105, 110, 115...
+		height := height + i*opts.interval
 		key := getKey(chainID, pk, height)
 		keys = append(keys, key)
 	}
 
 	return keys
+
 }
 
 func (s *PubRandProofStore) AddPubRandProofList(
@@ -97,8 +110,9 @@ func (s *PubRandProofStore) AddPubRandProofList(
 	height uint64,
 	numPubRand uint64,
 	proofList []*merkle.Proof,
+	options ...KeyBuildOption,
 ) error {
-	keys := buildKeys(chainID, pk, height, numPubRand)
+	keys := buildKeys(chainID, pk, height, numPubRand, options...)
 
 	if len(keys) != len(proofList) {
 		return fmt.Errorf("the number of public randomness is not same as the number of proofs")
@@ -129,53 +143,6 @@ func (s *PubRandProofStore) AddPubRandProofList(
 		return nil
 	}); err != nil {
 		return fmt.Errorf("failed to add pub rand proof list: %w", err)
-	}
-
-	return nil
-}
-
-// AddPubRandProofListWithInterval adds a list of public randomness proofs to the store with a given interval.
-// It creates keys for heights starting from startHeight and incrementing by interval for numPubRand entries.
-// For example, with startHeight=100, numPubRand=3, interval=5, it generates keys for heights [100, 105, 110].
-func (s *PubRandProofStore) AddPubRandProofListWithInterval(
-	chainID []byte,
-	pk []byte,
-	startHeight uint64,
-	numPubRand uint64,
-	proofList []*merkle.Proof,
-	interval uint64,
-) error {
-	keys := buildKeysWithInterval(chainID, pk, startHeight, numPubRand, interval)
-
-	if len(keys) != len(proofList) {
-		return fmt.Errorf("the number of public randomness is not same as the number of proofs")
-	}
-
-	var proofBytesList [][]byte
-	for _, proof := range proofList {
-		proofBytes, err := proof.ToProto().Marshal()
-		if err != nil {
-			return fmt.Errorf("invalid proof: %w", err)
-		}
-		proofBytesList = append(proofBytesList, proofBytes)
-	}
-
-	if err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
-		bucket := tx.ReadWriteBucket(pubRandProofBucketName)
-		if bucket == nil {
-			return ErrCorruptedPubRandProofDB
-		}
-
-		for i, key := range keys {
-			// set to DB
-			if err := bucket.Put(key, proofBytesList[i]); err != nil {
-				return fmt.Errorf("failed to store pub rand proof: %w", err)
-			}
-		}
-
-		return nil
-	}); err != nil {
-		return fmt.Errorf("failed to add pub rand proof list with interval: %w", err)
 	}
 
 	return nil
