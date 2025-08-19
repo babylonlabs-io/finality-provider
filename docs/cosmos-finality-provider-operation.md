@@ -204,7 +204,7 @@ on both chains.
 > 💡 **Recommendation**: Use different key names for each chain to avoid confusion and 
 > ensure proper key management.
 
-Use the following command to add key to your finality provider:
+Use the following command to add a key to your finality provider:
 ```shell
 cosmos-fpd keys add <key-name> --keyring-backend test --home <path>
 ```
