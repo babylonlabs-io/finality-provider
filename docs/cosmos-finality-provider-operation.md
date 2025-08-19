@@ -173,7 +173,7 @@ If the home directory already exists, `init` will not succeed.
 
 ### 4.2. Add keys for Babylon Genesis and Cosmos BSN accounts
 
-Each finality provider maintains all accounts in the keyring:
+Each finality provider maintains the following accounts:
 
 1. **Babylon Genesis account**: Used for registering as Cosmos BSN FP on Babylon 
 Genesis and receive BTC staking reward commissions
