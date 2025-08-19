@@ -6,7 +6,7 @@ lifecycle of running a Cosmos finality provider, including:
 
 * Managing keys (EOTS key for EOTS signatures, Babylon Genesis key for rewards, 
   and Cosmos BSN key for submissions).
-* Registering a Cosmos finality provider on Babylon Genesis.
+* Registering a Cosmos BSN finality provider on Babylon Genesis.
 * Operating a Cosmos finality provider.
 * Withdrawing Cosmos finality provider commission rewards.
 
