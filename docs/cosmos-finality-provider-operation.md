@@ -176,7 +176,8 @@ If the home directory already exists, `init` will not succeed.
 Each finality provider maintains the following accounts:
 
 1. **Babylon Genesis account**: Used for registering as Cosmos BSN FP on Babylon 
-Genesis and receive BTC staking reward commissions
+Genesis. It is the account that will receive IBC-bridged BSN rewards
+from the Cosmos BSN.
 2. **Cosmos BSN account**: Used for submitting finality signatures and public
 randomness to CosmWasm contracts on Cosmos BSN
 
