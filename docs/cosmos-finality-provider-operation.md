@@ -207,9 +207,8 @@ Use the following command to add key to your finality provider:
 ```shell
 cosmos-fpd keys add <key-name> --keyring-backend test --home <path>
 ```
-> **Note**: The same command is used to generate both the Babylon Genesis and 
-  Cosmos BSN accounts.
-> Use different key names to distinguish them in your keyring.
+> **Note**: This command can be executed two times to generate keys for
+> both Babylon Genesis and the Cosmos BSN as the key generation algorithm is the same.
 
 The above `keys add` commands will create new key pairs and store them in your 
 keyring.
