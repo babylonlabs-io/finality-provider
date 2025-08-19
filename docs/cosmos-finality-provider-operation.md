@@ -13,13 +13,13 @@ lifecycle of running a Cosmos finality provider, including:
 Please review the [high-level explainer](../README.md) before proceeding to
 gain an overall understanding of the finality provider.
 
-> **⚠️ Important**: Cosmos BSN integration requires the deployment of 
+> Important: Cosmos BSN integration requires the deployment of 
 > [CosmWasm BSN contracts](https://github.com/babylonlabs-io/cosmos-bsn-contracts) 
 > on the consumer Cosmos chain that are responsible for receiving finality 
 > signatures and maintaining the finality status of Cosmos BSN blocks.
-> Cosmos Finality providers register on Babylon Genesis to specify their intent to secure the Cosmos BSN, and
-> then query blocks from the Cosmos BSN and submit signatures to the CosmWasm
-> contracts on the Cosmos BSN.
+> Cosmos Finality providers register on Babylon Genesis to specify their intent to secure the Cosmos BSN, 
+> then query blocks from the consumer chain and submit signatures to the CosmWasm
+> contracts deployed on it.
 > This is in contrast with Babylon Genesis' native finality providers which only need
 > to interact with the Babylon chain directly.
 
@@ -64,7 +64,7 @@ process described in [EOTS Daemon Setup](./eots-daemon.md). This includes:
 * Adding your EOTS key to the daemon
 * Starting the EOTS daemon service
 
-⚠️ **Important considerations:**
+Important considerations:
 * The EOTS daemon must be running and accessible before you can operate a 
   finality provider
 * Each Finality Provider must generate a new EOTS key - EOTS keys cannot be 
@@ -102,7 +102,7 @@ crucial for secure operation.
 | **Functions** | • Unique identifier of a finality provider for BTC staking<br>• Initial registration<br>• Signs finality votes and Schnorr signatures<br>• Generates randomness<br> | • Unique identifier of a finality provider for Babylon Genesis<br>• Initial registration<br>• Withdrawing accumulated rewards<br>• Setting withdrawal addresses | • Submits finality signatures to Cosmos BSN contract<br>• Submits public randomness commitments to Cosmos BSN contract<br>• Pays transaction fees on Cosmos BSN |
 | **Managed By** | `eotsd`                                                                                                                                                             | `cosmos-fpd`                                                                                                       | `cosmos-fpd`                                                                                              |
 | **Mutability** | Immutable after registration                                                                                                                                        | Immutable after registration                                                                                                                                    | Rotatable                                                                                               |
-| **Key Relationships** | Permanently paired with Babylon Genesis Key during registration                                                                                                     | Permanently paired with EOTS Key during registration                                                            | • Not associated with the other keys<br>• Must exist after registration before submissions start   |
+| **Key Relationships** | Permanently paired with Babylon Genesis Key during registration                                                                                                     | Permanently paired with EOTS Key during registration                                                            | • Not associated with the other keys   |
 | **Recommended Practices** | • Store backups in multiple secure locations<br>• Use dedicated machine for EOTS Manager                                                                            | • Store backups in multiple secure locations<br>• Only use for Babylon chain operations and reward withdrawals                          | • Maintain sufficient balance for transaction fees<br>• Monitor consumer chain and key balance, fund it when needed       |
 | **Security Implications** | • Loss is irrecoverable<br>• Cannot participate finality voting                                                                                                     | • Loss is irrecoverable<br>• Cannot withdraw rewards                                                                                                            | • Temporary service disruption<br>• Can be replaced with a new key<br>• Loss of remaining balance        |
 
@@ -128,7 +128,7 @@ cosmos-fpd init --home <path>
 
 If the home directory already exists, `init` will not succeed.
 
-> ⚡ Running this command with `--force` will overwrite the existing config file.
+> **Note:** Running this command with `--force` will overwrite the existing config file.
 > Please ensure you have a backup of the existing config file before running
 > this command.
 
@@ -180,27 +180,28 @@ from the Cosmos BSN.
 2. **Cosmos BSN account**: Used for submitting finality signatures and public
 randomness to the CosmWasm contracts deployed on the Cosmos BSN
 
-Since these keys are accessed by an automated daemon process, they must be stored
-unencrypted on disk and associated with the `test` keyring backend.
-This ensures that the finality provider daemon can promptly submit transactions 
-on both chains.
+Since these keys are accessed by an automated daemon process:
+- Babylon Genesis account: must be stored unencrypted on disk and use the `test` keyring backend (enforced by the daemon for automatic signing).
+- Cosmos BSN account: recommended to use the `test` keyring backend for unattended operation; other backends may work but are not enforced.
+
+This ensures the finality provider daemon can promptly submit transactions where required.
 
 > **Note:** All finality provider transactions including **registration** and 
 > **signature submissions** require gas. 
 > Keep only the minimum needed balance in operational accounts and move the rest 
 > to more secure storage.
 
-> ⚠️ **Important**: Both accounts need to be funded:
+> Important: Both accounts need to be funded:
 > - **Babylon Genesis account**: Fund with Babylon tokens for **registration and rewards withdrawal gas fees**
 > - **Cosmos BSN account**: Fund with Cosmos chain tokens 
     for **finality signature and public randomness submission gas fees**
 
-> ⚠️ **Notice:** Do not reuse the same **Cosmos BSN** key for other operations (including other finality providers) 
+> Notice: Do not reuse the same **Cosmos BSN** key for other operations (including other finality providers) 
 > providers. Doing so can cause **sequence number mismatches** and lead 
 > to **failed transactions** or 
 > **unexpected outages**. Keep your Cosmos BSN key exclusive for the finality provider operation.
 
-> 💡 **Recommendation**: Use different key names for each chain to avoid confusion and 
+> Recommendation: Use different key names for each chain to avoid confusion and 
 > ensure proper key management.
 
 Use the following command to add a key to your finality provider:
@@ -226,6 +227,10 @@ The output should look similar to the one below:
 }
 ```
 
+> Notice: The `cosmos-fpd keys add` command generates standard Cosmos SDK keypairs and is used to create
+> both the Babylon Genesis key and the Cosmos BSN (wasm) key. Run it twice with different key names (for example,
+> `babylon-fp-key` and `cosmos-bsn-key`)
+
 ### 4.3. Configure Your Finality Provider
 
 Edit the `fpd.conf` file in your finality provider home directory with the
@@ -249,7 +254,19 @@ RPCAddr = http://127.0.0.1:26657 # Your Babylon Genesis node's RPC endpoint
 KeyDirectory = <path> # The `--home` path to the directory where the keyring is stored
 ```
 
-> ⚠️ **Important**: Operating a finality provider requires direct 
+- **BtcStakingContractAddress**: Address of the BTC Staking contract that
+  manages BTC staking and delegation. See the contract repo for details: 
+  [BTC Staking contract](https://github.com/babylonlabs-io/cosmos-bsn-contracts/tree/v1.0.0-rc.0/contracts/btc-staking).
+- **BtcFinalityContractAddress**: Address of the Finality contract that collects
+  and validates finality signatures. See the contract repo for details: 
+  [BTC Finality contract](https://github.com/babylonlabs-io/cosmos-bsn-contracts/tree/v1.0.0-rc.0/contracts/btc-finality).
+
+Every Cosmos BSN must deploy a set of CosmWasm contracts as part of the
+integration. For finality providers, the two contracts above are required. To
+learn more about the Cosmos BSN integration and contract set, see the guide:
+[Cosmos BSN integration docs](https://github.com/babylonlabs-io/cosmos-bsn-contracts/blob/main/docs/cosmos-bsn-integration.md).
+
+> Important: Operating a finality provider requires direct 
 > connections to a Cosmos BSN node. 
 > It is **highly recommended** to operate your own instances of
 > full nodes instead of relying on third parties.
@@ -258,14 +275,15 @@ Please verify the Babylon Gensis `chain-id` and other network parameters from
 the official
 [Babylon Genesis Networks repository](https://github.com/babylonlabs-io/networks).
 
-Another notable configurable parameter is `NumPubRand`, which is the number of 
-public randomness values that will be generated and submitted in one commit to 
-Babylon Genesis. This value is set to `50,000` by default, which is sufficient 
-for roughly 5 days of usage with block production time at `10s`. Depending on 
-the Cosmos BSN block production time, **this value should be adapted**. Larger 
-values can be set to tolerate longer downtime, but will increase the size of 
-Merkle proofs for each randomness, resulting in higher gas fees when submitting 
-future finality signatures and larger storage requirements.
+Another notable configurable parameter is `NumPubRand`, which is the number of
+public randomness values that will be generated and submitted in one commit to
+Babylon Genesis. This value is set to `50,000` by default, which is sufficient
+for roughly 1.2 days of usage with block production time at `2s`. To cover
+approximately 5 days of usage at a 2s block time, set `NumPubRand` to `216,000`.
+Depending on the Cosmos BSN block production time, **this value should be
+adapted**. Larger values can be set to tolerate longer downtime, but will
+increase the size of Merkle proofs for each randomness, resulting in higher gas
+fees when submitting future finality signatures and larger storage requirements.
 
 ### 4.4. Starting the Finality Provider Daemon
 
@@ -304,7 +322,7 @@ You should see logs indicating successful startup:
 [INFO] RPC server listening...
 ```
 
-> ⚠️ **Important**: The daemon needs to run continuously. It's recommended to set
+> Important: The daemon needs to run continuously. It's recommended to set
 > up a system service (like `systemd` on Linux or `launchd` on macOS) to manage
 > the daemon process, handle automatic restarts, and collect logs.
 
@@ -345,7 +363,7 @@ RPC will have access to all the EOTS keys held within it.
 For example, after registering a finality provider, you can start its daemon by
 providing the EOTS public key `cosmos-fpd start --eots-pk <hex-string-of-eots-public-key>`.
 
-> ⚠️ **Note**: A single finality provider daemon can only run with a single
+> Note: A single finality provider daemon can only run with a single
 > finality provider instance at a time.
 
 ## 5. Finality Provider Operations
@@ -389,7 +407,7 @@ Required parameters:
 * `--moniker`: A human-readable name for your finality provider
 * `--home`: Path to your finality provider daemon home directory
 
-> ⚠️ **Important**: The EOTS key and the Babylon Genesis key used in registration is
+> Important: The EOTS key and the Babylon Genesis key used in registration is
 > unique to the finality provider after registration. Either key cannot be
 > rotated. The EOTS key is for signing finality signatures while the latter is
 > for withdrawing rewards. You **MUST** keep both keys safe.
@@ -468,6 +486,12 @@ Rewards are accumulated in a reward gauge, and a finality provider becomes
 eligible for rewards if it has participated sending finality votes.
 The distribution of rewards is based on the provider's voting power portion
 relative to other voters.
+
+> **Note**
+> - Rewards are paid in the Cosmos BSN’s native asset and are IBC-bridged to Babylon Genesis for withdrawal on Babylon.
+> - Distribution is determined by each Cosmos BSN; chains can configure both the
+>   distribution scheme and the distribution interval (in number of Cosmos BSN
+>   blocks).
 
 #### 5.2.1. Querying Rewards
 
@@ -658,7 +682,7 @@ Parameters:
 * `--daemon-address`: RPC server address of fpd (default: `127.0.0.1:12581`)
 * `--home`: Path to your finality provider daemon home directory
 
-> ⚠️ Before unjailing, ensure you've fixed the underlying issue that caused jailing
+> Important: Before unjailing, ensure you've fixed the underlying issue that caused jailing
 
 If unjailing is successful, you may start running the finality provider by
 `cosmos-fpd start --eots-pk <hex-string-of-eots-public-key>`.
@@ -671,7 +695,7 @@ the extraction of the finality provider's private key and their immediate
 removal from the active set. For details about how the slashing works in the
 BTC staking protocol, please refer to our [light paper](https://docs.babylonlabs.io/papers/btc_staking_litepaper(EN).pdf).
 
-> ⚠️ **Critical**: Slashing is irreversible and the finality provider can
+> Critical: Slashing is irreversible and the finality provider can
 > no longer gain voting power from the network.
 
 Apart from malicious behavior, honest finality providers face [slashing risks](https://cubist.dev/blog/slashing-risks-you-need-to-think-about-when-restaking)
@@ -703,7 +727,7 @@ finality provider. The metrics endpoint is configurable in `fpd.conf`:
 Each metric with `fp_` prefix includes the finality provider's BTC public key
 hex as a label.
 
-> 💡 **Tip**: Monitor these metrics to detect issues before they lead to jailing:
+> Tip: Monitor these metrics to detect issues before they lead to jailing:
 >
 > * Large gaps in `fp_seconds_since_last_vote`
 > * Increasing `fp_total_failed_votes`
