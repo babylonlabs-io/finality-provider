@@ -20,7 +20,7 @@ gain an overall understanding of the finality provider.
 > Cosmos Finality providers register on Babylon Genesis to specify their intent to secure the Cosmos BSN, and
 > then query blocks from the Cosmos BSN and submit signatures to the CosmWasm
 > contracts on the Cosmos BSN.
-> This is in contrast with Babylon native finality providers which only need
+> This is in contrast with Babylon Genesis' native finality providers which only need
 > to interact with the Babylon chain directly.
 
 ## Table of Contents
