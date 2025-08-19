@@ -198,7 +198,7 @@ on both chains.
 > ⚠️ **Notice:** Do not reuse the same **Cosmos BSN** key for other operations (including other finality providers) 
 > providers. Doing so can cause **sequence number mismatches** and lead 
 > to **failed transactions** or 
-> **unexpected outages**. Use **unique keys per finality provider**.
+> **unexpected outages**. Keep your Cosmos BSN key exclusive for the finality provider operation.
 
 > 💡 **Recommendation**: Use different key names for each chain to avoid confusion and 
 > ensure proper key management.
