@@ -17,7 +17,7 @@ gain an overall understanding of the finality provider.
 > [CosmWasm BSN contracts](https://github.com/babylonlabs-io/cosmos-bsn-contracts) 
 > on the consumer Cosmos chain that are responsible for receiving finality 
 > signatures and maintaining the finality status of Cosmos BSN blocks.
-> Cosmos Finality providers register with Babylon Genesis for the Cosmos BSN,
+> Cosmos Finality providers register on Babylon Genesis to specify their intent to secure the Cosmos BSN, and
 > then query blocks from the Cosmos BSN and submit signatures to the CosmWasm
 > contracts on the Cosmos BSN.
 > This is in contrast with Babylon native finality providers which only need
