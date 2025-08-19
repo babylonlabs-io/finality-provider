@@ -192,7 +192,7 @@ on both chains.
 > to more secure storage.
 
 > ⚠️ **Important**: Both accounts need to be funded:
-> - **Babylon Genesis account**: Fund with Babylon tokens for **registration gas fees**
+> - **Babylon Genesis account**: Fund with Babylon tokens for **registration and rewards withdrawal gas fees**
 > - **Cosmos BSN account**: Fund with Cosmos chain tokens 
     for **finality signature and public randomness submission gas fees**
 
