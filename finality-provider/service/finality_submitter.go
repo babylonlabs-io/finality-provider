@@ -88,6 +88,7 @@ func (ds *DefaultFinalitySubmitter) MustSetLastVotedHeight(height uint64) {
 		if strings.Contains(err.Error(), "database not open") {
 			ds.Logger.Warn("skipping state update due to database shutdown",
 				zap.String("pk", ds.GetBtcPkHex()), zap.Uint64("height", height))
+
 			return
 		}
 		ds.Logger.Fatal("failed to update state after finality signature submitted",
