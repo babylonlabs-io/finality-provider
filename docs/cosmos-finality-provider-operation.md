@@ -147,7 +147,7 @@ If the home directory already exists, `init` will not succeed.
 
 * **fpd.conf**: The main configuration file that defines:
   * Babylon Genesis Network settings (chain-id, node endpoints)
-  * Cosmos BSN Network details (keys, node endpoints, cosmos bsn contracts address)
+  * Cosmos BSN Network settings (keys, node endpoints, Cosmos BSN contract addresses)
   * EOTS manager connection settings
   * Database configuration
   * Logging settings
