@@ -124,7 +124,7 @@ To initialize the finality provider daemon home directory,
 use the following command:
 
 ```shell
-consumer-fpd init --home <path>
+cosmos-fpd init --home <path>
 ```
 
 If the home directory already exists, `init` will not succeed.
