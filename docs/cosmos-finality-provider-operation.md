@@ -195,7 +195,7 @@ on both chains.
 > - **Cosmos BSN account**: Fund with Cosmos chain tokens 
     for **finality signature and public randomness submission gas fees**
 
-> ⚠️ **Notice:** Do not reuse the same **Cosmos BSN** keys across multiple finality 
+> ⚠️ **Notice:** Do not reuse the same **Cosmos BSN** key for other operations (including other finality providers) 
 > providers. Doing so can cause **sequence number mismatches** and lead 
 > to **failed transactions** or 
 > **unexpected outages**. Use **unique keys per finality provider**.
