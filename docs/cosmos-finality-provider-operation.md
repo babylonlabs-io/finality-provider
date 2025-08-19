@@ -179,7 +179,7 @@ Each finality provider maintains the following accounts:
 Genesis. It is the account that will receive IBC-bridged BSN rewards
 from the Cosmos BSN.
 2. **Cosmos BSN account**: Used for submitting finality signatures and public
-randomness to CosmWasm contracts on Cosmos BSN
+randomness to the CosmWasm contracts deployed on the Cosmos BSN
 
 Since these keys are accessed by an automated daemon process, they must be stored
 unencrypted on disk and associated with the `test` keyring backend.
