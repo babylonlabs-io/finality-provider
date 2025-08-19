@@ -114,9 +114,8 @@ Instructions for setting up the three keys can be found in the following places:
 ## 4. Setting up the Finality Provider
 
 > ⚠️ **Critical**: One finality provider can serve only one BSN.  
-> Each finality provider must use a unique EOTS key. Reusing an EOTS key across 
-> multiple FPs is dangerous, if one FP is slashed, all other FPs using the same 
-> EOTS key will also be subjected to slashing.
+> Each finality provider must use a unique EOTS key. Reusing an EOTS key to
+> register a finality provider for a different BSN will be rejected by Babylon Genesis.
 
 ### 4.1. Initialize the Finality Provider Daemon
 
