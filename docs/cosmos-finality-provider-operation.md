@@ -191,17 +191,17 @@ This ensures the finality provider daemon can promptly submit transactions where
 > Keep only the minimum needed balance in operational accounts and move the rest 
 > to more secure storage.
 
-> Important: Both accounts need to be funded:
+> ⚠️ **Important**: Both accounts need to be funded:
 > - **Babylon Genesis account**: Fund with Babylon tokens for **registration and rewards withdrawal gas fees**
 > - **Cosmos BSN account**: Fund with Cosmos chain tokens 
     for **finality signature and public randomness submission gas fees**
 
-> Notice: Do not reuse the same **Cosmos BSN** key for other operations (including other finality providers) 
+> ⚠️ **Notice:** Do not reuse the same **Cosmos BSN** key for other operations (including other finality providers) 
 > providers. Doing so can cause **sequence number mismatches** and lead 
 > to **failed transactions** or 
 > **unexpected outages**. Keep your Cosmos BSN key exclusive for the finality provider operation.
 
-> Recommendation: Use different key names for each chain to avoid confusion and 
+> 💡 **Recommendation**: Use different key names for each chain to avoid confusion and 
 > ensure proper key management.
 
 Use the following command to add a key to your finality provider:
@@ -322,7 +322,7 @@ You should see logs indicating successful startup:
 [INFO] RPC server listening...
 ```
 
-> Important: The daemon needs to run continuously. It's recommended to set
+> ⚠️ **Important**: The daemon needs to run continuously. It's recommended to set
 > up a system service (like `systemd` on Linux or `launchd` on macOS) to manage
 > the daemon process, handle automatic restarts, and collect logs.
 
@@ -363,7 +363,7 @@ RPC will have access to all the EOTS keys held within it.
 For example, after registering a finality provider, you can start its daemon by
 providing the EOTS public key `cosmos-fpd start --eots-pk <hex-string-of-eots-public-key>`.
 
-> Note: A single finality provider daemon can only run with a single
+> ⚠️ **Note**: A single finality provider daemon can only run with a single
 > finality provider instance at a time.
 
 ## 5. Finality Provider Operations
@@ -407,7 +407,7 @@ Required parameters:
 * `--moniker`: A human-readable name for your finality provider
 * `--home`: Path to your finality provider daemon home directory
 
-> Important: The EOTS key and the Babylon Genesis key used in registration is
+> ⚠️ **Important**: The EOTS key and the Babylon Genesis key used in registration is
 > unique to the finality provider after registration. Either key cannot be
 > rotated. The EOTS key is for signing finality signatures while the latter is
 > for withdrawing rewards. You **MUST** keep both keys safe.
@@ -682,7 +682,7 @@ Parameters:
 * `--daemon-address`: RPC server address of fpd (default: `127.0.0.1:12581`)
 * `--home`: Path to your finality provider daemon home directory
 
-> Important: Before unjailing, ensure you've fixed the underlying issue that caused jailing
+> ⚠️ Before unjailing, ensure you've fixed the underlying issue that caused jailing
 
 If unjailing is successful, you may start running the finality provider by
 `cosmos-fpd start --eots-pk <hex-string-of-eots-public-key>`.
@@ -695,7 +695,7 @@ the extraction of the finality provider's private key and their immediate
 removal from the active set. For details about how the slashing works in the
 BTC staking protocol, please refer to our [light paper](https://docs.babylonlabs.io/papers/btc_staking_litepaper(EN).pdf).
 
-> Critical: Slashing is irreversible and the finality provider can
+> ⚠️ **Critical**: Slashing is irreversible and the finality provider can
 > no longer gain voting power from the network.
 
 Apart from malicious behavior, honest finality providers face [slashing risks](https://cubist.dev/blog/slashing-risks-you-need-to-think-about-when-restaking)
@@ -727,7 +727,7 @@ finality provider. The metrics endpoint is configurable in `fpd.conf`:
 Each metric with `fp_` prefix includes the finality provider's BTC public key
 hex as a label.
 
-> Tip: Monitor these metrics to detect issues before they lead to jailing:
+> 💡 **Tip**: Monitor these metrics to detect issues before they lead to jailing:
 >
 > * Large gaps in `fp_seconds_since_last_vote`
 > * Increasing `fp_total_failed_votes`
