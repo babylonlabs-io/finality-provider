@@ -9,6 +9,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/cmd/cosmos-fpd/daemon"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
 	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	goflags "github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/require"
@@ -238,7 +239,9 @@ func TestConsumerRecoverRandProofCmd(t *testing.T) {
 		"--chain-id=" + fpi.ChainId,
 	})
 	// wrangle the app params to ensure the address prefixes are set correctly
+	service.LockAddressPrefix()
 	appparams.SetAddressPrefixes()
+	service.UnlockAddressPrefix()
 	err = cmd.Execute()
 	require.NoError(t, err)
 

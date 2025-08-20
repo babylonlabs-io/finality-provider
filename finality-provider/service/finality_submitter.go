@@ -84,6 +84,13 @@ func (ds *DefaultFinalitySubmitter) GetBtcPkBIP340() *bbntypes.BIP340PubKey {
 
 func (ds *DefaultFinalitySubmitter) MustSetLastVotedHeight(height uint64) {
 	if err := ds.State.SetLastVotedHeight(height); err != nil {
+		// Handle graceful shutdown case where database may be closed
+		if strings.Contains(err.Error(), "database not open") {
+			ds.Logger.Warn("skipping state update due to database shutdown",
+				zap.String("pk", ds.GetBtcPkHex()), zap.Uint64("height", height))
+
+			return
+		}
 		ds.Logger.Fatal("failed to update state after finality signature submitted",
 			zap.String("pk", ds.GetBtcPkHex()), zap.Uint64("height", height), zap.Error(err))
 	}
