@@ -127,7 +127,7 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 		}
 		var msgToSign []byte
 		// For BSNs we always use the ctx signing
-		if IsBSN(th.fp.consumerCon) || latestHeight >= th.fp.cfg.ContextSigningHeight {
+		if th.fp.consumerCon.IsBSN() || latestHeight >= th.fp.cfg.ContextSigningHeight {
 			signCtx := th.fp.consumerCon.GetFpFinVoteContext()
 			msgToSign = b.MsgToSign(signCtx)
 		} else {

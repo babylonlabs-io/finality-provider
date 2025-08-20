@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
-	clientcontroller2 "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"strings"
 	"sync"
@@ -542,7 +540,7 @@ func (app *FinalityProviderApp) CreatePop(ctx context.Context, fpAddress sdk.Acc
 		return nil, fmt.Errorf("failed to query the latest block height: %w", err)
 	}
 	//  nextHeight-1 might underflow if the nextHeight is 0
-	if IsBSN(app.consumerCon) || latestHeight >= app.config.ContextSigningHeight {
+	if app.consumerCon.IsBSN() || latestHeight >= app.config.ContextSigningHeight {
 		signCtx := app.cc.GetFpPopContextV0()
 		if _, err := hasher.Write([]byte(signCtx)); err != nil {
 			return nil, fmt.Errorf("failed to write signing context to the hash: %w", err)
@@ -706,18 +704,4 @@ func (app *FinalityProviderApp) putFpFromResponse(ctx context.Context, fp *bstyp
 	)
 
 	return nil
-}
-
-// IsBSN checks if the given ConsumerController is of type
-// CosmwasmConsumerController or RollupBSNController and returns true if it is,
-// false otherwise.
-func IsBSN(controller ccapi.ConsumerController) bool {
-	switch controller.(type) {
-	case *clientcontroller.CosmwasmConsumerController:
-		return true
-	case *clientcontroller2.RollupBSNController:
-		return true
-	default:
-		return false
-	}
 }

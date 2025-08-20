@@ -267,7 +267,7 @@ func (rc *DefaultRandomnessCommitter) SignPubRandCommit(ctx context.Context, sta
 		return nil, fmt.Errorf("failed to query the latest block: %w", err)
 	}
 	// For BSNs we always use the ctx signing
-	if IsBSN(rc.ConsumerCon) || latestHeight >= rc.Cfg.ContextSigningHeight {
+	if rc.ConsumerCon.IsBSN() || latestHeight >= rc.Cfg.ContextSigningHeight {
 		signCtx := rc.ConsumerCon.GetFpRandCommitContext()
 		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
 		if err != nil {

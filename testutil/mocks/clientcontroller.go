@@ -212,6 +212,20 @@ func (mr *MockConsumerControllerMockRecorder) GetFpRandCommitContext() *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFpRandCommitContext", reflect.TypeOf((*MockConsumerController)(nil).GetFpRandCommitContext))
 }
 
+// IsBSN mocks base method.
+func (m *MockConsumerController) IsBSN() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsBSN")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsBSN indicates an expected call of IsBSN.
+func (mr *MockConsumerControllerMockRecorder) IsBSN() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsBSN", reflect.TypeOf((*MockConsumerController)(nil).IsBSN))
+}
+
 // QueryBlock mocks base method.
 func (m *MockConsumerController) QueryBlock(ctx context.Context, height uint64) (types0.BlockDescription, error) {
 	m.ctrl.T.Helper()

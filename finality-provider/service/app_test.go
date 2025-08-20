@@ -82,6 +82,7 @@ func FuzzCreateFinalityProvider(f *testing.F) {
 		mockConsumerController.EXPECT().QueryLastPubRandCommit(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		mockBabylonController.EXPECT().GetFpPopContextV0().Return("").AnyTimes()
+		mockConsumerController.EXPECT().IsBSN().Return(false).AnyTimes()
 
 		// Create randomized config
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
@@ -267,6 +268,7 @@ func FuzzUnjailFinalityProvider(f *testing.F) {
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
 		mockConsumerController.EXPECT().GetFpRandCommitContext().Return("").AnyTimes()
+		mockConsumerController.EXPECT().IsBSN().Return(false).AnyTimes()
 
 		// Create randomized config
 		pathSuffix := datagen.GenRandomHexStr(r, 10)
@@ -355,6 +357,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 		mockConsumerController.EXPECT().GetFpRandCommitContext().Return("").AnyTimes()
 		mockConsumerController.EXPECT().GetFpFinVoteContext().Return("").AnyTimes()
 		mockBabylonController.EXPECT().GetFpPopContextV0().Return("").AnyTimes()
+		mockConsumerController.EXPECT().IsBSN().Return(false).AnyTimes()
 
 		// Create randomized config
 		fpHomeDir := filepath.Join(t.TempDir(), "fp-home")
