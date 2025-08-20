@@ -413,7 +413,9 @@ func (ctm *BcdTestManager) submitGovProp(ctx context.Context, t *testing.T, msgs
 func (ctm *BcdTestManager) voteGovProp(ctx context.Context, t *testing.T, proposalID uint64, option govtypes.VoteOption) {
 	t.Helper()
 	voter := ctm.BcdConsumerClient.GetClient().MustGetAddr()
+	service.LockAddressPrefix()
 	voterAddr, err := sdk.AccAddressFromBech32(voter)
+	service.UnlockAddressPrefix()
 	require.NoError(t, err)
 
 	voteMsg := govtypes.NewMsgVote(voterAddr, proposalID, option, "")
@@ -567,29 +569,42 @@ func (ctm *BcdTestManager) setupContracts(ctx context.Context, t *testing.T) cwc
 	resp, err := ctm.BcdConsumerClient.ListContractsByCode(btcStakingContractWasmId, &sdkquerytypes.PageRequest{})
 	require.NoError(t, err)
 	require.Len(t, resp.Contracts, 1)
+	service.LockAddressPrefix()
+
 	btcStakingContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
 	// update the contract address
 	btcStakingContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcStakingContractAddr)
+	service.UnlockAddressPrefix()
+
 	ctm.BcdConsumerClient.SetBtcStakingContractAddress(btcStakingContractAddrStr)
 
 	// get btc finality contract address
 	resp, err = ctm.BcdConsumerClient.ListContractsByCode(btcFinalityContractWasmId, &sdkquerytypes.PageRequest{})
 	require.NoError(t, err)
 	require.Len(t, resp.Contracts, 1)
+	service.LockAddressPrefix()
 	btcFinalityContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+	service.UnlockAddressPrefix()
 
 	resp, err = ctm.BcdConsumerClient.ListContractsByCode(babylonContractWasmId, &sdkquerytypes.PageRequest{})
 	require.NoError(t, err)
 	require.Len(t, resp.Contracts, 1)
+	service.LockAddressPrefix()
 	babylonContractAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+	service.UnlockAddressPrefix()
 
 	resp, err = ctm.BcdConsumerClient.ListContractsByCode(btcLightClientWasmId, &sdkquerytypes.PageRequest{})
 	require.NoError(t, err)
 	require.Len(t, resp.Contracts, 1)
+	service.LockAddressPrefix()
 	btcLightClientAddr := sdk.MustAccAddressFromBech32(resp.Contracts[0])
+	service.UnlockAddressPrefix()
 
 	// update the contract address
+	service.LockAddressPrefix()
 	btcFinalityContractAddrStr := sdk.MustBech32ifyAddressBytes("bbnc", btcFinalityContractAddr)
+	service.UnlockAddressPrefix()
+
 	ctm.BcdConsumerClient.SetBtcFinalityContractAddress(btcFinalityContractAddrStr)
 
 	bbnContracts := cwcc.BabylonContracts{
@@ -598,8 +613,9 @@ func (ctm *BcdTestManager) setupContracts(ctx context.Context, t *testing.T) cwc
 		BtcStakingContract:     btcStakingContractAddrStr,
 		BtcFinalityContract:    btcFinalityContractAddrStr,
 	}
-
+	service.LockAddressPrefix()
 	authorityBbnc := sdk.MustBech32ifyAddressBytes("bbnc", authtypes.NewModuleAddress("gov"))
+	service.UnlockAddressPrefix()
 
 	msgSet := &bbnsdktypes.MsgSetBSNContracts{
 		Authority: authorityBbnc,

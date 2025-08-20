@@ -41,6 +41,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 * [#634](https://github.com/babylonlabs-io/finality-provider/pull/634) chore: unify proof building
 
+### Bug fixes
+
+* [#637](https://github.com/babylonlabs-io/finality-provider/pull/637) chore: prevent flappy e2e
+
 ## v2.0.0-rc.2
 
 ### Bug fixes
