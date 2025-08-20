@@ -73,7 +73,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 				return fmt.Errorf("expected RollupPubRandCommit, got %T", commit)
 			}
 
-			if err := pubRandStore.AddPubRandProofListWithInterval(chainID, pk, commit.GetStartHeight(), commit.GetNumPubRand(), proofList, concreteCommit.Interval); err != nil {
+			if err := pubRandStore.AddPubRandProofList(chainID, pk, commit.GetStartHeight(), commit.GetNumPubRand(), proofList, store.WithInterval(concreteCommit.Interval)); err != nil {
 				return fmt.Errorf("failed to save public randomness to DB: %w", err)
 			}
 
