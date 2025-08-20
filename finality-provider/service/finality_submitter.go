@@ -374,7 +374,8 @@ func (ds *DefaultFinalitySubmitter) SignFinalitySig(ctx context.Context, b types
 	}
 
 	var msgToSign []byte
-	if latestHeight >= ds.Cfg.ContextSigningHeight {
+	// For BSNs we always use the ctx signing
+	if IsBSN(ds.ConsumerCtrl) || latestHeight >= ds.Cfg.ContextSigningHeight {
 		signCtx := ds.ConsumerCtrl.GetFpFinVoteContext()
 		msgToSign = b.MsgToSign(signCtx)
 	} else {

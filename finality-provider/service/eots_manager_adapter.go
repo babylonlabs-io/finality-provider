@@ -74,7 +74,8 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(ctx context.Context, start
 		return nil, fmt.Errorf("failed to query the latest block: %w", err)
 	}
 
-	if latestHeight >= fp.cfg.ContextSigningHeight {
+	// For BSNs we always use the ctx signing
+	if IsBSN(fp.consumerCon) || latestHeight >= fp.cfg.ContextSigningHeight {
 		signCtx := fp.consumerCon.GetFpRandCommitContext()
 		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
 		if err != nil {
@@ -103,7 +104,8 @@ func (fp *FinalityProviderInstance) SignFinalitySig(ctx context.Context, b types
 	}
 	// build proper finality signature request
 	var msgToSign []byte
-	if latestHeight >= fp.cfg.ContextSigningHeight {
+	// For BSNs we always use the ctx signing
+	if IsBSN(fp.consumerCon) || latestHeight >= fp.cfg.ContextSigningHeight {
 		signCtx := fp.consumerCon.GetFpFinVoteContext()
 		msgToSign = b.MsgToSign(signCtx)
 	} else {

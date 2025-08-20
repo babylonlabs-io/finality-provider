@@ -126,7 +126,8 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 			return nil, fmt.Errorf("failed to query the latest block: %w", err)
 		}
 		var msgToSign []byte
-		if latestHeight >= th.fp.cfg.ContextSigningHeight {
+		// For BSNs we always use the ctx signing
+		if IsBSN(th.fp.consumerCon) || latestHeight >= th.fp.cfg.ContextSigningHeight {
 			signCtx := th.fp.consumerCon.GetFpFinVoteContext()
 			msgToSign = b.MsgToSign(signCtx)
 		} else {
