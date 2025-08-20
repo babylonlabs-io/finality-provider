@@ -57,7 +57,7 @@ type ConsumerController interface {
 	RandomnessCommitter
 	BlockQuerier[types.BlockDescription]
 	FinalityOperator
-
+	IsBSN() bool
 	Close() error
 }
 
