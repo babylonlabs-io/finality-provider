@@ -246,6 +246,14 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop(ctx context.Contex
 // processAndSubmitSignatures handles the logic of fetching blocks, checking jail status,
 // processing them, and submitting signatures
 func (fp *FinalityProviderInstance) processAndSubmitSignatures(ctx context.Context) {
+	select {
+	case <-fp.quit:
+		fp.logger.Debug("processAndSubmitSignatures: the finality signature submission loop is closing")
+
+		return
+	default:
+	}
+
 	pollerBlocks := fp.getBatchBlocksFromPoller()
 	if len(pollerBlocks) == 0 {
 		return
