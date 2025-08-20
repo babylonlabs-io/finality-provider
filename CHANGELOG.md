@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Bug fixes
 
 * [#637](https://github.com/babylonlabs-io/finality-provider/pull/637) chore: prevent flappy e2e
+* [#638](https://github.com/babylonlabs-io/finality-provider/pull/638) fix: bsn always use ctx sign
 
 ## v2.0.0-rc.2
 

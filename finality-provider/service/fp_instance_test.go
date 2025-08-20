@@ -42,6 +42,7 @@ func FuzzCommitPubRandList(f *testing.F) {
 			Return(false, nil).AnyTimes()
 		mockConsumerController.EXPECT().GetFpRandCommitContext().Return("").AnyTimes()
 		mockConsumerController.EXPECT().GetFpFinVoteContext().Return("").AnyTimes()
+		mockConsumerController.EXPECT().IsBSN().Return(false).AnyTimes()
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
 
@@ -65,6 +66,7 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 		mockConsumerController.EXPECT().QueryLatestBlock(t.Context()).Return(types.NewBlockInfo(0, testutil.GenRandomByteArray(r, 32), false), nil).AnyTimes()
 		mockConsumerController.EXPECT().GetFpRandCommitContext().Return("").AnyTimes()
 		mockConsumerController.EXPECT().GetFpFinVoteContext().Return("").AnyTimes()
+		mockConsumerController.EXPECT().IsBSN().Return(false).AnyTimes()
 		_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
 		defer cleanUp()
 
