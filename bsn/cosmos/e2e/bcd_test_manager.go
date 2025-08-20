@@ -762,3 +762,27 @@ func (ctm *BcdTestManager) waitForPubRandInContract(t *testing.T, fpPk *bbntypes
 		return true
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 }
+
+func (ctm *BcdTestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
+	beforeHeight, err := ctm.BcdConsumerClient.QueryLatestBlock(t.Context())
+	require.NoError(t, err)
+
+	var afterHeight uint64
+	require.Eventually(t, func() bool {
+		height, err := ctm.BcdConsumerClient.QueryLatestBlock(t.Context())
+		if err != nil {
+			t.Logf("Failed to query latest rollup block height: %v", err)
+			return false
+		}
+
+		if height.GetHeight() >= uint64(n)+beforeHeight.GetHeight() {
+			afterHeight = height.GetHeight()
+			return true
+		}
+		return false
+	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime,
+		fmt.Sprintf("rollup chain should produce %d more blocks", n),
+	)
+
+	return afterHeight
+}

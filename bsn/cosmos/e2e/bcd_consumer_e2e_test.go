@@ -11,11 +11,15 @@ import (
 	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	"github.com/babylonlabs-io/finality-provider/testutil"
+	"github.com/babylonlabs-io/finality-provider/types"
 	goflags "github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/require"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 )
@@ -256,4 +260,102 @@ func TestConsumerRecoverRandProofCmd(t *testing.T) {
 	require.NoError(t, err)
 	_, err = pubRandStore.GetPubRandProof([]byte(fpi.ChainId), fp.GetBtcPkBIP340().MustMarshal(), finalizedBlock.GetHeight())
 	require.NoError(t, err)
+}
+
+func TestCosmosSkippingDoubleSignError(t *testing.T) {
+	t.Parallel()
+	setBbnAddressPrefixesSafely()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	ctm := StartBcdTestManager(t, ctx)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
+
+	// setup contracts
+	bbnContracts := ctm.setupContracts(ctx, t)
+
+	// setup relayer
+	ctm.BcdHandler.SetContractAddress(bbnContracts.BabylonContract)
+	ctm.BcdHandler.SetBabylonConfig("chain-test", ctm.FpConfig.BabylonConfig.RPCAddr, ctm.babylonKeyDir)
+
+	err := ctm.BcdHandler.StartRelayer(t)
+	require.NoError(t, err)
+
+	// register consumer to babylon
+	_, err = ctm.BabylonController.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
+	require.NoError(t, err)
+
+	// zone concierge channel is created after registering consumer fp
+	err = ctm.BcdHandler.createZoneConciergeChannel(t)
+	require.NoError(t, err)
+
+	ctm.waitForZoneConciergeChannel(t)
+
+	// register consumer fps to babylon
+	// this will be submitted to babylon once fp daemon starts
+	fp := ctm.CreateConsumerFinalityProviders(ctx, t, bcdConsumerID)
+	fpPk := fp.GetBtcPkBIP340()
+
+	res, err := ctm.BcdConsumerClient.QueryFinalityProvidersByTotalActiveSats(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// ensure pub rand is submitted to smart contract
+	ctm.waitForPubRandInContract(t, fpPk)
+
+	// inject delegation in smart contract using admin
+	// HACK: set account prefix to ensure the staker's address uses bbn prefix
+	setBbnAddressPrefixesSafely()
+	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
+	setBbncAppPrefixesSafely()
+	delMsgBytes, err := json.Marshal(delMsg)
+	require.NoError(t, err)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, delMsgBytes)
+	require.NoError(t, err)
+
+	// wait for the current block to be BTC timestamped
+	// thus some pub rand commit will be finalized
+	nodeStatus, err := ctm.BcdConsumerClient.GetClient().GetStatus(ctx)
+	require.NoError(t, err)
+	curHeight := uint64(nodeStatus.SyncInfo.LatestBlockHeight)
+	ctm.WaitForTimestampedHeight(t, ctx, curHeight)
+
+	// wait for FP to vote on block
+	ctm.waitForCastVote(t, fp)
+	err = fp.Stop()
+	require.NoError(t, err)
+
+	currentHeight := ctm.WaitForNBlocks(t, 1)
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	mockBlock := types.NewBlockInfo(currentHeight, testutil.GenRandomByteArray(r, 32), false)
+
+	t.Logf("Manually sending a vote for fresh height %d (simulating network issue)", currentHeight)
+
+	// Manually submit finality signature for the next height
+	// This creates a signing record in EOTS manager's database
+	_, _, err = fp.NewTestHelper().SubmitFinalitySignatureAndExtractPrivKey(ctx, mockBlock, true)
+	require.NoError(t, err)
+
+	err = fp.Start(t.Context())
+	require.NoError(t, err)
+
+	initialVotedHeight := fp.GetLastVotedHeight()
+
+	require.Eventually(t, func() bool {
+		votedHeight := fp.GetLastVotedHeight()
+
+		// FP should eventually work through all duplicates and vote on fresh heights
+		if votedHeight > initialVotedHeight {
+			t.Logf("✅ FP successfully worked through duplicate signatures and voted on fresh height %d (started from %d)",
+				votedHeight, initialVotedHeight)
+			t.Logf("✅ This proves the duplicate sign protection mechanism works correctly")
+			return true
+		}
+
+		t.Logf("FP working through duplicates, last voted height: %d (started from %d)", votedHeight, initialVotedHeight)
+		return false
+	}, 3*e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 }
