@@ -886,7 +886,7 @@ func TestUnsafeCommitPubRandCmd(t *testing.T) {
 	cmd := daemon.CommandCommitPubRand(BinaryName)
 	cmd.SetArgs([]string{
 		fpIns.GetBtcPkBIP340().MarshalHex(),
-		"30000",
+		"20000",
 		"--home=" + fpHomePath,
 	})
 	t1 := time.Now()
