@@ -327,6 +327,10 @@ func (bc *BabylonConsumerController) QueryFinalityActivationBlockHeight(_ contex
 	return res.Params.FinalityActivationHeight, nil
 }
 
+func (bc *BabylonConsumerController) IsBSN() bool {
+	return false
+}
+
 // QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
 func (bc *BabylonConsumerController) QueryFinalityProviderHighestVotedHeight(_ context.Context, fpPk *btcec.PublicKey) (uint64, error) {
 	fpPubKey := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk)

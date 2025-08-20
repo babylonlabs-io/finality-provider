@@ -850,3 +850,7 @@ func (wc *CosmwasmConsumerController) MustQueryBabylonContracts(ctx context.Cont
 		BtcFinalityContract:    resp.BsnContracts.BtcFinalityContract,
 	}
 }
+
+func (wc *CosmwasmConsumerController) IsBSN() bool {
+	return true
+}

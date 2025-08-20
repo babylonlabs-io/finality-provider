@@ -871,3 +871,7 @@ func (cc *RollupBSNController) isDelegationActive(
 
 	return true, nil
 }
+
+func (cc *RollupBSNController) IsBSN() bool {
+	return true
+}

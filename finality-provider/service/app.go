@@ -540,7 +540,7 @@ func (app *FinalityProviderApp) CreatePop(ctx context.Context, fpAddress sdk.Acc
 		return nil, fmt.Errorf("failed to query the latest block height: %w", err)
 	}
 	//  nextHeight-1 might underflow if the nextHeight is 0
-	if latestHeight >= app.config.ContextSigningHeight {
+	if app.consumerCon.IsBSN() || latestHeight >= app.config.ContextSigningHeight {
 		signCtx := app.cc.GetFpPopContextV0()
 		if _, err := hasher.Write([]byte(signCtx)); err != nil {
 			return nil, fmt.Errorf("failed to write signing context to the hash: %w", err)
