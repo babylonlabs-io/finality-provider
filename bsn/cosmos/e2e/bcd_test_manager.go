@@ -141,9 +141,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	var bc ccapi.BabylonController
 	require.Eventually(t, func() bool {
 		bbnCfg := cfg.BabylonConfig.ToBabylonConfig()
-		service.LockAddressPrefix()
 		bbnCl, err := bbnclient.New(&bbnCfg, logger)
-		service.UnlockAddressPrefix()
 		if err != nil {
 			t.Logf("failed to create Babylon client: %v", err)
 			return false
