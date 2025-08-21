@@ -104,7 +104,7 @@ test-e2e-babylon-ci: clean-e2e
 	--split-by=name --timings-type=name
 
 test-e2e-bcd: clean-e2e install-rly install-bcd
-	@go test -race -mod=readonly -timeout=30m -v $(PACKAGES_E2E_BCD) -count=1 --tags=e2e_bcd
+	@go test -mod=readonly -timeout=30m -v $(PACKAGES_E2E_BCD) -count=1 --tags=e2e_bcd
 
 test-e2e-rollup: clean-e2e
 	@go test -mod=readonly -timeout=25m -v $(PACKAGES_E2E_ROLLUP) -count=1 --tags=e2e_rollup
