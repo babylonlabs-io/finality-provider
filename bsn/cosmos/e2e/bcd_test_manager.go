@@ -39,10 +39,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 
-	sdklogs "cosmossdk.io/log"
-	wasmapp "github.com/CosmWasm/wasmd/app"
 	wasmparams "github.com/CosmWasm/wasmd/app/params"
-	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	_ "github.com/babylonlabs-io/babylon-sdk/demo/app"
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
@@ -57,8 +54,6 @@ import (
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
-	dbm "github.com/cosmos/cosmos-db"
-	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -180,15 +175,11 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	cosmwasmConfig.GasAdjustment = 2.0
 	cosmwasmConfig.GRPCAddr = fmt.Sprintf("tcp://localhost:%d", wh.bcdGrpcPort)
 
-	// tempApp := bcdapp.NewTmpApp() // TODO: investigate why wasmapp works and bcdapp doesn't
-	tempApp := wasmapp.NewWasmApp(sdklogs.NewNopLogger(), dbm.NewMemDB(), nil, false, simtestutil.NewAppOptionsWithFlagHome(t.TempDir()), []wasmkeeper.Option{})
-	encodingCfg := wasmparams.EncodingConfig{
-		InterfaceRegistry: tempApp.InterfaceRegistry(),
-		Codec:             tempApp.AppCodec(),
-		TxConfig:          tempApp.TxConfig(),
-		Amino:             tempApp.LegacyAmino(),
-	}
-	encodingCfg = config2.GetWasmdEncodingConfig()
+	service.LockAddressPrefix()
+	appparams.SetAddressPrefixes()
+	encodingCfg := config2.GetWasmdEncodingConfig()
+	service.UnlockAddressPrefix()
+
 	bbnsdktypes.RegisterInterfaces(encodingCfg.InterfaceRegistry)
 
 	var wcc *cwcc.CosmwasmConsumerController
