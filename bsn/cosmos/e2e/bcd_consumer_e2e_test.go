@@ -1,8 +1,9 @@
+//go:build e2e_bcd
+
 package e2etest_bcd
 
 import (
 	"context"
-	"encoding/json"
 	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/cmd/cosmos-fpd/daemon"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
@@ -85,16 +86,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 
 	// ensure pub rand is submitted to smart contract
 	ctm.waitForPubRandInContract(t, fpPk)
-
-	// inject delegation in smart contract using admin
-	// HACK: set account prefix to ensure the staker's address uses bbn prefix
-	setBbnAddressPrefixesSafely()
-	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
-	setBbncAppPrefixesSafely()
-	delMsgBytes, err := json.Marshal(delMsg)
-	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, delMsgBytes)
-	require.NoError(t, err)
+	delMsg := ctm.InsertDelegation(t, fpPk.MarshalHex())
 
 	// query delegations in smart contract
 	consumerDelsResp, err := ctm.BcdConsumerClient.QueryDelegations(ctx)
@@ -177,16 +169,7 @@ func TestConsumerRecoverRandProofCmd(t *testing.T) {
 
 	// ensure pub rand is submitted to smart contract
 	ctm.waitForPubRandInContract(t, fpPk)
-
-	// inject delegation in smart contract using admin
-	// HACK: set account prefix to ensure the staker's address uses bbn prefix
-	setBbnAddressPrefixesSafely()
-	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
-	setBbncAppPrefixesSafely()
-	delMsgBytes, err := json.Marshal(delMsg)
-	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, delMsgBytes)
-	require.NoError(t, err)
+	delMsg := ctm.InsertDelegation(t, fpPk.MarshalHex())
 
 	// query delegations in smart contract
 	consumerDelsResp, err := ctm.BcdConsumerClient.QueryDelegations(ctx)
@@ -305,16 +288,7 @@ func TestCosmosSkippingDoubleSignError(t *testing.T) {
 
 	// ensure pub rand is submitted to smart contract
 	ctm.waitForPubRandInContract(t, fpPk)
-
-	// inject delegation in smart contract using admin
-	// HACK: set account prefix to ensure the staker's address uses bbn prefix
-	setBbnAddressPrefixesSafely()
-	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
-	setBbncAppPrefixesSafely()
-	delMsgBytes, err := json.Marshal(delMsg)
-	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, delMsgBytes)
-	require.NoError(t, err)
+	ctm.InsertDelegation(t, fpPk.MarshalHex())
 
 	// wait for the current block to be BTC timestamped
 	// thus some pub rand commit will be finalized
@@ -403,16 +377,7 @@ func TestCosmosDoubleSigning(t *testing.T) {
 
 	// ensure pub rand is submitted to smart contract
 	ctm.waitForPubRandInContract(t, fpPk)
-
-	// inject delegation in smart contract using admin
-	// HACK: set account prefix to ensure the staker's address uses bbn prefix
-	setBbnAddressPrefixesSafely()
-	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
-	setBbncAppPrefixesSafely()
-	delMsgBytes, err := json.Marshal(delMsg)
-	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, delMsgBytes)
-	require.NoError(t, err)
+	ctm.InsertDelegation(t, fpPk.MarshalHex())
 
 	// wait for the current block to be BTC timestamped
 	// thus some pub rand commit will be finalized
@@ -448,6 +413,8 @@ func TestCosmosDoubleSigning(t *testing.T) {
 	require.True(t, fpStatusRes.Slashed)
 }
 
+// TestCosmosCatchingUp tests if a rollup BSN finality provider can catch up after being restarted
+// This is the cosmos BSN equivalent of the Babylon TestCatchingUp test
 func TestCosmosCatchingUp(t *testing.T) {
 	t.Parallel()
 	setBbnAddressPrefixesSafely()
@@ -485,16 +452,7 @@ func TestCosmosCatchingUp(t *testing.T) {
 
 	// ensure pub rand is submitted to smart contract
 	ctm.waitForPubRandInContract(t, fpPk)
-
-	// inject delegation in smart contract using admin
-	// HACK: set account prefix to ensure the staker's address uses bbn prefix
-	setBbnAddressPrefixesSafely()
-	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
-	setBbncAppPrefixesSafely()
-	delMsgBytes, err := json.Marshal(delMsg)
-	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, delMsgBytes)
-	require.NoError(t, err)
+	ctm.InsertDelegation(t, fpPk.MarshalHex())
 
 	nodeStatus, err := ctm.BcdConsumerClient.GetClient().GetStatus(ctx)
 	require.NoError(t, err)
@@ -508,22 +466,18 @@ func TestCosmosCatchingUp(t *testing.T) {
 	err = fp.Start(t.Context())
 	require.NoError(t, err)
 
-	t.Log(" Restarting FP to trigger catch-up/fast sync")
-	var finalVotedHeight uint64
 	require.Eventually(t, func() bool {
 		currentVotedHeight := fp.GetLastVotedHeight()
 
 		// FP should catch up and vote on blocks beyond its pre-downtime state
 		if currentVotedHeight > lastVotedHeight {
-			finalVotedHeight = currentVotedHeight
 			t.Logf("✅ FP successfully caught up and voted on height %d (previously %d)",
-				finalVotedHeight, lastVotedHeight)
+				currentVotedHeight, lastVotedHeight)
 			return true
 		}
 
 		t.Logf("FP catching up, current voted height: %d (previously %d)",
 			currentVotedHeight, lastVotedHeight)
 		return false
-	}, 2*e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime, // Give extra time for catch-up
-		"FP should catch up and vote on blocks after restart")
+	}, 2*e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 }

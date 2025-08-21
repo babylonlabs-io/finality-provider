@@ -1,3 +1,5 @@
+//go:build e2e_bcd
+
 package e2etest_bcd
 
 import (
@@ -783,4 +785,19 @@ func (ctm *BcdTestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
 	)
 
 	return afterHeight
+}
+
+// InsertDelegation inserts a delegation for the given fp key in the BTC staking contract
+func (ctm *BcdTestManager) InsertDelegation(t *testing.T, fpPkHex string) cwcc.ExecMsg {
+	// inject delegation in smart contract using admin
+	// HACK: set account prefix to ensure the staker's address uses bbn prefix
+	setBbnAddressPrefixesSafely()
+	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPkHex)
+	setBbncAppPrefixesSafely()
+	delMsgBytes, err := json.Marshal(delMsg)
+	require.NoError(t, err)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(t.Context(), delMsgBytes)
+	require.NoError(t, err)
+
+	return delMsg
 }
