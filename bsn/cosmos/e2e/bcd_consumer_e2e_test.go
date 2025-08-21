@@ -262,6 +262,9 @@ func TestConsumerRecoverRandProofCmd(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TestCosmosSkippingDoubleSignError tests the scenario where the BSN finality-provider
+// should skip the block when encountering a double sign request from the EOTS manager
+// This is critical for preventing accidental slashing during restart scenarios
 func TestCosmosSkippingDoubleSignError(t *testing.T) {
 	t.Parallel()
 	setBbnAddressPrefixesSafely()
@@ -358,4 +361,92 @@ func TestCosmosSkippingDoubleSignError(t *testing.T) {
 		t.Logf("FP working through duplicates, last voted height: %d (started from %d)", votedHeight, initialVotedHeight)
 		return false
 	}, 3*e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
+}
+
+// TestCosmosDoubleSigning tests the attack scenario where the Cosmos finality-provider
+// sends a finality vote over a conflicting block
+// In this case, the BTC private key should be extracted by the system
+func TestCosmosDoubleSigning(t *testing.T) {
+	t.Parallel()
+	setBbnAddressPrefixesSafely()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	ctm := StartBcdTestManager(t, ctx)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
+
+	bbnContracts := ctm.setupContracts(ctx, t)
+	ctm.BcdHandler.SetContractAddress(bbnContracts.BabylonContract)
+	ctm.BcdHandler.SetBabylonConfig("chain-test", ctm.FpConfig.BabylonConfig.RPCAddr, ctm.babylonKeyDir)
+
+	err := ctm.BcdHandler.StartRelayer(t)
+	require.NoError(t, err)
+
+	// register consumer to babylon
+	_, err = ctm.BabylonController.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
+	require.NoError(t, err)
+
+	// zone concierge channel is created after registering consumer fp
+	err = ctm.BcdHandler.createZoneConciergeChannel(t)
+	require.NoError(t, err)
+
+	ctm.waitForZoneConciergeChannel(t)
+
+	// register consumer fps to babylon
+	// this will be submitted to babylon once fp daemon starts
+	fp := ctm.CreateConsumerFinalityProviders(ctx, t, bcdConsumerID)
+	fpPk := fp.GetBtcPkBIP340()
+
+	res, err := ctm.BcdConsumerClient.QueryFinalityProvidersByTotalActiveSats(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// ensure pub rand is submitted to smart contract
+	ctm.waitForPubRandInContract(t, fpPk)
+
+	// inject delegation in smart contract using admin
+	// HACK: set account prefix to ensure the staker's address uses bbn prefix
+	setBbnAddressPrefixesSafely()
+	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
+	setBbncAppPrefixesSafely()
+	delMsgBytes, err := json.Marshal(delMsg)
+	require.NoError(t, err)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, delMsgBytes)
+	require.NoError(t, err)
+
+	// wait for the current block to be BTC timestamped
+	// thus some pub rand commit will be finalized
+	nodeStatus, err := ctm.BcdConsumerClient.GetClient().GetStatus(ctx)
+	require.NoError(t, err)
+	ctm.WaitForTimestampedHeight(t, ctx, uint64(nodeStatus.SyncInfo.LatestBlockHeight))
+
+	// wait for FP to vote on block
+	lastVotedHeight := ctm.waitForCastVote(t, fp)
+	fpTestHelper := fp.NewTestHelper()
+
+	originalVotedBlock, err := ctm.BcdConsumerClient.QueryBlock(ctx, lastVotedHeight)
+	require.NoError(t, err)
+	originalVotedBlockInfo := types.NewBlockInfo(originalVotedBlock.GetHeight(), originalVotedBlock.GetHash(), false)
+
+	resp, extractedKey, err := fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, originalVotedBlockInfo, false)
+	require.NoError(t, err)
+	require.Nil(t, extractedKey, "No private key should be extracted from duplicate vote")
+	require.Empty(t, resp, "Duplicate votes should return empty result")
+	t.Logf("Duplicate vote for rollup block %d was properly ignored", originalVotedBlockInfo.GetHeight())
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	conflictingBlock := types.NewBlockInfo(originalVotedBlockInfo.GetHeight(), testutil.GenRandomByteArray(r, 32), false)
+
+	_, _, err = fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, conflictingBlock, true)
+	require.Contains(t, err.Error(), "FailedPrecondition", "Double sign protection should prevent conflicting signatures")
+
+	t.Logf("Double signing block %d", conflictingBlock.GetHeight())
+	_, _, err = fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, conflictingBlock, false)
+	require.NoError(t, err)
+
+	fpStatusRes, err := ctm.BcdConsumerClient.QueryFinalityProviderStatus(ctx, fpPk.MustToBTCPK())
+	require.NoError(t, err)
+	require.True(t, fpStatusRes.Slashed)
 }

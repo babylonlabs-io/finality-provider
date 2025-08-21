@@ -16,6 +16,10 @@ type TxResponse struct {
 }
 
 func NewBabylonTxResponse(resp *babylonclient.RelayerTxResponse) *babylonclient.RelayerTxResponse {
+	if resp == nil {
+		return nil
+	}
+
 	events := make([]babylonclient.RelayerEvent, len(resp.Events))
 	for i, event := range resp.Events {
 		events[i] = babylonclient.RelayerEvent{
