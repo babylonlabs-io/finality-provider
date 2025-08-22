@@ -198,7 +198,6 @@ func LoadBIP340PubKeyFromKeyName(kr keyring.Keyring, keyName string) (*bbntypes.
 }
 
 func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte, startHeight uint64, num uint32, options ...RandomnessOption) ([]*btcec.FieldVal, error) {
-	// Apply options
 	cfg := &RandomnessConfig{}
 	for _, opt := range options {
 		opt(cfg)

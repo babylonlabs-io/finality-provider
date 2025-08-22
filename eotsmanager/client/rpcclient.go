@@ -69,7 +69,6 @@ func (c *EOTSManagerGRpcClient) Ping() error {
 }
 
 func (c *EOTSManagerGRpcClient) CreateRandomnessPairList(uid, chainID []byte, startHeight uint64, num uint32, options ...eotsmanager.RandomnessOption) ([]*btcec.FieldVal, error) {
-	// Apply options
 	cfg := &eotsmanager.RandomnessConfig{}
 	for _, opt := range options {
 		opt(cfg)
