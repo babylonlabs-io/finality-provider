@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#647](https://github.com/babylonlabs-io/finality-provider/pull/647) chore: unify methods in eotsmanager
+
 ## v2.0.0-rc.3
 
 ### Improvements
