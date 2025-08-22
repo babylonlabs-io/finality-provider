@@ -138,14 +138,14 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("localhost:%s", babylond.GetPort("9090/tcp"))
 
+	service.LockAddressPrefix()
+	bbnCfg := cfg.BabylonConfig.ToBabylonConfig()
+	bbnCl, err := bbnclient.New(&bbnCfg, logger)
+	service.UnlockAddressPrefix()
+	require.NoError(t, err)
+
 	var bc ccapi.BabylonController
 	require.Eventually(t, func() bool {
-		bbnCfg := cfg.BabylonConfig.ToBabylonConfig()
-		bbnCl, err := bbnclient.New(&bbnCfg, logger)
-		if err != nil {
-			t.Logf("failed to create Babylon client: %v", err)
-			return false
-		}
 		bc, err = bbncc.NewBabylonController(bbnCl, cfg.BabylonConfig, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon controller: %v", err)
