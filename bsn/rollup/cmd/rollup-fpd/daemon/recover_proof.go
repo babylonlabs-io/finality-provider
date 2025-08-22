@@ -3,6 +3,7 @@ package daemon
 import (
 	"fmt"
 	rollupfpcc "github.com/babylonlabs-io/finality-provider/bsn/rollup/clientcontroller"
+	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/log"
@@ -84,7 +85,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 				return nil, fmt.Errorf("expected RollupPubRandCommit, got %T", commit)
 			}
 
-			return em.CreateRandomnessPairListWithInterval(fpPk, chainID, commit.GetStartHeight(), uint32(commit.GetNumPubRand()), concreteCommit.Interval) // #nosec G115 - already checked by caller
+			return em.CreateRandomnessPairList(fpPk, chainID, commit.GetStartHeight(), uint32(commit.GetNumPubRand()), eotsmanager.WithInterval(concreteCommit.Interval)) // #nosec G115 - already checked by caller
 		})
 
 	if err != nil {

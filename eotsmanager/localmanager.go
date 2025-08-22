@@ -197,33 +197,24 @@ func LoadBIP340PubKeyFromKeyName(kr keyring.Keyring, keyName string) (*bbntypes.
 	}
 }
 
-func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte, startHeight uint64, num uint32) ([]*btcec.FieldVal, error) {
-	prList := make([]*btcec.FieldVal, 0, num)
-
-	for i := uint32(0); i < num; i++ {
-		height := startHeight + uint64(i)
-		_, pubRand, err := lm.getRandomnessPair(fpPk, chainID, height)
-		if err != nil {
-			return nil, err
-		}
-
-		prList = append(prList, pubRand)
+func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte, startHeight uint64, num uint32, options ...RandomnessOption) ([]*btcec.FieldVal, error) {
+	// Apply options
+	cfg := &RandomnessConfig{}
+	for _, opt := range options {
+		opt(cfg)
 	}
-	lm.metrics.IncrementEotsFpTotalGeneratedRandomnessCounter(hex.EncodeToString(fpPk))
-	lm.metrics.SetEotsFpLastGeneratedRandomnessHeight(hex.EncodeToString(fpPk), float64(startHeight))
 
-	return prList, nil
-}
-
-// CreateRandomnessPairListWithInterval generates a list of public randomness pairs with a given interval.
-// It creates keys for heights starting from startHeight and incrementing by interval for num entries.
-// For example, with startHeight=100, num=3, interval=5, it generates keys for heights [100, 105, 110].
-func (lm *LocalEOTSManager) CreateRandomnessPairListWithInterval(fpPk []byte, chainID []byte, startHeight uint64, num uint32, interval uint64) ([]*btcec.FieldVal, error) {
 	prList := make([]*btcec.FieldVal, 0, num)
 
 	for i := uint32(0); i < num; i++ {
-		// KEY DIFFERENCE: height increments by interval, not 1
-		height := startHeight + uint64(i)*interval // 100, 105, 110, 115...
+		var height uint64
+		if cfg.Interval != nil {
+			// Use interval: startHeight + i*interval
+			height = startHeight + uint64(i)*(*cfg.Interval)
+		} else {
+			// Consecutive heights: startHeight + i
+			height = startHeight + uint64(i)
+		}
 		_, pubRand, err := lm.getRandomnessPair(fpPk, chainID, height)
 		if err != nil {
 			return nil, err

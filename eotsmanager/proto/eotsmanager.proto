@@ -10,6 +10,7 @@ service EOTSManager {
   rpc Ping (PingRequest) returns (PingResponse);
 
   // CreateRandomnessPairList returns a list of Schnorr randomness pairs
+  // Supports optional interval between heights
   rpc CreateRandomnessPairList (CreateRandomnessPairListRequest)
       returns (CreateRandomnessPairListResponse);
 
@@ -32,11 +33,6 @@ service EOTSManager {
   // UnlockKey unlocks the keyring with the given passphrase
   rpc UnlockKey (UnlockKeyRequest)
       returns (UnlockKeyResponse);
-
-  // CreateRandomnessPairListWithInterval returns a list of Schnorr randomness pairs
-  // with a specified interval between heights
-  rpc CreateRandomnessPairListWithInterval (CreateRandomnessPairListWithIntervalRequest)
-      returns (CreateRandomnessPairListWithIntervalResponse);
 
   // Backup - etosd db
   rpc Backup (BackupRequest)
@@ -73,6 +69,9 @@ message CreateRandomnessPairListRequest {
   uint64 start_height = 3;
   // num is the number of randomness pair list
   uint32 num = 4;
+  // interval is the optional height interval between consecutive randomness pairs
+  // If not set or 0, consecutive heights are used
+  optional uint64 interval = 5;
 }
 
 // CreateRandomnessPairListResponse is a response to a create randomness pair list request
@@ -81,26 +80,6 @@ message CreateRandomnessPairListResponse {
   repeated bytes pub_rand_list = 1;
 }
 
-// CreateRandomnessPairListWithIntervalRequest is a request to create a list of Schnorr randomness pairs
-// with a specified interval between heights
-message CreateRandomnessPairListWithIntervalRequest {
-  // uid is the identifier of an EOTS key, i.e., public key following BIP-340 spec
-  bytes uid = 1;
-  // chain_id is the identifier of the consumer chain that the randomness is committed to
-  bytes chain_id = 2;
-  // start_height is the start height of the randomness pair list
-  uint64 start_height = 3;
-  // num is the number of randomness pair list
-  uint32 num = 4;
-  // interval is the height interval between consecutive randomness pairs
-  uint64 interval = 5;
-}
-
-// CreateRandomnessPairListWithIntervalResponse is a response to a create randomness pair list with interval request
-message CreateRandomnessPairListWithIntervalResponse {
-  // pub_rand_list is a list of Schnorr public randomness
-  repeated bytes pub_rand_list = 1;
-}
 
 // SignEOTSRequest is a request to sign an EOTS with the EOTS private key and the relevant randomness
 message SignEOTSRequest {
