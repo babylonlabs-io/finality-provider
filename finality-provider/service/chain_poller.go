@@ -384,7 +384,7 @@ func (cp *ChainPoller) latestBlockHeightWithRetry(ctx context.Context) (uint64, 
 		}
 
 		return nil
-	}, RtyAtt, RtyDel, RtyErr,
+	}, retry.Context(ctx), RtyAtt, RtyDel, RtyErr,
 		retry.OnRetry(func(n uint, err error) {
 			cp.logger.Debug("retrying latest block height query",
 				zap.Uint("attempt", n+1),
