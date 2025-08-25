@@ -140,6 +140,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 
 	service.LockAddressPrefix()
 	bbnCfg := cfg.BabylonConfig.ToBabylonConfig()
+	appparams.SetAddressPrefixes()
 	bbnCl, err := bbnclient.New(&bbnCfg, logger)
 	service.UnlockAddressPrefix()
 	require.NoError(t, err)

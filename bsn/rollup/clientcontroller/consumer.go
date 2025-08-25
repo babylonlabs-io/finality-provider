@@ -497,24 +497,7 @@ func (cc *RollupBSNController) queryEthBlock(ctx context.Context, height uint64)
 	return header, nil
 }
 
-// QueryIsBlockFinalized returns whether the given the L2 block number has been finalized
-func (cc *RollupBSNController) QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error) {
-	l2Block, err := cc.QueryLatestFinalizedBlock(ctx)
-	if err != nil {
-		return false, fmt.Errorf("failed to query latest finalized block: %w", err)
-	}
-
-	if l2Block == nil {
-		return false, nil
-	}
-	if height > l2Block.GetHeight() {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-// QueryLatestBlockHeight gets the latest rollup block number from a RPC call
+// QueryLatestBlock gets the latest rollup block number from a RPC call
 func (cc *RollupBSNController) QueryLatestBlock(ctx context.Context) (types.BlockDescription, error) {
 	l2LatestBlock, err := cc.ethClient.HeaderByNumber(ctx, big.NewInt(ethrpc.LatestBlockNumber.Int64()))
 	if err != nil {

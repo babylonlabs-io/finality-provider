@@ -316,21 +316,6 @@ func (mr *MockConsumerControllerMockRecorder) QueryFinalityProviderStatus(ctx, f
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityProviderStatus", reflect.TypeOf((*MockConsumerController)(nil).QueryFinalityProviderStatus), ctx, fpPk)
 }
 
-// QueryIsBlockFinalized mocks base method.
-func (m *MockConsumerController) QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryIsBlockFinalized", ctx, height)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// QueryIsBlockFinalized indicates an expected call of QueryIsBlockFinalized.
-func (mr *MockConsumerControllerMockRecorder) QueryIsBlockFinalized(ctx, height any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryIsBlockFinalized", reflect.TypeOf((*MockConsumerController)(nil).QueryIsBlockFinalized), ctx, height)
-}
-
 // QueryLastPubRandCommit mocks base method.
 func (m *MockConsumerController) QueryLastPubRandCommit(ctx context.Context, fpPk *btcec.PublicKey) (types0.PubRandCommit, error) {
 	m.ctrl.T.Helper()
@@ -571,21 +556,6 @@ func (m *MockBlockQuerier[T]) QueryFinalityActivationBlockHeight(ctx context.Con
 func (mr *MockBlockQuerierMockRecorder[T]) QueryFinalityActivationBlockHeight(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryFinalityActivationBlockHeight", reflect.TypeOf((*MockBlockQuerier[T])(nil).QueryFinalityActivationBlockHeight), ctx)
-}
-
-// QueryIsBlockFinalized mocks base method.
-func (m *MockBlockQuerier[T]) QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryIsBlockFinalized", ctx, height)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// QueryIsBlockFinalized indicates an expected call of QueryIsBlockFinalized.
-func (mr *MockBlockQuerierMockRecorder[T]) QueryIsBlockFinalized(ctx, height any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryIsBlockFinalized", reflect.TypeOf((*MockBlockQuerier[T])(nil).QueryIsBlockFinalized), ctx, height)
 }
 
 // QueryLatestBlock mocks base method.
