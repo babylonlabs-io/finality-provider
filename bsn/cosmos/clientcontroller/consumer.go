@@ -310,15 +310,6 @@ func (wc *CosmwasmConsumerController) QueryLastPubRandCommit(ctx context.Context
 	return &commit, nil
 }
 
-func (wc *CosmwasmConsumerController) QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error) {
-	resp, err := wc.QueryIndexedBlock(ctx, height)
-	if err != nil || resp == nil {
-		return false, err
-	}
-
-	return resp.Finalized, nil
-}
-
 func (wc *CosmwasmConsumerController) QueryLatestBlockHeight(ctx context.Context) (uint64, error) {
 	block, err := wc.queryCometBestBlock(ctx)
 	if err != nil {
