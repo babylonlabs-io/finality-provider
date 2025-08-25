@@ -4,18 +4,21 @@ package e2etest_bcd
 
 import (
 	"context"
-	"encoding/json"
 	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/cmd/cosmos-fpd/daemon"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
 	cfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	"github.com/babylonlabs-io/finality-provider/testutil"
+	"github.com/babylonlabs-io/finality-provider/types"
 	goflags "github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/require"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 )
@@ -83,16 +86,7 @@ func TestConsumerFpLifecycle(t *testing.T) {
 
 	// ensure pub rand is submitted to smart contract
 	ctm.waitForPubRandInContract(t, fpPk)
-
-	// inject delegation in smart contract using admin
-	// HACK: set account prefix to ensure the staker's address uses bbn prefix
-	setBbnAddressPrefixesSafely()
-	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
-	setBbncAppPrefixesSafely()
-	delMsgBytes, err := json.Marshal(delMsg)
-	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, delMsgBytes)
-	require.NoError(t, err)
+	delMsg := ctm.InsertDelegation(t, fpPk.MarshalHex())
 
 	// query delegations in smart contract
 	consumerDelsResp, err := ctm.BcdConsumerClient.QueryDelegations(ctx)
@@ -175,16 +169,7 @@ func TestConsumerRecoverRandProofCmd(t *testing.T) {
 
 	// ensure pub rand is submitted to smart contract
 	ctm.waitForPubRandInContract(t, fpPk)
-
-	// inject delegation in smart contract using admin
-	// HACK: set account prefix to ensure the staker's address uses bbn prefix
-	setBbnAddressPrefixesSafely()
-	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPk.MarshalHex())
-	setBbncAppPrefixesSafely()
-	delMsgBytes, err := json.Marshal(delMsg)
-	require.NoError(t, err)
-	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(ctx, delMsgBytes)
-	require.NoError(t, err)
+	delMsg := ctm.InsertDelegation(t, fpPk.MarshalHex())
 
 	// query delegations in smart contract
 	consumerDelsResp, err := ctm.BcdConsumerClient.QueryDelegations(ctx)
@@ -256,4 +241,243 @@ func TestConsumerRecoverRandProofCmd(t *testing.T) {
 	require.NoError(t, err)
 	_, err = pubRandStore.GetPubRandProof([]byte(fpi.ChainId), fp.GetBtcPkBIP340().MustMarshal(), finalizedBlock.GetHeight())
 	require.NoError(t, err)
+}
+
+// TestCosmosSkippingDoubleSignError tests the scenario where the BSN finality-provider
+// should skip the block when encountering a double sign request from the EOTS manager
+// This is critical for preventing accidental slashing during restart scenarios
+func TestCosmosSkippingDoubleSignError(t *testing.T) {
+	t.Parallel()
+	setBbnAddressPrefixesSafely()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	ctm := StartBcdTestManager(t, ctx)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
+
+	// setup contracts
+	bbnContracts := ctm.setupContracts(ctx, t)
+
+	// setup relayer
+	ctm.BcdHandler.SetContractAddress(bbnContracts.BabylonContract)
+	ctm.BcdHandler.SetBabylonConfig("chain-test", ctm.FpConfig.BabylonConfig.RPCAddr, ctm.babylonKeyDir)
+
+	err := ctm.BcdHandler.StartRelayer(t)
+	require.NoError(t, err)
+
+	// register consumer to babylon
+	_, err = ctm.BabylonController.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
+	require.NoError(t, err)
+
+	// zone concierge channel is created after registering consumer fp
+	err = ctm.BcdHandler.createZoneConciergeChannel(t)
+	require.NoError(t, err)
+
+	ctm.waitForZoneConciergeChannel(t)
+
+	// register consumer fps to babylon
+	// this will be submitted to babylon once fp daemon starts
+	fp := ctm.CreateConsumerFinalityProviders(ctx, t, bcdConsumerID)
+	fpPk := fp.GetBtcPkBIP340()
+
+	res, err := ctm.BcdConsumerClient.QueryFinalityProvidersByTotalActiveSats(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// ensure pub rand is submitted to smart contract
+	ctm.waitForPubRandInContract(t, fpPk)
+	ctm.InsertDelegation(t, fpPk.MarshalHex())
+
+	// wait for the current block to be BTC timestamped
+	// thus some pub rand commit will be finalized
+	nodeStatus, err := ctm.BcdConsumerClient.GetClient().GetStatus(ctx)
+	require.NoError(t, err)
+	curHeight := uint64(nodeStatus.SyncInfo.LatestBlockHeight)
+	ctm.WaitForTimestampedHeight(t, ctx, curHeight)
+
+	// wait for FP to vote on block
+	ctm.waitForCastVote(t, fp)
+	err = fp.Stop()
+	require.NoError(t, err)
+
+	currentHeight := ctm.WaitForNBlocks(t, 1)
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	mockBlock := types.NewBlockInfo(currentHeight, testutil.GenRandomByteArray(r, 32), false)
+
+	t.Logf("Manually sending a vote for fresh height %d (simulating network issue)", currentHeight)
+
+	// Manually submit finality signature for the next height
+	// This creates a signing record in EOTS manager's database
+	_, _, err = fp.NewTestHelper().SubmitFinalitySignatureAndExtractPrivKey(ctx, mockBlock, true)
+	require.NoError(t, err)
+
+	err = fp.Start(t.Context())
+	require.NoError(t, err)
+
+	initialVotedHeight := fp.GetLastVotedHeight()
+
+	require.Eventually(t, func() bool {
+		votedHeight := fp.GetLastVotedHeight()
+
+		// FP should eventually work through all duplicates and vote on fresh heights
+		if votedHeight > initialVotedHeight {
+			t.Logf("✅ FP successfully worked through duplicate signatures and voted on fresh height %d (started from %d)",
+				votedHeight, initialVotedHeight)
+			t.Logf("✅ This proves the duplicate sign protection mechanism works correctly")
+			return true
+		}
+
+		t.Logf("FP working through duplicates, last voted height: %d (started from %d)", votedHeight, initialVotedHeight)
+		return false
+	}, 3*e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
+}
+
+// TestCosmosDoubleSigning tests the attack scenario where the Cosmos finality-provider
+// sends a finality vote over a conflicting block
+// In this case, the BTC private key should be extracted by the system
+func TestCosmosDoubleSigning(t *testing.T) {
+	t.Parallel()
+	setBbnAddressPrefixesSafely()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	ctm := StartBcdTestManager(t, ctx)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
+
+	bbnContracts := ctm.setupContracts(ctx, t)
+	ctm.BcdHandler.SetContractAddress(bbnContracts.BabylonContract)
+	ctm.BcdHandler.SetBabylonConfig("chain-test", ctm.FpConfig.BabylonConfig.RPCAddr, ctm.babylonKeyDir)
+
+	err := ctm.BcdHandler.StartRelayer(t)
+	require.NoError(t, err)
+
+	// register consumer to babylon
+	_, err = ctm.BabylonController.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
+	require.NoError(t, err)
+
+	// zone concierge channel is created after registering consumer fp
+	err = ctm.BcdHandler.createZoneConciergeChannel(t)
+	require.NoError(t, err)
+
+	ctm.waitForZoneConciergeChannel(t)
+
+	// register consumer fps to babylon
+	// this will be submitted to babylon once fp daemon starts
+	fp := ctm.CreateConsumerFinalityProviders(ctx, t, bcdConsumerID)
+	fpPk := fp.GetBtcPkBIP340()
+
+	res, err := ctm.BcdConsumerClient.QueryFinalityProvidersByTotalActiveSats(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// ensure pub rand is submitted to smart contract
+	ctm.waitForPubRandInContract(t, fpPk)
+	ctm.InsertDelegation(t, fpPk.MarshalHex())
+
+	// wait for the current block to be BTC timestamped
+	// thus some pub rand commit will be finalized
+	nodeStatus, err := ctm.BcdConsumerClient.GetClient().GetStatus(ctx)
+	require.NoError(t, err)
+	ctm.WaitForTimestampedHeight(t, ctx, uint64(nodeStatus.SyncInfo.LatestBlockHeight))
+
+	// wait for FP to vote on block
+	lastVotedHeight := ctm.waitForCastVote(t, fp)
+	fpTestHelper := fp.NewTestHelper()
+
+	originalVotedBlock, err := ctm.BcdConsumerClient.QueryBlock(ctx, lastVotedHeight)
+	require.NoError(t, err)
+	originalVotedBlockInfo := types.NewBlockInfo(originalVotedBlock.GetHeight(), originalVotedBlock.GetHash(), false)
+
+	resp, extractedKey, err := fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, originalVotedBlockInfo, false)
+	require.NoError(t, err)
+	require.Nil(t, extractedKey, "No private key should be extracted from duplicate vote")
+	require.Empty(t, resp, "Duplicate votes should return empty result")
+	t.Logf("Duplicate vote for rollup block %d was properly ignored", originalVotedBlockInfo.GetHeight())
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	conflictingBlock := types.NewBlockInfo(originalVotedBlockInfo.GetHeight(), testutil.GenRandomByteArray(r, 32), false)
+
+	_, _, err = fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, conflictingBlock, true)
+	require.Contains(t, err.Error(), "FailedPrecondition", "Double sign protection should prevent conflicting signatures")
+
+	_, _, err = fpTestHelper.SubmitFinalitySignatureAndExtractPrivKey(ctx, conflictingBlock, false)
+	require.NoError(t, err)
+
+	fpStatusRes, err := ctm.BcdConsumerClient.QueryFinalityProviderStatus(ctx, fpPk.MustToBTCPK())
+	require.NoError(t, err)
+	require.True(t, fpStatusRes.Slashed)
+}
+
+// TestCosmosCatchingUp tests if a rollup BSN finality provider can catch up after being restarted
+// This is the cosmos BSN equivalent of the Babylon TestCatchingUp test
+func TestCosmosCatchingUp(t *testing.T) {
+	t.Parallel()
+	setBbnAddressPrefixesSafely()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	ctm := StartBcdTestManager(t, ctx)
+	defer func() {
+		cancel()
+		ctm.Stop(t)
+	}()
+
+	bbnContracts := ctm.setupContracts(ctx, t)
+	ctm.BcdHandler.SetContractAddress(bbnContracts.BabylonContract)
+	ctm.BcdHandler.SetBabylonConfig("chain-test", ctm.FpConfig.BabylonConfig.RPCAddr, ctm.babylonKeyDir)
+
+	err := ctm.BcdHandler.StartRelayer(t)
+	require.NoError(t, err)
+
+	_, err = ctm.BabylonController.RegisterConsumerChain(bcdConsumerID, "Consumer chain 1 (test)", "Test Consumer Chain 1", "")
+	require.NoError(t, err)
+
+	err = ctm.BcdHandler.createZoneConciergeChannel(t)
+	require.NoError(t, err)
+
+	ctm.waitForZoneConciergeChannel(t)
+
+	// register consumer fps to babylon
+	// this will be submitted to babylon once fp daemon starts
+	fp := ctm.CreateConsumerFinalityProviders(ctx, t, bcdConsumerID)
+	fpPk := fp.GetBtcPkBIP340()
+
+	res, err := ctm.BcdConsumerClient.QueryFinalityProvidersByTotalActiveSats(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// ensure pub rand is submitted to smart contract
+	ctm.waitForPubRandInContract(t, fpPk)
+	ctm.InsertDelegation(t, fpPk.MarshalHex())
+
+	nodeStatus, err := ctm.BcdConsumerClient.GetClient().GetStatus(ctx)
+	require.NoError(t, err)
+	ctm.WaitForTimestampedHeight(t, ctx, uint64(nodeStatus.SyncInfo.LatestBlockHeight))
+
+	lastVotedHeight := ctm.waitForCastVote(t, fp)
+	err = fp.Stop()
+	require.NoError(t, err)
+	ctm.WaitForNBlocks(t, 3)
+
+	err = fp.Start(t.Context())
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		currentVotedHeight := fp.GetLastVotedHeight()
+
+		// FP should catch up and vote on blocks beyond its pre-downtime state
+		if currentVotedHeight > lastVotedHeight {
+			t.Logf("✅ FP successfully caught up and voted on height %d (previously %d)",
+				currentVotedHeight, lastVotedHeight)
+			return true
+		}
+
+		t.Logf("FP catching up, current voted height: %d (previously %d)",
+			currentVotedHeight, lastVotedHeight)
+		return false
+	}, 2*e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
 }

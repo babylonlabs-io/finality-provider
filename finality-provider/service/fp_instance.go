@@ -514,7 +514,7 @@ func LatestBlockHeightWithRetry(ctx context.Context, cc ccapi.ConsumerController
 		}
 
 		return nil
-	}, RtyAtt, RtyDel, RtyErr,
+	}, retry.Context(ctx), RtyAtt, RtyDel, RtyErr,
 		retry.OnRetry(func(n uint, err error) {
 			logger.Debug("retrying latest block height query",
 				zap.Uint("attempt", n+1),
