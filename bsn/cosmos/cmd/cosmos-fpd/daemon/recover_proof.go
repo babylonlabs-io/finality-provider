@@ -7,6 +7,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
 	cosmwasmcfg "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
 	eotsclient "github.com/babylonlabs-io/finality-provider/eotsmanager/client"
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/log"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -47,8 +48,11 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	}
 
 	// Create encoding config with the correct account prefix
+	service.LockAddressPrefix()
 	appparams.SetAddressPrefixes()
 	wasmEncodingCfg := cosmwasmcfg.GetWasmdEncodingConfig()
+	service.UnlockAddressPrefix()
+	
 	cosmWasmCtrl, err := clientcontroller.NewCosmwasmConsumerController(cfg.Cosmwasm, wasmEncodingCfg, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create rpc client for the consumer chain cosmos: %w", err)

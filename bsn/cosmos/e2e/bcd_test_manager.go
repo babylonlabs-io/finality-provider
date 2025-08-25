@@ -39,10 +39,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 
-	sdklogs "cosmossdk.io/log"
-	wasmapp "github.com/CosmWasm/wasmd/app"
 	wasmparams "github.com/CosmWasm/wasmd/app/params"
-	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	_ "github.com/babylonlabs-io/babylon-sdk/demo/app"
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
 	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
@@ -57,8 +54,6 @@ import (
 	base_test_manager "github.com/babylonlabs-io/finality-provider/itest/test-manager"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 	"github.com/babylonlabs-io/finality-provider/types"
-	dbm "github.com/cosmos/cosmos-db"
-	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -143,14 +138,14 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	cfg.BabylonConfig.RPCAddr = fmt.Sprintf("http://localhost:%s", babylond.GetPort("26657/tcp"))
 	cfg.BabylonConfig.GRPCAddr = fmt.Sprintf("localhost:%s", babylond.GetPort("9090/tcp"))
 
+	service.LockAddressPrefix()
+	bbnCfg := cfg.BabylonConfig.ToBabylonConfig()
+	bbnCl, err := bbnclient.New(&bbnCfg, logger)
+	service.UnlockAddressPrefix()
+	require.NoError(t, err)
+
 	var bc ccapi.BabylonController
 	require.Eventually(t, func() bool {
-		bbnCfg := cfg.BabylonConfig.ToBabylonConfig()
-		bbnCl, err := bbnclient.New(&bbnCfg, logger)
-		if err != nil {
-			t.Logf("failed to create Babylon client: %v", err)
-			return false
-		}
 		bc, err = bbncc.NewBabylonController(bbnCl, cfg.BabylonConfig, logger)
 		if err != nil {
 			t.Logf("failed to create Babylon controller: %v", err)
@@ -180,15 +175,11 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	cosmwasmConfig.GasAdjustment = 2.0
 	cosmwasmConfig.GRPCAddr = fmt.Sprintf("tcp://localhost:%d", wh.bcdGrpcPort)
 
-	// tempApp := bcdapp.NewTmpApp() // TODO: investigate why wasmapp works and bcdapp doesn't
-	tempApp := wasmapp.NewWasmApp(sdklogs.NewNopLogger(), dbm.NewMemDB(), nil, false, simtestutil.NewAppOptionsWithFlagHome(t.TempDir()), []wasmkeeper.Option{})
-	encodingCfg := wasmparams.EncodingConfig{
-		InterfaceRegistry: tempApp.InterfaceRegistry(),
-		Codec:             tempApp.AppCodec(),
-		TxConfig:          tempApp.TxConfig(),
-		Amino:             tempApp.LegacyAmino(),
-	}
-	encodingCfg = config2.GetWasmdEncodingConfig()
+	service.LockAddressPrefix()
+	appparams.SetAddressPrefixes()
+	encodingCfg := config2.GetWasmdEncodingConfig()
+	service.UnlockAddressPrefix()
+
 	bbnsdktypes.RegisterInterfaces(encodingCfg.InterfaceRegistry)
 
 	var wcc *cwcc.CosmwasmConsumerController
@@ -761,4 +752,43 @@ func (ctm *BcdTestManager) waitForPubRandInContract(t *testing.T, fpPk *bbntypes
 
 		return true
 	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime)
+}
+
+func (ctm *BcdTestManager) WaitForNBlocks(t *testing.T, n int) uint64 {
+	beforeHeight, err := ctm.BcdConsumerClient.QueryLatestBlock(t.Context())
+	require.NoError(t, err)
+
+	var afterHeight uint64
+	require.Eventually(t, func() bool {
+		height, err := ctm.BcdConsumerClient.QueryLatestBlock(t.Context())
+		if err != nil {
+			t.Logf("Failed to query latest rollup block height: %v", err)
+			return false
+		}
+
+		if height.GetHeight() >= uint64(n)+beforeHeight.GetHeight() {
+			afterHeight = height.GetHeight()
+			return true
+		}
+		return false
+	}, e2eutils.EventuallyWaitTimeOut, e2eutils.EventuallyPollTime,
+		fmt.Sprintf("rollup chain should produce %d more blocks", n),
+	)
+
+	return afterHeight
+}
+
+// InsertDelegation inserts a delegation for the given fp key in the BTC staking contract
+func (ctm *BcdTestManager) InsertDelegation(t *testing.T, fpPkHex string) cwcc.ExecMsg {
+	// inject delegation in smart contract using admin
+	// HACK: set account prefix to ensure the staker's address uses bbn prefix
+	setBbnAddressPrefixesSafely()
+	delMsg := e2eutils.GenBtcStakingDelExecMsg(fpPkHex)
+	setBbncAppPrefixesSafely()
+	delMsgBytes, err := json.Marshal(delMsg)
+	require.NoError(t, err)
+	_, err = ctm.BcdConsumerClient.ExecuteBTCStakingContract(t.Context(), delMsgBytes)
+	require.NoError(t, err)
+
+	return delMsg
 }
