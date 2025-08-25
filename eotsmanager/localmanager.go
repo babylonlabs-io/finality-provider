@@ -203,6 +203,10 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 		opt(cfg)
 	}
 
+	if cfg.Interval != nil && *cfg.Interval == 0 {
+		return nil, fmt.Errorf("interval must be greater than 0")
+	}
+
 	prList := make([]*btcec.FieldVal, 0, num)
 
 	for i := uint32(0); i < num; i++ {
