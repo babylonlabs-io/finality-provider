@@ -170,9 +170,6 @@ type ConsumerQueries interface {
     // QueryFinalityProviderStatus queries the status of the finality provider
     QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*FinalityProviderStatusResponse, error)
 
-    // QueryIsBlockFinalized queries if the block at the given height is finalized
-    QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error)
-
     // QueryBlocks returns a list of blocks from startHeight to endHeight
     QueryBlocks(ctx context.Context, req *QueryBlocksRequest) ([]types.BlockDescription, error)
 }
@@ -237,10 +234,6 @@ type BlockQuerier[T types.BlockDescription] interface {
     // MUST: Core block queries
     // QueryFinalityActivationBlockHeight returns the block height when finality voting starts
     QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error)
-
-    // SHOULD: Convenience block queries
-    // QueryIsBlockFinalized queries if the block at the given height is finalized
-    QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error)
 
     // SHOULD: Convenience block queries
     // QueryBlocks returns a list of blocks from startHeight to endHeight

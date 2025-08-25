@@ -138,7 +138,6 @@ type RandomnessCommitter interface {
 type BlockQuerier[T types.BlockDescription] interface {
     QueryLatestFinalizedBlock(ctx context.Context) (T, error)
     QueryBlock(ctx context.Context, height uint64) (T, error)
-    QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error)
     QueryBlocks(ctx context.Context, req *QueryBlocksRequest) ([]T, error)
     QueryLatestBlock(ctx context.Context) (T, error)
     QueryFinalityActivationBlockHeight(ctx context.Context) (uint64, error)
