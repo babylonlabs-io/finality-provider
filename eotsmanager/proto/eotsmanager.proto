@@ -70,7 +70,7 @@ message CreateRandomnessPairListRequest {
   // num is the number of randomness pair list
   uint32 num = 4;
   // interval is the optional height interval between consecutive randomness pairs
-  // If not set or 0, consecutive heights are used
+  // If not set, consecutive heights are used
   optional uint64 interval = 5;
 }
 

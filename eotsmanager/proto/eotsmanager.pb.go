@@ -220,7 +220,7 @@ type CreateRandomnessPairListRequest struct {
 	// num is the number of randomness pair list
 	Num uint32 `protobuf:"varint,4,opt,name=num,proto3" json:"num,omitempty"`
 	// interval is the optional height interval between consecutive randomness pairs
-	// If not set or 0, consecutive heights are used
+	// If not set, consecutive heights are used
 	Interval *uint64 `protobuf:"varint,5,opt,name=interval,proto3,oneof" json:"interval,omitempty"`
 }
 
