@@ -48,7 +48,12 @@ func (r *rpcServer) Ping(_ context.Context, _ *proto.PingRequest) (*proto.PingRe
 // CreateRandomnessPairList returns a list of Schnorr randomness pairs
 func (r *rpcServer) CreateRandomnessPairList(_ context.Context, req *proto.CreateRandomnessPairListRequest) (
 	*proto.CreateRandomnessPairListResponse, error) {
-	pubRandList, err := r.em.CreateRandomnessPairList(req.Uid, req.ChainId, req.StartHeight, req.Num)
+	var options []eotsmanager.RandomnessOption
+	if req.Interval != nil && *req.Interval > 0 {
+		options = append(options, eotsmanager.WithInterval(*req.Interval))
+	}
+
+	pubRandList, err := r.em.CreateRandomnessPairList(req.Uid, req.ChainId, req.StartHeight, req.Num, options...)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create randomness pair list: %w", err)
@@ -64,24 +69,6 @@ func (r *rpcServer) CreateRandomnessPairList(_ context.Context, req *proto.Creat
 	}, nil
 }
 
-// CreateRandomnessPairListWithInterval returns a list of Schnorr randomness pairs with a specified interval between heights.
-func (r *rpcServer) CreateRandomnessPairListWithInterval(_ context.Context, req *proto.CreateRandomnessPairListWithIntervalRequest) (
-	*proto.CreateRandomnessPairListWithIntervalResponse, error) {
-	pubRandList, err := r.em.CreateRandomnessPairListWithInterval(req.Uid, req.ChainId, req.StartHeight, req.Num, req.Interval)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create randomness pair list with interval: %w", err)
-	}
-
-	pubRandBytesList := make([][]byte, 0, len(pubRandList))
-	for _, p := range pubRandList {
-		pubRandBytesList = append(pubRandBytesList, p.Bytes()[:])
-	}
-
-	return &proto.CreateRandomnessPairListWithIntervalResponse{
-		PubRandList: pubRandBytesList,
-	}, nil
-}
 
 // SignEOTS signs an EOTS with the EOTS private key and the relevant randomness
 func (r *rpcServer) SignEOTS(_ context.Context, req *proto.SignEOTSRequest) (

@@ -147,12 +147,12 @@ func (rrc *RollupRandomnessCommitter) getLastVotingHeightWithRandomness(lastComm
 // getPubRandList overrides the default implementation to use sparse generation
 // startHeight is already aligned by ShouldCommit, so we can use it directly
 func (rrc *RollupRandomnessCommitter) getPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
-	pubRandList, err := rrc.Em.CreateRandomnessPairListWithInterval(
+	pubRandList, err := rrc.Em.CreateRandomnessPairList(
 		rrc.BtcPk.MustMarshal(),
 		rrc.Cfg.ChainID,
 		startHeight, // Already aligned by ShouldCommit
 		numPubRand,
-		rrc.interval,
+		eotsmanager.WithInterval(rrc.interval),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create randomness pair list with interval: %w", err)
