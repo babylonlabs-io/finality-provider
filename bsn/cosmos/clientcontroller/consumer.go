@@ -81,9 +81,7 @@ func (wc *CosmwasmConsumerController) reliablySendMsgs(ctx context.Context, msgs
 		return nil, fmt.Errorf("failed to reliably send msgs: %w", err)
 	}
 
-	bbnResp := fptypes.NewBabylonTxResponse(resp)
-
-	return bbnResp, nil
+	return fptypes.NewBabylonTxResponse(resp), nil
 }
 
 func (wc *CosmwasmConsumerController) GetClient() *cwcclient.Client {
@@ -177,7 +175,11 @@ func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 		return nil, fmt.Errorf("failed to reliably send batch finality sigs: %w", err)
 	}
 
-	return &fptypes.TxResponse{TxHash: res.TxHash}, nil
+	if res == nil {
+		return &fptypes.TxResponse{}, nil
+	}
+
+	return &fptypes.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }
 
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
