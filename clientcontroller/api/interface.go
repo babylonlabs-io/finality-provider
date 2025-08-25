@@ -83,10 +83,6 @@ type BlockQuerier[T types.BlockDescription] interface {
 	// QueryBlock queries the block at the given height
 	QueryBlock(ctx context.Context, height uint64) (T, error)
 
-	// QueryIsBlockFinalized queries if the block at the given height is
-	// finalized
-	QueryIsBlockFinalized(ctx context.Context, height uint64) (bool, error)
-
 	// QueryBlocks returns a list of blocks from startHeight to endHeight
 	QueryBlocks(ctx context.Context, req *QueryBlocksRequest) ([]T, error)
 
