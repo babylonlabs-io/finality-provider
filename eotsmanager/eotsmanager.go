@@ -5,22 +5,30 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 )
 
+// RandomnessOption is a functional option for CreateRandomnessPairList
+type RandomnessOption func(*RandomnessConfig)
+
+// RandomnessConfig holds configuration for randomness pair creation
+type RandomnessConfig struct {
+	Interval *uint64 // nil means no interval (consecutive heights)
+}
+
+// WithInterval sets the interval between consecutive randomness pairs
+func WithInterval(interval uint64) RandomnessOption {
+	return func(cfg *RandomnessConfig) {
+		cfg.Interval = &interval
+	}
+}
+
 type EOTSManager interface {
-	// CreateRandomnessPairList generates a list of Schnorr randomness pairs from
-	// startHeight to startHeight+(num-1) where num means the number of public randomness
+	// CreateRandomnessPairList generates a list of Schnorr randomness pairs.
+	// By default, generates consecutive pairs from startHeight to startHeight+(num-1).
+	// With WithInterval option, generates pairs at startHeight, startHeight+interval, startHeight+2*interval, etc.
 	// It fails if the finality provider does not exist or a randomness pair has been created before
 	// or passPhrase is incorrect
 	// NOTE: the randomness is deterministically generated based on the EOTS key, chainID and
 	// block height
-	CreateRandomnessPairList(uid []byte, chainID []byte, startHeight uint64, num uint32) ([]*btcec.FieldVal, error)
-
-	// CreateRandomnessPairListWithInterval generates a list of Schnorr randomness pairs with intervals
-	// from startHeight, startHeight+interval, startHeight+2*interval, etc. where num means the number of public randomness
-	// It fails if the finality provider does not exist or a randomness pair has been created before
-	// or passPhrase is incorrect
-	// NOTE: the randomness is deterministically generated based on the EOTS key, chainID and
-	// block height. This method is used for rollup FPs that only vote on specific intervals.
-	CreateRandomnessPairListWithInterval(uid []byte, chainID []byte, startHeight uint64, num uint32, interval uint64) ([]*btcec.FieldVal, error)
+	CreateRandomnessPairList(uid []byte, chainID []byte, startHeight uint64, num uint32, options ...RandomnessOption) ([]*btcec.FieldVal, error)
 
 	// SignEOTS signs an EOTS using the private key of the finality provider and the corresponding
 	// secret randomness of the given chain at the given height
