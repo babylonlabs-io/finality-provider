@@ -43,12 +43,12 @@ func NewRollupFinalitySubmitter(
 // GetPubRandList overrides the default implementation to use sparse generation
 // This ensures the randomness retrieval matches the sparse commitment pattern
 func (rfs *RollupFinalitySubmitter) GetPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
-	pubRandList, err := rfs.Em.CreateRandomnessPairListWithInterval(
+	pubRandList, err := rfs.Em.CreateRandomnessPairList(
 		rfs.GetBtcPkBIP340().MustMarshal(),
 		rfs.State.GetChainID(),
 		startHeight,
 		numPubRand,
-		rfs.interval,
+		eotsmanager.WithInterval(rfs.interval),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create sparse public randomness list: %w", err)
