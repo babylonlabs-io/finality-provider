@@ -33,6 +33,8 @@ func NewEOTSManagerGRpcClient(remoteAddr string, hmacKey string) (*EOTSManagerGR
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
+	dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(s)))
+
 	// Add HMAC interceptor if key is available
 	if processedHmacKey != "" {
 		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(HMACUnaryClientInterceptor(processedHmacKey)))
