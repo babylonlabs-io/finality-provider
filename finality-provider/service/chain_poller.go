@@ -213,10 +213,15 @@ func (cp *ChainPoller) pollChain(ctx context.Context) {
 	for {
 		select {
 		case <-cp.quit:
+			cp.logger.Info("shutting down the chain poller")
+
 			return
 		case <-ctx.Done():
+			cp.logger.Info("context done, shutting down the chain poller", zap.Error(ctx.Err()))
+
 			return
 		case <-ticker.C:
+			cp.logger.Debug("pollCycle initiated")
 			if err := cp.pollCycle(ctx); err != nil {
 				failedCycles++
 				cp.logger.Debug("poll cycle failed",
@@ -247,6 +252,11 @@ func (cp *ChainPoller) pollCycle(ctx context.Context) error {
 
 	blockToRetrieve := cp.getNextHeight()
 
+	cp.logger.Debug("in pollCycle: polling chain",
+		zap.Uint64("latest_height", latestBlockHeight),
+		zap.Uint64("next_height", blockToRetrieve),
+	)
+
 	return cp.tryPollChain(ctx, latestBlockHeight, blockToRetrieve)
 }
 
@@ -266,6 +276,7 @@ func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, bloc
 		return nil
 
 	case blockToRetrieve == latestBlockHeight:
+		cp.logger.Debug("latest block height reached, polling for next block")
 		var latestBlock types.BlockDescription
 		latestBlock, err = cp.consumerCon.QueryBlock(ctx, latestBlockHeight)
 		if err != nil {
@@ -274,11 +285,18 @@ func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, bloc
 		blocks = []types.BlockDescription{latestBlock}
 
 	default:
+		cp.logger.Debug("polling for block range",
+			zap.Uint64("start_height", blockToRetrieve),
+			zap.Uint64("end_height", latestBlockHeight),
+			zap.Uint32("poll_size", cp.cfg.PollSize))
+
 		blocks, err = cp.blocksWithRetry(ctx, blockToRetrieve, latestBlockHeight, cp.cfg.PollSize)
 		if err != nil {
 			return fmt.Errorf("failed to query block range: %w", err)
 		}
 	}
+
+	cp.logger.Debug("received blocks from chain", zap.Int("block_count", len(blocks)))
 
 	if len(blocks) == 0 {
 		return nil
@@ -291,6 +309,7 @@ func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, bloc
 			return fmt.Errorf("poller shutting down")
 		case cp.blockChan <- block:
 			// Block sent successfully
+			cp.logger.Debug("block sent to channel", zap.Uint64("block_height", block.GetHeight()))
 		case <-ctx.Done():
 			return fmt.Errorf("context done: %w", ctx.Err())
 		default:
