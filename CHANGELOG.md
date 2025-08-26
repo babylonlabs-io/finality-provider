@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#646](https://github.com/babylonlabs-io/finality-provider/pull/646) chore: adds more e2e for cosmos
 * [#647](https://github.com/babylonlabs-io/finality-provider/pull/647) chore: unify methods in eotsmanager
 * [#657](https://github.com/babylonlabs-io/finality-provider/pull/657) chore: cleanup cc interface
+* [#662](https://github.com/babylonlabs-io/finality-provider/pull/662) chore: grpc server configurable msg size
 
 ## v2.0.0-rc.3
 

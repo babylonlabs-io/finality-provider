@@ -68,7 +68,7 @@ type BcdTestManager struct {
 	EOTSServerHandler *e2eutils.EOTSServerHandler
 	EOTSConfig        *eotsconfig.Config
 	Fpa               *service.FinalityProviderApp
-	EOTSClient        *client.EOTSManagerGRpcClient
+	EOTSClient        *client.EOTSManagerGRPCClient
 	baseDir           string
 	logger            *zap.Logger
 	cfg               *config.CosmwasmConfig
@@ -201,7 +201,7 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	eotsCli, err := client.NewEOTSManagerGRpcClient(eotsCfg.RPCListener, "")
+	eotsCli, err := client.NewEOTSManagerGRPCClient(eotsCfg.RPCListener, "")
 	require.NoError(t, err)
 
 	fpMetrics := metrics.NewFpMetrics()

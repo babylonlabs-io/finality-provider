@@ -94,7 +94,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 			}
 
 			return nil
-		}, func(em *eotsclient.EOTSManagerGRpcClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error) {
+		}, func(em *eotsclient.EOTSManagerGRPCClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error) {
 			return em.CreateRandomnessPairList(fpPk, chainID, commit.GetStartHeight(), uint32(commit.GetNumPubRand())) // #nosec G115 - already checked by caller
 		})
 }
@@ -122,7 +122,7 @@ func RunCommandRecoverProofWithConfig(_ client.Context, cmd *cobra.Command, cfg 
 		return fmt.Errorf("failed to get start height flag: %w", err)
 	}
 
-	em, err := eotsclient.NewEOTSManagerGRpcClient(cfg.EOTSManagerAddress, cfg.HMACKey)
+	em, err := eotsclient.NewEOTSManagerGRPCClient(cfg.EOTSManagerAddress, cfg.HMACKey)
 	if err != nil {
 		return fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}

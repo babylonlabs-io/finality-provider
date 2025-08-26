@@ -79,7 +79,7 @@ func NewFinalityProviderAppFromConfig(
 
 	// if the EOTSManagerAddress is empty, run a local EOTS manager;
 	// otherwise connect a remote one with a gRPC client
-	em, err := InitEOTSManagerClient(cfg.EOTSManagerAddress, cfg.HMACKey)
+	em, err := InitEOTSManagerClient(cfg.EOTSManagerAddress, cfg.HMACKey, cfg.GRPCMaxContentLength)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}

@@ -51,7 +51,7 @@ func backup(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to get %s flag: %w", rpcClientFlag, err)
 	}
 
-	eotsdClient, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, "")
+	eotsdClient, err := eotsclient.NewEOTSManagerGRPCClient(rpcListener, "")
 	if err != nil {
 		return fmt.Errorf("failed to create eotsd client: %w", err)
 	}

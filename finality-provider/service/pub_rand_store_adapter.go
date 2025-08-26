@@ -11,7 +11,7 @@ import (
 )
 
 type AddProofListFunc func(chainID []byte, pk []byte, commit types.PubRandCommit, proofList []*merkle.Proof) error
-type CreateRandomnessFunc func(em *eotsclient.EOTSManagerGRpcClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error)
+type CreateRandomnessFunc func(em *eotsclient.EOTSManagerGRPCClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error)
 
 type PubRandState struct {
 	s *store.PubRandProofStore

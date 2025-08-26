@@ -13,16 +13,16 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/proto"
 )
 
-var _ eotsmanager.EOTSManager = &EOTSManagerGRpcClient{}
+var _ eotsmanager.EOTSManager = &EOTSManagerGRPCClient{}
 
-type EOTSManagerGRpcClient struct {
+type EOTSManagerGRPCClient struct {
 	client proto.EOTSManagerClient
 	conn   *grpc.ClientConn
 }
 
-// NewEOTSManagerGRpcClient creates a new EOTS manager gRPC client
+// NewEOTSManagerGRPCClient creates a new EOTS manager gRPC client
 // The hmacKey parameter is used for authentication with the EOTS manager server
-func NewEOTSManagerGRpcClient(remoteAddr string, hmacKey string) (*EOTSManagerGRpcClient, error) {
+func NewEOTSManagerGRPCClient(remoteAddr string, hmacKey string, grpcOpts ...grpc.DialOption) (*EOTSManagerGRPCClient, error) {
 	processedHmacKey, err := ProcessHMACKey(hmacKey)
 	if err != nil {
 		// Log warning and continue without HMAC authentication
@@ -33,7 +33,9 @@ func NewEOTSManagerGRpcClient(remoteAddr string, hmacKey string) (*EOTSManagerGR
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
-	dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(s)))
+	if len(grpcOpts) > 0 {
+		dialOpts = append(dialOpts, grpcOpts...)
+	}
 
 	// Add HMAC interceptor if key is available
 	if processedHmacKey != "" {
@@ -47,7 +49,7 @@ func NewEOTSManagerGRpcClient(remoteAddr string, hmacKey string) (*EOTSManagerGR
 		return nil, fmt.Errorf("failed to build gRPC connection to %s: %w", remoteAddr, err)
 	}
 
-	gClient := &EOTSManagerGRpcClient{
+	gClient := &EOTSManagerGRPCClient{
 		client: proto.NewEOTSManagerClient(conn),
 		conn:   conn,
 	}
@@ -59,7 +61,7 @@ func NewEOTSManagerGRpcClient(remoteAddr string, hmacKey string) (*EOTSManagerGR
 	return gClient, nil
 }
 
-func (c *EOTSManagerGRpcClient) Ping() error {
+func (c *EOTSManagerGRPCClient) Ping() error {
 	req := &proto.PingRequest{}
 
 	_, err := c.client.Ping(context.Background(), req)
@@ -70,7 +72,7 @@ func (c *EOTSManagerGRpcClient) Ping() error {
 	return nil
 }
 
-func (c *EOTSManagerGRpcClient) CreateRandomnessPairList(uid, chainID []byte, startHeight uint64, num uint32, options ...eotsmanager.RandomnessOption) ([]*btcec.FieldVal, error) {
+func (c *EOTSManagerGRPCClient) CreateRandomnessPairList(uid, chainID []byte, startHeight uint64, num uint32, options ...eotsmanager.RandomnessOption) ([]*btcec.FieldVal, error) {
 	cfg := &eotsmanager.RandomnessConfig{}
 	for _, opt := range options {
 		opt(cfg)
@@ -103,7 +105,7 @@ func (c *EOTSManagerGRpcClient) CreateRandomnessPairList(uid, chainID []byte, st
 	return pubRandFieldValList, nil
 }
 
-func (c *EOTSManagerGRpcClient) SaveEOTSKeyName(pk *btcec.PublicKey, keyName string) error {
+func (c *EOTSManagerGRPCClient) SaveEOTSKeyName(pk *btcec.PublicKey, keyName string) error {
 	req := &proto.SaveEOTSKeyNameRequest{
 		KeyName: keyName,
 		EotsPk:  pk.SerializeUncompressed(),
@@ -116,7 +118,7 @@ func (c *EOTSManagerGRpcClient) SaveEOTSKeyName(pk *btcec.PublicKey, keyName str
 	return nil
 }
 
-func (c *EOTSManagerGRpcClient) SignEOTS(uid, chaiID, msg []byte, height uint64) (*btcec.ModNScalar, error) {
+func (c *EOTSManagerGRPCClient) SignEOTS(uid, chaiID, msg []byte, height uint64) (*btcec.ModNScalar, error) {
 	req := &proto.SignEOTSRequest{
 		Uid:     uid,
 		ChainId: chaiID,
@@ -134,7 +136,7 @@ func (c *EOTSManagerGRpcClient) SignEOTS(uid, chaiID, msg []byte, height uint64)
 	return &s, nil
 }
 
-func (c *EOTSManagerGRpcClient) UnsafeSignEOTS(uid, chaiID, msg []byte, height uint64) (*btcec.ModNScalar, error) {
+func (c *EOTSManagerGRPCClient) UnsafeSignEOTS(uid, chaiID, msg []byte, height uint64) (*btcec.ModNScalar, error) {
 	req := &proto.SignEOTSRequest{
 		Uid:     uid,
 		ChainId: chaiID,
@@ -152,7 +154,7 @@ func (c *EOTSManagerGRpcClient) UnsafeSignEOTS(uid, chaiID, msg []byte, height u
 	return &s, nil
 }
 
-func (c *EOTSManagerGRpcClient) SignSchnorrSig(uid, msg []byte) (*schnorr.Signature, error) {
+func (c *EOTSManagerGRPCClient) SignSchnorrSig(uid, msg []byte) (*schnorr.Signature, error) {
 	req := &proto.SignSchnorrSigRequest{Uid: uid, Msg: msg}
 	res, err := c.client.SignSchnorrSig(context.Background(), req)
 	if err != nil {
@@ -167,7 +169,7 @@ func (c *EOTSManagerGRpcClient) SignSchnorrSig(uid, msg []byte) (*schnorr.Signat
 	return sig, nil
 }
 
-func (c *EOTSManagerGRpcClient) Unlock(uid []byte, passphrase string) error {
+func (c *EOTSManagerGRPCClient) Unlock(uid []byte, passphrase string) error {
 	req := &proto.UnlockKeyRequest{
 		Uid:        uid,
 		Passphrase: passphrase,
@@ -181,7 +183,7 @@ func (c *EOTSManagerGRpcClient) Unlock(uid []byte, passphrase string) error {
 	return nil
 }
 
-func (c *EOTSManagerGRpcClient) Backup(dbPath string, backupDir string) (string, error) {
+func (c *EOTSManagerGRPCClient) Backup(dbPath string, backupDir string) (string, error) {
 	req := &proto.BackupRequest{
 		DbPath:    dbPath,
 		BackupDir: backupDir,
@@ -195,7 +197,7 @@ func (c *EOTSManagerGRpcClient) Backup(dbPath string, backupDir string) (string,
 	return res.BackupName, nil
 }
 
-func (c *EOTSManagerGRpcClient) Close() error {
+func (c *EOTSManagerGRPCClient) Close() error {
 	if err := c.conn.Close(); err != nil {
 		return fmt.Errorf("failed to close EOTS manager client connection: %w", err)
 	}

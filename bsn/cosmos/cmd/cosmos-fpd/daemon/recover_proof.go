@@ -52,7 +52,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 	appparams.SetAddressPrefixes()
 	wasmEncodingCfg := cosmwasmcfg.GetWasmdEncodingConfig()
 	service.UnlockAddressPrefix()
-	
+
 	cosmWasmCtrl, err := clientcontroller.NewCosmwasmConsumerController(cfg.Cosmwasm, wasmEncodingCfg, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create rpc client for the consumer chain cosmos: %w", err)
@@ -82,7 +82,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 			}
 
 			return nil
-		}, func(em *eotsclient.EOTSManagerGRpcClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error) {
+		}, func(em *eotsclient.EOTSManagerGRPCClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error) {
 			return em.CreateRandomnessPairList(fpPk, chainID, commit.GetStartHeight(), uint32(commit.GetNumPubRand())) // #nosec G115 - already checked by caller
 		})
 
