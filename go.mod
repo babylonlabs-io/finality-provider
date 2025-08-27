@@ -6,9 +6,9 @@ require (
 	cosmossdk.io/errors v1.0.2
 	cosmossdk.io/math v1.5.3
 	github.com/avast/retry-go/v4 v4.5.1
-	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250807100855-be35b2768ee4
-	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250807100855-be35b2768ee4
-	github.com/babylonlabs-io/babylon/v3 v3.0.0-rc.0
+	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250819005731-171062db6830
+	github.com/babylonlabs-io/babylon-sdk/x v0.0.0-20250819005731-171062db6830
+	github.com/babylonlabs-io/babylon/v3 v3.0.0-rc.1
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.5
 	github.com/btcsuite/btcd/btcutil v1.1.6
@@ -53,7 +53,6 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.48.1 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.48.1 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
-	github.com/babylonlabs-io/babylon-sdk/tests/e2e v0.0.0-20250807100855-be35b2768ee4 // indirect
 	github.com/bytedance/sonic v1.13.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
