@@ -32,7 +32,7 @@ var (
 	//   ~/Library/Application Support/Eotsd on MacOS
 	DefaultEOTSDir = btcutil.AppDataDir("eotsd", false)
 
-	//nolint:revive,stylecheck
+	//nolint:revive
 	defaultRpcListener = fmt.Sprintf("%s:%d", DefaultRPCHost, DefaultRPCPort)
 )
 
