@@ -82,6 +82,7 @@ func getFullCommit(modName, version string) (string, error) {
 	// Get GOMODCACHE location
 	modCache := os.Getenv("GOMODCACHE")
 	if modCache == "" {
+		//nolint:noctx
 		cmd := exec.Command("go", "env", "GOMODCACHE")
 		out, err := cmd.Output()
 		if err != nil {

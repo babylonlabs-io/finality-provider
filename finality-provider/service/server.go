@@ -73,7 +73,7 @@ func (s *Server) RunUntilShutdown(ctx context.Context) error {
 	listenAddr := s.cfg.RPCListener
 	// we create listeners from the RPCListeners defined
 	// in the config.
-	lis, err := net.Listen("tcp", listenAddr)
+	lis, err := net.Listen("tcp", listenAddr) //nolint:noctx
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", listenAddr, err)
 	}

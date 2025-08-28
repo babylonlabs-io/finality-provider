@@ -40,6 +40,7 @@ func AllocateUniquePort(t *testing.T) int {
 			continue
 		}
 
+		//nolint:noctx
 		listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 		if err != nil {
 			portMutex.Unlock()
