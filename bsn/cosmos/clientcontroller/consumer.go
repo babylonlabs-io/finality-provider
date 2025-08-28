@@ -401,10 +401,7 @@ func (wc *CosmwasmConsumerController) QueryFinalityProviderStatus(ctx context.Co
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	jailed := false
-	if respSigningInfo.JailedUntil != nil && *respSigningInfo.JailedUntil > 0 {
-		jailed = true
-	}
+	jailed := respSigningInfo.JailedUntil != nil && *respSigningInfo.JailedUntil > 0
 
 	return &api.FinalityProviderStatusResponse{
 		Slashed: resp.SlashedBtcHeight > 0,

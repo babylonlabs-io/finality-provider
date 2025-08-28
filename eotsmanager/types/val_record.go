@@ -1,3 +1,4 @@
+//nolint:revive
 package types
 
 import "github.com/btcsuite/btcd/btcec/v2"

@@ -1,7 +1,9 @@
+//nolint:revive
 package types
 
 import (
 	"context"
+
 	"github.com/babylonlabs-io/babylon/v3/types"
 )
 

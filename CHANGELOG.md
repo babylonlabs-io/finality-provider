@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#657](https://github.com/babylonlabs-io/finality-provider/pull/657) chore: cleanup cc interface
 * [#663](https://github.com/babylonlabs-io/finality-provider/pull/663) bump cosmos contracts and bbn sdk
 * [#662](https://github.com/babylonlabs-io/finality-provider/pull/662) chore: grpc server configurable msg size
+* [#666](https://github.com/babylonlabs-io/finality-provider/pull/666) chore: go bump 1.25
 
 ## v2.0.0-rc.3
 
