@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"google.golang.org/grpc"
 	"strings"
 
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -19,13 +20,17 @@ import (
 const failedPreconditionErrStr = "FailedPrecondition"
 
 // InitEOTSManagerClient initializes an EOTS manager client with HMAC authentication
-func InitEOTSManagerClient(address string, hmacKey string) (eotsmanager.EOTSManager, error) {
-	client, err := client.NewEOTSManagerGRpcClient(address, hmacKey)
+func InitEOTSManagerClient(address string, hmacKey string, grpcMaxContentLen int) (eotsmanager.EOTSManager, error) {
+	eotsClient, err := client.NewEOTSManagerGRPCClient(address, hmacKey,
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(grpcMaxContentLen),
+			grpc.MaxCallSendMsgSize(grpcMaxContentLen)),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EOTS manager client: %w", err)
 	}
 
-	return client, nil
+	return eotsClient, nil
 }
 
 func (fp *FinalityProviderInstance) GetPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {

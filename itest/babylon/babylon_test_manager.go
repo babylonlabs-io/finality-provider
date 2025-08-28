@@ -55,7 +55,7 @@ type TestManager struct {
 	EOTSHomeDir       string
 	FpConfig          *fpcfg.Config
 	Fps               []*service.FinalityProviderApp
-	EOTSClient        *client.EOTSManagerGRpcClient
+	EOTSClient        *client.EOTSManagerGRPCClient
 	BBNConsumerClient *bbncc.BabylonConsumerController
 	baseDir           string
 	manager           *container.Manager
@@ -224,7 +224,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	require.NoError(t, err)
 
 	// Create and start finality provider app
-	eotsCli, err := client.NewEOTSManagerGRpcClient(tm.EOTSServerHandler.Config().RPCListener, tm.EOTSServerHandler.Config().HMACKey)
+	eotsCli, err := client.NewEOTSManagerGRPCClient(tm.EOTSServerHandler.Config().RPCListener, tm.EOTSServerHandler.Config().HMACKey)
 	require.NoError(t, err)
 	fpdb, err := cfg.DatabaseConfig.GetDBBackend()
 	require.NoError(t, err)
@@ -472,11 +472,11 @@ func newDescription(moniker string) *stakingtypes.Description {
 	return &dec
 }
 
-func NewEOTSManagerGrpcClientWithRetry(t *testing.T, cfg *eotsconfig.Config) *client.EOTSManagerGRpcClient {
+func NewEOTSManagerGrpcClientWithRetry(t *testing.T, cfg *eotsconfig.Config) *client.EOTSManagerGRPCClient {
 	var err error
-	var eotsCli *client.EOTSManagerGRpcClient
+	var eotsCli *client.EOTSManagerGRPCClient
 	err = retry.Do(func() error {
-		eotsCli, err = client.NewEOTSManagerGRpcClient(cfg.RPCListener, cfg.HMACKey)
+		eotsCli, err = client.NewEOTSManagerGRPCClient(cfg.RPCListener, cfg.HMACKey)
 		return err
 	}, retry.Attempts(5))
 	require.NoError(t, err)

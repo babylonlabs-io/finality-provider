@@ -144,7 +144,7 @@ func saveKeyNameMapping(cmd *cobra.Command, clientCtx client.Context, keyName st
 	}
 
 	if len(rpcListener) > 0 {
-		eotsClient, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, "")
+		eotsClient, err := eotsclient.NewEOTSManagerGRPCClient(rpcListener, "")
 		if err != nil {
 			return nil, fmt.Errorf("failed to create eots client: %w", err)
 		}

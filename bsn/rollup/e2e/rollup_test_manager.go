@@ -63,8 +63,8 @@ type RollupConsumerTestManager struct {
 	EOTSServerHandler   *e2eutils.EOTSServerHandler
 	BabylonFpApp        *service.FinalityProviderApp
 	ConsumerFpApp       *service.FinalityProviderApp
-	BabylonEOTSClient   *client.EOTSManagerGRpcClient
-	ConsumerEOTSClient  *client.EOTSManagerGRpcClient
+	BabylonEOTSClient   *client.EOTSManagerGRPCClient
+	ConsumerEOTSClient  *client.EOTSManagerGRPCClient
 	AnvilResource       *dockertest.Resource
 	rollupConfig        *rollupfpconfig.RollupFPConfig
 	fpConfig            *fpcfg.Config
