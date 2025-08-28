@@ -1,12 +1,11 @@
+version: "2"
 run:
   build-tags:
     - e2e_rollup
     - e2e_babylon
     - e2e_bcd
-  timeout: 5m
-
 linters:
-  disable-all: true
+  default: none
   enable:
     - asasalint
     - asciicheck
@@ -30,7 +29,6 @@ linters:
     - goheader
     - gomodguard
     - goprintffuncname
-    - gosimple
     - govet
     - grouper
     - importas
@@ -51,36 +49,48 @@ linters:
     - rowserrcheck
     - sqlclosecheck
     - staticcheck
-    - stylecheck
-    - usetesting
     - testableexamples
     - tparallel
-    - typecheck
     - unconvert
     - unparam
-    - usestdlibvars
     - unused
+    - usestdlibvars
+    - usetesting
     - wastedassign
     - whitespace
     - wrapcheck
-
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - errcheck
+          - gocyclo
+          - gosec
+          - nonamedreturns
+          - unparam
+        path: _test\.go
+      - linters:
+          - forbidigo
+        path-except: _test\.go
+    paths:
+      - e2etest
+      - itest
+      - e2e
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   max-same-issues: 0
-  # Default: https://golangci-lint.run/usage/false-positives/#default-exclusions
-  exclude-dirs:
-    - e2etest
-    - itest
-    - e2e
-  exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - dupl
-        - gosec
-        - nonamedreturns
-        - unparam
-    - path-except: _test\.go
-      linters:
-        - forbidigo
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
