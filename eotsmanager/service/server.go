@@ -97,6 +97,13 @@ func (s *Server) RunUntilShutdown(ctx context.Context) error {
 		s.logger.Warn("HMAC authentication not enabled. This is insecure.")
 	}
 
+	if s.cfg.GRPCMaxContentLength > 0 {
+		s.logger.Info("Setting max content length for gRPC server",
+			zap.Int("max_content_length", s.cfg.GRPCMaxContentLength))
+		opts = append(opts, grpc.MaxRecvMsgSize(s.cfg.GRPCMaxContentLength))
+		opts = append(opts, grpc.MaxSendMsgSize(s.cfg.GRPCMaxContentLength))
+	}
+
 	grpcServer := grpc.NewServer(opts...)
 	defer grpcServer.Stop()
 
