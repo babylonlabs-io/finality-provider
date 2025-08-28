@@ -104,7 +104,7 @@ func unlockKeyring(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	eotsdClient, err := eotsclient.NewEOTSManagerGRpcClient(rpcListener, hmac)
+	eotsdClient, err := eotsclient.NewEOTSManagerGRPCClient(rpcListener, hmac)
 	if err != nil {
 		return fmt.Errorf("failed to create eotsd client: %w", err)
 	}

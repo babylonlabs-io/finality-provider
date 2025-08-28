@@ -17,7 +17,6 @@ import (
 )
 
 const (
-	defaultChainType                   = "babylon"
 	defaultLogLevel                    = zapcore.DebugLevel
 	defaultLogDirname                  = "logs"
 	defaultLogFilename                 = "fpd.log"
@@ -33,6 +32,7 @@ const (
 	defaultSignatureSubmissionInterval = 1 * time.Second
 	defaultMaxSubmissionRetries        = 20
 	defaultDataDirname                 = "data"
+	defaultMaxGRPCContentLength        = 16 * 1024 * 1024 // 16 MB
 )
 
 var (
@@ -72,6 +72,8 @@ type Config struct {
 	Metrics *metrics.Config `group:"metrics" namespace:"metrics"`
 
 	ContextSigningHeight uint64 `long:"contextsigningheight" description:"The height at which the context signing will start"`
+
+	GRPCMaxContentLength int `long:"grpcmaxcontentlength" description:"The maximum size of the gRPC message in bytes."`
 }
 
 func DefaultConfigWithHome(homePath string) Config {
@@ -95,6 +97,7 @@ func DefaultConfigWithHome(homePath string) Config {
 		EOTSManagerAddress:          defaultEOTSManagerAddress,
 		RPCListener:                 DefaultRPCListener,
 		Metrics:                     metrics.DefaultFpConfig(),
+		GRPCMaxContentLength:        defaultMaxGRPCContentLength,
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -202,6 +205,10 @@ func (cfg *Config) Validate() error {
 	}
 	if cfg.BatchSubmissionSize == 0 {
 		return fmt.Errorf("invalid batch submission size: %d", cfg.BatchSubmissionSize)
+	}
+
+	if cfg.GRPCMaxContentLength <= 0 {
+		return fmt.Errorf("invalid max content length: %d", cfg.GRPCMaxContentLength)
 	}
 
 	// All good, return the sanitized result.

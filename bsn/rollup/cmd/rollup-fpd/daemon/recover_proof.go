@@ -79,7 +79,7 @@ func runCommandRecoverProof(ctx client.Context, cmd *cobra.Command, args []strin
 			}
 
 			return nil
-		}, func(em *eotsclient.EOTSManagerGRpcClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error) {
+		}, func(em *eotsclient.EOTSManagerGRPCClient, fpPk []byte, chainID []byte, commit types.PubRandCommit) ([]*btcec.FieldVal, error) {
 			concreteCommit, ok := commit.(*rollupfpcc.RollupPubRandCommit)
 			if !ok {
 				return nil, fmt.Errorf("expected RollupPubRandCommit, got %T", commit)

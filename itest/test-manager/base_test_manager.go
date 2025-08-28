@@ -584,9 +584,9 @@ func StartEotsManagers(
 	testDir string,
 	babylonFpCfg *fpcfg.Config,
 	consumerFpCfg *fpcfg.Config,
-) (*e2eutils.EOTSServerHandler, []*eotsclient.EOTSManagerGRpcClient) {
+) (*e2eutils.EOTSServerHandler, []*eotsclient.EOTSManagerGRPCClient) {
 	fpCfgs := []*fpcfg.Config{babylonFpCfg, consumerFpCfg}
-	eotsClients := make([]*eotsclient.EOTSManagerGRpcClient, len(fpCfgs))
+	eotsClients := make([]*eotsclient.EOTSManagerGRPCClient, len(fpCfgs))
 	eotsHomeDirs := []string{filepath.Join(testDir, "babylon-eots-home"), filepath.Join(testDir, "consumer-eots-home")}
 	eotsConfigs := make([]*eotsconfig.Config, len(fpCfgs))
 	for i := 0; i < len(fpCfgs); i++ {
@@ -608,11 +608,11 @@ func StartEotsManagers(
 	for i := 0; i < len(fpCfgs); i++ {
 		// wait for EOTS servers to start
 		// see https://github.com/babylonchain/finality-provider/pull/517
-		var eotsCli *eotsclient.EOTSManagerGRpcClient
+		var eotsCli *eotsclient.EOTSManagerGRPCClient
 		var err error
 		require.Eventually(t, func() bool {
 			// we use only one server and two clients
-			eotsCli, err = eotsclient.NewEOTSManagerGRpcClient(fpCfgs[0].EOTSManagerAddress, fpCfgs[0].HMACKey)
+			eotsCli, err = eotsclient.NewEOTSManagerGRPCClient(fpCfgs[0].EOTSManagerAddress, fpCfgs[0].HMACKey)
 			if err != nil {
 				t.Logf("Error creating EOTS client: %v", err)
 
@@ -633,7 +633,7 @@ func CreateAndStartFpApp(
 	logger *zap.Logger,
 	cfg *fpcfg.Config,
 	cc api.ConsumerController,
-	eotsCli *eotsclient.EOTSManagerGRpcClient,
+	eotsCli *eotsclient.EOTSManagerGRPCClient,
 ) *service.FinalityProviderApp {
 	bc, err := fpcc.NewBabylonController(cfg.BabylonConfig, logger)
 	require.NoError(t, err)
