@@ -9,6 +9,8 @@ import (
 )
 
 func TestCustomProofIndexField(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		proof    cmtcrypto.Proof
@@ -38,6 +40,8 @@ func TestCustomProofIndexField(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			// Test that our CustomProof always includes index
 			customProof := ConvertProof(tt.proof)
 			jsonBytes, err := json.Marshal(customProof)
@@ -51,6 +55,8 @@ func TestCustomProofIndexField(t *testing.T) {
 }
 
 func TestOriginalProofOmitsIndexWhenZero(t *testing.T) {
+	t.Parallel()
+
 	// This test demonstrates the original problem
 	originalProof := cmtcrypto.Proof{
 		Total:    100,
@@ -71,6 +77,8 @@ func TestOriginalProofOmitsIndexWhenZero(t *testing.T) {
 }
 
 func TestSubmitFinalitySignatureWithCustomProof(t *testing.T) {
+	t.Parallel()
+
 	// Test the complete SubmitFinalitySignature struct
 	originalProof := cmtcrypto.Proof{
 		Total:    50000,
@@ -112,6 +120,8 @@ func TestSubmitFinalitySignatureWithCustomProof(t *testing.T) {
 }
 
 func TestConvertProofFunction(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    cmtcrypto.Proof
@@ -151,6 +161,8 @@ func TestConvertProofFunction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := ConvertProof(tt.input)
 			require.Equal(t, tt.expected, result)
 		})
