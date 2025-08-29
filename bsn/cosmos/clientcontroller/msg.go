@@ -2,6 +2,25 @@ package clientcontroller
 
 import cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 
+// CustomProof is a custom proof struct that ensures the index field is always included in JSON
+// This fixes the issue where cmtcrypto.Proof omits the index field when it's 0 due to the omitempty tag
+type CustomProof struct {
+	Total    uint64   `json:"total"`
+	Index    uint64   `json:"index"` // No omitempty tag to ensure it's always included
+	LeafHash []byte   `json:"leaf_hash"`
+	Aunts    [][]byte `json:"aunts"`
+}
+
+// convertProof converts cmtcrypto.Proof to CustomProof to ensure index field is always included
+func convertProof(cmtProof cmtcrypto.Proof) CustomProof {
+	return CustomProof{
+		Total:    uint64(cmtProof.Total), // #nosec G115
+		Index:    uint64(cmtProof.Index), // #nosec G115
+		LeafHash: cmtProof.LeafHash,
+		Aunts:    cmtProof.Aunts,
+	}
+}
+
 type ConsumerFpsResponse struct {
 	Fps []SingleConsumerFpResponse `json:"fps"`
 }
@@ -145,12 +164,12 @@ type CommitPublicRandomness struct {
 }
 
 type SubmitFinalitySignature struct {
-	FpPubkeyHex string          `json:"fp_pubkey_hex"`
-	Height      uint64          `json:"height"`
-	PubRand     []byte          `json:"pub_rand"`
-	Proof       cmtcrypto.Proof `json:"proof"` // nested struct
-	BlockHash   []byte          `json:"block_hash"`
-	Signature   []byte          `json:"signature"`
+	FpPubkeyHex string      `json:"fp_pubkey_hex"`
+	Height      uint64      `json:"height"`
+	PubRand     []byte      `json:"pub_rand"`
+	Proof       CustomProof `json:"proof"` // Use custom proof struct to avoid omitempty issue
+	BlockHash   []byte      `json:"block_hash"`
+	Signature   []byte      `json:"signature"`
 }
 
 type ExecMsg struct {
