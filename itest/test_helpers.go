@@ -1,10 +1,11 @@
 package e2e_utils
 
 import (
-	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/clientcontroller"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/babylonlabs-io/babylon/v3/crypto/eots"
@@ -105,7 +106,7 @@ func GenFinalitySigExecMsg(startHeight, blockHeight uint64, randListInfo *datage
 			FpPubkeyHex: fmsg.FpBtcPk.MarshalHex(),
 			Height:      fmsg.BlockHeight,
 			PubRand:     fmsg.PubRand.MustMarshal(),
-			Proof:       *fmsg.Proof,
+			Proof:       clientcontroller.ConvertProof(*fmsg.Proof),
 			BlockHash:   fmsg.BlockAppHash,
 			Signature:   fmsg.FinalitySig.MustMarshal(),
 		},
