@@ -39,7 +39,7 @@ func TestCustomProofIndexField(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Test that our CustomProof always includes index
-			customProof := convertProof(tt.proof)
+			customProof := ConvertProof(tt.proof)
 			jsonBytes, err := json.Marshal(customProof)
 			require.NoError(t, err)
 			require.JSONEq(t, tt.expected, string(jsonBytes))
@@ -83,7 +83,7 @@ func TestSubmitFinalitySignatureWithCustomProof(t *testing.T) {
 		FpPubkeyHex: "test_pubkey_hex",
 		Height:      340000,
 		PubRand:     []byte("public_randomness"),
-		Proof:       convertProof(originalProof), // Use our fixed conversion
+		Proof:       ConvertProof(originalProof), // Use our fixed conversion
 		BlockHash:   []byte("app_hash"),
 		Signature:   []byte("finality_signature"),
 	}
@@ -151,7 +151,7 @@ func TestConvertProofFunction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := convertProof(tt.input)
+			result := ConvertProof(tt.input)
 			require.Equal(t, tt.expected, result)
 		})
 	}

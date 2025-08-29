@@ -146,7 +146,7 @@ func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 				FpPubkeyHex: bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex(),
 				Height:      b.GetHeight(),
 				PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(req.PubRandList[i]).MustMarshal(),
-				Proof:       convertProof(cmtProof),
+				Proof:       ConvertProof(cmtProof),
 				BlockHash:   b.GetHash(),
 				Signature:   bbntypes.NewSchnorrEOTSSigFromModNScalar(req.Sigs[i]).MustMarshal(),
 			},

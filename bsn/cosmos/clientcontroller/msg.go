@@ -11,8 +11,9 @@ type CustomProof struct {
 	Aunts    [][]byte `json:"aunts"`
 }
 
-// convertProof converts cmtcrypto.Proof to CustomProof to ensure index field is always included
-func convertProof(cmtProof cmtcrypto.Proof) CustomProof {
+// ConvertProof converts cmtcrypto.Proof to CustomProof to ensure index field is always included
+// This function is public so it can be used by tests and other packages
+func ConvertProof(cmtProof cmtcrypto.Proof) CustomProof {
 	return CustomProof{
 		Total:    uint64(cmtProof.Total), // #nosec G115
 		Index:    uint64(cmtProof.Index), // #nosec G115
