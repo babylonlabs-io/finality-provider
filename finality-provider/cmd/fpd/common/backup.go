@@ -56,7 +56,7 @@ func backup(cmd *cobra.Command, _ []string) error {
 
 	grpcClient, cleanUp, err := dc.NewFinalityProviderServiceGRpcClient(rpcListener)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create grpc client: %w", err)
 	}
 
 	defer func() {

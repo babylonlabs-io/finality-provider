@@ -1,3 +1,5 @@
+//go:build e2e_babylon
+
 package e2etest_babylon
 
 import (
@@ -59,7 +61,6 @@ type TestManager struct {
 	manager           *container.Manager
 	logger            *zap.Logger
 	babylond          *dockertest.Resource
-	fpHomes           []string
 }
 
 func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacKey string) *TestManager {
@@ -180,7 +181,7 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 	return tm
 }
 
-func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hmacKey ...string) (*service.FinalityProviderInstance, string) {
+func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hmacKey ...string) *service.FinalityProviderInstance {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
 	eotsKeyName := fmt.Sprintf("eots-key-%s", datagen.GenRandomHexStr(r, 4))
@@ -273,7 +274,7 @@ func (tm *TestManager) AddFinalityProvider(t *testing.T, ctx context.Context, hm
 	fpIns, err := fpApp.GetFinalityProviderInstance()
 	require.NoError(t, err)
 
-	return fpIns, fpHomeDir
+	return fpIns
 }
 
 func (tm *TestManager) WaitForServicesStart(t *testing.T) {
@@ -297,18 +298,15 @@ func StartManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context, 
 	}
 
 	var runningFps []*service.FinalityProviderInstance
-	var fpHomes []string
 	for i := 0; i < n; i++ {
 		// Pass the HMAC key if provided, otherwise don't use HMAC
 		var fpIns *service.FinalityProviderInstance
-		var home string
 		if len(hmacKey) > 0 && hmacKey[0] != "" {
-			fpIns, home = tm.AddFinalityProvider(t, ctx, hmacKey[0])
+			fpIns = tm.AddFinalityProvider(t, ctx, hmacKey[0])
 		} else {
-			fpIns, home = tm.AddFinalityProvider(t, ctx)
+			fpIns = tm.AddFinalityProvider(t, ctx)
 		}
 		runningFps = append(runningFps, fpIns)
-		fpHomes = append(fpHomes, home)
 	}
 
 	// Check finality providers on Babylon side
@@ -323,8 +321,6 @@ func StartManagerWithFinalityProvider(t *testing.T, n int, ctx context.Context, 
 	}, eventuallyWaitTimeOut, eventuallyPollTime)
 
 	t.Logf("the test manager is running with a finality provider")
-
-	tm.fpHomes = fpHomes
 
 	return tm, runningFps
 }
