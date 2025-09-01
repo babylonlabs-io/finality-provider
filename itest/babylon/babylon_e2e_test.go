@@ -894,3 +894,59 @@ func TestUnsafeCommitPubRandCmd(t *testing.T) {
 	require.NoError(t, err)
 	t.Logf("Committing public randomness took %v", time.Since(t1))
 }
+
+func TestFpdBackupCmd(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(t.Context())
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
+
+	fpIns := fps[0]
+
+	// check the public randomness is committed
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
+	cmd := commoncmd.NewBackupCmd("fpd")
+
+	backupHome := t.TempDir()
+	backupPath := fmt.Sprintf("%s/data", backupHome)
+
+	cmd.SetArgs([]string{
+		"--db-path=" + fpIns.GetConfig().DatabaseConfig.DBPath,
+		"--daemon-address=" + fpIns.GetConfig().RPCListener,
+		"--backup-dir=" + backupPath,
+	})
+
+	var outputBuffer bytes.Buffer
+	cmd.SetOut(&outputBuffer)
+	cmd.SetErr(&outputBuffer)
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	output := outputBuffer.String()
+	t.Logf("Captured output: %s", output)
+
+	splitOutput := strings.Split(output, ":")
+	if len(splitOutput) != 2 {
+		t.Fatalf("Invalid output format: %s", output)
+	}
+
+	bkpDBPath := strings.TrimSpace(splitOutput[1])
+	bkpDBPathSplit := strings.Split(bkpDBPath, "/")
+	bkpDBName := bkpDBPathSplit[len(bkpDBPathSplit)-1]
+
+	fpIns.GetConfig().DatabaseConfig.DBPath = backupPath
+	fpIns.GetConfig().DatabaseConfig.DBFileName = bkpDBName
+	fpdb, err := fpIns.GetConfig().DatabaseConfig.GetDBBackend()
+	require.NoError(t, err)
+
+	fpStore, err := store.NewFinalityProviderStore(fpdb)
+	require.NoError(t, err)
+
+	storeFp, err := fpStore.GetFinalityProvider(fpIns.GetBtcPk())
+	require.NoError(t, err)
+	require.NotNil(t, storeFp)
+}

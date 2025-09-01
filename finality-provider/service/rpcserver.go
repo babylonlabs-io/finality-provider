@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
-	"go.uber.org/zap"
 	"sync"
 	"sync/atomic"
+
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
+	"go.uber.org/zap"
 
 	sdkmath "cosmossdk.io/math"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
@@ -265,6 +266,18 @@ func (r *rpcServer) UnsafeRemoveMerkleProof(_ context.Context, req *proto.Remove
 	}
 
 	return nil, nil
+}
+
+// Backup - performs hot backup on fpd database
+func (r *rpcServer) Backup(_ context.Context, req *proto.FpdBackupRequest) (*proto.FpdBackupResponse, error) {
+	fileName, err := r.app.pubRandStore.BackupDB(req.DbPath, req.BackupDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to backup fpd database: %w", err)
+	}
+
+	return &proto.FpdBackupResponse{
+		BackupName: fileName,
+	}, nil
 }
 
 func parseEotsPk(eotsPkHex string) (*bbntypes.BIP340PubKey, error) {
