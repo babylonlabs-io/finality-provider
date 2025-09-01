@@ -27,6 +27,7 @@ const (
 	FinalityProviders_QueryFinalityProviderList_FullMethodName = "/proto.FinalityProviders/QueryFinalityProviderList"
 	FinalityProviders_EditFinalityProvider_FullMethodName      = "/proto.FinalityProviders/EditFinalityProvider"
 	FinalityProviders_UnsafeRemoveMerkleProof_FullMethodName   = "/proto.FinalityProviders/UnsafeRemoveMerkleProof"
+	FinalityProviders_Backup_FullMethodName                    = "/proto.FinalityProviders/Backup"
 )
 
 // FinalityProvidersClient is the client API for FinalityProviders service.
@@ -51,6 +52,8 @@ type FinalityProvidersClient interface {
 	EditFinalityProvider(ctx context.Context, in *EditFinalityProviderRequest, opts ...grpc.CallOption) (*EmptyResponse, error)
 	// UnsafeRemoveMerkleProof removes merkle proofs up to target height
 	UnsafeRemoveMerkleProof(ctx context.Context, in *RemoveMerkleProofRequest, opts ...grpc.CallOption) (*EmptyResponse, error)
+	// Backup - hot backup finality provider db
+	Backup(ctx context.Context, in *FpdBackupRequest, opts ...grpc.CallOption) (*FpdBackupResponse, error)
 }
 
 type finalityProvidersClient struct {
@@ -133,6 +136,15 @@ func (c *finalityProvidersClient) UnsafeRemoveMerkleProof(ctx context.Context, i
 	return out, nil
 }
 
+func (c *finalityProvidersClient) Backup(ctx context.Context, in *FpdBackupRequest, opts ...grpc.CallOption) (*FpdBackupResponse, error) {
+	out := new(FpdBackupResponse)
+	err := c.cc.Invoke(ctx, FinalityProviders_Backup_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FinalityProvidersServer is the server API for FinalityProviders service.
 // All implementations must embed UnimplementedFinalityProvidersServer
 // for forward compatibility
@@ -155,6 +167,8 @@ type FinalityProvidersServer interface {
 	EditFinalityProvider(context.Context, *EditFinalityProviderRequest) (*EmptyResponse, error)
 	// UnsafeRemoveMerkleProof removes merkle proofs up to target height
 	UnsafeRemoveMerkleProof(context.Context, *RemoveMerkleProofRequest) (*EmptyResponse, error)
+	// Backup - hot backup finality provider db
+	Backup(context.Context, *FpdBackupRequest) (*FpdBackupResponse, error)
 	mustEmbedUnimplementedFinalityProvidersServer()
 }
 
@@ -185,6 +199,9 @@ func (UnimplementedFinalityProvidersServer) EditFinalityProvider(context.Context
 }
 func (UnimplementedFinalityProvidersServer) UnsafeRemoveMerkleProof(context.Context, *RemoveMerkleProofRequest) (*EmptyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnsafeRemoveMerkleProof not implemented")
+}
+func (UnimplementedFinalityProvidersServer) Backup(context.Context, *FpdBackupRequest) (*FpdBackupResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Backup not implemented")
 }
 func (UnimplementedFinalityProvidersServer) mustEmbedUnimplementedFinalityProvidersServer() {}
 
@@ -343,6 +360,24 @@ func _FinalityProviders_UnsafeRemoveMerkleProof_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FinalityProviders_Backup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FpdBackupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinalityProvidersServer).Backup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FinalityProviders_Backup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinalityProvidersServer).Backup(ctx, req.(*FpdBackupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FinalityProviders_ServiceDesc is the grpc.ServiceDesc for FinalityProviders service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -381,6 +416,10 @@ var FinalityProviders_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UnsafeRemoveMerkleProof",
 			Handler:    _FinalityProviders_UnsafeRemoveMerkleProof_Handler,
+		},
+		{
+			MethodName: "Backup",
+			Handler:    _FinalityProviders_Backup_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

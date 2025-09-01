@@ -33,6 +33,7 @@ func AddCommonCommands(cmd *cobra.Command, binaryName string) {
 		CommandAddFinalitySig(binaryName),
 		CommandEditFinalityDescription(binaryName),
 		CommandUnsafePruneMerkleProof(binaryName),
+		NewBackupCmd(binaryName),
 	)
 }
 

@@ -24,4 +24,7 @@ const (
 	CommissionRateFlag          = "commission-rate"
 	CommissionMaxRateFlag       = "commission-max-rate"
 	CommissionMaxChangeRateFlag = "commission-max-change-rate"
+
+	flagDBPath    = "db-path"
+	flagBackupDir = "backup-dir"
 )

@@ -3,6 +3,10 @@ package store
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/btcsuite/btcwallet/walletdb"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -17,12 +21,13 @@ var (
 )
 
 type PubRandProofStore struct {
+	mu sync.Mutex
 	db kvdb.Backend
 }
 
 // NewPubRandProofStore returns a new store backed by db
 func NewPubRandProofStore(db kvdb.Backend) (*PubRandProofStore, error) {
-	store := &PubRandProofStore{db}
+	store := &PubRandProofStore{db: db}
 	if err := store.initBuckets(); err != nil {
 		return nil, err
 	}
@@ -244,4 +249,48 @@ func (s *PubRandProofStore) Close() error {
 	}
 
 	return nil
+}
+
+// BackupDB performs a hot backup of the database using a read-only transaction
+// db instance is shared between fpstore and pubrandproofstore, so we only need to define it once.
+func (s *PubRandProofStore) BackupDB(dbPath string, backupDir string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if dbPath == "" {
+		return "", fmt.Errorf("database path must be provided")
+	}
+
+	if backupDir == "" {
+		return "", fmt.Errorf("backup dir path must be provided")
+	}
+
+	// Create backup filename with timestamp
+	timestamp := time.Now().Format("20060102_150405")
+	backupName := fmt.Sprintf("fp_%s.db", timestamp)
+	backupPath := filepath.Join(backupDir, backupName)
+
+	// Create the directory if it doesn't exist
+	if err := os.MkdirAll(backupDir, 0750); err != nil {
+		return "", fmt.Errorf("failed to create backup directory: %w", err)
+	}
+
+	// Open the backup file
+	// #nosec G304 -- backupPath is provided by operators
+	backupFile, err := os.Create(backupPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to create backup file: %w", err)
+	}
+	defer func() {
+		if err := backupFile.Close(); err != nil {
+			// Log error but don't return it since we're in a defer
+			fmt.Printf("Error closing backup file: %v\n", err)
+		}
+	}()
+
+	if err := s.db.Copy(backupFile); err != nil {
+		return "", fmt.Errorf("failed to copy database contents: %w", err)
+	}
+
+	return backupName, nil
 }
