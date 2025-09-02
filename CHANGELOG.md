@@ -47,6 +47,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#666](https://github.com/babylonlabs-io/finality-provider/pull/666) chore: go bump 1.25
 * [#669](https://github.com/babylonlabs-io/finality-provider/pull/669) feat: adds hot backup for fpd
 
+### Bug fixes
+
+* [#668](https://github.com/babylonlabs-io/finality-provider/pull/668) fix:
+  index in cmtcrypto.Proof
+
 ## v2.0.0-rc.3
 
 ### Improvements
