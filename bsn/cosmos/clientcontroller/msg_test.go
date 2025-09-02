@@ -43,7 +43,8 @@ func TestCustomProofIndexField(t *testing.T) {
 			t.Parallel()
 
 			// Test that our CustomProof always includes index
-			customProof := ConvertProof(tt.proof)
+			customProof, err := ConvertProof(tt.proof)
+			require.NoError(t, err)
 			jsonBytes, err := json.Marshal(customProof)
 			require.NoError(t, err)
 			require.JSONEq(t, tt.expected, string(jsonBytes))
@@ -87,11 +88,14 @@ func TestSubmitFinalitySignatureWithCustomProof(t *testing.T) {
 		Aunts:    [][]byte{[]byte("merkle_aunt")},
 	}
 
+	customProof, err := ConvertProof(originalProof)
+	require.NoError(t, err)
+
 	submitMsg := SubmitFinalitySignature{
 		FpPubkeyHex: "test_pubkey_hex",
 		Height:      340000,
 		PubRand:     []byte("public_randomness"),
-		Proof:       ConvertProof(originalProof), // Use our fixed conversion
+		Proof:       customProof, // Use our fixed conversion
 		BlockHash:   []byte("app_hash"),
 		Signature:   []byte("finality_signature"),
 	}
