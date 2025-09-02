@@ -141,12 +141,17 @@ func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 			return nil, fmt.Errorf("failed to unmarshal proof: %w", err)
 		}
 
+		customProof, err := ConvertProof(cmtProof)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert proof for height %d: %w", b.GetHeight(), err)
+		}
+
 		msg := ExecMsg{
 			SubmitFinalitySignature: &SubmitFinalitySignature{
 				FpPubkeyHex: bbntypes.NewBIP340PubKeyFromBTCPK(req.FpPk).MarshalHex(),
 				Height:      b.GetHeight(),
 				PubRand:     bbntypes.NewSchnorrPubRandFromFieldVal(req.PubRandList[i]).MustMarshal(),
-				Proof:       ConvertProof(cmtProof),
+				Proof:       customProof,
 				BlockHash:   b.GetHash(),
 				Signature:   bbntypes.NewSchnorrEOTSSigFromModNScalar(req.Sigs[i]).MustMarshal(),
 			},

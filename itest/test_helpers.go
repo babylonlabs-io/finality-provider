@@ -1,6 +1,7 @@
 package e2e_utils
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -101,12 +102,18 @@ func GenPubRandomnessExecMsg(fpHex string, commitment, sig []byte, startHeight, 
 
 func GenFinalitySigExecMsg(startHeight, blockHeight uint64, randListInfo *datagen.RandListInfo, sk *btcec.PrivateKey) clientcontroller.ExecMsg {
 	fmsg := genAddFinalitySig(startHeight, blockHeight, randListInfo, sk)
+
+	customProof, err := clientcontroller.ConvertProof(*fmsg.Proof)
+	if err != nil {
+		panic(fmt.Sprintf("failed to convert proof in test helper: %v", err))
+	}
+
 	msg := clientcontroller.ExecMsg{
 		SubmitFinalitySignature: &clientcontroller.SubmitFinalitySignature{
 			FpPubkeyHex: fmsg.FpBtcPk.MarshalHex(),
 			Height:      fmsg.BlockHeight,
 			PubRand:     fmsg.PubRand.MustMarshal(),
-			Proof:       clientcontroller.ConvertProof(*fmsg.Proof),
+			Proof:       customProof,
 			BlockHash:   fmsg.BlockAppHash,
 			Signature:   fmsg.FinalitySig.MustMarshal(),
 		},

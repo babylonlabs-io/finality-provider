@@ -163,8 +163,70 @@ func TestConvertProofFunction(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := ConvertProof(tt.input)
+			result, err := ConvertProof(tt.input)
+			require.NoError(t, err)
 			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestConvertProofValidation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		input       cmtcrypto.Proof
+		shouldError bool
+		errorMsg    string
+	}{
+		{
+			name: "negative total should return error",
+			input: cmtcrypto.Proof{
+				Total:    -1,
+				Index:    0,
+				LeafHash: []byte("leaf"),
+				Aunts:    [][]byte{},
+			},
+			shouldError: true,
+			errorMsg:    "cmtProof.Total cannot be negative: -1",
+		},
+		{
+			name: "negative index should return error",
+			input: cmtcrypto.Proof{
+				Total:    10,
+				Index:    -1,
+				LeafHash: []byte("leaf"),
+				Aunts:    [][]byte{},
+			},
+			shouldError: true,
+			errorMsg:    "cmtProof.Index cannot be negative: -1",
+		},
+		{
+			name: "valid values should not return error",
+			input: cmtcrypto.Proof{
+				Total:    10,
+				Index:    0,
+				LeafHash: []byte("leaf"),
+				Aunts:    [][]byte{},
+			},
+			shouldError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := ConvertProof(tt.input)
+
+			if tt.shouldError {
+				require.Error(t, err)
+				require.Equal(t, tt.errorMsg, err.Error())
+				require.Equal(t, CustomProof{}, result) // Should return zero value on error
+			} else {
+				require.NoError(t, err)
+				require.NotEqual(t, CustomProof{}, result) // Should return valid result
+			}
 		})
 	}
 }

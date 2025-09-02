@@ -1,6 +1,10 @@
 package clientcontroller
 
-import cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
+import (
+	"fmt"
+
+	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
+)
 
 // CustomProof is a custom proof struct that ensures the index field is always included in JSON
 // This fixes the issue where cmtcrypto.Proof omits the index field when it's 0 due to the omitempty tag
@@ -13,13 +17,21 @@ type CustomProof struct {
 
 // ConvertProof converts cmtcrypto.Proof to CustomProof to ensure index field is always included
 // This function is public so it can be used by tests and other packages
-func ConvertProof(cmtProof cmtcrypto.Proof) CustomProof {
+func ConvertProof(cmtProof cmtcrypto.Proof) (CustomProof, error) {
+	// Validate that Total and Index are non-negative before converting to uint64
+	if cmtProof.Total < 0 {
+		return CustomProof{}, fmt.Errorf("cmtProof.Total cannot be negative: %d", cmtProof.Total)
+	}
+	if cmtProof.Index < 0 {
+		return CustomProof{}, fmt.Errorf("cmtProof.Index cannot be negative: %d", cmtProof.Index)
+	}
+
 	return CustomProof{
-		Total:    uint64(cmtProof.Total), // #nosec G115
-		Index:    uint64(cmtProof.Index), // #nosec G115
+		Total:    uint64(cmtProof.Total),
+		Index:    uint64(cmtProof.Index),
 		LeafHash: cmtProof.LeafHash,
 		Aunts:    cmtProof.Aunts,
-	}
+	}, nil
 }
 
 type ConsumerFpsResponse struct {
