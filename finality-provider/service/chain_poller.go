@@ -247,6 +247,9 @@ func (cp *ChainPoller) pollCycle(ctx context.Context) error {
 
 	blockToRetrieve := cp.getNextHeight()
 
+	// TODO: FIXME comet bft has a max of 20 blocks to give out
+	// and we do not do pagination
+	latestBlockHeight = min(latestBlockHeight, blockToRetrieve+19)
 	return cp.tryPollChain(ctx, latestBlockHeight, blockToRetrieve)
 }
 
