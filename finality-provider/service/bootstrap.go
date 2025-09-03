@@ -104,6 +104,7 @@ func (bt *StartHeightDeterminer) DetermineStartHeight(
 
 	// ensure start height is not lower than the finality activation height
 	startHeight = max(startHeight, finalityActivationHeight)
+	_ = startHeight
 
 	bt.logger.Info("determined poller starting height",
 		zap.String("pk", bt.btcPk.MarshalHex()),
