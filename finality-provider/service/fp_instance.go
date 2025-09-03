@@ -271,6 +271,7 @@ func (fp *FinalityProviderInstance) processAndSubmitSignatures(ctx context.Conte
 	fp.logger.Debug("the finality-provider received new block(s), start processing",
 		zap.String("pk", fp.GetBtcPkHex()),
 		zap.Uint64("start_height", pollerBlocks[0].GetHeight()),
+		zap.Int("num blocks received", len(pollerBlocks)),
 		zap.Uint64("end_height", targetHeight),
 	)
 
