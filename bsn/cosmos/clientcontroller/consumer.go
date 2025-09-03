@@ -248,17 +248,15 @@ func (wc *CosmwasmConsumerController) QueryFinalityProvidersByTotalActiveSats(ct
 }
 
 func (wc *CosmwasmConsumerController) QueryLatestFinalizedBlock(ctx context.Context) (fptypes.BlockDescription, error) {
-	isFinalized := true
-	limit := uint64(1)
-	blocks, err := wc.queryLatestBlocks(ctx, nil, &limit, &isFinalized, nil)
-	if err != nil || len(blocks) == 0 {
+	block, err := wc.queryLastFinalizedHeight(ctx)
+	if err != nil || block == nil {
 		// do not return error here as FP handles this situation by
 		// not running fast sync
 		//nolint:nilerr
 		return nil, nil
 	}
 
-	return blocks[0], nil
+	return block, nil
 }
 
 func (wc *CosmwasmConsumerController) QueryBlocks(ctx context.Context, req *api.QueryBlocksRequest) ([]fptypes.BlockDescription, error) {
@@ -511,6 +509,43 @@ func (wc *CosmwasmConsumerController) QueryDelegations(ctx context.Context) (*Co
 	return &resp, nil
 }
 
+func (wc *CosmwasmConsumerController) queryLastFinalizedHeight(ctx context.Context) (fptypes.BlockDescription, error) {
+	queryMsg := QueryLastFinalizedHeight{
+		LastFinalizedHeight: struct{}{},
+	}
+
+	// Marshal the query message to JSON
+	queryMsgBytes, err := json.Marshal(queryMsg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query message: %w", err)
+	}
+
+	// Query the smart contract state
+	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.cfg.BtcFinalityContractAddress, string(queryMsgBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+
+	// Unmarshal the response
+	var lastFinalizedHeight *uint64
+	if err = json.Unmarshal(dataFromContract.Data, &lastFinalizedHeight); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	if lastFinalizedHeight == nil {
+		return nil, nil
+	}
+
+	queriedBlock, err := wc.QueryBlock(ctx, *lastFinalizedHeight)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query block: %w", err)
+	}
+
+	return fptypes.NewBlockInfo(queriedBlock.GetHeight(), queriedBlock.GetHash(), true), nil
+}
+
+// queryLatestBlocks queries the latest blocks from the BTC finality contract.
+// nolint:unused // might need it
 func (wc *CosmwasmConsumerController) queryLatestBlocks(ctx context.Context, startAfter, limit *uint64, finalized, reverse *bool) ([]*fptypes.BlockInfo, error) {
 	// Construct the query message
 	queryMsg := QueryMsgBlocks{
