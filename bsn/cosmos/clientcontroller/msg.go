@@ -337,3 +337,7 @@ type SigningInfoResponse struct {
 	LastSignedHeight uint64  `json:"last_signed_height"`
 	JailedUntil      *uint64 `json:"jailed_until,omitempty"`
 }
+
+type QueryLastFinalizedHeight struct {
+	LastFinalizedHeight struct{} `json:"last_finalized_height"`
+}
