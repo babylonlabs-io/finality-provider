@@ -130,7 +130,7 @@ func (ds *DefaultFinalitySubmitter) FilterBlocksForVoting(ctx context.Context, b
 				zap.Uint64("last_voted_height", ds.State.GetLastVotedHeight()),
 			)
 
-			continue
+			//continue
 		}
 
 		// check whether the finality provider has voting power
@@ -314,7 +314,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 				zap.String("hash", hex.EncodeToString(b.GetHash())),
 				zap.Error(err))
 
-			continue
+			//continue
 		}
 
 		// If signature is valid, append all corresponding items
