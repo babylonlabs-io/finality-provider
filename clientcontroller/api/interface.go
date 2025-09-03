@@ -111,6 +111,14 @@ type FinalityOperator interface {
 
 	// QueryFinalityProviderHighestVotedHeight queries the highest voted height of the given finality provider
 	QueryFinalityProviderHighestVotedHeight(ctx context.Context, fpPk *btcec.PublicKey) (uint64, error)
+
+	// QueryFinalityProviderVoted queries if the fp voted for that block height
+	QueryFinalityProviderVoted(ctx context.Context, req *QueryFinalityProviderVotedRequest) (voted bool, err error)
+}
+
+type QueryFinalityProviderVotedRequest struct {
+	FpPk        *btcec.PublicKey
+	BlockHeight uint64
 }
 
 type SubmitBatchFinalitySigsRequest struct {

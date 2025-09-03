@@ -17,22 +17,23 @@ import (
 )
 
 const (
-	defaultLogLevel                    = zapcore.DebugLevel
-	defaultLogDirname                  = "logs"
-	defaultLogFilename                 = "fpd.log"
-	defaultFinalityProviderKeyName     = "finality-provider"
-	DefaultRPCPort                     = 12581
-	defaultConfigFileName              = "fpd.conf"
-	defaultNumPubRand                  = 50000 // support running of roughly 5 days with block production time as 10s
-	defaultNumPubRandMax               = 500000
-	defaultTimestampingDelayBlocks     = 6000 // 100 BTC blocks * 600s / 10s
-	defaultBatchSubmissionSize         = 1000
-	defaultRandomInterval              = 30 * time.Second
-	defaultSubmitRetryInterval         = 1 * time.Second
-	defaultSignatureSubmissionInterval = 1 * time.Second
-	defaultMaxSubmissionRetries        = 20
-	defaultDataDirname                 = "data"
-	defaultMaxGRPCContentLength        = 16 * 1024 * 1024 // 16 MB
+	defaultLogLevel                                       = zapcore.DebugLevel
+	defaultLogDirname                                     = "logs"
+	defaultLogFilename                                    = "fpd.log"
+	defaultFinalityProviderKeyName                        = "finality-provider"
+	DefaultRPCPort                                        = 12581
+	defaultConfigFileName                                 = "fpd.conf"
+	defaultNumPubRand                                     = 50000 // support running of roughly 5 days with block production time as 10s
+	defaultNumPubRandMax                                  = 500000
+	defaultTimestampingDelayBlocks                        = 6000 // 100 BTC blocks * 600s / 10s
+	defaultOverwriteFpStateLastVotedHeightWithStartHeight = false
+	defaultBatchSubmissionSize                            = 1000
+	defaultRandomInterval                                 = 30 * time.Second
+	defaultSubmitRetryInterval                            = 1 * time.Second
+	defaultSignatureSubmissionInterval                    = 1 * time.Second
+	defaultMaxSubmissionRetries                           = 20
+	defaultDataDirname                                    = "data"
+	defaultMaxGRPCContentLength                           = 16 * 1024 * 1024 // 16 MB
 )
 
 var (
@@ -60,6 +61,8 @@ type Config struct {
 	RandomnessCommitInterval    time.Duration `long:"randomnesscommitinterval" description:"The interval between each attempt to commit public randomness"`
 	SubmissionRetryInterval     time.Duration `long:"submissionretryinterval" description:"The interval between each attempt to submit finality signature or public randomness after a failure"`
 	SignatureSubmissionInterval time.Duration `long:"signaturesubmissioninterval" description:"The interval between each finality signature(s) submission"`
+
+	OverwriteFpStateLastVotedHeightWithStartHeight bool `long:"overwritefpstatelastvotedheightwithstartheight" description:"Assigns the state of the finality provider submitter with the starting height calculated from poller"`
 
 	PollerConfig *ChainPollerConfig `group:"chainpollerconfig" namespace:"chainpollerconfig"`
 
@@ -93,11 +96,14 @@ func DefaultConfigWithHome(homePath string) Config {
 		RandomnessCommitInterval:    defaultRandomInterval,
 		SubmissionRetryInterval:     defaultSubmitRetryInterval,
 		SignatureSubmissionInterval: defaultSignatureSubmissionInterval,
-		MaxSubmissionRetries:        defaultMaxSubmissionRetries,
-		EOTSManagerAddress:          defaultEOTSManagerAddress,
-		RPCListener:                 DefaultRPCListener,
-		Metrics:                     metrics.DefaultFpConfig(),
-		GRPCMaxContentLength:        defaultMaxGRPCContentLength,
+
+		OverwriteFpStateLastVotedHeightWithStartHeight: defaultOverwriteFpStateLastVotedHeightWithStartHeight,
+
+		MaxSubmissionRetries: defaultMaxSubmissionRetries,
+		EOTSManagerAddress:   defaultEOTSManagerAddress,
+		RPCListener:          DefaultRPCListener,
+		Metrics:              metrics.DefaultFpConfig(),
+		GRPCMaxContentLength: defaultMaxGRPCContentLength,
 	}
 
 	if err := cfg.Validate(); err != nil {

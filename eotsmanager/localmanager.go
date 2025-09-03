@@ -261,7 +261,9 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 			zap.String("chainID", string(chainID)),
 		)
 
-		return nil, eotstypes.ErrDoubleSign
+		var s btcec.ModNScalar
+		s.SetByteSlice(record.Signature)
+		return &s, eotstypes.ErrDoubleSign
 	}
 
 	privRand, _, err := lm.getRandomnessPair(eotsPk, chainID, height)

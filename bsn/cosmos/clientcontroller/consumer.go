@@ -187,6 +187,11 @@ func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 	return &fptypes.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
 }
 
+// QueryFinalityProviderVoted implements api.ConsumerController.
+func (wc *CosmwasmConsumerController) QueryFinalityProviderVoted(ctx context.Context, req *api.QueryFinalityProviderVotedRequest) (voted bool, err error) {
+	return false, nil
+}
+
 // QueryFinalityProviderHasPower queries whether the finality provider has voting power at a given height
 func (wc *CosmwasmConsumerController) QueryFinalityProviderHasPower(
 	ctx context.Context,

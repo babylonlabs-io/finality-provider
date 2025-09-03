@@ -69,13 +69,13 @@ func (r *rpcServer) CreateRandomnessPairList(_ context.Context, req *proto.Creat
 	}, nil
 }
 
-
 // SignEOTS signs an EOTS with the EOTS private key and the relevant randomness
 func (r *rpcServer) SignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 	*proto.SignEOTSResponse, error) {
 	sig, err := r.em.SignEOTS(req.Uid, req.ChainId, req.Msg, req.Height)
 	if err != nil {
 		if errors.Is(err, types.ErrDoubleSign) {
+			// if it is double sign, check if we already voted for that height
 			return nil, status.Error(codes.FailedPrecondition, err.Error()) //nolint:wrapcheck
 		}
 

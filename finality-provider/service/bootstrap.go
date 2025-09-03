@@ -75,12 +75,12 @@ func (bt *StartHeightDeterminer) DetermineStartHeight(
 		return bt.cfg.StaticChainScanningStartHeight, nil
 	}
 
-	highestVotedHeight, err := bt.highestVotedHeightWithRetry(ctx)
+	chainHighestVotedHeight, err := bt.highestVotedHeightWithRetry(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get the highest voted height: %w", err)
 	}
 
-	lastFinalizedHeight, err := bt.latestFinalizedHeightWithRetry(ctx)
+	chainLastFinalizedHeight, err := bt.latestFinalizedHeightWithRetry(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get the last finalized height: %w", err)
 	}
@@ -91,11 +91,12 @@ func (bt *StartHeightDeterminer) DetermineStartHeight(
 	// the gap due to bugs. A potential solution is to check if the fp has voted for each block within
 	// the gap. This issue is not critical if we can assume the votes are sent in the monotonically
 	// increasing order.
-	lastVotedHeight, err := lastVotedHeightFunc()
+	localLastVotedHeight, err := lastVotedHeightFunc()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get last voted height: %w", err)
 	}
-	startHeight := max(lastVotedHeight, highestVotedHeight, lastFinalizedHeight) + 1
+	registeredLastVotedHeight := max(localLastVotedHeight, chainHighestVotedHeight)
+	startHeight := min(registeredLastVotedHeight, chainLastFinalizedHeight) + 1
 
 	finalityActivationHeight, err := bt.getFinalityActivationHeightWithRetry(ctx)
 	if err != nil {
@@ -109,9 +110,9 @@ func (bt *StartHeightDeterminer) DetermineStartHeight(
 		zap.String("pk", bt.btcPk.MarshalHex()),
 		zap.Uint64("start_height", startHeight),
 		zap.Uint64("finality_activation_height", finalityActivationHeight),
-		zap.Uint64("last_voted_height", lastVotedHeight),
-		zap.Uint64("last_finalized_height", lastFinalizedHeight),
-		zap.Uint64("highest_voted_height", highestVotedHeight))
+		zap.Uint64("last_voted_height", localLastVotedHeight),
+		zap.Uint64("last_finalized_height", chainLastFinalizedHeight),
+		zap.Uint64("highest_voted_height", chainHighestVotedHeight))
 
 	return startHeight, nil
 }

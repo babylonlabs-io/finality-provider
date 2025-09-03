@@ -110,6 +110,21 @@ func (bc *BabylonConsumerController) GetFpFinVoteContext() string {
 	return signingcontext.FpFinVoteContextV0(bc.cfg.ChainID, signingcontext.AccFinality.String())
 }
 
+// QueryFinalityProviderVoted implements api.ConsumerController.
+func (bc *BabylonConsumerController) QueryFinalityProviderVoted(ctx context.Context, req *api.QueryFinalityProviderVotedRequest) (voted bool, err error) {
+	resp, err := bc.bbnClient.VotesAtHeight(req.BlockHeight)
+	if err != nil {
+		return false, err
+	}
+
+	for _, fpBtcPk := range resp.BtcPks {
+		if req.FpPk.IsEqual(fpBtcPk.MustToBTCPK()) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // CommitPubRandList commits a list of Schnorr public randomness via a MsgCommitPubRand to Babylon
 // it returns tx hash and error
 func (bc *BabylonConsumerController) CommitPubRandList(

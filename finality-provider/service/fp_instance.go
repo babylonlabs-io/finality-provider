@@ -158,6 +158,13 @@ func (fp *FinalityProviderInstance) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to start the poller with start height %d: %w", startHeight, err)
 	}
 
+	if fp.cfg.OverwriteFpStateLastVotedHeightWithStartHeight {
+		err = fp.fpState.SetLastVotedHeight(startHeight)
+		if err != nil {
+			return fmt.Errorf("failed to overwrite finality provider state with start height %d: %w", startHeight, err)
+		}
+	}
+
 	fp.quit = make(chan struct{})
 
 	fp.wg.Add(2)

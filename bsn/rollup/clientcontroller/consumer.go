@@ -46,6 +46,11 @@ type RollupBSNController struct {
 	logger    *zap.Logger
 }
 
+// QueryFinalityProviderVoted implements api.ConsumerController.
+func (cc *RollupBSNController) QueryFinalityProviderVoted(ctx context.Context, req *api.QueryFinalityProviderVotedRequest) (voted bool, err error) {
+	return false, nil
+}
+
 func NewRollupBSNController(
 	rollupFPCfg *rollupfpconfig.RollupFPConfig,
 	logger *zap.Logger,
