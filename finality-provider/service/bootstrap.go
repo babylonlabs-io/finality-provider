@@ -107,7 +107,7 @@ func (bt *StartHeightDeterminer) DetermineStartHeight(
 
 	bt.logger.Info("determined poller starting height",
 		zap.String("pk", bt.btcPk.MarshalHex()),
-		zap.Uint64("start_height", startHeight),
+		zap.Uint64("start_height", lastFinalizedHeight),
 		zap.Uint64("finality_activation_height", finalityActivationHeight),
 		zap.Uint64("last_voted_height", lastVotedHeight),
 		zap.Uint64("last_finalized_height", lastFinalizedHeight),
