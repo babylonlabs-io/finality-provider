@@ -2,10 +2,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/config"
 
 	"github.com/cosmos/btcutil/bech32"
 )
@@ -67,34 +68,33 @@ func DefaultCosmwasmConfig() *CosmwasmConfig {
 		ChainID:                   "wasmd-test",
 		RPCAddr:                   "http://localhost:2990",
 		GRPCAddr:                  "https://localhost:9090",
-		AccountPrefix:             "wasm",
+		AccountPrefix:             "bbnc",
 		KeyringBackend:            "test",
 		GasAdjustment:             1.3,
 		GasPrices:                 "1ustake",
 		Debug:                     true,
 		Timeout:                   20 * time.Second,
 		BlockTimeout:              1 * time.Minute,
-		OutputFormat:              "direct",
-		SignModeStr:               "",
+		OutputFormat:              "json",
+		SignModeStr:               "direct",
 		BtcStakingContractAddress: "",
 	}
 }
 
 func (cfg *CosmwasmConfig) ToQueryClientConfig() *config.CosmwasmConfig {
 	return &config.CosmwasmConfig{
-		Key:              cfg.Key,
-		ChainID:          cfg.ChainID,
-		RPCAddr:          cfg.RPCAddr,
-		AccountPrefix:    cfg.AccountPrefix,
-		KeyringBackend:   cfg.KeyringBackend,
-		GasAdjustment:    cfg.GasAdjustment,
-		GasPrices:        cfg.GasPrices,
-		KeyDirectory:     cfg.KeyDirectory,
-		Debug:            cfg.Debug,
-		Timeout:          cfg.Timeout,
-		BlockTimeout:     cfg.BlockTimeout,
-		OutputFormat:     cfg.OutputFormat,
-		SignModeStr:      cfg.SignModeStr,
-		SubmitterAddress: "",
+		Key:            cfg.Key,
+		ChainID:        cfg.ChainID,
+		RPCAddr:        cfg.RPCAddr,
+		AccountPrefix:  cfg.AccountPrefix,
+		KeyringBackend: cfg.KeyringBackend,
+		GasAdjustment:  cfg.GasAdjustment,
+		GasPrices:      cfg.GasPrices,
+		KeyDirectory:   cfg.KeyDirectory,
+		Debug:          cfg.Debug,
+		Timeout:        cfg.Timeout,
+		BlockTimeout:   cfg.BlockTimeout,
+		OutputFormat:   cfg.OutputFormat,
+		SignModeStr:    cfg.SignModeStr,
 	}
 }
