@@ -104,16 +104,17 @@ func (bt *StartHeightDeterminer) DetermineStartHeight(
 
 	// ensure start height is not lower than the finality activation height
 	startHeight = max(startHeight, finalityActivationHeight)
+	_ = startHeight
 
 	bt.logger.Info("determined poller starting height",
 		zap.String("pk", bt.btcPk.MarshalHex()),
-		zap.Uint64("start_height", startHeight),
+		zap.Uint64("start_height", lastFinalizedHeight),
 		zap.Uint64("finality_activation_height", finalityActivationHeight),
 		zap.Uint64("last_voted_height", lastVotedHeight),
 		zap.Uint64("last_finalized_height", lastFinalizedHeight),
 		zap.Uint64("highest_voted_height", highestVotedHeight))
 
-	return startHeight, nil
+	return lastFinalizedHeight, nil
 }
 
 func (bt *StartHeightDeterminer) highestVotedHeightWithRetry(ctx context.Context) (uint64, error) {
