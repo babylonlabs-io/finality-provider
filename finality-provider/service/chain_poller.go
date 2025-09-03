@@ -286,6 +286,9 @@ func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, bloc
 
 	// Send blocks to a channel with backpressure handling
 	for _, block := range blocks {
+		cp.logger.Debug("sending block to channel",
+			zap.Uint64("block_height", block.GetHeight()))
+
 		select {
 		case <-cp.quit:
 			return fmt.Errorf("poller shutting down")
