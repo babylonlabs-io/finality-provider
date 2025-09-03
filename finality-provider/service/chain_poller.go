@@ -348,6 +348,12 @@ func (cp *ChainPoller) blocksWithRetry(ctx context.Context, start, end uint64, l
 
 	retryErr := retry.Do(func() error {
 		blocks, err = cp.consumerCon.QueryBlocks(ctx, ccapi.NewQueryBlocksRequest(start, end, limit))
+		cp.logger.Debug("queried blocks",
+			zap.Uint64("start_height", start),
+			zap.Uint64("end_height", end),
+			zap.Uint64("block_start_height", blocks[0].GetHeight()),
+			zap.Uint64("block_end_height", blocks[len(blocks)-1].GetHeight()),
+			zap.Int("num_blocks", len(blocks)))
 		if err != nil {
 			return fmt.Errorf("failed to query blocks: %w", err)
 		}
