@@ -47,6 +47,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#666](https://github.com/babylonlabs-io/finality-provider/pull/666) chore: go bump 1.25
 * [#669](https://github.com/babylonlabs-io/finality-provider/pull/669) feat: adds hot backup for fpd
 * [#673](https://github.com/babylonlabs-io/finality-provider/pull/673) chore: change default cosmwasm cfg values
+* [#685](https://github.com/babylonlabs-io/finality-provider/pull/685) chore: add missing highest voted height
 
 ### Bug fixes
 
