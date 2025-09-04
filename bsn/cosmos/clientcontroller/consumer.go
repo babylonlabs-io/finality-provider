@@ -364,9 +364,29 @@ func (wc *CosmwasmConsumerController) QueryLatestBlock(ctx context.Context) (fpt
 	return block, nil
 }
 
-func (wc *CosmwasmConsumerController) QueryFinalityProviderHighestVotedHeight(_ context.Context, _ *btcec.PublicKey) (uint64, error) {
-	// TODO: implement highest voted height feature in OP stack L2
-	return 0, nil
+func (wc *CosmwasmConsumerController) QueryFinalityProviderHighestVotedHeight(ctx context.Context, fpPk *btcec.PublicKey) (uint64, error) {
+	btcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
+
+	queryMsgSigningInfo := QueryMsgSigningInfo{
+		FinalityProvider{BtcPkHex: btcPkHex},
+	}
+
+	queryMsgBytes, err := json.Marshal(queryMsgSigningInfo)
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal query message: %w", err)
+	}
+
+	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.cfg.BtcFinalityContractAddress, string(queryMsgBytes))
+	if err != nil {
+		return 0, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+
+	var respSigningInfo SigningInfoResponse
+	if err = json.Unmarshal(dataFromContract.Data, &respSigningInfo); err != nil {
+		return 0, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return respSigningInfo.LastSignedHeight, nil
 }
 
 func (wc *CosmwasmConsumerController) QueryFinalityProviderStatus(ctx context.Context, fpPk *btcec.PublicKey) (*api.FinalityProviderStatusResponse, error) {
