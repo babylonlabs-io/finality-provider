@@ -9,7 +9,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
 	fpcfg "github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
 	cwcclient "github.com/babylonlabs-io/finality-provider/bsn/cosmos/cosmwasmclient/client"
@@ -264,7 +266,7 @@ func (wc *CosmwasmConsumerController) QueryLatestFinalizedBlock(ctx context.Cont
 }
 
 func (wc *CosmwasmConsumerController) QueryBlocks(ctx context.Context, req *api.QueryBlocksRequest) ([]fptypes.BlockDescription, error) {
-	return wc.queryCometBlocksInRange(ctx, req.StartHeight, req.EndHeight)
+	return wc.queryCometBlocksInRange(ctx, int64(req.StartHeight), int64(req.EndHeight), uint64(req.Limit))
 }
 
 func (wc *CosmwasmConsumerController) QueryBlock(ctx context.Context, height uint64) (fptypes.BlockDescription, error) {
@@ -629,36 +631,52 @@ func (wc *CosmwasmConsumerController) queryCometBestBlock(ctx context.Context) (
 	), nil
 }
 
-func (wc *CosmwasmConsumerController) queryCometBlocksInRange(ctx context.Context, startHeight, endHeight uint64) ([]fptypes.BlockDescription, error) {
+func (wc *CosmwasmConsumerController) queryCometBlocksInRange(ctx context.Context, startHeight, endHeight int64, limit uint64) ([]fptypes.BlockDescription, error) {
 	if startHeight > endHeight {
 		return nil, fmt.Errorf("the startHeight %v should not be higher than the endHeight %v", startHeight, endHeight)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, wc.cfg.Timeout)
-	defer cancel()
+	var blocks []fptypes.BlockDescription
+	fetched := uint64(0)
 
-	// this will return 20 items at max in the descending order (highest first)
-	chainInfo, err := wc.cwClient.RPCClient.BlockchainInfo(ctx, int64(startHeight), int64(endHeight)) // #nosec G115
-	if err != nil {
-		return nil, fmt.Errorf("failed to query comet blocks in range: %w", err)
+	// Fetch blocks one by one to avoid BlockchainInfo bugs
+	for height := startHeight; height <= endHeight && fetched < limit; height++ {
+		var block *coretypes.ResultBlock
+
+		err := retry.Do(
+			func() error {
+				ctxBlock, cancel := context.WithTimeout(ctx, wc.cfg.Timeout)
+				defer cancel()
+
+				var err error
+				block, err = wc.cwClient.RPCClient.Block(ctxBlock, &height) // #nosec G115
+
+				return fmt.Errorf("failed to query comet block %v: %w", height, err)
+			},
+			retry.Context(ctx),
+			retry.Attempts(5),
+			retry.Delay(time.Millisecond*300),
+			retry.LastErrorOnly(true),
+			retry.OnRetry(func(n uint, err error) {
+				wc.logger.Error("retrying block query",
+					zap.Uint("attempt", n+1),
+					zap.Int64("height", height),
+					zap.Error(err))
+			}),
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to query comet block %v: %w", height, err)
+		}
+
+		// #nosec G115
+		blocks = append(blocks, fptypes.NewBlockInfo(uint64(block.Block.Height), block.Block.AppHash, false))
+		fetched++
 	}
 
-	// If no blocks found, return an empty slice
-	if len(chainInfo.BlockMetas) == 0 {
+	if len(blocks) == 0 {
 		return nil, fmt.Errorf("no comet blocks found in the range")
 	}
-
-	// Process the blocks and convert them to BlockInfo
-	var blocks []fptypes.BlockDescription
-	for _, blockMeta := range chainInfo.BlockMetas {
-		// #nosec G115
-		blocks = append(blocks, fptypes.NewBlockInfo(uint64(blockMeta.Header.Height), blockMeta.Header.AppHash, false))
-	}
-
-	// Sort the blocks by height in ascending order
-	sort.Slice(blocks, func(i, j int) bool {
-		return blocks[i].GetHeight() < blocks[j].GetHeight()
-	})
 
 	return blocks, nil
 }
