@@ -14,7 +14,6 @@ import (
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
-	eotstypes "github.com/babylonlabs-io/finality-provider/eotsmanager/types"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/types"
@@ -391,28 +390,23 @@ func (ds *DefaultFinalitySubmitter) SignFinalitySig(ctx context.Context, b types
 	}
 
 	heightToVote := b.GetHeight()
+
+	voted, err := ds.ConsumerCtrl.QueryFinalityProviderVoted(ctx, &api.QueryFinalityProviderVotedRequest{
+		FpPk:        ds.GetBtcPkBIP340().MustToBTCPK(),
+		BlockHeight: heightToVote,
+	})
+	if err != nil {
+		ds.Logger.Error("error querying QueryFinalityProviderVoted", zap.Error(err), zap.Uint64("block_height", heightToVote))
+		return nil, ErrFailedPrecondition
+	}
+
+	if voted {
+		ds.Logger.Error("already voted for this block", zap.Uint64("block_height", heightToVote))
+		return nil, fmt.Errorf("already voted for block %d: %w", heightToVote, err)
+	}
+
 	sig, err := ds.Em.SignEOTS(ds.GetBtcPkBIP340().MustMarshal(), ds.State.GetChainID(), msgToSign, heightToVote)
 	if err != nil {
-		// if dup vote
-		//   check we really voted for that height
-		//      if not voted, send the vote again
-		if strings.Contains(err.Error(), eotstypes.ErrDoubleSign.Error()) {
-			// TODO: implement check if the fp voted for that block for rollup and cosmwasm
-			voted, err := ds.ConsumerCtrl.QueryFinalityProviderVoted(ctx, &api.QueryFinalityProviderVotedRequest{
-				FpPk:        ds.GetBtcPkBIP340().MustToBTCPK(),
-				BlockHeight: heightToVote,
-			})
-			if err != nil {
-				ds.Logger.Error("error querying QueryFinalityProviderVoted", zap.Error(err), zap.Uint64("block_height", heightToVote))
-				return nil, ErrFailedPrecondition
-			}
-
-			if !voted {
-				// submit the vote normally
-				return bbntypes.NewSchnorrEOTSSigFromModNScalar(sig), nil
-			}
-		}
-
 		if strings.Contains(err.Error(), failedPreconditionErrStr) {
 			return nil, ErrFailedPrecondition
 		}
