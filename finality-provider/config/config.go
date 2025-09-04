@@ -33,6 +33,7 @@ const (
 	defaultMaxSubmissionRetries        = 20
 	defaultDataDirname                 = "data"
 	defaultMaxGRPCContentLength        = 16 * 1024 * 1024 // 16 MB
+	defaultUnsafeResetLastVotedHeight  = false
 )
 
 var (
@@ -60,6 +61,7 @@ type Config struct {
 	RandomnessCommitInterval    time.Duration `long:"randomnesscommitinterval" description:"The interval between each attempt to commit public randomness"`
 	SubmissionRetryInterval     time.Duration `long:"submissionretryinterval" description:"The interval between each attempt to submit finality signature or public randomness after a failure"`
 	SignatureSubmissionInterval time.Duration `long:"signaturesubmissioninterval" description:"The interval between each finality signature(s) submission"`
+	UnsafeResetLastVotedHeight  bool          `long:"unsaferesetlastvotedheight" description:"WARNING: If set to 'true', resets the finality provider's last voted height to the calculated start height from poller. WARNING"`
 
 	PollerConfig *ChainPollerConfig `group:"chainpollerconfig" namespace:"chainpollerconfig"`
 
@@ -98,6 +100,7 @@ func DefaultConfigWithHome(homePath string) Config {
 		RPCListener:                 DefaultRPCListener,
 		Metrics:                     metrics.DefaultFpConfig(),
 		GRPCMaxContentLength:        defaultMaxGRPCContentLength,
+		UnsafeResetLastVotedHeight:  defaultUnsafeResetLastVotedHeight,
 	}
 
 	if err := cfg.Validate(); err != nil {
