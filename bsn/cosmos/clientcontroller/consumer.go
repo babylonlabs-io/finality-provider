@@ -650,8 +650,11 @@ func (wc *CosmwasmConsumerController) queryCometBlocksInRange(ctx context.Contex
 
 				var err error
 				block, err = wc.cwClient.RPCClient.Block(ctxBlock, &height) // #nosec G115
+				if err != nil {
+					return fmt.Errorf("failed to query comet block %v: %w", height, err)
+				}
 
-				return fmt.Errorf("failed to query comet block %v: %w", height, err)
+				return nil
 			},
 			retry.Context(ctx),
 			retry.Attempts(5),
