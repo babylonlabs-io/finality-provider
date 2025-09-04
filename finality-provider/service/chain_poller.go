@@ -23,7 +23,7 @@ var (
 )
 
 const (
-	maxFailedCycles   = 20
+	maxFailedCycles   = 50
 	defaultBufferSize = 100
 )
 
@@ -303,7 +303,7 @@ func (cp *ChainPoller) tryPollChain(ctx context.Context, latestBlockHeight, bloc
 			case cp.blockChan <- block:
 				cp.logger.Debug("block sent after backpressure delay",
 					zap.Uint64("block_height", block.GetHeight()))
-			case <-time.After(time.Second * 30):
+			case <-time.After(time.Second * 120):
 				return fmt.Errorf("failed to send block %d: channel full for too long", block.GetHeight())
 			case <-ctx.Done():
 				return fmt.Errorf("context done: %w", ctx.Err())
