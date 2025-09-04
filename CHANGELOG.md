@@ -49,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#673](https://github.com/babylonlabs-io/finality-provider/pull/673) chore: change default cosmwasm cfg values
 * [#685](https://github.com/babylonlabs-io/finality-provider/pull/685) chore: add missing highest voted height
 * [#687](https://github.com/babylonlabs-io/finality-provider/pull/687) chore: remove failed msgs from batch when fail
+* [#689](https://github.com/babylonlabs-io/finality-provider/pull/689) chore: fix cmt block fetching
 
 ### Bug fixes
 
