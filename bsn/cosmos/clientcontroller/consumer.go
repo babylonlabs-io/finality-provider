@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"sort"
 	"strconv"
@@ -266,7 +267,17 @@ func (wc *CosmwasmConsumerController) QueryLatestFinalizedBlock(ctx context.Cont
 }
 
 func (wc *CosmwasmConsumerController) QueryBlocks(ctx context.Context, req *api.QueryBlocksRequest) ([]fptypes.BlockDescription, error) {
-	return wc.queryCometBlocksInRange(ctx, int64(req.StartHeight), int64(req.EndHeight), uint64(req.Limit))
+	if req.StartHeight > math.MaxInt64 {
+		return nil, fmt.Errorf("start height %d exceeds maximum int64 value", req.StartHeight)
+	}
+	if req.EndHeight > math.MaxInt64 {
+		return nil, fmt.Errorf("end height %d exceeds maximum int64 value", req.EndHeight)
+	}
+
+	startHeight := int64(req.StartHeight) // #nosec G115 - already checked above
+	endHeight := int64(req.EndHeight)     // #nosec G115 - already checked above
+
+	return wc.queryCometBlocksInRange(ctx, startHeight, endHeight, uint64(req.Limit))
 }
 
 func (wc *CosmwasmConsumerController) QueryBlock(ctx context.Context, height uint64) (fptypes.BlockDescription, error) {
