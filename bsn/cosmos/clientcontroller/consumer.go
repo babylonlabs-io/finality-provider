@@ -143,6 +143,18 @@ func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 ) (*fptypes.TxResponse, error) {
 	msgs := make([]sdk.Msg, 0, len(req.Blocks))
 	for i, b := range req.Blocks {
+		hasVoted, err := wc.QueryHasVotedForHeight(ctx, req.FpPk, b.GetHeight())
+		if err != nil {
+			return nil, fmt.Errorf("failed to query has voted for height: %w", err)
+		}
+
+		if hasVoted {
+			wc.logger.Debug("has voted for height, skipping",
+				zap.Uint64("height", b.GetHeight()))
+
+			continue
+		}
+
 		cmtProof := cmtcrypto.Proof{}
 		if err := cmtProof.Unmarshal(req.ProofList[i]); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal proof: %w", err)
@@ -174,12 +186,17 @@ func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 			Contract: wc.cfg.BtcFinalityContractAddress,
 			Msg:      msgBytes,
 		}
+
 		msgs = append(msgs, execMsg)
 	}
 
 	expectedErrs := []*sdkErr.Error{
 		finalitytypes.ErrDuplicatedFinalitySig,
 		finalitytypes.ErrSigHeightOutdated,
+	}
+
+	if len(msgs) == 0 {
+		return &fptypes.TxResponse{}, nil
 	}
 
 	res, err := wc.reliablySendMsgsResendingOnMsgErr(ctx, msgs, expectedErrs, nil)
@@ -939,6 +956,37 @@ func (wc *CosmwasmConsumerController) MustQueryBabylonContracts(ctx context.Cont
 
 func (wc *CosmwasmConsumerController) IsBSN() bool {
 	return true
+}
+
+func (wc *CosmwasmConsumerController) QueryHasVotedForHeight(ctx context.Context, fpPk *btcec.PublicKey, height uint64) (bool, error) {
+	btcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
+
+	queryMsgSigningInfo := QueryMsgVotes{
+		BlockQuery{Height: height},
+	}
+
+	queryMsgBytes, err := json.Marshal(queryMsgSigningInfo)
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal query message: %w", err)
+	}
+
+	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.cfg.BtcFinalityContractAddress, string(queryMsgBytes))
+	if err != nil {
+		return false, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+
+	var resp ResponseMsgVotes
+	if err = json.Unmarshal(dataFromContract.Data, &resp); err != nil {
+		return false, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	for _, btcPk := range resp.BtcPks {
+		if btcPk == btcPkHex {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // reliablySendMsgsResendingOnMsgErr sends the msgs to the chain, if some msg fails to execute

@@ -3,8 +3,9 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 	"sync"
+
+	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 
 	"cosmossdk.io/errors"
 	"github.com/avast/retry-go/v4"
