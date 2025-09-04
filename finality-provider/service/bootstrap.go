@@ -111,8 +111,6 @@ func (bt *StartHeightDeterminer) DetermineStartHeight(
 		zap.Uint64("last_finalized_height", lastFinalizedHeight),
 		zap.Uint64("highest_voted_height", highestVotedHeight))
 
-	startHeight = uint64(594000)
-
 	return startHeight, nil
 }
 
