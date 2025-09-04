@@ -48,6 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#669](https://github.com/babylonlabs-io/finality-provider/pull/669) feat: adds hot backup for fpd
 * [#673](https://github.com/babylonlabs-io/finality-provider/pull/673) chore: change default cosmwasm cfg values
 * [#685](https://github.com/babylonlabs-io/finality-provider/pull/685) chore: add missing highest voted height
+* [#687](https://github.com/babylonlabs-io/finality-provider/pull/687) chore: remove failed msgs from batch when fail
 
 ### Bug fixes
 

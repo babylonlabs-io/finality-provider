@@ -3,8 +3,11 @@ package clientcontroller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
@@ -30,6 +33,7 @@ import (
 )
 
 var _ api.ConsumerController = &CosmwasmConsumerController{}
+var messageIndexRegex = regexp.MustCompile(`message index:\s*(\d+)`)
 
 //nolint:revive
 type CosmwasmConsumerController struct {
@@ -175,7 +179,7 @@ func (wc *CosmwasmConsumerController) SubmitBatchFinalitySigs(
 		finalitytypes.ErrSigHeightOutdated,
 	}
 
-	res, err := wc.reliablySendMsgs(ctx, msgs, expectedErrs, nil)
+	res, err := wc.reliablySendMsgsResendingOnMsgErr(ctx, msgs, expectedErrs, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to reliably send batch finality sigs: %w", err)
 	}
@@ -903,4 +907,103 @@ func (wc *CosmwasmConsumerController) MustQueryBabylonContracts(ctx context.Cont
 
 func (wc *CosmwasmConsumerController) IsBSN() bool {
 	return true
+}
+
+// reliablySendMsgsResendingOnMsgErr sends the msgs to the chain, if some msg fails to execute
+// and contains 'message index: %d', it will remove that msg from the batch and send again
+// if there is no more message available, returns the last error.
+func (wc *CosmwasmConsumerController) reliablySendMsgsResendingOnMsgErr(
+	ctx context.Context,
+	msgs []sdk.Msg,
+	expectedErrs []*sdkErr.Error,
+	unrecoverableErrs []*sdkErr.Error,
+) (*fptypes.TxResponse, error) {
+	var err error
+
+	maxRetries := BatchRetries(msgs, wc.cfg.MaxRetiresBatchRemovingMsgs)
+	for i := uint64(0); i < maxRetries; i++ {
+		res, errSendMsg := wc.reliablySendMsgs(ctx, msgs, nil, unrecoverableErrs)
+		if errSendMsg != nil {
+			// concatenate the errors, to throw out if needed
+			err = errors.Join(err, errSendMsg)
+
+			if strings.Contains(errSendMsg.Error(), "message index: ") {
+				// remove the failed msg from the batch and send again
+				failedIndex, found := FailedMessageIndex(errSendMsg)
+				if !found {
+					return nil, errSendMsg
+				}
+
+				msgs = RemoveMsgAtIndex(msgs, failedIndex)
+
+				continue
+			}
+
+			return nil, errSendMsg
+		}
+
+		if res == nil {
+			return &fptypes.TxResponse{}, nil
+		}
+
+		return &fptypes.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
+	}
+
+	if err != nil && errorContained(err, expectedErrs) {
+		return &fptypes.TxResponse{}, nil
+	}
+
+	return nil, fmt.Errorf("failed to send batch of msgs: %w", err)
+}
+
+// BatchRetries returns the max number of retries it should execute based on the
+// amount of messages in the batch
+func BatchRetries(msgs []sdk.Msg, maxRetiresBatchRemovingMsgs uint64) uint64 {
+	maxRetriesByMsgLen := uint64(len(msgs))
+
+	if maxRetiresBatchRemovingMsgs == 0 {
+		return maxRetriesByMsgLen
+	}
+
+	if maxRetiresBatchRemovingMsgs > maxRetriesByMsgLen {
+		return maxRetriesByMsgLen
+	}
+
+	return maxRetiresBatchRemovingMsgs
+}
+
+// RemoveMsgAtIndex removes any msg inside the slice, based on the index is given
+// if the index is out of bounds, it just returns the slice of msgs.
+func RemoveMsgAtIndex(msgs []sdk.Msg, index int) []sdk.Msg {
+	if index < 0 || index >= len(msgs) {
+		return msgs
+	}
+
+	return append(msgs[:index], msgs[index+1:]...)
+}
+
+// FailedMessageIndex finds the message index which failed in a error which contains
+// the substring 'message index: %d'.
+// ex.:  rpc error: code = Unknown desc = failed to execute message; message index: 1: the covenant signature is already submitted
+func FailedMessageIndex(err error) (int, bool) {
+	matches := messageIndexRegex.FindStringSubmatch(err.Error())
+
+	if len(matches) > 1 {
+		index, errAtoi := strconv.Atoi(matches[1])
+		if errAtoi == nil {
+			return index, true
+		}
+	}
+
+	return 0, false
+}
+
+func errorContained(err error, errList []*sdkErr.Error) bool {
+	for _, e := range errList {
+		if strings.Contains(err.Error(), e.Error()) {
+			return true
+		}
+	}
+
+	return false
 }
