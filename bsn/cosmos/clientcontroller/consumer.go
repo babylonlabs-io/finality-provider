@@ -968,6 +968,10 @@ func (wc *CosmwasmConsumerController) reliablySendMsgsResendingOnMsgErr(
 
 				msgs = RemoveMsgAtIndex(msgs, failedIndex)
 
+				// log that we removed the msg from the batch and how many left
+				wc.logger.Debug("✔ removed msg from batch because it failed",
+					zap.Int("remaining msgs", len(msgs)))
+
 				continue
 			}
 
