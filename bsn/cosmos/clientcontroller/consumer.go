@@ -4,11 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-<<<<<<< HEAD
-=======
+
 	"math"
-	"regexp"
->>>>>>> 1a0f819 (chore: fix cmt block fetching (#689))
 	"sort"
 	"strings"
 	"time"
