@@ -23,7 +23,7 @@ var (
 )
 
 const (
-	maxFailedCycles   = 50
+	maxFailedCycles   = 500
 	defaultBufferSize = 100
 )
 
