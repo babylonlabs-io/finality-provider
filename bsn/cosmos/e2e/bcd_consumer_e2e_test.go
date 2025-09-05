@@ -4,6 +4,12 @@ package e2etest_bcd
 
 import (
 	"context"
+	"math/rand"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
 	appparams "github.com/babylonlabs-io/babylon/v3/app/params"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/cmd/cosmos-fpd/daemon"
 	"github.com/babylonlabs-io/finality-provider/bsn/cosmos/config"
@@ -14,11 +20,6 @@ import (
 	"github.com/babylonlabs-io/finality-provider/types"
 	goflags "github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/require"
-	"math/rand"
-	"os"
-	"path/filepath"
-	"testing"
-	"time"
 
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 )
