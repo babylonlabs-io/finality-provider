@@ -4,10 +4,12 @@ package e2etest_bcd
 
 import (
 	"context"
-	sdkErr "cosmossdk.io/errors"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	sdkErr "cosmossdk.io/errors"
 	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
 	bbnsdktypes "github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
@@ -19,7 +21,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
-	"strings"
 
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -201,8 +202,17 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	eotsCli, err := client.NewEOTSManagerGRPCClient(eotsCfg.RPCListener, "")
-	require.NoError(t, err)
+
+	var eotsCli *client.EOTSManagerGRPCClient
+	require.Eventually(t, func() bool {
+		eotsCli, err = client.NewEOTSManagerGRPCClient(eotsCfg.RPCListener, "")
+		if err != nil {
+			t.Logf("failed to create EOTS manager client: %v", err)
+			return false
+		}
+
+		return true
+	}, 30*time.Second, e2eutils.EventuallyPollTime)
 
 	fpMetrics := metrics.NewFpMetrics()
 	poller := service.NewChainPoller(logger, cfg.PollerConfig, wcc, fpMetrics)
@@ -518,7 +528,7 @@ func (ctm *BcdTestManager) setupContracts(ctx context.Context, t *testing.T) cwc
 	admin := ctm.BcdConsumerClient.MustGetValidatorAddress()
 	btcLightClientInitMsg := fmt.Sprintf(`{"network":"%s","btc_confirmation_depth":%d,"checkpoint_finalization_timeout":%d}`,
 		network, btcConfirmationDepth, btcFinalizationTimeout)
-	btcFinalityInitMsg := fmt.Sprintf(`{"admin":"%s"}`, admin)
+	btcFinalityInitMsg := fmt.Sprintf(`{"admin":"%s","missed_blocks_window":10000}`, admin)
 	btcStakingInitMsg := fmt.Sprintf(`{"admin":"%s"}`, admin)
 	btcLightClientInitMsgBz := base64.StdEncoding.EncodeToString([]byte(btcLightClientInitMsg))
 	btcFinalityInitMsgBz := base64.StdEncoding.EncodeToString([]byte(btcFinalityInitMsg))
