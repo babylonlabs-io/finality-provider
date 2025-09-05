@@ -528,7 +528,7 @@ func (ctm *BcdTestManager) setupContracts(ctx context.Context, t *testing.T) cwc
 	admin := ctm.BcdConsumerClient.MustGetValidatorAddress()
 	btcLightClientInitMsg := fmt.Sprintf(`{"network":"%s","btc_confirmation_depth":%d,"checkpoint_finalization_timeout":%d}`,
 		network, btcConfirmationDepth, btcFinalizationTimeout)
-	btcFinalityInitMsg := fmt.Sprintf(`{"admin":"%s"}`, admin)
+	btcFinalityInitMsg := fmt.Sprintf(`{"admin":"%s","missed_blocks_window":10000}`, admin)
 	btcStakingInitMsg := fmt.Sprintf(`{"admin":"%s"}`, admin)
 	btcLightClientInitMsgBz := base64.StdEncoding.EncodeToString([]byte(btcLightClientInitMsg))
 	btcFinalityInitMsgBz := base64.StdEncoding.EncodeToString([]byte(btcFinalityInitMsg))
@@ -550,7 +550,6 @@ func (ctm *BcdTestManager) setupContracts(ctx context.Context, t *testing.T) cwc
 		"consumer_description":            "test-consumer-description",
 		"ics20_channel_id":                "channel-0",
 		"destination_module":              "btcstaking",
-		"missed_blocks_window":            10000,
 	}
 	babylonInitMsgBz, err := json.Marshal(babylonInitMsg)
 	require.NoError(t, err)
