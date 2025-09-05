@@ -960,7 +960,7 @@ func (wc *CosmwasmConsumerController) reliablySendMsgsResendingOnMsgErr(
 			// concatenate the errors, to throw out if needed
 			err = errors.Join(err, errSendMsg)
 
-			if strings.Contains(errSendMsg.Error(), "message index: ") {
+			if strings.Contains(errSendMsg.Error(), "message index: ") && errorContained(err, expectedErrs) {
 				// remove the failed msg from the batch and send again
 				failedIndex, found := FailedMessageIndex(errSendMsg)
 				if !found {
