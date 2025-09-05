@@ -122,7 +122,7 @@ func (ds *DefaultFinalitySubmitter) FilterBlocksForVoting(ctx context.Context, b
 	var err error
 	for _, b := range blocks {
 		blk := b
-		if blk.GetHeight() <= ds.State.GetLastVotedHeight() {
+		if blk.GetHeight() < ds.State.GetLastVotedHeight() {
 			ds.Logger.Debug(
 				"the block height is lower than last processed height",
 				zap.String("pk", ds.GetBtcPkHex()),
