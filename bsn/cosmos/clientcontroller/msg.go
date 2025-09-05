@@ -341,3 +341,11 @@ type SigningInfoResponse struct {
 type QueryLastFinalizedHeight struct {
 	LastFinalizedHeight struct{} `json:"last_finalized_height"`
 }
+
+type QueryMsgVotes struct {
+	Votes BlockQuery `json:"votes"`
+}
+
+type ResponseMsgVotes struct {
+	BtcPks []string `json:"btc_pks"`
+}

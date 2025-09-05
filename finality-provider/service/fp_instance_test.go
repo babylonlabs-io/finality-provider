@@ -138,7 +138,8 @@ func FuzzDetermineStartHeight(f *testing.F) {
 		require.NoError(t, err)
 
 		actualLastVotedHeight := fpIns.GetLastVotedHeight()
-		expectedStartHeight := max(max(actualLastVotedHeight, highestVotedHeight, lastFinalizedHeight)+1, finalityActivationHeight)
+		registeredLastVotedHeight := max(actualLastVotedHeight, highestVotedHeight)
+		expectedStartHeight := min(registeredLastVotedHeight, lastFinalizedHeight) + 1
 
 		require.Equal(t, expectedStartHeight, startHeight)
 	})
