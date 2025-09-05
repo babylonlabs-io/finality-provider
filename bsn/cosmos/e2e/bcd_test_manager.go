@@ -550,7 +550,7 @@ func (ctm *BcdTestManager) setupContracts(ctx context.Context, t *testing.T) cwc
 		"consumer_description":            "test-consumer-description",
 		"ics20_channel_id":                "channel-0",
 		"destination_module":              "btcstaking",
-		"missed_blocks_window":            1000,
+		"missed_blocks_window":            10000,
 	}
 	babylonInitMsgBz, err := json.Marshal(babylonInitMsg)
 	require.NoError(t, err)
