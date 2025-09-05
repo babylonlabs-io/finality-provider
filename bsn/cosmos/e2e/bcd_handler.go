@@ -366,9 +366,6 @@ func (w *BcdNodeHandler) createTransferChannel(t *testing.T) error {
 	}
 	t.Log("Created IBC transfer channel successfully!")
 
-	// Wait for channels to be established
-	//time.Sleep(10 * time.Second)
-
 	return nil
 }
 
