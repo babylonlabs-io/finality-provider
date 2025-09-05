@@ -8,10 +8,15 @@ on:
     tags:
       - '*'
   workflow_dispatch:
+    inputs:
+      skip-lint-test:
+        description: "Skip lint_test"
+        default: "false"
 
 jobs:
   lint_test:
     uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@v0.13.3
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs['skip-lint-test'] == 'true') }}
     with:
       go-version: '1.25'
       go-lint-version: 'v2.4.0'
@@ -55,6 +60,12 @@ jobs:
         run: make test-e2e-rollup
 
   docker_pipeline:
+    # Always evaluate, but only proceed if:
+    # - skip is eneabled, or lint_test succeeded (normal path)
+    if: ${{ always() && (
+            (github.event_name == 'workflow_dispatch' && inputs['skip-lint-test'] == 'true') ||
+            needs.lint_test.result == 'success'
+          )}}
     needs: ["lint_test"]
     uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.10.2
     secrets: inherit
