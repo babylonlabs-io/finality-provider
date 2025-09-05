@@ -1,5 +1,3 @@
-//go:build e2e_bcd
-
 package e2etest_bcd
 
 import (
@@ -782,7 +780,7 @@ func bcdStartCmd(t *testing.T, testDir string, rpcPort, p2pPort, grpcPort int, l
 	require.NoError(t, err)
 
 	cmd := exec.Command("bcd", args...)
-	
+
 	if logToConsole {
 		// Create a multi-writer to write to both the log file and the console
 		mw := io.MultiWriter(os.Stdout, f)
