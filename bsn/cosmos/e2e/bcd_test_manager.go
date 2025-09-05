@@ -1,13 +1,13 @@
-//go:build e2e_bcd
-
 package e2etest_bcd
 
 import (
 	"context"
-	sdkErr "cosmossdk.io/errors"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	sdkErr "cosmossdk.io/errors"
 	wasmdtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	bbnappparams "github.com/babylonlabs-io/babylon-sdk/demo/app/params"
 	bbnsdktypes "github.com/babylonlabs-io/babylon-sdk/x/babylon/types"
@@ -19,7 +19,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
-	"strings"
 
 	sdkquerytypes "github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
