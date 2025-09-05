@@ -202,8 +202,17 @@ func StartBcdTestManager(t *testing.T, ctx context.Context) *BcdTestManager {
 	eh := e2eutils.NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
-	eotsCli, err := client.NewEOTSManagerGRPCClient(eotsCfg.RPCListener, "")
-	require.NoError(t, err)
+
+	var eotsCli *client.EOTSManagerGRPCClient
+	require.Eventually(t, func() bool {
+		eotsCli, err = client.NewEOTSManagerGRPCClient(eotsCfg.RPCListener, "")
+		if err != nil {
+			t.Logf("failed to create EOTS manager client: %v", err)
+			return false
+		}
+
+		return true
+	}, 30*time.Second, e2eutils.EventuallyPollTime)
 
 	fpMetrics := metrics.NewFpMetrics()
 	poller := service.NewChainPoller(logger, cfg.PollerConfig, wcc, fpMetrics)
