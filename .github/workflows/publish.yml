@@ -63,7 +63,7 @@ jobs:
 
   docker_pipeline:
     # Always evaluate, but only proceed if:
-    # - skip is eneabled, or lint_test succeeded (normal path)
+    # - skip is enabled, or lint_test succeeded (normal path)
     if: ${{ always() && (
             (github.event_name == 'workflow_dispatch' && inputs['skip-lint-test'] == true) ||
             needs.lint_test.result == 'success'
