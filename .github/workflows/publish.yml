@@ -18,7 +18,7 @@ on:
 jobs:
   lint_test:
     uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@v0.13.3
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs['skip-lint-test'] == 'true') }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs['skip-lint-test'] == true) }}
     with:
       go-version: '1.25'
       go-lint-version: 'v2.4.0'
@@ -65,7 +65,7 @@ jobs:
     # Always evaluate, but only proceed if:
     # - skip is eneabled, or lint_test succeeded (normal path)
     if: ${{ always() && (
-            (github.event_name == 'workflow_dispatch' && inputs['skip-lint-test'] == 'true') ||
+            (github.event_name == 'workflow_dispatch' && inputs['skip-lint-test'] == true) ||
             needs.lint_test.result == 'success'
           )}}
     needs: ["lint_test"]
