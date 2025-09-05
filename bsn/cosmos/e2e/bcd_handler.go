@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/testutil"
 	"io"
 	"log"
 	"os"
@@ -16,6 +15,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/babylonlabs-io/finality-provider/testutil"
 
 	"github.com/stretchr/testify/require"
 
@@ -50,50 +51,6 @@ type BcdNodeHandler struct {
 	babylonHome    string
 }
 
-type RelayerConfig struct {
-	Global RelayerGlobalConfig           `yaml:"global"`
-	Chains map[string]RelayerChainConfig `yaml:"chains"`
-	Paths  map[string]RelayerPathConfig  `yaml:"paths"`
-}
-
-type RelayerGlobalConfig struct {
-	APIListenAddr  string `yaml:"api-listen-addr"`
-	MaxRetries     int    `yaml:"max-retries"`
-	Timeout        string `yaml:"timeout"`
-	Memo           string `yaml:"memo"`
-	LightCacheSize int    `yaml:"light-cache-size"`
-}
-
-type RelayerChainConfig struct {
-	Type  string                  `yaml:"type"`
-	Value RelayerChainValueConfig `yaml:"value"`
-}
-
-type RelayerChainValueConfig struct {
-	Key            string   `yaml:"key"`
-	ChainID        string   `yaml:"chain-id"`
-	RPCAddr        string   `yaml:"rpc-addr"`
-	AccountPrefix  string   `yaml:"account-prefix"`
-	KeyringBackend string   `yaml:"keyring-backend"`
-	GasAdjustment  float64  `yaml:"gas-adjustment"`
-	GasPrices      string   `yaml:"gas-prices"`
-	MinGasAmount   int      `yaml:"min-gas-amount"`
-	Debug          bool     `yaml:"debug"`
-	Timeout        string   `yaml:"timeout"`
-	OutputFormat   string   `yaml:"output-format"`
-	SignMode       string   `yaml:"sign-mode"`
-	ExtraCodecs    []string `yaml:"extra-codecs"`
-}
-
-type RelayerPathConfig struct {
-	Src RelayerEndpointConfig `yaml:"src"`
-	Dst RelayerEndpointConfig `yaml:"dst"`
-}
-
-type RelayerEndpointConfig struct {
-	ChainID string `yaml:"chain-id"`
-}
-
 func NewBcdNodeHandler(t *testing.T) *BcdNodeHandler {
 	testDir, err := common.BaseDir("ZBcdTest")
 	require.NoError(t, err)
@@ -113,7 +70,7 @@ func NewBcdNodeHandler(t *testing.T) *BcdNodeHandler {
 	p2pPort := testutil.AllocateUniquePort(t)
 	grpcPort := testutil.AllocateUniquePort(t)
 
-	cmd := bcdStartCmd(t, testDir, rpcPort, p2pPort, grpcPort)
+	cmd := bcdStartCmd(t, testDir, rpcPort, p2pPort, grpcPort, false)
 	t.Log("Starting bcd with command:", cmd.String())
 	t.Log("Test directory:", testDir)
 	t.Log("Relayer directory:", relayerDir)
@@ -175,15 +132,12 @@ func (w *BcdNodeHandler) StartRelayer(t *testing.T) error {
 	}
 
 	// Wait for clients to be established
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	// Step 2: Create IBC connection
 	if err := w.createConnection(t); err != nil {
 		return fmt.Errorf("failed to create IBC connection: %w", err)
 	}
-
-	// Wait for connection to be established
-	time.Sleep(5 * time.Second)
 
 	// Create IBC channels
 	if err := w.createTransferChannel(t); err != nil {
@@ -411,9 +365,6 @@ func (w *BcdNodeHandler) createTransferChannel(t *testing.T) error {
 		return fmt.Errorf("failed to create transfer channel: %w", err)
 	}
 	t.Log("Created IBC transfer channel successfully!")
-
-	// Wait for channels to be established
-	time.Sleep(10 * time.Second)
 
 	return nil
 }
@@ -695,7 +646,24 @@ func bcdUpdateGenesisFile(t *testing.T, homeDir string) error {
 		return fmt.Errorf("failed to update stake in genesis.json: %w", err)
 	}
 
-	jqCmd := fmt.Sprintf("jq '.app_state.gov.params.voting_period = \"30s\" | .app_state.gov.params.max_deposit_period = \"10s\" | .app_state.gov.params.expedited_voting_period = \"15s\"' %s > %s.tmp && mv %s.tmp %s",
+	// Update timeout_commit and timeout_propose
+	configPath := filepath.Join(homeDir, "config", "config.toml")
+
+	sedCmd2 := fmt.Sprintf("sed -i. 's/timeout_commit = \"5s\"/timeout_commit = \"1s\"/g' %s", configPath)
+	t.Log("Executing command:", sedCmd2)
+	_, err = common.RunCommand("sh", "-c", sedCmd2)
+	if err != nil {
+		return fmt.Errorf("failed to update timeout_commit in config.toml: %w", err)
+	}
+
+	sedCmd3 := fmt.Sprintf("sed -i. 's/timeout_propose = \"3s\"/timeout_propose = \"1s\"/g' %s", configPath)
+	t.Log("Executing command:", sedCmd3)
+	_, err = common.RunCommand("sh", "-c", sedCmd3)
+	if err != nil {
+		return fmt.Errorf("failed to update timeout_propose in config.toml: %w", err)
+	}
+
+	jqCmd := fmt.Sprintf("jq '.app_state.gov.params.voting_period = \"10s\" | .app_state.gov.params.max_deposit_period = \"5s\" | .app_state.gov.params.expedited_voting_period = \"6s\"' %s > %s.tmp && mv %s.tmp %s",
 		genesisPath, genesisPath, genesisPath, genesisPath)
 	t.Log("Executing jq command:", jqCmd)
 	_, err = common.RunCommand("sh", "-c", jqCmd)
@@ -800,7 +768,7 @@ func setupBcd(t *testing.T, testDir string) {
 	require.NoError(t, err)
 }
 
-func bcdStartCmd(t *testing.T, testDir string, rpcPort, p2pPort, grpcPort int) *exec.Cmd {
+func bcdStartCmd(t *testing.T, testDir string, rpcPort, p2pPort, grpcPort int, logToConsole bool) *exec.Cmd {
 	args := []string{
 		"start",
 		"--home", testDir,
@@ -813,12 +781,18 @@ func bcdStartCmd(t *testing.T, testDir string, rpcPort, p2pPort, grpcPort int) *
 	f, err := os.Create(filepath.Join(testDir, "bcd.log"))
 	require.NoError(t, err)
 
-	// Create a multi-writer to write to both the log file and the console
-	mw := io.MultiWriter(os.Stdout, f)
-
 	cmd := exec.Command("bcd", args...)
-	cmd.Stdout = mw
-	cmd.Stderr = mw
+
+	if logToConsole {
+		// Create a multi-writer to write to both the log file and the console
+		mw := io.MultiWriter(os.Stdout, f)
+		cmd.Stdout = mw
+		cmd.Stderr = mw
+	} else {
+		// Only write to log file
+		cmd.Stdout = f
+		cmd.Stderr = f
+	}
 
 	return cmd
 }
