@@ -70,7 +70,7 @@ func NewBcdNodeHandler(t *testing.T) *BcdNodeHandler {
 	p2pPort := testutil.AllocateUniquePort(t)
 	grpcPort := testutil.AllocateUniquePort(t)
 
-	cmd := bcdStartCmd(t, testDir, rpcPort, p2pPort, grpcPort)
+	cmd := bcdStartCmd(t, testDir, rpcPort, p2pPort, grpcPort, false)
 	t.Log("Starting bcd with command:", cmd.String())
 	t.Log("Test directory:", testDir)
 	t.Log("Relayer directory:", relayerDir)
@@ -768,7 +768,7 @@ func setupBcd(t *testing.T, testDir string) {
 	require.NoError(t, err)
 }
 
-func bcdStartCmd(t *testing.T, testDir string, rpcPort, p2pPort, grpcPort int) *exec.Cmd {
+func bcdStartCmd(t *testing.T, testDir string, rpcPort, p2pPort, grpcPort int, logToConsole bool) *exec.Cmd {
 	args := []string{
 		"start",
 		"--home", testDir,
@@ -781,12 +781,18 @@ func bcdStartCmd(t *testing.T, testDir string, rpcPort, p2pPort, grpcPort int) *
 	f, err := os.Create(filepath.Join(testDir, "bcd.log"))
 	require.NoError(t, err)
 
-	// Create a multi-writer to write to both the log file and the console
-	mw := io.MultiWriter(os.Stdout, f)
-
 	cmd := exec.Command("bcd", args...)
-	cmd.Stdout = mw
-	cmd.Stderr = mw
+	
+	if logToConsole {
+		// Create a multi-writer to write to both the log file and the console
+		mw := io.MultiWriter(os.Stdout, f)
+		cmd.Stdout = mw
+		cmd.Stderr = mw
+	} else {
+		// Only write to log file
+		cmd.Stdout = f
+		cmd.Stderr = f
+	}
 
 	return cmd
 }
