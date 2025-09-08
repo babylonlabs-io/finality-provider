@@ -52,6 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#689](https://github.com/babylonlabs-io/finality-provider/pull/689) chore: fix cmt block fetching
 * [#699](https://github.com/babylonlabs-io/finality-provider/pull/699) fix: we should only remove expected errs
 * [#701](https://github.com/babylonlabs-io/finality-provider/pull/701) chore: faster bcd e2e
+* [#703](https://github.com/babylonlabs-io/finality-provider/pull/703) chore: better err msg for file keyring missing unlock
 
 ### Bug fixes
 
