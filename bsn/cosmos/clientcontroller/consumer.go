@@ -942,6 +942,38 @@ func (wc *CosmwasmConsumerController) IsBSN() bool {
 	return true
 }
 
+// QueryHasVotedForHeight checks if the given FP public key has voted for a specific block height in the contract state.
+func (wc *CosmwasmConsumerController) QueryHasVotedForHeight(ctx context.Context, fpPk *btcec.PublicKey, height uint64) (bool, error) {
+	btcPkHex := bbntypes.NewBIP340PubKeyFromBTCPK(fpPk).MarshalHex()
+
+	queryMsgSigningInfo := QueryMsgVotes{
+		BlockQuery{Height: height},
+	}
+
+	queryMsgBytes, err := json.Marshal(queryMsgSigningInfo)
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal query message: %w", err)
+	}
+
+	dataFromContract, err := wc.QuerySmartContractState(ctx, wc.cfg.BtcFinalityContractAddress, string(queryMsgBytes))
+	if err != nil {
+		return false, fmt.Errorf("failed to query smart contract state: %w", err)
+	}
+
+	var resp ResponseMsgVotes
+	if err = json.Unmarshal(dataFromContract.Data, &resp); err != nil {
+		return false, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	for _, btcPk := range resp.BtcPks {
+		if btcPk == btcPkHex {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // reliablySendMsgsResendingOnMsgErr sends the msgs to the chain, if some msg fails to execute
 // and contains 'message index: %d', it will remove that msg from the batch and send again
 // if there is no more message available, returns the last error.
