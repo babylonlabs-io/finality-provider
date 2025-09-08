@@ -420,7 +420,7 @@ func (lm *LocalEOTSManager) eotsPrivKeyFromKeyName(keyName string) (*btcec.Priva
 	case keyring.BackendFile:
 		privKey, err = lm.getKeyFromMap(keyName)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf(`make sure to run the "unlock" command after you started the eots manager with the keyring: %s, error: %w`, keyName, err)
 		}
 	}
 
