@@ -266,6 +266,7 @@ func (wc *CosmwasmConsumerController) QueryLatestFinalizedBlock(ctx context.Cont
 func (wc *CosmwasmConsumerController) QueryBlocks(ctx context.Context, req *api.QueryBlocksRequest) ([]fptypes.BlockDescription, error) {
 	limit := uint64(req.Limit)
 	reverse := false
+
 	return wc.queryLatestBlocks(ctx, &req.StartHeight, &limit, nil, &reverse)
 }
 
