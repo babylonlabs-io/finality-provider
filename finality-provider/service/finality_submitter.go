@@ -271,6 +271,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 		return nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
 	}
 
+	// #nosec G115 -- performed the conversion check above
 	numPubRand := uint32(len(blocks))
 	prList, err := ds.GetPubRandList(blocks[0].GetHeight(), numPubRand)
 	if err != nil {
