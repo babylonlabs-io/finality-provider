@@ -272,13 +272,11 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	}
 
 	numPubRand := uint32(len(blocks))
-	// Get public randomness for this specific height
 	prList, err := ds.GetPubRandList(blocks[0].GetHeight(), numPubRand)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get public randomness for height %d: %w", blocks[0].GetHeight(), err)
 	}
 
-	// Get proof for this specific height
 	proofBytesList, err := ds.ProofListGetterFunc(blocks[0].GetHeight(), uint64(numPubRand))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get public randomness inclusion proof for height %d: %w\nplease recover the randomness proof from db", blocks[0].GetHeight(), err)
