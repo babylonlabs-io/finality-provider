@@ -271,28 +271,17 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 		return nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
 	}
 
-	// Get proofs and public randomness for each block
-	var proofBytesList [][]byte
-	var prList []*btcec.FieldVal
+	numPubRand := uint32(len(blocks))
+	// Get public randomness for this specific height
+	prList, err := ds.GetPubRandList(blocks[0].GetHeight(), numPubRand)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get public randomness for height %d: %w", blocks[0].GetHeight(), err)
+	}
 
-	// TODO: https://github.com/babylonlabs-io/finality-provider/issues/560
-	for _, block := range blocks {
-		// Get public randomness for this specific height
-		pr, err := ds.GetPubRandList(block.GetHeight(), 1)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get public randomness for height %d: %w", block.GetHeight(), err)
-		}
-		prList = append(prList, pr[0])
-
-		// Get proof for this specific height
-		proofs, err := ds.ProofListGetterFunc(block.GetHeight(), 1)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get public randomness inclusion proof for height %d: %w\nplease recover the randomness proof from db", block.GetHeight(), err)
-		}
-		if len(proofs) != 1 {
-			return nil, fmt.Errorf("expected exactly one proof for height %d, got %d", block.GetHeight(), len(proofs))
-		}
-		proofBytesList = append(proofBytesList, proofs[0])
+	// Get proof for this specific height
+	proofBytesList, err := ds.ProofListGetterFunc(blocks[0].GetHeight(), uint64(numPubRand))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get public randomness inclusion proof for height %d: %w\nplease recover the randomness proof from db", blocks[0].GetHeight(), err)
 	}
 
 	// Create slices to store only the valid items
