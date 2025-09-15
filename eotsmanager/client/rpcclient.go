@@ -154,6 +154,40 @@ func (c *EOTSManagerGRPCClient) UnsafeSignEOTS(uid, chaiID, msg []byte, height u
 	return &s, nil
 }
 
+func (c *EOTSManagerGRPCClient) SignBatchEOTS(req *eotsmanager.SignBatchEOTSRequest) ([]eotsmanager.SignDataResponse, error) {
+	signRequests := make([]*proto.SignDataRequest, len(req.SignRequest))
+	for i, signReq := range req.SignRequest {
+		signRequests[i] = &proto.SignDataRequest{
+			Msg:    signReq.Msg,
+			Height: signReq.Height,
+		}
+	}
+
+	protoReq := &proto.SignBatchEOTSRequest{
+		Uid:          req.UID,
+		ChainId:      req.ChainID,
+		SignRequests: signRequests,
+	}
+
+	res, err := c.client.SignBatchEOTS(context.Background(), protoReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign batch EOTS: %w", err)
+	}
+
+	responses := make([]eotsmanager.SignDataResponse, len(res.Responses))
+	for i, resp := range res.Responses {
+		var s btcec.ModNScalar
+		s.SetByteSlice(resp.Sig)
+
+		responses[i] = eotsmanager.SignDataResponse{
+			Signature: &s,
+			Height:    resp.Height,
+		}
+	}
+
+	return responses, nil
+}
+
 func (c *EOTSManagerGRPCClient) SignSchnorrSig(uid, msg []byte) (*schnorr.Signature, error) {
 	req := &proto.SignSchnorrSigRequest{Uid: uid, Msg: msg}
 	res, err := c.client.SignSchnorrSig(context.Background(), req)
