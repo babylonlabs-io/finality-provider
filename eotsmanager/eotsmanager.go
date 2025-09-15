@@ -53,8 +53,8 @@ type EOTSManager interface {
 	// This should be called during startup for `file`-based keyring, which requires explicit unlocking.
 	Unlock(uid []byte, passphrase string) error
 
-	// SignBatchEOTS signs multiple EOTS signatures in batch
-	// It fails if any signature fails or if the finality provider does not exist
+	// SignBatchEOTS same as SignEOTS but for a batch of messages
+	// In case of double sign error that signature in batch is not returned
 	SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignDataResponse, error)
 
 	// Backup performs a hot backup of the database using a read-only transaction, eotsd can be running

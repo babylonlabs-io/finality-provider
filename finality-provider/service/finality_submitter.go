@@ -301,7 +301,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 			validProofList = append(validProofList, proofBytesList[i])
 			validSigList = append(validSigList, sig.ToModNScalar())
 		} else {
-			// Block was skipped due to double-sign, log it
+			// Block was skipped due to double-sign
 			ds.Logger.Warn("block skipped in batch signing due to double sign",
 				zap.Uint64("height", block.GetHeight()),
 				zap.String("hash", hex.EncodeToString(block.GetHash())))
