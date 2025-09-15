@@ -84,6 +84,7 @@ builds:
     tags:
       - netgo
       - osusergo
+      - static_wasm
 
   - id: rollup-fpd-linux-amd64
     main: ./rollup-finality-gadget/cmd/fpd/main.go
@@ -148,6 +149,7 @@ builds:
     tags:
       - netgo
       - osusergo
+      - static_wasm
 
   - id: cosmos-fpd-linux-amd64
     main: ./cosmos-finality-gadget/cmd/fpd/main.go
@@ -214,6 +216,7 @@ builds:
     tags:
       - netgo
       - osusergo
+      - static_wasm
 
   - id: eotsd-linux-amd64
     main: ./eotsmanager/cmd/eotsd/main.go
@@ -278,6 +281,7 @@ builds:
     tags:
       - netgo
       - osusergo
+      - static_wasm
 
 archives:
   - ids:
