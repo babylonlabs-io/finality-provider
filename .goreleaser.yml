@@ -35,7 +35,7 @@ builds:
       - -trimpath
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
+      - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
       - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
@@ -59,7 +59,7 @@ builds:
       - -trimpath
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
+      - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
       - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
@@ -85,7 +85,7 @@ builds:
       - CGO_LDFLAGS=-L/lib -mmacosx-version-min=10.12
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
+      - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
     tags:
@@ -108,7 +108,7 @@ builds:
       - -trimpath 
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
+      - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
       - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
@@ -132,7 +132,7 @@ builds:
       - -trimpath 
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
+      - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
       - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
@@ -155,7 +155,7 @@ builds:
       - CGO_LDFLAGS=-L/lib -mmacosx-version-min=10.12
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
+      - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
     tags:
@@ -178,7 +178,7 @@ builds:
       - -trimpath
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
+      - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
       - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
@@ -202,7 +202,7 @@ builds:
       - -trimpath
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
+      - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
       - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
@@ -228,7 +228,7 @@ builds:
       - -trimpath
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
+      - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
     tags:
@@ -251,7 +251,7 @@ builds:
       - -trimpath
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
+      - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
     tags:
@@ -274,7 +274,7 @@ builds:
       - -trimpath
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
+      - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
     tags:
@@ -299,7 +299,7 @@ builds:
       - -trimpath
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
-      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
+      - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
     tags:
