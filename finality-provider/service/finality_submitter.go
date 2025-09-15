@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -283,33 +282,30 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 		return nil, fmt.Errorf("failed to get public randomness inclusion proof for height %d: %w\nplease recover the randomness proof from db", blocks[0].GetHeight(), err)
 	}
 
-	// Create slices to store only the valid items
+	// Use batch signing for better performance
+	batchSigMap, err := ds.SignFinalitySigBatch(ctx, blocks)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter out blocks that were skipped due to double-sign
 	validBlocks := make([]types.BlockDescription, 0, len(blocks))
 	validPrList := make([]*btcec.FieldVal, 0, len(blocks))
 	validProofList := make([][]byte, 0, len(blocks))
 	validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
 
-	// Process each block and collect only valid items
-	for i, b := range blocks {
-		eotsSig, err := ds.SignFinalitySig(ctx, b)
-		if err != nil {
-			if !errors.Is(err, ErrFailedPrecondition) {
-				return nil, err
-			}
-			// Skip this block if we encounter FailedPrecondition
-			ds.Logger.Warn("encountered FailedPrecondition error, skipping block",
-				zap.Uint64("height", b.GetHeight()),
-				zap.String("hash", hex.EncodeToString(b.GetHash())),
-				zap.Error(err))
-
-			continue
+	for i, block := range blocks {
+		if sig, found := batchSigMap[block.GetHeight()]; found {
+			validBlocks = append(validBlocks, block)
+			validPrList = append(validPrList, prList[i])
+			validProofList = append(validProofList, proofBytesList[i])
+			validSigList = append(validSigList, sig.ToModNScalar())
+		} else {
+			// Block was skipped due to double-sign, log it
+			ds.Logger.Warn("block skipped in batch signing due to double sign",
+				zap.Uint64("height", block.GetHeight()),
+				zap.String("hash", hex.EncodeToString(block.GetHash())))
 		}
-
-		// If signature is valid, append all corresponding items
-		validBlocks = append(validBlocks, b)
-		validPrList = append(validPrList, prList[i])
-		validProofList = append(validProofList, proofBytesList[i])
-		validSigList = append(validSigList, eotsSig.ToModNScalar())
 	}
 
 	// If all blocks were skipped, return early
@@ -387,6 +383,50 @@ func (ds *DefaultFinalitySubmitter) SignFinalitySig(ctx context.Context, b types
 	}
 
 	return bbntypes.NewSchnorrEOTSSigFromModNScalar(sig), nil
+}
+
+func (ds *DefaultFinalitySubmitter) SignFinalitySigBatch(ctx context.Context, blocks []types.BlockDescription) (map[uint64]*bbntypes.SchnorrEOTSSig, error) {
+	latestHeight, err := LatestBlockHeightWithRetry(ctx, ds.ConsumerCtrl, ds.Logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query the latest block: %w", err)
+	}
+
+	signDataReq := make([]*eotsmanager.SignDataRequest, 0, len(blocks))
+	for _, b := range blocks {
+		var msgToSign []byte
+		// For BSNs we always use the ctx signing
+		if ds.ConsumerCtrl.IsBSN() || latestHeight >= ds.Cfg.ContextSigningHeight {
+			signCtx := ds.ConsumerCtrl.GetFpFinVoteContext()
+			msgToSign = b.MsgToSign(signCtx)
+		} else {
+			msgToSign = b.MsgToSign("")
+		}
+		signDataReq = append(signDataReq, &eotsmanager.SignDataRequest{
+			Msg:    msgToSign,
+			Height: b.GetHeight(),
+		})
+	}
+
+	resp, err := ds.Em.SignBatchEOTS(&eotsmanager.SignBatchEOTSRequest{
+		UID:         ds.GetBtcPkBIP340().MustMarshal(),
+		ChainID:     ds.State.GetChainID(),
+		SignRequest: signDataReq,
+	})
+	if err != nil {
+		if strings.Contains(err.Error(), failedPreconditionErrStr) {
+			return nil, ErrFailedPrecondition
+		}
+
+		return nil, fmt.Errorf("failed to sign EOTS: %w", err)
+	}
+
+	// Create a map of height -> signature for easy lookup
+	sigMap := make(map[uint64]*bbntypes.SchnorrEOTSSig)
+	for _, sig := range resp {
+		sigMap[sig.Height] = bbntypes.NewSchnorrEOTSSigFromModNScalar(sig.Signature)
+	}
+
+	return sigMap, nil
 }
 
 func (ds *DefaultFinalitySubmitter) GetPubRandList(startHeight uint64, numPubRand uint32) ([]*btcec.FieldVal, error) {
