@@ -80,6 +80,7 @@ builds:
       - -mod=readonly
       - -trimpath
     env:
+      - CC=oa64-clang
       - CGO_CFLAGS=-mmacosx-version-min=10.12
       - CGO_LDFLAGS=-L/lib -mmacosx-version-min=10.12
     ldflags:
