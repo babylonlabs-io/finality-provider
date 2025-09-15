@@ -581,3 +581,235 @@ func TestEOTSStore_BackupTime(t *testing.T) {
 		})
 	}
 }
+
+// FuzzSaveSignRecordsBatch tests batch saving of sign records
+func FuzzSaveSignRecordsBatch(f *testing.F) {
+	testutil.AddRandomSeedsToFuzzer(f, 10)
+	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
+		r := rand.New(rand.NewSource(seed))
+
+		homePath := t.TempDir()
+		cfg := config.DefaultDBConfigWithHomePath(homePath)
+
+		dbBackend, err := cfg.GetDBBackend()
+		require.NoError(t, err)
+
+		vs, err := store.NewEOTSStore(dbBackend)
+		require.NoError(t, err)
+
+		defer func() {
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
+			err := os.RemoveAll(homePath)
+			require.NoError(t, err)
+		}()
+
+		chainID := []byte("test-chain")
+		pk := testutil.GenRandomByteArray(r, 32)
+
+		numRecords := r.Intn(10) + 1 // 1-10 records
+		batchRecords := make([]store.BatchSignRecord, numRecords)
+		expectedRecords := make(map[uint64]store.BatchSignRecord)
+
+		for i := 0; i < numRecords; i++ {
+			height := r.Uint64()
+			msg := testutil.GenRandomByteArray(r, 32)
+			sig := testutil.GenRandomByteArray(r, 32)
+
+			batchRecords[i] = store.BatchSignRecord{
+				Height:  height,
+				ChainID: chainID,
+				Msg:     msg,
+				EotsPk:  pk,
+				Sig:     sig,
+			}
+			expectedRecords[height] = batchRecords[i]
+		}
+
+		err = vs.SaveSignRecordsBatch(batchRecords)
+		require.NoError(t, err)
+
+		for height, expectedRecord := range expectedRecords {
+			record, found, err := vs.GetSignRecord(pk, chainID, height)
+			require.NoError(t, err)
+			require.True(t, found)
+			require.Equal(t, expectedRecord.Msg, record.Msg)
+			require.Equal(t, expectedRecord.Sig, record.Signature)
+		}
+
+		err = vs.SaveSignRecordsBatch(batchRecords)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "duplicate sign record")
+
+		err = vs.SaveSignRecordsBatch([]store.BatchSignRecord{})
+		require.NoError(t, err)
+	})
+}
+
+// FuzzGetSignRecordsBatch tests batch retrieval of sign records
+func FuzzGetSignRecordsBatch(f *testing.F) {
+	testutil.AddRandomSeedsToFuzzer(f, 10)
+	f.Fuzz(func(t *testing.T, seed int64) {
+		t.Parallel()
+		r := rand.New(rand.NewSource(seed))
+
+		homePath := t.TempDir()
+		cfg := config.DefaultDBConfigWithHomePath(homePath)
+
+		dbBackend, err := cfg.GetDBBackend()
+		require.NoError(t, err)
+
+		vs, err := store.NewEOTSStore(dbBackend)
+		require.NoError(t, err)
+
+		defer func() {
+			if err := dbBackend.Close(); err != nil {
+				t.Errorf("Error closing database: %v", err)
+			}
+			err := os.RemoveAll(homePath)
+			require.NoError(t, err)
+		}()
+
+		chainID := []byte("test-chain")
+		pk := testutil.GenRandomByteArray(r, 32)
+
+		numRecords := r.Intn(20) + 5 // 5-24 records
+		savedRecords := make(map[uint64][]byte)
+		heights := make([]uint64, 0, numRecords)
+
+		for i := 0; i < numRecords; i++ {
+			height := r.Uint64()
+			// Ensure unique heights
+			for _, existingHeight := range heights {
+				if height == existingHeight {
+					height = r.Uint64()
+					break
+				}
+			}
+			heights = append(heights, height)
+
+			msg := testutil.GenRandomByteArray(r, 32)
+			sig := testutil.GenRandomByteArray(r, 32)
+
+			err = vs.SaveSignRecord(height, chainID, msg, pk, sig)
+			require.NoError(t, err)
+			savedRecords[height] = sig
+		}
+
+		nonExistentHeights := make([]uint64, r.Intn(5)+1) // 1-5 non-existent heights
+		for i := range nonExistentHeights {
+			nonExistentHeights[i] = r.Uint64() + 1000000
+		}
+
+		queryHeights := append(heights, nonExistentHeights...)
+
+		batchResults, err := vs.GetSignRecordsBatch(pk, chainID, queryHeights)
+		require.NoError(t, err)
+
+		require.Equal(t, len(savedRecords), len(batchResults))
+
+		for height, expectedSig := range savedRecords {
+			record, found := batchResults[height]
+			require.True(t, found, "Height %d should be found in batch results", height)
+			require.Equal(t, expectedSig, record.Signature)
+		}
+
+		// Verify non-existent heights are not in results
+		for _, height := range nonExistentHeights {
+			_, found := batchResults[height]
+			require.False(t, found, "Height %d should not be found in batch results", height)
+		}
+
+		emptyResults, err := vs.GetSignRecordsBatch(pk, chainID, []uint64{})
+		require.NoError(t, err)
+		require.Empty(t, emptyResults)
+
+		differentPk := testutil.GenRandomByteArray(r, 32)
+		noneResults, err := vs.GetSignRecordsBatch(differentPk, chainID, heights)
+		require.NoError(t, err)
+		require.Empty(t, noneResults)
+	})
+}
+
+// TestSaveSignRecordsBatchWithGetSignRecordsBatch tests integration between batch save and batch get
+func TestSaveSignRecordsBatchWithGetSignRecordsBatch(t *testing.T) {
+	t.Parallel()
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	homePath := t.TempDir()
+	cfg := config.DefaultDBConfigWithHomePath(homePath)
+
+	dbBackend, err := cfg.GetDBBackend()
+	require.NoError(t, err)
+
+	vs, err := store.NewEOTSStore(dbBackend)
+	require.NoError(t, err)
+
+	defer func() {
+		if err := dbBackend.Close(); err != nil {
+			t.Errorf("Error closing database: %v", err)
+		}
+		err := os.RemoveAll(homePath)
+		require.NoError(t, err)
+	}()
+
+	chainID := []byte("test-chain")
+	pk := testutil.GenRandomByteArray(r, 32)
+
+	batchRecords := []store.BatchSignRecord{
+		{
+			Height:  100,
+			ChainID: chainID,
+			Msg:     testutil.GenRandomByteArray(r, 32),
+			EotsPk:  pk,
+			Sig:     testutil.GenRandomByteArray(r, 32),
+		},
+		{
+			Height:  200,
+			ChainID: chainID,
+			Msg:     testutil.GenRandomByteArray(r, 32),
+			EotsPk:  pk,
+			Sig:     testutil.GenRandomByteArray(r, 32),
+		},
+		{
+			Height:  300,
+			ChainID: chainID,
+			Msg:     testutil.GenRandomByteArray(r, 32),
+			EotsPk:  pk,
+			Sig:     testutil.GenRandomByteArray(r, 32),
+		},
+	}
+
+	err = vs.SaveSignRecordsBatch(batchRecords)
+	require.NoError(t, err)
+
+	heights := []uint64{100, 200, 300, 400} // Include one non-existent height
+	results, err := vs.GetSignRecordsBatch(pk, chainID, heights)
+	require.NoError(t, err)
+
+	require.Len(t, results, 3)
+
+	for _, expectedRecord := range batchRecords {
+		result, found := results[expectedRecord.Height]
+		require.True(t, found, "Height %d should be found", expectedRecord.Height)
+		require.Equal(t, expectedRecord.Msg, result.Msg)
+		require.Equal(t, expectedRecord.Sig, result.Signature)
+	}
+
+	_, found := results[400]
+	require.False(t, found, "Height 400 should not be found")
+
+	// Test consistency with individual GetSignRecord
+	for _, expectedRecord := range batchRecords {
+		individualResult, found, err := vs.GetSignRecord(pk, chainID, expectedRecord.Height)
+		require.NoError(t, err)
+		require.True(t, found)
+
+		batchResult := results[expectedRecord.Height]
+		require.Equal(t, individualResult.Msg, batchResult.Msg)
+		require.Equal(t, individualResult.Signature, batchResult.Signature)
+		require.Equal(t, individualResult.Timestamp, batchResult.Timestamp)
+	}
+}
