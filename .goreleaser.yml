@@ -34,13 +34,15 @@ builds:
       - -mod=readonly
       - -trimpath
     ldflags:
-      - -linkmode=external
+      - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
+      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
       - -w -s
+      - -linkmode=external
       - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
     tags:
+      - muslc
       - netgo
       - osusergo
-      - muslc
 
   - id: fpd-linux-arm64
     main: ./finality-provider/cmd/fpd/main.go
@@ -56,13 +58,15 @@ builds:
       - -mod=readonly
       - -trimpath
     ldflags:
-      - -linkmode=external
+      - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
+      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
       - -w -s
+      - -linkmode=external
       - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
     tags:
+      - muslc
       - netgo
       - osusergo
-      - muslc
 
   - id: fpd-darwin
     main: ./finality-provider/cmd/fpd/main.go
@@ -79,12 +83,14 @@ builds:
       - CGO_CFLAGS=-mmacosx-version-min=10.12
       - CGO_LDFLAGS=-L/lib -mmacosx-version-min=10.12
     ldflags:
+      - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
+      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
       - -w -s
       - -linkmode=external
     tags:
       - netgo
-      - osusergo
       - static_wasm
+      - osusergo
 
   - id: rollup-fpd-linux-amd64
     main: ./rollup-finality-gadget/cmd/fpd/main.go
@@ -100,13 +106,15 @@ builds:
       - -mod=readonly
       - -trimpath 
     ldflags:
-      - -linkmode=external
+      - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
+      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
       - -w -s
+      - -linkmode=external
       - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
     tags:
+      - muslc
       - netgo
       - osusergo
-      - muslc
 
   - id: rollup-fpd-linux-arm64
     main: ./rollup-finality-gadget/cmd/fpd/main.go
@@ -122,13 +130,15 @@ builds:
       - -mod=readonly
       - -trimpath 
     ldflags:
-      - -linkmode=external
+      - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
+      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
       - -w -s
+      - -linkmode=external
       - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
     tags:
+      - muslc
       - netgo
       - osusergo
-      - muslc
 
   - id: rollup-fpd-darwin
     main: ./rollup-finality-gadget/cmd/fpd/main.go
@@ -143,13 +153,14 @@ builds:
       - CGO_CFLAGS=-mmacosx-version-min=10.12
       - CGO_LDFLAGS=-L/lib -mmacosx-version-min=10.12
     ldflags:
-      - -linkmode=external
+      - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
+      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
       - -w -s
-      - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
+      - -linkmode=external
     tags:
       - netgo
-      - osusergo
       - static_wasm
+      - osusergo
 
   - id: cosmos-fpd-linux-amd64
     main: ./cosmos-finality-gadget/cmd/fpd/main.go
@@ -165,13 +176,15 @@ builds:
       - -mod=readonly
       - -trimpath
     ldflags:
-      - -linkmode=external
+      - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
+      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
       - -w -s
+      - -linkmode=external
       - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
     tags:
+      - muslc
       - netgo
       - osusergo
-      - muslc
 
   - id: cosmos-fpd-linux-arm64
     main: ./cosmos-finality-gadget/cmd/fpd/main.go
@@ -187,13 +200,15 @@ builds:
       - -mod=readonly
       - -trimpath
     ldflags:
-      - -linkmode=external
+      - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
+      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
       - -w -s
+      - -linkmode=external
       - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
     tags:
+      - muslc
       - netgo
       - osusergo
-      - muslc
 
   - id: cosmos-fpd-darwin
     main: ./cosmos-finality-gadget/cmd/fpd/main.go
@@ -211,12 +226,14 @@ builds:
       - -mod=readonly
       - -trimpath
     ldflags:
+      - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
+      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
       - -w -s
       - -linkmode=external
     tags:
       - netgo
-      - osusergo
       - static_wasm
+      - osusergo
 
   - id: eotsd-linux-amd64
     main: ./eotsmanager/cmd/eotsd/main.go
@@ -232,12 +249,14 @@ builds:
       - -mod=readonly
       - -trimpath
     ldflags:
+      - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
+      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
       - -w -s
       - -linkmode=external
     tags:
+      - muslc
       - netgo
       - osusergo
-      - muslc
 
   - id: eotsd-linux-arm64
     main: ./eotsmanager/cmd/eotsd/main.go
@@ -253,12 +272,14 @@ builds:
       - -mod=readonly
       - -trimpath
     ldflags:
+      - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
+      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
       - -w -s
       - -linkmode=external
     tags:
+      - muslc
       - netgo
       - osusergo
-      - muslc
 
   - id: eotsd-darwin
     main: ./eotsmanager/cmd/eotsd/main.go
@@ -276,12 +297,14 @@ builds:
       - -mod=readonly
       - -trimpath
     ldflags:
+      - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
+      - -X github.com/babylonlabs-io/finality-provider/version.Commit={{ .Commit }}
       - -w -s
       - -linkmode=external
     tags:
       - netgo
-      - osusergo
       - static_wasm
+      - osusergo
 
 archives:
   - ids:
