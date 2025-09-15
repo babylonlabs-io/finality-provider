@@ -105,7 +105,7 @@ builds:
       - LD=/opt/musl-cross-x86_64/bin/x86_64-linux-musl-ld
     flags:
       - -mod=readonly
-      - -trimpath 
+      - -trimpath
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
       - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
@@ -129,7 +129,7 @@ builds:
       - LD=/opt/musl-cross-aarch64/bin/aarch64-linux-musl-ld
     flags:
       - -mod=readonly
-      - -trimpath 
+      - -trimpath
     ldflags:
       - -X github.com/babylonlabs-io/finality-provider/version.version={{ .Version }}
       - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
@@ -254,6 +254,7 @@ builds:
       - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
+      - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
     tags:
       - muslc
       - netgo
@@ -277,6 +278,7 @@ builds:
       - -X github.com/babylonlabs-io/finality-provider/version.commit={{ .Commit }}
       - -w -s
       - -linkmode=external
+      - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
     tags:
       - muslc
       - netgo
