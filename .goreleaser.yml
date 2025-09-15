@@ -1,59 +1,267 @@
+version: 2
 project_name: finality-provider
+
+env:
+  - CGO_ENABLED=1
+  - CGO_LDFLAGS=-L/lib
+
+before:
+  hooks:
+    - wget -nc https://github.com/CosmWasm/wasmvm/releases/download/{{ .Env.COSMWASM_VERSION }}/libwasmvm_muslc.x86_64.a -O /lib/libwasmvm_muslc.x86_64.a
+    - wget -nc https://github.com/CosmWasm/wasmvm/releases/download/{{ .Env.COSMWASM_VERSION }}/libwasmvm_muslc.aarch64.a -O /lib/libwasmvm_muslc.aarch64.a
+    - wget -nc https://github.com/CosmWasm/wasmvm/releases/download/{{ .Env.COSMWASM_VERSION }}/libwasmvmstatic_darwin.a -O /lib/libwasmvmstatic_darwin.a
+
+    - curl -LO https://musl.cc/x86_64-linux-musl-cross.tgz
+    - tar xf x86_64-linux-musl-cross.tgz
+    - mv -n -u x86_64-linux-musl-cross /opt/musl-cross-x86_64
+
+    - curl -LO https://musl.cc/aarch64-linux-musl-cross.tgz
+    - tar xf aarch64-linux-musl-cross.tgz
+    - mv -n -u aarch64-linux-musl-cross /opt/musl-cross-aarch64
 
 builds:
   - id: fpd-linux-amd64
     main: ./finality-provider/cmd/fpd/main.go
     binary: fpd
-    hooks:
-      pre:
-        - wget https://github.com/CosmWasm/wasmvm/releases/download/{{ .Env.COSMWASM_VERSION }}/libwasmvm_muslc.x86_64.a -O /usr/lib/libwasmvm_muslc.x86_64.a
     goos:
       - linux
     goarch:
       - amd64
     env:
-      - GO111MODULE=on
+    - CC=/opt/musl-cross-x86_64/bin/x86_64-linux-musl-gcc
+    - LD=/opt/musl-cross-x86_64/bin/x86_64-linux-musl-ld
     flags:
       - -mod=readonly
       - -trimpath
+    ldflags:
+      - -linkmode=external
+      - -w -s
+      - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
     tags:
       - netgo
       - osusergo
 
+  - id: fpd-linux-arm64
+    main: ./finality-provider/cmd/fpd/main.go
+    binary: fpd
+    goos:
+      - linux
+    goarch:
+      - arm64
+    env:
+    - CC=/opt/musl-cross-aarch64/bin/aarch64-linux-musl-gcc
+    - LD=/opt/musl-cross-aarch64/bin/aarch64-linux-musl-ld
+    flags:
+      - -mod=readonly
+      - -trimpath
+    ldflags:
+      - -linkmode=external
+      - -w -s
+      - -extldflags "-Wl,-z,muldefs -static -z noexecstack"
+    tags:
+      - netgo
+      - osusergo
+
+  - id: fpd-darwin
+    main: ./finality-provider/cmd/fpd/main.go
+    binary: fpd
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -mod=readonly
+      - -trimpath
+    env:
+      - CGO_CFLAGS=-mmacosx-version-min=10.12
+      - CGO_LDFLAGS=-L/lib -mmacosx-version-min=10.12
+    ldflags:
+      - -w -s
+      - -linkmode=external
+    tags:
+      - netgo
+      - osusergo
+
+  - id: rollup-fpd-linux-amd64
+    main: ./rollup-finality-gadget/cmd/fpd/main.go
+    binary: rollup-fpd
+    goos:
+      - linux
+    goarch:
+      - amd64
+    flags:
+      - -mod=readonly
+      - -trimpath
+    ldflags:
+      - -w -s
+      - -linkmode=external
+    tags:
+      - netgo
+      - osusergo
+
+  - id: rollup-fpd-linux-arm64
+    main: ./rollup-finality-gadget/cmd/fpd/main.go
+    binary: rollup-fpd
+    goos:
+      - linux
+    goarch:
+      - arm64
+    flags:
+      - -mod=readonly
+      - -trimpath
+    ldflags:
+      - -w -s
+      - -linkmode=external
+    tags:
+      - netgo
+      - osusergo
+
+  - id: rollup-fpd-darwin
+    main: ./rollup-finality-gadget/cmd/fpd/main.go
+    binary: rollup-fpd
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -mod=readonly
+      - -trimpath
+    ldflags:
+      - -w -s
+      - -linkmode=external
+    tags:
+      - netgo
+      - osusergo
+
+  - id: cosmos-fpd-linux-amd64
+    main: ./cosmos-finality-gadget/cmd/fpd/main.go
+    binary: cosmos-fpd
+    goos:
+      - linux
+    goarch:
+      - amd64
+    flags:
+      - -mod=readonly
+      - -trimpath
+    ldflags:
+      - -w -s
+      - -linkmode=external
+    tags:
+      - netgo
+      - osusergo
+
+  - id: cosmos-fpd-linux-arm64
+    main: ./cosmos-finality-gadget/cmd/fpd/main.go
+    binary: cosmos-fpd
+    goos:
+      - linux
+    goarch:
+      - arm64
+    flags:
+      - -mod=readonly
+      - -trimpath
+    ldflags:
+      - -w -s
+      - -linkmode=external
+    tags:
+      - netgo
+      - osusergo
+
+  - id: cosmos-fpd-darwin
+    main: ./cosmos-finality-gadget/cmd/fpd/main.go
+    binary: cosmos-fpd
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -mod=readonly
+      - -trimpath
+    ldflags:
+      - -w -s
+      - -linkmode=external
+    tags:
+      - netgo
+      - osusergo
+
+
   - id: eotsd-linux-amd64
     main: ./eotsmanager/cmd/eotsd/main.go
     binary: eotsd
-    hooks:
-      pre:
-        - wget https://github.com/CosmWasm/wasmvm/releases/download/{{ .Env.COSMWASM_VERSION }}/libwasmvm_muslc.x86_64.a -O /usr/lib/libwasmvm_muslc.x86_64.a
     goos:
       - linux
     goarch:
       - amd64
     env:
-      - GO111MODULE=on
+      - CC=/opt/musl-cross-x86_64/bin/x86_64-linux-musl-gcc
+      - LD=/opt/musl-cross-x86_64/bin/x86_64-linux-musl-ld
     flags:
       - -mod=readonly
       - -trimpath
+    ldflags:
+      - -w -s
+      - -linkmode=external
+    tags:
+      - netgo
+      - osusergo
+
+  - id: eotsd-linux-arm64
+    main: ./eotsmanager/cmd/eotsd/main.go
+    binary: eotsd
+    goos:
+      - linux
+    goarch:
+      - arm64
+    env:
+      - CC=/opt/musl-cross-aarch64/bin/aarch64-linux-musl-gcc
+      - LD=/opt/musl-cross-aarch64/bin/aarch64-linux-musl-ld
+    flags:
+      - -mod=readonly
+      - -trimpath
+    ldflags:
+      - -w -s
+      - -linkmode=external
+    tags:
+      - netgo
+      - osusergo
+
+  - id: eotsd-darwin
+    main: ./eotsmanager/cmd/eotsd/main.go
+    binary: eotsd
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -mod=readonly
+      - -trimpath
+    ldflags:
+      - -w -s
+      - -linkmode=external
     tags:
       - netgo
       - osusergo
 
 archives:
-  - id: zipped
-    builds:
+  - ids:
       - fpd-linux-amd64
+      - fpd-linux-arm64
+      - fpd-darwin
+      - rollup-fpd-linux-amd64
+      - rollup-fpd-linux-arm64
+      - rollup-fpd-darwin
+      - cosmos-fpd-linux-amd64
+      - cosmos-fpd-linux-arm64
+      - cosmos-fpd-darwin
       - eotsd-linux-amd64
+      - eotsd-linux-arm64
+      - eotsd-darwin
     name_template: "{{.ProjectName}}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
-    format: tar.gz
-    files:
-      - none*
-  - id: binaries
-    builds:
-      - fpd-linux-amd64
-      - eotsd-linux-amd64
-    name_template: "{{.ProjectName}}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
-    format: binary
+    formats: [tar.gz, binary]
     files:
       - none*
 
