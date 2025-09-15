@@ -293,22 +293,17 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 
 func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignDataResponse, error) {
 	eotsPk, chainID := req.UID, req.ChainID
-
-	// Get private key once
 	privKey, err := lm.getEOTSPrivKey(eotsPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
 	}
 
 	// Extract all heights for batch lookup
-	heights := make([]uint64, len(req.SignRequest))
-	heightToRequest := make(map[uint64]*SignDataRequest)
-	for i, request := range req.SignRequest {
-		heights[i] = request.Height
-		heightToRequest[request.Height] = request
+	heights := make([]uint64, 0, len(req.SignRequest))
+	for _, request := range req.SignRequest {
+		heights = append(heights, request.Height)
 	}
 
-	// Batch lookup existing sign records
 	existingRecords, err := lm.es.GetSignRecordsBatch(eotsPk, chainID, heights)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get existing sign records: %w", err)
@@ -369,7 +364,6 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 			return nil, fmt.Errorf("failed to sign eots: %w", err)
 		}
 
-		// Prepare for batch save
 		b := signedBytes.Bytes()
 		recordsToSave = append(recordsToSave, store.BatchSignRecord{
 			Height:  height,
@@ -385,7 +379,6 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 		})
 	}
 
-	// Batch save all new sign records
 	if len(recordsToSave) > 0 {
 		if err := lm.es.SaveSignRecordsBatch(recordsToSave); err != nil {
 			return nil, fmt.Errorf("failed to save signing records batch: %w", err)
