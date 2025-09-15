@@ -292,32 +292,46 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 }
 
 func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignDataResponse, error) {
-	response := make([]SignDataResponse, 0, len(req.SignRequest))
 	eotsPk, chainID := req.UID, req.ChainID
 
+	// Get private key once
 	privKey, err := lm.getEOTSPrivKey(eotsPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
 	}
 
+	// Extract all heights for batch lookup
+	heights := make([]uint64, len(req.SignRequest))
+	heightToRequest := make(map[uint64]*SignDataRequest)
+	for i, request := range req.SignRequest {
+		heights[i] = request.Height
+		heightToRequest[request.Height] = request
+	}
+
+	// Batch lookup existing sign records
+	existingRecords, err := lm.es.GetSignRecordsBatch(eotsPk, chainID, heights)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get existing sign records: %w", err)
+	}
+
+	response := make([]SignDataResponse, 0, len(req.SignRequest))
+	var recordsToSave []store.BatchSignRecord
+
 	for _, request := range req.SignRequest {
 		msg, height := request.Msg, request.Height
-		record, found, err := lm.es.GetSignRecord(eotsPk, chainID, height)
-		if err != nil {
-			return nil, fmt.Errorf("error getting sign record: %w", err)
-		}
 
-		if found {
-			if bytes.Equal(msg, record.Msg) {
+		// Check if record exists from batch lookup
+		if existingRecord, found := existingRecords[height]; found {
+			if bytes.Equal(msg, existingRecord.Msg) {
 				var s btcec.ModNScalar
-				s.SetByteSlice(record.Signature)
+				s.SetByteSlice(existingRecord.Signature)
 
 				lm.logger.Info(
 					"duplicate sign requested",
 					zap.String("eots_pk", hex.EncodeToString(eotsPk)),
 					zap.String("hash", hex.EncodeToString(msg)),
 					zap.Uint64("height", height),
-					zap.String("chainID", string(req.ChainID)),
+					zap.String("chainID", string(chainID)),
 				)
 
 				response = append(response, SignDataResponse{
@@ -333,12 +347,13 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 				zap.String("eots_pk", hex.EncodeToString(eotsPk)),
 				zap.String("hash", hex.EncodeToString(msg)),
 				zap.Uint64("height", height),
-				zap.String("chainID", string(req.ChainID)),
+				zap.String("chainID", string(chainID)),
 			)
 
 			continue
 		}
 
+		// Generate randomness for signing
 		privRand, _, err := lm.getRandomnessPair(eotsPk, chainID, height)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get private randomness: %w", err)
@@ -348,20 +363,33 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 		lm.metrics.IncrementEotsFpTotalEotsSignCounter(hex.EncodeToString(eotsPk))
 		lm.metrics.SetEotsFpLastEotsSignHeight(hex.EncodeToString(eotsPk), float64(height))
 
+		// Sign the message
 		signedBytes, err := eots.Sign(privKey, privRand, msg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign eots: %w", err)
 		}
 
+		// Prepare for batch save
 		b := signedBytes.Bytes()
-		if err := lm.es.SaveSignRecord(height, chainID, msg, eotsPk, b[:]); err != nil {
-			return nil, fmt.Errorf("failed to save signing record: %w", err)
-		}
+		recordsToSave = append(recordsToSave, store.BatchSignRecord{
+			Height:  height,
+			ChainID: chainID,
+			Msg:     msg,
+			EotsPk:  eotsPk,
+			Sig:     b[:],
+		})
 
 		response = append(response, SignDataResponse{
 			Signature: signedBytes,
 			Height:    height,
 		})
+	}
+
+	// Batch save all new sign records
+	if len(recordsToSave) > 0 {
+		if err := lm.es.SaveSignRecordsBatch(recordsToSave); err != nil {
+			return nil, fmt.Errorf("failed to save signing records batch: %w", err)
+		}
 	}
 
 	return response, nil
