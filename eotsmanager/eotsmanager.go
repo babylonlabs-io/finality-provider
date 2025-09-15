@@ -59,3 +59,19 @@ type EOTSManager interface {
 
 	Close() error
 }
+
+type SignBatchEOTSRequest struct {
+	UID         []byte
+	ChainID     []byte
+	SignRequest []*SignDataRequest
+}
+
+type SignDataRequest struct {
+	Msg    []byte
+	Height uint64
+}
+
+type SignDataResponse struct {
+	Signature *btcec.ModNScalar
+	Height    uint64
+}

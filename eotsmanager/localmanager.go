@@ -291,6 +291,82 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 	return signedBytes, nil
 }
 
+func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignDataResponse, error) {
+	response := make([]SignDataResponse, 0, len(req.SignRequest))
+	eotsPk, chainID := req.UID, req.ChainID
+
+	privKey, err := lm.getEOTSPrivKey(eotsPk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
+	}
+
+	for _, request := range req.SignRequest {
+		msg, height := request.Msg, request.Height
+		record, found, err := lm.es.GetSignRecord(eotsPk, chainID, height)
+		if err != nil {
+			return nil, fmt.Errorf("error getting sign record: %w", err)
+		}
+
+		if found {
+			if bytes.Equal(msg, record.Msg) {
+				var s btcec.ModNScalar
+				s.SetByteSlice(record.Signature)
+
+				lm.logger.Info(
+					"duplicate sign requested",
+					zap.String("eots_pk", hex.EncodeToString(eotsPk)),
+					zap.String("hash", hex.EncodeToString(msg)),
+					zap.Uint64("height", height),
+					zap.String("chainID", string(req.ChainID)),
+				)
+
+				response = append(response, SignDataResponse{
+					Signature: &s,
+					Height:    height,
+				})
+
+				continue
+			}
+
+			lm.logger.Error(
+				"double sign requested",
+				zap.String("eots_pk", hex.EncodeToString(eotsPk)),
+				zap.String("hash", hex.EncodeToString(msg)),
+				zap.Uint64("height", height),
+				zap.String("chainID", string(req.ChainID)),
+			)
+
+			continue
+		}
+
+		privRand, _, err := lm.getRandomnessPair(eotsPk, chainID, height)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get private randomness: %w", err)
+		}
+
+		// Update metrics
+		lm.metrics.IncrementEotsFpTotalEotsSignCounter(hex.EncodeToString(eotsPk))
+		lm.metrics.SetEotsFpLastEotsSignHeight(hex.EncodeToString(eotsPk), float64(height))
+
+		signedBytes, err := eots.Sign(privKey, privRand, msg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign eots: %w", err)
+		}
+
+		b := signedBytes.Bytes()
+		if err := lm.es.SaveSignRecord(height, chainID, msg, eotsPk, b[:]); err != nil {
+			return nil, fmt.Errorf("failed to save signing record: %w", err)
+		}
+
+		response = append(response, SignDataResponse{
+			Signature: signedBytes,
+			Height:    height,
+		})
+	}
+
+	return response, nil
+}
+
 // UnsafeSignEOTS should only be used in e2e test to demonstrate double sign
 func (lm *LocalEOTSManager) UnsafeSignEOTS(fpPk []byte, chainID []byte, msg []byte, height uint64) (*btcec.ModNScalar, error) {
 	privRand, _, err := lm.getRandomnessPair(fpPk, chainID, height)
