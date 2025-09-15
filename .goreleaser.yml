@@ -93,7 +93,7 @@ builds:
       - osusergo
 
   - id: rollup-fpd-linux-amd64
-    main: ./rollup-finality-gadget/cmd/fpd/main.go
+    main: ./bsn/rollup/cmd/rollup-fpd/main.go
     binary: rollup-fpd
     goos:
       - linux
@@ -117,7 +117,7 @@ builds:
       - osusergo
 
   - id: rollup-fpd-linux-arm64
-    main: ./rollup-finality-gadget/cmd/fpd/main.go
+    main: ./bsn/rollup/cmd/rollup-fpd/main.go
     binary: rollup-fpd
     goos:
       - linux
@@ -141,7 +141,7 @@ builds:
       - osusergo
 
   - id: rollup-fpd-darwin
-    main: ./rollup-finality-gadget/cmd/fpd/main.go
+    main: ./bsn/rollup/cmd/rollup-fpd/main.go
     binary: rollup-fpd
     goos:
       - darwin
@@ -163,7 +163,7 @@ builds:
       - osusergo
 
   - id: cosmos-fpd-linux-amd64
-    main: ./cosmos-finality-gadget/cmd/fpd/main.go
+    main: ./bsn/cosmos/cmd/cosmos-fpd/main.go
     binary: cosmos-fpd
     goos:
       - linux
@@ -187,7 +187,7 @@ builds:
       - osusergo
 
   - id: cosmos-fpd-linux-arm64
-    main: ./cosmos-finality-gadget/cmd/fpd/main.go
+    main: ./bsn/cosmos/cmd/cosmos-fpd/main.go
     binary: cosmos-fpd
     goos:
       - linux
@@ -211,7 +211,7 @@ builds:
       - osusergo
 
   - id: cosmos-fpd-darwin
-    main: ./cosmos-finality-gadget/cmd/fpd/main.go
+    main: ./bsn/cosmos/cmd/cosmos-fpd/main.go
     binary: cosmos-fpd
     goos:
       - darwin
