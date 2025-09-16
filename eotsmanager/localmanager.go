@@ -312,6 +312,8 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 	response := make([]SignDataResponse, 0, len(req.SignRequest))
 	var recordsToSave []store.BatchSignRecord
 
+	encodedEotsPk := hex.EncodeToString(eotsPk)
+
 	for _, request := range req.SignRequest {
 		msg, height := request.Msg, request.Height
 
@@ -323,7 +325,7 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 
 				lm.logger.Info(
 					"duplicate sign requested",
-					zap.String("eots_pk", hex.EncodeToString(eotsPk)),
+					zap.String("eots_pk", encodedEotsPk),
 					zap.String("hash", hex.EncodeToString(msg)),
 					zap.Uint64("height", height),
 					zap.String("chainID", string(chainID)),
@@ -339,7 +341,7 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 
 			lm.logger.Error(
 				"double sign requested",
-				zap.String("eots_pk", hex.EncodeToString(eotsPk)),
+				zap.String("eots_pk", encodedEotsPk),
 				zap.String("hash", hex.EncodeToString(msg)),
 				zap.Uint64("height", height),
 				zap.String("chainID", string(chainID)),
@@ -355,8 +357,8 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 		}
 
 		// Update metrics
-		lm.metrics.IncrementEotsFpTotalEotsSignCounter(hex.EncodeToString(eotsPk))
-		lm.metrics.SetEotsFpLastEotsSignHeight(hex.EncodeToString(eotsPk), float64(height))
+		lm.metrics.IncrementEotsFpTotalEotsSignCounter(encodedEotsPk)
+		lm.metrics.SetEotsFpLastEotsSignHeight(encodedEotsPk, float64(height))
 
 		// Sign the message
 		signedBytes, err := eots.Sign(privKey, privRand, msg)
