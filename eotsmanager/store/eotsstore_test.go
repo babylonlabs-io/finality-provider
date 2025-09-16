@@ -685,6 +685,7 @@ func FuzzGetSignRecordsBatch(f *testing.F) {
 			for _, existingHeight := range heights {
 				if height == existingHeight {
 					height = r.Uint64()
+
 					break
 				}
 			}
@@ -703,6 +704,7 @@ func FuzzGetSignRecordsBatch(f *testing.F) {
 			nonExistentHeights[i] = r.Uint64() + 1000000
 		}
 
+		// nolint:gocritic // false positive
 		queryHeights := append(heights, nonExistentHeights...)
 
 		batchResults, err := vs.GetSignRecordsBatch(pk, chainID, queryHeights)
