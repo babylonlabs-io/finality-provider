@@ -12,6 +12,14 @@ type SigningRecord struct {
 	Timestamp int64 // The timestamp of the signing operation, in Unix seconds.
 }
 
+type BatchSignRecord struct {
+	Height  uint64
+	ChainID []byte
+	Msg     []byte
+	EotsPk  []byte
+	Sig     []byte
+}
+
 func (s *SigningRecord) FromProto(sr *proto.SigningRecord) {
 	s.Msg = sr.Msg
 	s.Timestamp = sr.Timestamp

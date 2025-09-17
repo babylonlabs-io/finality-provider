@@ -26,6 +26,10 @@ service EOTSManager {
   rpc SignSchnorrSig (SignSchnorrSigRequest)
       returns (SignSchnorrSigResponse);
 
+  // SignBatchEOTS signs multiple EOTS in batch
+  rpc SignBatchEOTS (SignBatchEOTSRequest)
+      returns (SignBatchEOTSResponse);
+
   // SaveEOTSKeyName saves a new key name mapping for the EOTS public key
   rpc SaveEOTSKeyName (SaveEOTSKeyNameRequest)
       returns (SaveEOTSKeyNameResponse);
@@ -147,4 +151,36 @@ message BackupRequest {
 // BackupResponse is a response to a backup request
 message BackupResponse {
   string backup_name = 1;
+}
+
+// SignDataRequest is a request for signing data at a specific height
+message SignDataRequest {
+  // the message which the EOTS signs
+  bytes msg = 1;
+  // the block height which the EOTS signs
+  uint64 height = 2;
+}
+
+// SignDataResponse is a response containing a signature for data at a specific height
+message SignDataResponse {
+  // sig is the EOTS signature
+  bytes sig = 1;
+  // the block height which the EOTS signed
+  uint64 height = 2;
+}
+
+// SignBatchEOTSRequest is a request to sign multiple EOTS in batch
+message SignBatchEOTSRequest {
+  // uid is the identifier of an EOTS key, i.e., public key following BIP-340 spec
+  bytes uid = 1;
+  // chain_id is the identifier of the consumer chain that the randomness is committed to
+  bytes chain_id = 2;
+  // sign_requests is the list of signing requests
+  repeated SignDataRequest sign_requests = 3;
+}
+
+// SignBatchEOTSResponse is a response to a batch EOTS signing request
+message SignBatchEOTSResponse {
+  // responses is the list of signature responses
+  repeated SignDataResponse responses = 1;
 }

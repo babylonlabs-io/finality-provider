@@ -69,7 +69,6 @@ func (r *rpcServer) CreateRandomnessPairList(_ context.Context, req *proto.Creat
 	}, nil
 }
 
-
 // SignEOTS signs an EOTS with the EOTS private key and the relevant randomness
 func (r *rpcServer) SignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 	*proto.SignEOTSResponse, error) {
@@ -109,6 +108,44 @@ func (r *rpcServer) SignSchnorrSig(_ context.Context, req *proto.SignSchnorrSigR
 	}
 
 	return &proto.SignSchnorrSigResponse{Sig: sig.Serialize()}, nil
+}
+
+// SignBatchEOTS signs multiple EOTS in batch
+func (r *rpcServer) SignBatchEOTS(_ context.Context, req *proto.SignBatchEOTSRequest) (
+	*proto.SignBatchEOTSResponse, error) {
+	signRequests := make([]*eotsmanager.SignDataRequest, len(req.SignRequests))
+	for i, signReq := range req.SignRequests {
+		signRequests[i] = &eotsmanager.SignDataRequest{
+			Msg:    signReq.Msg,
+			Height: signReq.Height,
+		}
+	}
+
+	batchReq := &eotsmanager.SignBatchEOTSRequest{
+		UID:         req.Uid,
+		ChainID:     req.ChainId,
+		SignRequest: signRequests,
+	}
+
+	responses, err := r.em.SignBatchEOTS(batchReq)
+	if err != nil {
+		if errors.Is(err, types.ErrDoubleSign) {
+			return nil, status.Error(codes.FailedPrecondition, err.Error()) //nolint:wrapcheck
+		}
+
+		return nil, fmt.Errorf("failed to sign batch EOTS: %w", err)
+	}
+
+	protoResponses := make([]*proto.SignDataResponse, len(responses))
+	for i, resp := range responses {
+		sigBytes := resp.Signature.Bytes()
+		protoResponses[i] = &proto.SignDataResponse{
+			Sig:    sigBytes[:],
+			Height: resp.Height,
+		}
+	}
+
+	return &proto.SignBatchEOTSResponse{Responses: protoResponses}, nil
 }
 
 // SaveEOTSKeyName signs a Schnorr sig with the EOTS private key
