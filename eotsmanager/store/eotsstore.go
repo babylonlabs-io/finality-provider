@@ -229,6 +229,90 @@ func (s *EOTSStore) GetSignRecord(eotsPk, chainID []byte, height uint64) (*Signi
 	return res, true, nil
 }
 
+// GetSignRecordsBatch retrieves multiple sign records in a single transaction
+func (s *EOTSStore) GetSignRecordsBatch(eotsPk, chainID []byte, heights []uint64) (map[uint64]*SigningRecord, error) {
+	results := make(map[uint64]*SigningRecord, len(heights))
+
+	err := s.db.View(func(tx kvdb.RTx) error {
+		bucket := tx.ReadBucket(signRecordBucketName)
+		if bucket == nil {
+			return ErrCorruptedEOTSDb
+		}
+
+		for _, height := range heights {
+			key := getSignRecordKey(chainID, eotsPk, height)
+			signRecordBytes := bucket.Get(key)
+
+			if signRecordBytes != nil {
+				protoRes := &proto.SigningRecord{}
+				if err := pm.Unmarshal(signRecordBytes, protoRes); err != nil {
+					return fmt.Errorf("failed to unmarshal sign record for height %d: %w", height, err)
+				}
+
+				record := &SigningRecord{}
+				record.FromProto(protoRes)
+				results[height] = record
+			}
+		}
+
+		return nil
+	}, func() {})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sign records batch: %w", err)
+	}
+
+	return results, nil
+}
+
+// SaveSignRecordsBatch saves multiple sign records in a single transaction
+func (s *EOTSStore) SaveSignRecordsBatch(records []BatchSignRecord) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	err := kvdb.Batch(s.db, func(tx kvdb.RwTx) error {
+		bucket := tx.ReadWriteBucket(signRecordBucketName)
+		if bucket == nil {
+			return ErrCorruptedEOTSDb
+		}
+
+		timestamp := time.Now().UnixMilli()
+
+		for _, record := range records {
+			key := getSignRecordKey(record.ChainID, record.EotsPk, record.Height)
+
+			// Check for duplicates
+			if bucket.Get(key) != nil {
+				return fmt.Errorf("duplicate sign record for height %d: %w", record.Height, ErrDuplicateSignRecord)
+			}
+
+			signRecord := &proto.SigningRecord{
+				Msg:       record.Msg,
+				EotsSig:   record.Sig,
+				Timestamp: timestamp,
+			}
+
+			marshalled, err := pm.Marshal(signRecord)
+			if err != nil {
+				return fmt.Errorf("failed to marshal sign record for height %d: %w", record.Height, err)
+			}
+
+			if err := bucket.Put(key, marshalled); err != nil {
+				return fmt.Errorf("failed to save sign record for height %d: %w", record.Height, err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to save sign records batch: %w", err)
+	}
+
+	return nil
+}
+
 func (s *EOTSStore) Close() error {
 	if err := s.db.Close(); err != nil {
 		return fmt.Errorf("failed to close EOTS store database: %w", err)
