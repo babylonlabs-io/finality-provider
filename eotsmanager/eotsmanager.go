@@ -53,9 +53,29 @@ type EOTSManager interface {
 	// This should be called during startup for `file`-based keyring, which requires explicit unlocking.
 	Unlock(uid []byte, passphrase string) error
 
+	// SignBatchEOTS same as SignEOTS but for a batch of messages
+	// In case of double sign error that signature in batch is not returned
+	SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignDataResponse, error)
+
 	// Backup performs a hot backup of the database using a read-only transaction, eotsd can be running
 	// when this function is called, but writing to the db is blocked until the backup is done
 	Backup(dbPath string, backupDir string) (string, error)
 
 	Close() error
+}
+
+type SignBatchEOTSRequest struct {
+	UID         []byte
+	ChainID     []byte
+	SignRequest []*SignDataRequest
+}
+
+type SignDataRequest struct {
+	Msg    []byte
+	Height uint64
+}
+
+type SignDataResponse struct {
+	Signature *btcec.ModNScalar
+	Height    uint64
 }

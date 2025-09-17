@@ -24,6 +24,7 @@ const (
 	EOTSManager_SignEOTS_FullMethodName                 = "/proto.EOTSManager/SignEOTS"
 	EOTSManager_UnsafeSignEOTS_FullMethodName           = "/proto.EOTSManager/UnsafeSignEOTS"
 	EOTSManager_SignSchnorrSig_FullMethodName           = "/proto.EOTSManager/SignSchnorrSig"
+	EOTSManager_SignBatchEOTS_FullMethodName            = "/proto.EOTSManager/SignBatchEOTS"
 	EOTSManager_SaveEOTSKeyName_FullMethodName          = "/proto.EOTSManager/SaveEOTSKeyName"
 	EOTSManager_UnlockKey_FullMethodName                = "/proto.EOTSManager/UnlockKey"
 	EOTSManager_Backup_FullMethodName                   = "/proto.EOTSManager/Backup"
@@ -44,6 +45,8 @@ type EOTSManagerClient interface {
 	UnsafeSignEOTS(ctx context.Context, in *SignEOTSRequest, opts ...grpc.CallOption) (*SignEOTSResponse, error)
 	// SignSchnorrSig signs a Schnorr sig with the EOTS private key
 	SignSchnorrSig(ctx context.Context, in *SignSchnorrSigRequest, opts ...grpc.CallOption) (*SignSchnorrSigResponse, error)
+	// SignBatchEOTS signs multiple EOTS in batch
+	SignBatchEOTS(ctx context.Context, in *SignBatchEOTSRequest, opts ...grpc.CallOption) (*SignBatchEOTSResponse, error)
 	// SaveEOTSKeyName saves a new key name mapping for the EOTS public key
 	SaveEOTSKeyName(ctx context.Context, in *SaveEOTSKeyNameRequest, opts ...grpc.CallOption) (*SaveEOTSKeyNameResponse, error)
 	// UnlockKey unlocks the keyring with the given passphrase
@@ -105,6 +108,15 @@ func (c *eOTSManagerClient) SignSchnorrSig(ctx context.Context, in *SignSchnorrS
 	return out, nil
 }
 
+func (c *eOTSManagerClient) SignBatchEOTS(ctx context.Context, in *SignBatchEOTSRequest, opts ...grpc.CallOption) (*SignBatchEOTSResponse, error) {
+	out := new(SignBatchEOTSResponse)
+	err := c.cc.Invoke(ctx, EOTSManager_SignBatchEOTS_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eOTSManagerClient) SaveEOTSKeyName(ctx context.Context, in *SaveEOTSKeyNameRequest, opts ...grpc.CallOption) (*SaveEOTSKeyNameResponse, error) {
 	out := new(SaveEOTSKeyNameResponse)
 	err := c.cc.Invoke(ctx, EOTSManager_SaveEOTSKeyName_FullMethodName, in, out, opts...)
@@ -147,6 +159,8 @@ type EOTSManagerServer interface {
 	UnsafeSignEOTS(context.Context, *SignEOTSRequest) (*SignEOTSResponse, error)
 	// SignSchnorrSig signs a Schnorr sig with the EOTS private key
 	SignSchnorrSig(context.Context, *SignSchnorrSigRequest) (*SignSchnorrSigResponse, error)
+	// SignBatchEOTS signs multiple EOTS in batch
+	SignBatchEOTS(context.Context, *SignBatchEOTSRequest) (*SignBatchEOTSResponse, error)
 	// SaveEOTSKeyName saves a new key name mapping for the EOTS public key
 	SaveEOTSKeyName(context.Context, *SaveEOTSKeyNameRequest) (*SaveEOTSKeyNameResponse, error)
 	// UnlockKey unlocks the keyring with the given passphrase
@@ -174,6 +188,9 @@ func (UnimplementedEOTSManagerServer) UnsafeSignEOTS(context.Context, *SignEOTSR
 }
 func (UnimplementedEOTSManagerServer) SignSchnorrSig(context.Context, *SignSchnorrSigRequest) (*SignSchnorrSigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SignSchnorrSig not implemented")
+}
+func (UnimplementedEOTSManagerServer) SignBatchEOTS(context.Context, *SignBatchEOTSRequest) (*SignBatchEOTSResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SignBatchEOTS not implemented")
 }
 func (UnimplementedEOTSManagerServer) SaveEOTSKeyName(context.Context, *SaveEOTSKeyNameRequest) (*SaveEOTSKeyNameResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveEOTSKeyName not implemented")
@@ -287,6 +304,24 @@ func _EOTSManager_SignSchnorrSig_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EOTSManager_SignBatchEOTS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignBatchEOTSRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EOTSManagerServer).SignBatchEOTS(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EOTSManager_SignBatchEOTS_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EOTSManagerServer).SignBatchEOTS(ctx, req.(*SignBatchEOTSRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EOTSManager_SaveEOTSKeyName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SaveEOTSKeyNameRequest)
 	if err := dec(in); err != nil {
@@ -367,6 +402,10 @@ var EOTSManager_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SignSchnorrSig",
 			Handler:    _EOTSManager_SignSchnorrSig_Handler,
+		},
+		{
+			MethodName: "SignBatchEOTS",
+			Handler:    _EOTSManager_SignBatchEOTS_Handler,
 		},
 		{
 			MethodName: "SaveEOTSKeyName",
