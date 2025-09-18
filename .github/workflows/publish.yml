@@ -17,12 +17,8 @@ on:
 
 jobs:
   lint_test:
-<<<<<<< Updated upstream
-    uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@v0.13.3
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs['skip-lint-test'] == true) }}
-=======
     uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@5151754256060bf160c411d0784f831f29882106 # v0.13.4
->>>>>>> Stashed changes
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs['skip-lint-test'] == true) }}
     with:
       go-version: '1.25'
       go-lint-version: 'v2.4.0'
