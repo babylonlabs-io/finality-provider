@@ -24,9 +24,6 @@ PACKAGES_E2E=$(shell go list -tags=e2e_babylon ./... | grep '/itest')
 # need to specify the full path to fix issue where logs won't stream to stdout
 # due to multiple packages found
 # context: https://github.com/golang/go/issues/24929
-PACKAGES_E2E_ROLLUP=$(shell go list -tags=e2e_rollup ./... | grep '/bsn/rollup/e2e')
-PACKAGES_E2E_BCD=$(shell go list -tags=e2e_bcd ./... | grep '/bsn/cosmos/e2e')
-
 ifeq ($(LINK_STATICALLY),true)
 	ldflags += -linkmode=external -extldflags "-Wl,-z,muldefs -static" -v
 endif
