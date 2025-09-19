@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 
 	fpkr "github.com/babylonlabs-io/finality-provider/keyring"
 
@@ -70,8 +69,7 @@ func FuzzCreatePoP(f *testing.F) {
 		require.NoError(t, err)
 
 		// Need to use the same signing context for verification
-		fpPopContext := signingcontext.FpPopContextV0(testChainID, signingcontext.AccBTCStaking.String())
-		err = pop.Verify(fpPopContext, fpAddr, btcPk, &chaincfg.SimNetParams)
+		err = pop.Verify("", fpAddr, btcPk, &chaincfg.SimNetParams)
 		require.NoError(t, err)
 	})
 }

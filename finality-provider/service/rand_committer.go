@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+
 	"github.com/avast/retry-go/v4"
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
@@ -256,28 +257,10 @@ func (rc *DefaultRandomnessCommitter) getPubRandList(startHeight uint64, numPubR
 	return pubRandList, nil
 }
 
-func (rc *DefaultRandomnessCommitter) SignPubRandCommit(ctx context.Context, startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
-	var (
-		hash []byte
-		err  error
-	)
-
-	latestHeight, err := LatestBlockHeightWithRetry(ctx, rc.ConsumerCon, rc.Logger)
+func (rc *DefaultRandomnessCommitter) SignPubRandCommit(_ context.Context, startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
+	hash, err := getHashToSignForCommitPubRandWithContext("", startHeight, numPubRand, commitment)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query the latest block: %w", err)
-	}
-	// For BSNs we always use the ctx signing
-	if rc.ConsumerCon.IsBSN() || latestHeight >= rc.Cfg.ContextSigningHeight {
-		signCtx := rc.ConsumerCon.GetFpRandCommitContext()
-		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
-		}
-	} else {
-		hash, err = getHashToSignForCommitPubRandWithContext("", startHeight, numPubRand, commitment)
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
-		}
+		return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
 	}
 
 	// sign the message hash using the finality-provider's BTC private key

@@ -3,8 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
-	"google.golang.org/grpc"
 	"strings"
+
+	"google.golang.org/grpc"
 
 	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -68,29 +69,10 @@ func getHashToSignForCommitPubRandWithContext(signingContext string, startHeight
 	return hasher.Sum(nil), nil
 }
 
-func (fp *FinalityProviderInstance) SignPubRandCommit(ctx context.Context, startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
-	var (
-		hash []byte
-		err  error
-	)
-
-	latestHeight, err := LatestBlockHeightWithRetry(ctx, fp.consumerCon, fp.logger)
+func (fp *FinalityProviderInstance) SignPubRandCommit(_ context.Context, startHeight uint64, numPubRand uint64, commitment []byte) (*schnorr.Signature, error) {
+	hash, err := getHashToSignForCommitPubRandWithContext("", startHeight, numPubRand, commitment)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query the latest block: %w", err)
-	}
-
-	// For BSNs we always use the ctx signing
-	if fp.consumerCon.IsBSN() || latestHeight >= fp.cfg.ContextSigningHeight {
-		signCtx := fp.consumerCon.GetFpRandCommitContext()
-		hash, err = getHashToSignForCommitPubRandWithContext(signCtx, startHeight, numPubRand, commitment)
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
-		}
-	} else {
-		hash, err = getHashToSignForCommitPubRandWithContext("", startHeight, numPubRand, commitment)
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
-		}
+		return nil, fmt.Errorf("failed to sign the commit public randomness message: %w", err)
 	}
 
 	// sign the message hash using the finality-provider's BTC private key
@@ -102,22 +84,8 @@ func (fp *FinalityProviderInstance) SignPubRandCommit(ctx context.Context, start
 	return sig, nil
 }
 
-func (fp *FinalityProviderInstance) SignFinalitySig(ctx context.Context, b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
-	latestHeight, err := LatestBlockHeightWithRetry(ctx, fp.consumerCon, fp.logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query the latest block: %w", err)
-	}
-	// build proper finality signature request
-	var msgToSign []byte
-	// For BSNs we always use the ctx signing
-	if fp.consumerCon.IsBSN() || latestHeight >= fp.cfg.ContextSigningHeight {
-		signCtx := fp.consumerCon.GetFpFinVoteContext()
-		msgToSign = b.MsgToSign(signCtx)
-	} else {
-		msgToSign = b.MsgToSign("")
-	}
-
-	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.GetHeight())
+func (fp *FinalityProviderInstance) SignFinalitySig(_ context.Context, b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
+	sig, err := fp.em.SignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), b.MsgToSign(""), b.GetHeight())
 	if err != nil {
 		if strings.Contains(err.Error(), failedPreconditionErrStr) {
 			return nil, ErrFailedPrecondition

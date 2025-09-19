@@ -37,7 +37,6 @@ import (
 	eotsconfig "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	e2eutils "github.com/babylonlabs-io/finality-provider/itest"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 	"github.com/babylonlabs-io/finality-provider/testutil"
@@ -98,9 +97,7 @@ func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.Publ
 	stakerAddr := tm.BabylonController.GetKeyAddress()
 
 	// proof-of-possession
-	babylonChainID := tm.GetBabylonChainID(t)
-	stakerPopContext := signingcontext.StakerPopContextV0(babylonChainID, signingcontext.AccBTCStaking.String())
-	pop, err := datagen.NewPoPBTC(stakerPopContext, stakerAddr, delBtcPrivKey)
+	pop, err := datagen.NewPoPBTC("", stakerAddr, delBtcPrivKey)
 	require.NoError(t, err)
 
 	// create and insert BTC headers which include the staking tx to get staking tx info
