@@ -120,21 +120,8 @@ func (th *FinalityProviderTestHelper) SubmitFinalitySignatureAndExtractPrivKey(
 		return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %w", err)
 	}
 
-	eotsSignerFunc := func(ctx context.Context, b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
-		latestHeight, err := LatestBlockHeightWithRetry(ctx, th.fp.consumerCon, th.fp.logger)
-		if err != nil {
-			return nil, fmt.Errorf("failed to query the latest block: %w", err)
-		}
-		var msgToSign []byte
-		// For BSNs we always use the ctx signing
-		if th.fp.consumerCon.IsBSN() || latestHeight >= th.fp.cfg.ContextSigningHeight {
-			signCtx := th.fp.consumerCon.GetFpFinVoteContext()
-			msgToSign = b.MsgToSign(signCtx)
-		} else {
-			msgToSign = b.MsgToSign("")
-		}
-
-		sig, err := th.fp.em.UnsafeSignEOTS(th.fp.btcPk.MustMarshal(), th.fp.GetChainID(), msgToSign, b.GetHeight())
+	eotsSignerFunc := func(_ context.Context, b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
+		sig, err := th.fp.em.UnsafeSignEOTS(th.fp.btcPk.MustMarshal(), th.fp.GetChainID(), b.MsgToSign(""), b.GetHeight())
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign EOTS: %w", err)
 		}

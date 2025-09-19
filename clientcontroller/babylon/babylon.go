@@ -8,7 +8,6 @@ import (
 	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 
 	sdkErr "cosmossdk.io/errors"
 	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
@@ -124,10 +123,6 @@ func (bc *ClientWrapper) reliablySendMsgs(ctx context.Context, msgs []sdk.Msg, e
 	}
 
 	return resp, nil
-}
-
-func (bc *ClientWrapper) GetFpPopContextV0() string {
-	return signingcontext.FpPopContextV0(bc.cfg.ChainID, signingcontext.AccBTCStaking.String())
 }
 
 // RegisterFinalityProvider registers a finality provider via a MsgCreateFinalityProvider to Babylon

@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#709](https://github.com/babylonlabs-io/finality-provider/pull/709) chore: query indexed block
 * [#711](https://github.com/babylonlabs-io/finality-provider/pull/711) chore: improve proof batch building
 * [#715](https://github.com/babylonlabs-io/finality-provider/pull/715) feat: batch eots sign
+* [#717](https://github.com/babylonlabs-io/finality-provider/pull/717) chore: remove bsns and phase 3
 
 ## v2.0.0-rc.4
 
