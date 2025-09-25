@@ -1,5 +1,3 @@
-//go:build e2e_babylon
-
 package e2etest_babylon
 
 import (
@@ -15,12 +13,12 @@ import (
 	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
 	"github.com/babylonlabs-io/finality-provider/metrics"
 
-	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
+	bbnclient "github.com/babylonlabs-io/babylon/v4/client/client"
 
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 
-	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	"github.com/babylonlabs-io/babylon/v4/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/require"

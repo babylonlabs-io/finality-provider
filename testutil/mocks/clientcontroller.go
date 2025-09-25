@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	types "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	types "github.com/babylonlabs-io/babylon/v4/x/btcstaking/types"
 	api "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	types0 "github.com/babylonlabs-io/finality-provider/types"
 	btcec "github.com/btcsuite/btcd/btcec/v2"

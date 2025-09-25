@@ -1,5 +1,3 @@
-//go:build e2e_babylon
-
 package e2etest_babylon
 
 import (
@@ -22,8 +20,8 @@ import (
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/babylonlabs-io/finality-provider/testutil"
 
-	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	"github.com/babylonlabs-io/babylon/v4/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
 	eotscmd "github.com/babylonlabs-io/finality-provider/eotsmanager/cmd/eotsd/daemon"
 	commoncmd "github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/common"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/cmd/fpd/daemon"
@@ -335,6 +333,8 @@ func TestFinalityProviderEditCmd(t *testing.T) {
 }
 
 func TestFinalityProviderCreateCmd(t *testing.T) {
+	// todo(lazar955): breaking change on bbn does not allow to create multiple fps with the same key, skipping for now
+	t.Skip()
 	t.Parallel()
 	ctx, cancel := context.WithCancel(t.Context())
 	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)

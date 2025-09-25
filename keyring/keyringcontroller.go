@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
-	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	"github.com/babylonlabs-io/babylon/v4/testutil/datagen"
+	bstypes "github.com/babylonlabs-io/babylon/v4/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -119,7 +119,7 @@ func (kc *ChainKeyringController) CreateChainKey(passphrase, hdPath, mnemonic st
 // this requires both keys created beforehand
 func (kc *ChainKeyringController) CreatePop(_ string, fpAddr sdk.AccAddress, btcPrivKey *btcec.PrivateKey) (*bstypes.ProofOfPossessionBTC, error) {
 	// Use FpPopContextV0 with the provided chain ID
-	pop, err := datagen.NewPoPBTC("", fpAddr, btcPrivKey)
+	pop, err := datagen.NewPoPBTC(fpAddr, btcPrivKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proof of possession: %w", err)
 	}

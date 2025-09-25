@@ -8,7 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/babylonlabs-io/babylon/v3/types"
+	"github.com/babylonlabs-io/babylon/v4/types"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/stretchr/testify/require"
@@ -69,7 +69,7 @@ func FuzzCreatePoP(f *testing.F) {
 		require.NoError(t, err)
 
 		// Need to use the same signing context for verification
-		err = pop.Verify("", fpAddr, btcPk, &chaincfg.SimNetParams)
+		err = pop.Verify(fpAddr, btcPk, &chaincfg.SimNetParams)
 		require.NoError(t, err)
 	})
 }

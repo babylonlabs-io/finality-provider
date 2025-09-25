@@ -13,15 +13,15 @@ import (
 
 	fpstore "github.com/babylonlabs-io/finality-provider/finality-provider/store"
 
-	"github.com/babylonlabs-io/babylon/v3/btcstaking"
-	txformat "github.com/babylonlabs-io/babylon/v3/btctxformatter"
-	asig "github.com/babylonlabs-io/babylon/v3/crypto/schnorr-adaptor-signature"
-	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	btcctypes "github.com/babylonlabs-io/babylon/v3/x/btccheckpoint/types"
-	btclctypes "github.com/babylonlabs-io/babylon/v3/x/btclightclient/types"
-	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
-	ckpttypes "github.com/babylonlabs-io/babylon/v3/x/checkpointing/types"
+	"github.com/babylonlabs-io/babylon/v4/btcstaking"
+	txformat "github.com/babylonlabs-io/babylon/v4/btctxformatter"
+	asig "github.com/babylonlabs-io/babylon/v4/crypto/schnorr-adaptor-signature"
+	"github.com/babylonlabs-io/babylon/v4/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
+	btcctypes "github.com/babylonlabs-io/babylon/v4/x/btccheckpoint/types"
+	btclctypes "github.com/babylonlabs-io/babylon/v4/x/btclightclient/types"
+	bstypes "github.com/babylonlabs-io/babylon/v4/x/btcstaking/types"
+	ckpttypes "github.com/babylonlabs-io/babylon/v4/x/checkpointing/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/wire"
@@ -97,7 +97,7 @@ func (tm *BaseTestManager) InsertBTCDelegation(t *testing.T, fpPks []*btcec.Publ
 	stakerAddr := tm.BabylonController.GetKeyAddress()
 
 	// proof-of-possession
-	pop, err := datagen.NewPoPBTC("", stakerAddr, delBtcPrivKey)
+	pop, err := datagen.NewPoPBTC(stakerAddr, delBtcPrivKey)
 	require.NoError(t, err)
 
 	// create and insert BTC headers which include the staking tx to get staking tx info

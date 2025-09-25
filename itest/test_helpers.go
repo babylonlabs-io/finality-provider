@@ -4,10 +4,10 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/babylonlabs-io/babylon/v3/crypto/eots"
-	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
-	bbn "github.com/babylonlabs-io/babylon/v3/types"
-	ftypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
+	"github.com/babylonlabs-io/babylon/v4/crypto/eots"
+	"github.com/babylonlabs-io/babylon/v4/testutil/datagen"
+	bbn "github.com/babylonlabs-io/babylon/v4/types"
+	ftypes "github.com/babylonlabs-io/babylon/v4/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -26,7 +26,7 @@ func GenCommitPubRandListMsg(r *rand.Rand, fpSk *btcec.PrivateKey, startHeight u
 		NumPubRand:  numPubRand,
 		Commitment:  randListInfo.Commitment,
 	}
-	hash, err := msg.HashToSign("")
+	hash, err := msg.HashToSign()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -96,7 +96,7 @@ func newMsgAddFinalitySig(
 		BlockAppHash: blockAppHash,
 		FinalitySig:  nil,
 	}
-	msgToSign := msg.MsgToSign("")
+	msgToSign := msg.MsgToSign()
 	sig, err := eots.Sign(sk, randListInfo.SRList[idx], msgToSign)
 	if err != nil {
 		return nil, err

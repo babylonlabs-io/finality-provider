@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	ftypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
+	ftypes "github.com/babylonlabs-io/babylon/v4/x/finality/types"
 	ccapi "github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/types"
 	"github.com/btcsuite/btcd/btcec/v2"

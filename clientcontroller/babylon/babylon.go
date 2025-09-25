@@ -5,17 +5,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
+	"github.com/babylonlabs-io/babylon/v4/client/babylonclient"
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 
 	sdkErr "cosmossdk.io/errors"
-	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	btcctypes "github.com/babylonlabs-io/babylon/v3/x/btccheckpoint/types"
-	btclctypes "github.com/babylonlabs-io/babylon/v3/x/btclightclient/types"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
-	bsctypes "github.com/babylonlabs-io/babylon/v3/x/btcstkconsumer/types"
+	bbnclient "github.com/babylonlabs-io/babylon/v4/client/client"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
+	btcctypes "github.com/babylonlabs-io/babylon/v4/x/btccheckpoint/types"
+	btclctypes "github.com/babylonlabs-io/babylon/v4/x/btclightclient/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v4/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil"
@@ -148,7 +147,6 @@ func (bc *ClientWrapper) RegisterFinalityProvider(
 		Pop:         &bbnPop,
 		Commission:  req.Commission,
 		Description: &sdkDescription,
-		BsnId:       req.ChainID,
 	}
 
 	res, err := bc.reliablySendMsg(ctx, msg, emptyErrs, emptyErrs)
@@ -320,7 +318,7 @@ func (bc *ClientWrapper) QueryFinalityProviders() ([]*btcstakingtypes.FinalityPr
 
 	for {
 		// NOTE: empty BSN ID means querying all Babylon finality providers
-		res, err := bc.bbnClient.FinalityProviders("", pagination)
+		res, err := bc.bbnClient.FinalityProviders(pagination)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query finality providers: %w", err)
 		}
@@ -335,14 +333,14 @@ func (bc *ClientWrapper) QueryFinalityProviders() ([]*btcstakingtypes.FinalityPr
 	return fps, nil
 }
 
-func (bc *ClientWrapper) QueryConsumerFinalityProviders(bsnID string) ([]*btcstakingtypes.FinalityProviderResponse, error) {
+func (bc *ClientWrapper) QueryConsumerFinalityProviders() ([]*btcstakingtypes.FinalityProviderResponse, error) {
 	var fps []*btcstakingtypes.FinalityProviderResponse
 	pagination := &sdkquery.PageRequest{
 		Limit: 100,
 	}
 
 	for {
-		res, err := bc.bbnClient.FinalityProviders(bsnID, pagination)
+		res, err := bc.bbnClient.FinalityProviders(pagination)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query finality providers: %w", err)
 		}
@@ -480,24 +478,6 @@ func (bc *ClientWrapper) InsertSpvProofs(submitter string, proofs []*btcctypes.B
 	}
 
 	return res, nil
-}
-
-// RegisterConsumerChain registers a consumer chain via a MsgRegisterChain to Babylon
-func (bc *ClientWrapper) RegisterConsumerChain(id, name, description, ethL2FinalityContractAddress string) (*types.TxResponse, error) {
-	msg := &bsctypes.MsgRegisterConsumer{
-		Signer:                        bc.MustGetTxSigner(),
-		ConsumerId:                    id,
-		ConsumerName:                  name,
-		ConsumerDescription:           description,
-		RollupFinalityContractAddress: ethL2FinalityContractAddress,
-	}
-
-	res, err := bc.reliablySendMsg(context.Background(), msg, emptyErrs, emptyErrs)
-	if err != nil {
-		return nil, err
-	}
-
-	return &types.TxResponse{TxHash: res.TxHash}, nil
 }
 
 func (bc *ClientWrapper) GetBBNClient() *bbnclient.Client {

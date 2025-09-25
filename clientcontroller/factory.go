@@ -2,7 +2,7 @@ package clientcontroller
 
 import (
 	"fmt"
-	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
+	bbnclient "github.com/babylonlabs-io/babylon/v4/client/client"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
