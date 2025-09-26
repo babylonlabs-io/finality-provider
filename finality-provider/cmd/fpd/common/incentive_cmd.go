@@ -2,7 +2,7 @@
 package common
 
 import (
-	incentivecli "github.com/babylonlabs-io/babylon/v3/x/incentive/client/cli"
+	incentivecli "github.com/babylonlabs-io/babylon/v4/x/incentive/client/cli"
 	"github.com/spf13/cobra"
 )
 

@@ -4,7 +4,7 @@ package types
 import (
 	"encoding/json"
 
-	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
+	"github.com/babylonlabs-io/babylon/v4/client/babylonclient"
 	"github.com/spf13/cobra"
 )
 

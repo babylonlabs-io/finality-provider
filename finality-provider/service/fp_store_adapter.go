@@ -6,7 +6,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/types"
 	"sync"
 
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"go.uber.org/zap"
 

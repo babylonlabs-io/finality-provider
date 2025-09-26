@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"strings"
 	"sync"
 
+	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
+
 	"github.com/babylonlabs-io/finality-provider/types"
 
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
+	bstypes "github.com/babylonlabs-io/babylon/v4/x/btcstaking/types"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -527,7 +528,7 @@ func (app *FinalityProviderApp) UnjailFinalityProvider(ctx context.Context, fpPk
 	}
 }
 
-func (app *FinalityProviderApp) CreatePop(ctx context.Context, fpAddress sdk.AccAddress, fpPk *bbntypes.BIP340PubKey) (*bstypes.ProofOfPossessionBTC, error) {
+func (app *FinalityProviderApp) CreatePop(_ context.Context, fpAddress sdk.AccAddress, fpPk *bbntypes.BIP340PubKey) (*bstypes.ProofOfPossessionBTC, error) {
 	pop := &bstypes.ProofOfPossessionBTC{
 		BtcSigType: bstypes.BTCSigType_BIP340, // by default, we use BIP-340 encoding for BTC signature
 	}
@@ -535,18 +536,6 @@ func (app *FinalityProviderApp) CreatePop(ctx context.Context, fpAddress sdk.Acc
 	// NOTE: *schnorr.Sign has to take the hash of the message.
 	// So we have to hash the address before signing
 	hasher := tmhash.New()
-	latestHeight, err := LatestBlockHeightWithRetry(ctx, app.consumerCon, app.logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query the latest block height: %w", err)
-	}
-	//  nextHeight-1 might underflow if the nextHeight is 0
-	if app.consumerCon.IsBSN() || latestHeight >= app.config.ContextSigningHeight {
-		signCtx := app.cc.GetFpPopContextV0()
-		if _, err := hasher.Write([]byte(signCtx)); err != nil {
-			return nil, fmt.Errorf("failed to write signing context to the hash: %w", err)
-		}
-	}
-
 	if _, err := hasher.Write(fpAddress.Bytes()); err != nil {
 		return nil, fmt.Errorf("failed to write fp address to the hash: %w", err)
 	}

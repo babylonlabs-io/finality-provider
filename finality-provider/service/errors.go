@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
 )
 
 const instanceTerminatingMsg = "terminating the finality-provider instance due to critical error"

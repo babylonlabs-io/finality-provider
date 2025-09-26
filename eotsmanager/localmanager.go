@@ -9,8 +9,8 @@ import (
 
 	"github.com/babylonlabs-io/finality-provider/metrics"
 
-	"github.com/babylonlabs-io/babylon/v3/crypto/eots"
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	"github.com/babylonlabs-io/babylon/v4/crypto/eots"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"

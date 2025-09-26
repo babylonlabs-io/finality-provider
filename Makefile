@@ -24,9 +24,6 @@ PACKAGES_E2E=$(shell go list -tags=e2e_babylon ./... | grep '/itest')
 # need to specify the full path to fix issue where logs won't stream to stdout
 # due to multiple packages found
 # context: https://github.com/golang/go/issues/24929
-PACKAGES_E2E_ROLLUP=$(shell go list -tags=e2e_rollup ./... | grep '/bsn/rollup/e2e')
-PACKAGES_E2E_BCD=$(shell go list -tags=e2e_bcd ./... | grep '/bsn/cosmos/e2e')
-
 ifeq ($(LINK_STATICALLY),true)
 	ldflags += -linkmode=external -extldflags "-Wl,-z,muldefs -static" -v
 endif
@@ -92,7 +89,7 @@ clean-e2e:
 	rm -rf ~/.babylond ~/.bcd ~/.relayer
 	rm -rf /tmp/ZBcdTest* /tmp/ZRelayerTest* /tmp/ZBabylonTest*
 # Main test target that runs all e2e tests
-test-e2e: test-e2e-babylon test-e2e-bcd test-e2e-rollup
+test-e2e: test-e2e-babylon
 
 test-e2e-babylon: clean-e2e
 	@go test -mod=readonly -timeout=25m -v $(PACKAGES_E2E) -count=1 --tags=e2e_babylon
@@ -102,12 +99,6 @@ test-e2e-babylon-ci: clean-e2e
 	| circleci tests run --command \
 	"xargs go test -mod=readonly -timeout=25m -v $(PACKAGES_E2E) -count=1 --tags=e2e_babylon --run" \
 	--split-by=name --timings-type=name
-
-test-e2e-bcd: clean-e2e install-rly install-bcd
-	@go test -mod=readonly -timeout=30m -v $(PACKAGES_E2E_BCD) -count=1 --tags=e2e_bcd -failfast
-
-test-e2e-rollup: clean-e2e
-	@go test -mod=readonly -timeout=25m -v $(PACKAGES_E2E_ROLLUP) -count=1 --tags=e2e_rollup
 
 ###############################################################################
 ###                                Protobuf                                 ###
