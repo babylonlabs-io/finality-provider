@@ -12,10 +12,10 @@ import (
 
 	"go.uber.org/zap/zaptest"
 
-	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
-	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
+	"github.com/babylonlabs-io/babylon/v4/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v4/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/v4/x/finality/types"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	eotscfg "github.com/babylonlabs-io/finality-provider/eotsmanager/config"
@@ -351,7 +351,7 @@ func FuzzSaveAlreadyRegisteredFinalityProvider(f *testing.F) {
 		currentHeight := randomStartingHeight + uint64(r.Int63n(10)+2)
 		mockBabylonController := testutil.PrepareMockedBabylonController(t)
 		mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
-		rndFp, err := datagen.GenRandomFinalityProvider(r, "", "")
+		rndFp, err := datagen.GenRandomFinalityProvider(r)
 		require.NoError(t, err)
 
 		mockConsumerController.EXPECT().GetFpRandCommitContext().Return("").AnyTimes()

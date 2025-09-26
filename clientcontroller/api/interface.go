@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"cosmossdk.io/math"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v4/x/btcstaking/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
@@ -19,9 +19,6 @@ const babylonConsumerChainType = "babylon"
 type BabylonController interface {
 	// Start initializes the client connection
 	Start() error
-
-	// GetFpPopContextV0 returns the signing context for proof-of-possession
-	GetFpPopContextV0() string
 
 	// RegisterFinalityProvider registers a finality provider to the consumer chain
 	RegisterFinalityProvider(ctx context.Context, req *RegisterFinalityProviderRequest) (*types.TxResponse, error)
@@ -63,9 +60,6 @@ type ConsumerController interface {
 
 // RandomnessCommitter handles public randomness commitment operations
 type RandomnessCommitter interface {
-	// GetFpRandCommitContext returns the signing context for public randomness commitment
-	GetFpRandCommitContext() string
-
 	// CommitPubRandList commits a list of EOTS public randomness to the consumer chain
 	CommitPubRandList(ctx context.Context, req *CommitPubRandListRequest) (*types.TxResponse, error)
 
@@ -95,8 +89,6 @@ type BlockQuerier[T types.BlockDescription] interface {
 
 // FinalityOperator handles finality signature submission operations
 type FinalityOperator interface {
-	// GetFpFinVoteContext returns the signing context for finality vote
-	GetFpFinVoteContext() string
 	// SubmitBatchFinalitySigs submits a batch of finality signatures to the consumer chain
 	SubmitBatchFinalitySigs(ctx context.Context, req *SubmitBatchFinalitySigsRequest) (*types.TxResponse, error)
 

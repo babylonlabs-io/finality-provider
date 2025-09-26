@@ -2,7 +2,7 @@
 package types
 
 import (
-	bbn "github.com/babylonlabs-io/babylon/v3/types"
+	bbn "github.com/babylonlabs-io/babylon/v4/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cometbft/cometbft/crypto/merkle"
 )

@@ -2,7 +2,7 @@
 package types
 
 import (
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/btcsuite/btcd/btcec/v2"
 )

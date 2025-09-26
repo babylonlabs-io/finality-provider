@@ -16,8 +16,8 @@ import (
 	"github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/service"
 
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	bstypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
+	bstypes "github.com/babylonlabs-io/babylon/v4/x/btcstaking/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -132,7 +132,7 @@ func DefaultFpConfigWithPorts(keyringDir, homeDir string, fpRpcPort, fpMetricsPo
 
 // ParseRespBTCDelToBTCDel parses an BTC delegation response to BTC Delegation
 // adapted from
-// https://github.com/babylonlabs-io/babylon/v3/blob/1a3c50da64885452c8d669fcea2a2fad78c8a028/test/e2e/btc_staking_e2e_test.go#L548
+// https://github.com/babylonlabs-io/babylon/v4/blob/1a3c50da64885452c8d669fcea2a2fad78c8a028/test/e2e/btc_staking_e2e_test.go#L548
 func ParseRespBTCDelToBTCDel(resp *bstypes.BTCDelegationResponse) (btcDel *bstypes.BTCDelegation, err error) {
 	stakingTx, err := hex.DecodeString(resp.StakingTxHex)
 	if err != nil {
