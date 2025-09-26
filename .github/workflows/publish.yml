@@ -32,28 +32,6 @@ jobs:
       - name: Run e2e Babylon tests
         run: make test-e2e-babylon
 
-  e2e_bcd:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.25'
-      - name: Run e2e BCD tests
-        run: make test-e2e-bcd
-
-  e2e_rollup:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.25'
-      - name: Run rollup BSN e2e tests
-        run: make test-e2e-rollup
-
   docker_pipeline:
     needs: ["lint_test"]
     uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@v0.10.2

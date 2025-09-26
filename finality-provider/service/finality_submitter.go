@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
 	fpcc "github.com/babylonlabs-io/finality-provider/clientcontroller"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
@@ -357,23 +357,8 @@ func (ds *DefaultFinalitySubmitter) CheckBlockFinalization(ctx context.Context, 
 	return b.IsFinalized(), nil
 }
 
-func (ds *DefaultFinalitySubmitter) SignFinalitySig(ctx context.Context, b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
-	// build proper finality signature request
-	latestHeight, err := LatestBlockHeightWithRetry(ctx, ds.ConsumerCtrl, ds.Logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query the latest block: %w", err)
-	}
-
-	var msgToSign []byte
-	// For BSNs we always use the ctx signing
-	if ds.ConsumerCtrl.IsBSN() || latestHeight >= ds.Cfg.ContextSigningHeight {
-		signCtx := ds.ConsumerCtrl.GetFpFinVoteContext()
-		msgToSign = b.MsgToSign(signCtx)
-	} else {
-		msgToSign = b.MsgToSign("")
-	}
-
-	sig, err := ds.Em.SignEOTS(ds.GetBtcPkBIP340().MustMarshal(), ds.State.GetChainID(), msgToSign, b.GetHeight())
+func (ds *DefaultFinalitySubmitter) SignFinalitySig(_ context.Context, b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
+	sig, err := ds.Em.SignEOTS(ds.GetBtcPkBIP340().MustMarshal(), ds.State.GetChainID(), b.MsgToSign(""), b.GetHeight())
 	if err != nil {
 		if strings.Contains(err.Error(), failedPreconditionErrStr) {
 			return nil, ErrFailedPrecondition
@@ -385,24 +370,11 @@ func (ds *DefaultFinalitySubmitter) SignFinalitySig(ctx context.Context, b types
 	return bbntypes.NewSchnorrEOTSSigFromModNScalar(sig), nil
 }
 
-func (ds *DefaultFinalitySubmitter) SignFinalitySigBatch(ctx context.Context, blocks []types.BlockDescription) (map[uint64]*bbntypes.SchnorrEOTSSig, error) {
-	latestHeight, err := LatestBlockHeightWithRetry(ctx, ds.ConsumerCtrl, ds.Logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query the latest block: %w", err)
-	}
-
+func (ds *DefaultFinalitySubmitter) SignFinalitySigBatch(_ context.Context, blocks []types.BlockDescription) (map[uint64]*bbntypes.SchnorrEOTSSig, error) {
 	signDataReq := make([]*eotsmanager.SignDataRequest, 0, len(blocks))
 	for _, b := range blocks {
-		var msgToSign []byte
-		// For BSNs we always use the ctx signing
-		if ds.ConsumerCtrl.IsBSN() || latestHeight >= ds.Cfg.ContextSigningHeight {
-			signCtx := ds.ConsumerCtrl.GetFpFinVoteContext()
-			msgToSign = b.MsgToSign(signCtx)
-		} else {
-			msgToSign = b.MsgToSign("")
-		}
 		signDataReq = append(signDataReq, &eotsmanager.SignDataRequest{
-			Msg:    msgToSign,
+			Msg:    b.MsgToSign(""),
 			Height: b.GetHeight(),
 		})
 	}

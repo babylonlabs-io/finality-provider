@@ -11,7 +11,7 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-const modName = "github.com/babylonlabs-io/babylon/v3"
+const modName = "github.com/babylonlabs-io/babylon/v4"
 
 // GetBabylonVersion returns babylond version from go.mod
 func GetBabylonVersion() (string, error) {

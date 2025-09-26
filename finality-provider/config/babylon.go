@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"time"
 
-	bbncfg "github.com/babylonlabs-io/babylon/v3/client/config"
+	bbncfg "github.com/babylonlabs-io/babylon/v4/client/config"
 )
 
 type BBNConfig struct {

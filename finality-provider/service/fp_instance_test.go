@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/babylonlabs-io/babylon/v3/testutil/datagen"
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	"github.com/babylonlabs-io/babylon/v4/testutil/datagen"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/babylon"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"

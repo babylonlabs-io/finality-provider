@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	sdkErr "cosmossdk.io/errors"
-	"github.com/babylonlabs-io/babylon/v3/client/babylonclient"
-	bbnclient "github.com/babylonlabs-io/babylon/v3/client/client"
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
-	finalitytypes "github.com/babylonlabs-io/babylon/v3/x/finality/types"
+	"github.com/babylonlabs-io/babylon/v4/client/babylonclient"
+	bbnclient "github.com/babylonlabs-io/babylon/v4/client/client"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v4/x/btcstaking/types"
+	finalitytypes "github.com/babylonlabs-io/babylon/v4/x/finality/types"
 	"github.com/btcsuite/btcd/btcec/v2"
 	cmtcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -19,7 +19,6 @@ import (
 
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
-	"github.com/babylonlabs-io/finality-provider/finality-provider/signingcontext"
 	"github.com/babylonlabs-io/finality-provider/types"
 )
 
@@ -100,14 +99,6 @@ func (bc *BabylonConsumerController) reliablySendMsgs(ctx context.Context, msgs 
 	}
 
 	return resp, nil
-}
-
-func (bc *BabylonConsumerController) GetFpRandCommitContext() string {
-	return signingcontext.FpRandCommitContextV0(bc.cfg.ChainID, signingcontext.AccFinality.String())
-}
-
-func (bc *BabylonConsumerController) GetFpFinVoteContext() string {
-	return signingcontext.FpFinVoteContextV0(bc.cfg.ChainID, signingcontext.AccFinality.String())
 }
 
 // CommitPubRandList commits a list of Schnorr public randomness via a MsgCommitPubRand to Babylon

@@ -7,8 +7,8 @@ import (
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	"time"
 
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
-	btcstakingtypes "github.com/babylonlabs-io/babylon/v3/x/btcstaking/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
+	btcstakingtypes "github.com/babylonlabs-io/babylon/v4/x/btcstaking/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"go.uber.org/zap"

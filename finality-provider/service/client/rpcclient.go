@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	bbntypes "github.com/babylonlabs-io/babylon/v3/types"
+	bbntypes "github.com/babylonlabs-io/babylon/v4/types"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
