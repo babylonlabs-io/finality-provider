@@ -211,7 +211,7 @@ ContextSigningHeight = <v3-upgrade-height>
 
 [babylon]
 Key = <finality-provider-key-name-signer> # the key you used above
-ChainID = bbn-test-5 # chain ID of the Babylon Genesis
+ChainID = bbn-test-6 # chain ID of the Babylon Genesis
 RPCAddr = http://127.0.0.1:26657 # Your Babylon Genesis node's RPC endpoint
 KeyDirectory = <path> # The `--home` path to the directory where the keyring is stored
 ```
@@ -220,7 +220,7 @@ KeyDirectory = <path> # The `--home` path to the directory where the keyring is 
 > Babylon Genesis node. It is **highly recommended** to operate your own
 > Babylon Genesis full node instead of relying on third parties. You can find
 > instructions on setting up a Babylon Genesis node
-> [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-5/babylon-node/README.md).
+> [here](https://github.com/babylonlabs-io/networks/tree/main/bbn-test-6/babylon-node/README.md).
 
 > ⚠️ **Critical RPC Configuration**:
 > When configuring your finality provider to a Babylon Genesis RPC node, you should
@@ -379,7 +379,7 @@ fpd create-finality-provider \
 
 Required parameters:
 
-* `--chain-id`: The Babylon Genesis chain ID (e.g., `bbn-1` and `bbn-test-5`
+* `--chain-id`: The Babylon Genesis chain ID (e.g., `bbn-1` and `bbn-test-6`
   for mainnet and testnet, respectively).
 * `--eots-pk`: The EOTS public key maintained by the connected EOTS manager
   instance that the finality provider should use. If one is not provided the
