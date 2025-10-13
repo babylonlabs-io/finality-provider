@@ -14,6 +14,7 @@ import (
 	"github.com/cosmos/go-bip39"
 
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 const (
@@ -102,13 +103,8 @@ func (kc *ChainKeyringController) CreateChainKey(passphrase, hdPath, mnemonic st
 	case *sdksecp256k1.PrivKey:
 		// Validate that the private key bytes fit within the secp256k1 curve order
 		// before converting to PrivateKey type. btcd passes this responsibility to callers.
-		var keyInt btcec.ModNScalar
-		overflow := keyInt.SetByteSlice(v.Key)
-		if overflow {
-			return nil, fmt.Errorf("private key is greater than or equal to the secp256k1 curve order")
-		}
-		if keyInt.IsZero() {
-			return nil, fmt.Errorf("private key cannot be zero")
+		if err := util.ValidatePrivKeyBytes(v.Key); err != nil {
+			return nil, fmt.Errorf("invalid private key: %w", err)
 		}
 
 		sk, pk := btcec.PrivKeyFromBytes(v.Key)
