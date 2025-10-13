@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#726](https://github.com/babylonlabs-io/finality-provider/pull/726) chore: add lock in localmngr
+
 ## v2.0.0-rc.5
 
 ### Improvements
