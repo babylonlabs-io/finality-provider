@@ -100,6 +100,17 @@ func (kc *ChainKeyringController) CreateChainKey(passphrase, hdPath, mnemonic st
 
 	switch v := privKey.(type) {
 	case *sdksecp256k1.PrivKey:
+		// Validate that the private key bytes fit within the secp256k1 curve order
+		// before converting to PrivateKey type. btcd passes this responsibility to callers.
+		var keyInt btcec.ModNScalar
+		overflow := keyInt.SetByteSlice(v.Key)
+		if overflow {
+			return nil, fmt.Errorf("private key is greater than or equal to the secp256k1 curve order")
+		}
+		if keyInt.IsZero() {
+			return nil, fmt.Errorf("private key cannot be zero")
+		}
+
 		sk, pk := btcec.PrivKeyFromBytes(v.Key)
 
 		return &types.ChainKeyInfo{

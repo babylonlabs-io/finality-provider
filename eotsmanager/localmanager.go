@@ -575,6 +575,17 @@ func (lm *LocalEOTSManager) getKeyFromKeyring(keyName, passphrase string) (*btce
 	var privKey *btcec.PrivateKey
 	switch v := privKeyCached.(type) {
 	case *secp256k1.PrivKey:
+		// Validate that the private key bytes fit within the secp256k1 curve order
+		// before converting to PrivateKey type. btcd passes this responsibility to callers.
+		var keyInt btcec.ModNScalar
+		overflow := keyInt.SetByteSlice(v.Key)
+		if overflow {
+			return nil, fmt.Errorf("private key is greater than or equal to the secp256k1 curve order")
+		}
+		if keyInt.IsZero() {
+			return nil, fmt.Errorf("private key cannot be zero")
+		}
+
 		privKey, _ = btcec.PrivKeyFromBytes(v.Key)
 
 		return privKey, nil
