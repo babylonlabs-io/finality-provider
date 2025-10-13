@@ -474,7 +474,7 @@ func (lm *LocalEOTSManager) getRandomnessPair(fpPk []byte, chainID []byte, heigh
 	}
 	privRand, pubRand, err := randgenerator.GenerateRandomness(record.PrivKey.Serialize(), chainID, height)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to generate randomness: %w", err)
 	}
 
 	return privRand, pubRand, nil
