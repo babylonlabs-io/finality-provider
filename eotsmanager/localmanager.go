@@ -232,6 +232,11 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 }
 
 func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, height uint64) (*btcec.ModNScalar, error) {
+	// Lock the entire read-check-sign-write sequence to prevent race conditions
+	// that could lead to double signing with the same nonce
+	lm.mu.Lock()
+	defer lm.mu.Unlock()
+
 	record, found, err := lm.es.GetSignRecord(eotsPk, chainID, height)
 	if err != nil {
 		return nil, fmt.Errorf("error getting sign record: %w", err)
@@ -269,7 +274,14 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 		return nil, fmt.Errorf("failed to get private randomness: %w", err)
 	}
 
-	privKey, err := lm.getEOTSPrivKey(eotsPk)
+	// Get the key name directly from the store without locking again
+	keyName, err := lm.es.GetEOTSKeyName(eotsPk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get EOTS key name: %w", err)
+	}
+
+	// Get private key using the key name (already holding the lock)
+	privKey, err := lm.eotsPrivKeyFromKeyName(keyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
 	}
@@ -292,8 +304,21 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 }
 
 func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignDataResponse, error) {
+	// Lock the entire read-check-sign-write sequence to prevent race conditions
+	// that could lead to double signing with the same nonce
+	lm.mu.Lock()
+	defer lm.mu.Unlock()
+
 	eotsPk, chainID := req.UID, req.ChainID
-	privKey, err := lm.getEOTSPrivKey(eotsPk)
+
+	// Get the key name directly from the store
+	keyName, err := lm.es.GetEOTSKeyName(eotsPk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get EOTS key name: %w", err)
+	}
+
+	// Get private key using the key name (already holding the lock)
+	privKey, err := lm.eotsPrivKeyFromKeyName(keyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
 	}
