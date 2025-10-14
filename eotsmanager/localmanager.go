@@ -207,7 +207,6 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 		return nil, fmt.Errorf("interval must be greater than 0")
 	}
 
-	// Get private key once before the loop
 	privKey, err := lm.getEOTSPrivKey(fpPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
@@ -272,13 +271,11 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 		return nil, eotstypes.ErrDoubleSign
 	}
 
-	// Get the key name directly from the store without locking again
 	keyName, err := lm.es.GetEOTSKeyName(eotsPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS key name: %w", err)
 	}
 
-	// Get private key using the key name (already holding the lock)
 	privKey, err := lm.eotsPrivKeyFromKeyName(keyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
@@ -317,7 +314,6 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 		return nil, fmt.Errorf("failed to get EOTS key name: %w", err)
 	}
 
-	// Get private key using the key name (already holding the lock)
 	privKey, err := lm.eotsPrivKeyFromKeyName(keyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
