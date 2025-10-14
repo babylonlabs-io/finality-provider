@@ -234,8 +234,7 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 }
 
 func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, height uint64) (*btcec.ModNScalar, error) {
-	// Lock the entire read-check-sign-write sequence to prevent race conditions
-	// that could lead to double signing with the same nonce
+	// Lock to prevent race conditions that could lead to double signing
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
 
@@ -301,14 +300,12 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 }
 
 func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignDataResponse, error) {
-	// Lock the entire read-check-sign-write sequence to prevent race conditions
-	// that could lead to double signing with the same nonce
+	// Lock to prevent race conditions that could lead to double signing
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
 
 	eotsPk, chainID := req.UID, req.ChainID
 
-	// Get the key name directly from the store
 	keyName, err := lm.es.GetEOTSKeyName(eotsPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS key name: %w", err)
