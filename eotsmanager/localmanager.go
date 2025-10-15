@@ -208,6 +208,11 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 		return nil, fmt.Errorf("interval must be greater than 0")
 	}
 
+	privKey, err := lm.getEOTSPrivKey(fpPk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
+	}
+
 	prList := make([]*btcec.FieldVal, 0, num)
 
 	for i := uint32(0); i < num; i++ {
@@ -219,9 +224,9 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 			// Consecutive heights: startHeight + i
 			height = startHeight + uint64(i)
 		}
-		_, pubRand, err := lm.getRandomnessPair(fpPk, chainID, height)
+		_, pubRand, err := lm.getRandomnessPair(privKey, chainID, height)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get randomness pair: %w", err)
 		}
 
 		prList = append(prList, pubRand)
@@ -233,6 +238,10 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 }
 
 func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, height uint64) (*btcec.ModNScalar, error) {
+	// Lock to prevent race conditions that could lead to double signing
+	lm.mu.Lock()
+	defer lm.mu.Unlock()
+
 	record, found, err := lm.es.GetSignRecord(eotsPk, chainID, height)
 	if err != nil {
 		return nil, fmt.Errorf("error getting sign record: %w", err)
@@ -265,14 +274,19 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 		return nil, eotstypes.ErrDoubleSign
 	}
 
-	privRand, _, err := lm.getRandomnessPair(eotsPk, chainID, height)
+	keyName, err := lm.es.GetEOTSKeyName(eotsPk)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get private randomness: %w", err)
+		return nil, fmt.Errorf("failed to get EOTS key name: %w", err)
 	}
 
-	privKey, err := lm.getEOTSPrivKey(eotsPk)
+	privKey, err := lm.eotsPrivKeyFromKeyName(keyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
+	}
+
+	privRand, _, err := lm.getRandomnessPair(privKey, chainID, height)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get randomness pair: %w", err)
 	}
 
 	// Update metrics
@@ -293,8 +307,18 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 }
 
 func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignDataResponse, error) {
+	// Lock to prevent race conditions that could lead to double signing
+	lm.mu.Lock()
+	defer lm.mu.Unlock()
+
 	eotsPk, chainID := req.UID, req.ChainID
-	privKey, err := lm.getEOTSPrivKey(eotsPk)
+
+	keyName, err := lm.es.GetEOTSKeyName(eotsPk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get EOTS key name: %w", err)
+	}
+
+	privKey, err := lm.eotsPrivKeyFromKeyName(keyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
 	}
@@ -352,9 +376,9 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 		}
 
 		// Generate randomness for signing
-		privRand, _, err := lm.getRandomnessPair(eotsPk, chainID, height)
+		privRand, _, err := lm.getRandomnessPair(privKey, chainID, height)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get private randomness: %w", err)
+			return nil, fmt.Errorf("failed to get randomness pair: %w", err)
 		}
 
 		// Update metrics
@@ -393,14 +417,14 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 
 // UnsafeSignEOTS should only be used in e2e test to demonstrate double sign
 func (lm *LocalEOTSManager) UnsafeSignEOTS(fpPk []byte, chainID []byte, msg []byte, height uint64) (*btcec.ModNScalar, error) {
-	privRand, _, err := lm.getRandomnessPair(fpPk, chainID, height)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get private randomness: %w", err)
-	}
-
 	privKey, err := lm.getEOTSPrivKey(fpPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
+	}
+
+	privRand, _, err := lm.getRandomnessPair(privKey, chainID, height)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get randomness pair: %w", err)
 	}
 
 	// Update metrics
@@ -467,13 +491,9 @@ func (lm *LocalEOTSManager) Close() error {
 	return nil
 }
 
-// getRandomnessPair returns a randomness pair generated based on the given finality provider key, chainID and height
-func (lm *LocalEOTSManager) getRandomnessPair(fpPk []byte, chainID []byte, height uint64) (*eots.PrivateRand, *eots.PublicRand, error) {
-	record, err := lm.KeyRecord(fpPk)
-	if err != nil {
-		return nil, nil, err
-	}
-	privRand, pubRand, err := randgenerator.GenerateRandomness(record.PrivKey.Serialize(), chainID, height)
+// getRandomnessPair returns a randomness pair generated based on the given private key, chainID and height
+func (lm *LocalEOTSManager) getRandomnessPair(privKey *btcec.PrivateKey, chainID []byte, height uint64) (*eots.PrivateRand, *eots.PublicRand, error) {
+	privRand, pubRand, err := randgenerator.GenerateRandomness(privKey.Serialize(), chainID, height)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to generate randomness: %w", err)
 	}
