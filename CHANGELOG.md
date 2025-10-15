@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Improvements
 
+* [#724](https://github.com/babylonlabs-io/finality-provider/pull/724) chore: check and return err gen rnd
 * [#725](https://github.com/babylonlabs-io/finality-provider/pull/725) chore: adds check for pk from bytes
 
 ## v2.0.0-rc.5
