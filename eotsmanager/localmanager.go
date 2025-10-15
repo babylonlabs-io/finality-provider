@@ -23,6 +23,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/randgenerator"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
 	eotstypes "github.com/babylonlabs-io/finality-provider/eotsmanager/types"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 const (
@@ -223,7 +224,10 @@ func (lm *LocalEOTSManager) CreateRandomnessPairList(fpPk []byte, chainID []byte
 			// Consecutive heights: startHeight + i
 			height = startHeight + uint64(i)
 		}
-		_, pubRand := lm.getRandomnessPair(privKey, chainID, height)
+		_, pubRand, err := lm.getRandomnessPair(privKey, chainID, height)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get randomness pair: %w", err)
+		}
 
 		prList = append(prList, pubRand)
 	}
@@ -280,7 +284,10 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
 	}
 
-	privRand, _ := lm.getRandomnessPair(privKey, chainID, height)
+	privRand, _, err := lm.getRandomnessPair(privKey, chainID, height)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get randomness pair: %w", err)
+	}
 
 	// Update metrics
 	lm.metrics.IncrementEotsFpTotalEotsSignCounter(hex.EncodeToString(eotsPk))
@@ -369,7 +376,10 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 		}
 
 		// Generate randomness for signing
-		privRand, _ := lm.getRandomnessPair(privKey, chainID, height)
+		privRand, _, err := lm.getRandomnessPair(privKey, chainID, height)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get randomness pair: %w", err)
+		}
 
 		// Update metrics
 		lm.metrics.IncrementEotsFpTotalEotsSignCounter(encodedEotsPk)
@@ -412,7 +422,10 @@ func (lm *LocalEOTSManager) UnsafeSignEOTS(fpPk []byte, chainID []byte, msg []by
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
 	}
 
-	privRand, _ := lm.getRandomnessPair(privKey, chainID, height)
+	privRand, _, err := lm.getRandomnessPair(privKey, chainID, height)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get randomness pair: %w", err)
+	}
 
 	// Update metrics
 	lm.metrics.IncrementEotsFpTotalEotsSignCounter(hex.EncodeToString(fpPk))
@@ -479,8 +492,13 @@ func (lm *LocalEOTSManager) Close() error {
 }
 
 // getRandomnessPair returns a randomness pair generated based on the given private key, chainID and height
-func (lm *LocalEOTSManager) getRandomnessPair(privKey *btcec.PrivateKey, chainID []byte, height uint64) (*eots.PrivateRand, *eots.PublicRand) {
-	return randgenerator.GenerateRandomness(privKey.Serialize(), chainID, height)
+func (lm *LocalEOTSManager) getRandomnessPair(privKey *btcec.PrivateKey, chainID []byte, height uint64) (*eots.PrivateRand, *eots.PublicRand, error) {
+	privRand, pubRand, err := randgenerator.GenerateRandomness(privKey.Serialize(), chainID, height)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to generate randomness: %w", err)
+	}
+
+	return privRand, pubRand, nil
 }
 
 func (lm *LocalEOTSManager) KeyRecord(fpPk []byte) (*eotstypes.KeyRecord, error) {
@@ -581,6 +599,12 @@ func (lm *LocalEOTSManager) getKeyFromKeyring(keyName, passphrase string) (*btce
 	var privKey *btcec.PrivateKey
 	switch v := privKeyCached.(type) {
 	case *secp256k1.PrivKey:
+		// Validate that the private key bytes fit within the secp256k1 curve order
+		// before converting to PrivateKey type. btcd passes this responsibility to callers.
+		if err := util.ValidatePrivKeyBytes(v.Key); err != nil {
+			return nil, fmt.Errorf("invalid private key: %w", err)
+		}
+
 		privKey, _ = btcec.PrivKeyFromBytes(v.Key)
 
 		return privKey, nil
