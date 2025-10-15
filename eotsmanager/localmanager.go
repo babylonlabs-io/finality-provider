@@ -23,6 +23,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/randgenerator"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/store"
 	eotstypes "github.com/babylonlabs-io/finality-provider/eotsmanager/types"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 const (
@@ -578,6 +579,12 @@ func (lm *LocalEOTSManager) getKeyFromKeyring(keyName, passphrase string) (*btce
 	var privKey *btcec.PrivateKey
 	switch v := privKeyCached.(type) {
 	case *secp256k1.PrivKey:
+		// Validate that the private key bytes fit within the secp256k1 curve order
+		// before converting to PrivateKey type. btcd passes this responsibility to callers.
+		if err := util.ValidatePrivKeyBytes(v.Key); err != nil {
+			return nil, fmt.Errorf("invalid private key: %w", err)
+		}
+
 		privKey, _ = btcec.PrivKeyFromBytes(v.Key)
 
 		return privKey, nil
