@@ -33,6 +33,7 @@ const (
 	defaultMaxSubmissionRetries        = 20
 	defaultDataDirname                 = "data"
 	defaultMaxGRPCContentLength        = 16 * 1024 * 1024 // 16 MB
+	defaultUnsafeResetLastVotedHeight  = false
 )
 
 var (
@@ -73,7 +74,8 @@ type Config struct {
 
 	ContextSigningHeight uint64 `long:"contextsigningheight" description:"The height at which the context signing will start"`
 
-	GRPCMaxContentLength int `long:"grpcmaxcontentlength" description:"The maximum size of the gRPC message in bytes."`
+	GRPCMaxContentLength       int  `long:"grpcmaxcontentlength" description:"The maximum size of the gRPC message in bytes."`
+	UnsafeResetLastVotedHeight bool `long:"unsaferesetlastvotedheight" description:"WARNING: If set to 'true', resets the finality provider's last voted height to the calculated start height from poller. WARNING"`
 }
 
 func DefaultConfigWithHome(homePath string) Config {
@@ -98,6 +100,7 @@ func DefaultConfigWithHome(homePath string) Config {
 		RPCListener:                 DefaultRPCListener,
 		Metrics:                     metrics.DefaultFpConfig(),
 		GRPCMaxContentLength:        defaultMaxGRPCContentLength,
+		UnsafeResetLastVotedHeight:  defaultUnsafeResetLastVotedHeight,
 	}
 
 	if err := cfg.Validate(); err != nil {
