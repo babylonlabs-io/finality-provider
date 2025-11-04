@@ -30,10 +30,10 @@ func NewImageConfig(t *testing.T) ImageConfig {
 	// the version tag. There's a docker image pushed to the registry with every PR
 	// merged to main.
 	// TODO on creation of the v1rc7 tag (or other useful tag for these tests), we should use the GetBabylonVersion() back again
-	// babylondVersion, err := testutil.GetBabylonVersion()
-	babylondVersion, err := testutil.GetBabylonCommitHash()
+	babylondVersion, err := testutil.GetBabylonVersion()
+	// babylondVersion, err := testutil.GetBabylonCommitHash()
 	require.NoError(t, err)
-	
+
 	return ImageConfig{
 		BabylonRepository:     dockerBabylondRepository,
 		BabylonVersion:        babylondVersion,
