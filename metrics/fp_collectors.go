@@ -9,9 +9,12 @@ import (
 
 	"github.com/babylonlabs-io/finality-provider/finality-provider/proto"
 	"github.com/babylonlabs-io/finality-provider/finality-provider/store"
+	"github.com/babylonlabs-io/finality-provider/version"
 )
 
 type FpMetrics struct {
+	// version info
+	versionInfo *prometheus.GaugeVec
 	// poller metrics
 	babylonTipHeight     prometheus.Gauge
 	lastPolledHeight     prometheus.Gauge
@@ -45,6 +48,10 @@ var fpMetricsInstance *FpMetrics
 func NewFpMetrics() *FpMetrics {
 	fpMetricsRegisterOnce.Do(func() {
 		fpMetricsInstance = &FpMetrics{
+			versionInfo: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+				Name: "fp_version_info",
+				Help: "Version information of the finality provider binary",
+			}, []string{"version", "commit", "timestamp"}),
 			fpStatus: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 				Name: "fp_status",
 				Help: "Current status of a finality provider",
@@ -142,6 +149,7 @@ func NewFpMetrics() *FpMetrics {
 		}
 
 		// Register the metrics with Prometheus
+		prometheus.MustRegister(fpMetricsInstance.versionInfo)
 		prometheus.MustRegister(fpMetricsInstance.fpStatus)
 		prometheus.MustRegister(fpMetricsInstance.babylonTipHeight)
 		prometheus.MustRegister(fpMetricsInstance.lastPolledHeight)
@@ -156,6 +164,10 @@ func NewFpMetrics() *FpMetrics {
 		prometheus.MustRegister(fpMetricsInstance.fpLastCommittedRandomnessHeight)
 		prometheus.MustRegister(fpMetricsInstance.fpTotalFailedVotes)
 		prometheus.MustRegister(fpMetricsInstance.fpTotalFailedRandomness)
+
+		// Set the version info metric (set once at startup)
+		commit, timestamp := version.CommitInfo()
+		fpMetricsInstance.versionInfo.WithLabelValues(version.Version(), commit, timestamp).Set(1)
 	})
 
 	return fpMetricsInstance
