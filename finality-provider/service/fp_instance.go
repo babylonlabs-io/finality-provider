@@ -401,12 +401,14 @@ func (fp *FinalityProviderInstance) reportCriticalErr(err error) {
 	case <-fp.quit:
 		fp.logger.Debug(
 			"skipping error report due to context cancellation",
-			zap.String("pk", fp.GetBtcPkHex()), zap.Error(err),
+			zap.String("pk", fp.GetBtcPkHex()),
+			zap.Error(err),
 		)
 	default:
 		fp.logger.Error(
 			"failed to report critical error (channel full)",
-			zap.String("pk", fp.GetBtcPkHex()), zap.Error(err),
+			zap.String("pk", fp.GetBtcPkHex()),
+			zap.Error(err),
 		)
 	}
 }
