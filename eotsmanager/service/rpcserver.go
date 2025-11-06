@@ -94,7 +94,7 @@ func (r *rpcServer) SignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 func (r *rpcServer) UnsafeSignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 	*proto.SignEOTSResponse, error) {
 	if r.cfg.DisableUnsafeEndpoints {
-		return nil, status.Error(codes.PermissionDenied,
+		return nil, status.Error(codes.PermissionDenied, //nolint:wrapcheck
 			"UnsafeSignEOTS endpoint is disabled in configuration for security reasons")
 	}
 
