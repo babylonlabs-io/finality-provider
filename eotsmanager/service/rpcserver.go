@@ -13,6 +13,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/proto"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/types"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 // rpcServer is the main RPC server for the EOTS daemon that handles
@@ -113,6 +114,17 @@ func (r *rpcServer) SignSchnorrSig(_ context.Context, req *proto.SignSchnorrSigR
 // SignBatchEOTS signs multiple EOTS in batch
 func (r *rpcServer) SignBatchEOTS(_ context.Context, req *proto.SignBatchEOTSRequest) (
 	*proto.SignBatchEOTSResponse, error) {
+	// Validate no duplicate heights before forwarding to manager (defense-in-depth)
+	heights := make([]uint64, len(req.SignRequests))
+	for i, signReq := range req.SignRequests {
+		heights[i] = signReq.Height
+	}
+
+	if err := util.ValidateNoDuplicateHeights(heights); err != nil {
+		return nil, status.Error(codes.InvalidArgument, //nolint:wrapcheck
+			fmt.Sprintf("duplicate height in batch: %v", err))
+	}
+
 	signRequests := make([]*eotsmanager.SignDataRequest, len(req.SignRequests))
 	for i, signReq := range req.SignRequests {
 		signRequests[i] = &eotsmanager.SignDataRequest{
