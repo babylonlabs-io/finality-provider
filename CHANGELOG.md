@@ -44,7 +44,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#726](https://github.com/babylonlabs-io/finality-provider/pull/726) chore: add lock in localmngr
 * [#730](https://github.com/babylonlabs-io/finality-provider/pull/730) chore: bump babylon to `v4.0.0-rc.3`
 * [#732](https://github.com/babylonlabs-io/finality-provider/pull/732) feat: add version metric
+* [#734](https://github.com/babylonlabs-io/finality-provider/pull/734) chore: rm unused cfg val
+* [#735](https://github.com/babylonlabs-io/finality-provider/pull/735) chore: use counter prometeus
+* [#736](https://github.com/babylonlabs-io/finality-provider/pull/736) chore: disable flag on unsafe/test RPCs
 * [#737](https://github.com/babylonlabs-io/finality-provider/pull/737) chore: add fp identifier to logs
+* [#739](https://github.com/babylonlabs-io/finality-provider/pull/739) chore: bump babylon to `v4.0.0`
 
 ## v2.0.0-rc.5
 
