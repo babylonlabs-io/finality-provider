@@ -24,8 +24,7 @@ const (
 	DefaultRPCPort                     = 12581
 	defaultConfigFileName              = "fpd.conf"
 	defaultNumPubRand                  = 50000 // support running of roughly 5 days with block production time as 10s
-	defaultNumPubRandMax               = 500000
-	defaultTimestampingDelayBlocks     = 6000 // 100 BTC blocks * 600s / 10s
+	defaultTimestampingDelayBlocks     = 6000  // 100 BTC blocks * 600s / 10s
 	defaultBatchSubmissionSize         = 1000
 	defaultRandomInterval              = 30 * time.Second
 	defaultSubmitRetryInterval         = 1 * time.Second
@@ -51,7 +50,6 @@ type Config struct {
 	LogLevel string `long:"loglevel" description:"Logging level for all subsystems" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal"`
 
 	NumPubRand                  uint32        `long:"numPubRand" description:"The number of Schnorr public randomness for each commitment"`
-	NumPubRandMax               uint32        `long:"numpubrandmax" description:"The upper bound of the number of Schnorr public randomness for each commitment"`
 	TimestampingDelayBlocks     uint32        `long:"timestampingdelayblocks" description:"The delay, measured in blocks, between a randomness commit submission and the randomness is BTC-timestamped"`
 	MaxSubmissionRetries        uint32        `long:"maxsubmissionretries" description:"The maximum number of retries to submit finality signature or public randomness"`
 	EOTSManagerAddress          string        `long:"eotsmanageraddress" description:"The address of the remote EOTS manager; Empty if the EOTS manager is running locally"`
@@ -87,7 +85,6 @@ func DefaultConfigWithHome(homePath string) Config {
 		BabylonConfig:               &bbnCfg,
 		PollerConfig:                &pollerCfg,
 		NumPubRand:                  defaultNumPubRand,
-		NumPubRandMax:               defaultNumPubRandMax,
 		TimestampingDelayBlocks:     defaultTimestampingDelayBlocks,
 		BatchSubmissionSize:         defaultBatchSubmissionSize,
 		RandomnessCommitInterval:    defaultRandomInterval,
