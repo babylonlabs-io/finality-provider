@@ -28,8 +28,8 @@ type FpMetrics struct {
 	fpLastProcessedHeight           *prometheus.GaugeVec
 	fpLastCommittedRandomnessHeight *prometheus.GaugeVec
 	fpTotalBlocksWithoutVotingPower *prometheus.CounterVec
-	fpTotalVotedBlocks              *prometheus.GaugeVec
-	fpTotalCommittedRandomness      *prometheus.GaugeVec
+	fpTotalVotedBlocks              *prometheus.CounterVec
+	fpTotalCommittedRandomness      *prometheus.CounterVec
 	fpTotalFailedVotes              *prometheus.CounterVec
 	fpTotalFailedRandomness         *prometheus.CounterVec
 	// time keeper
@@ -110,15 +110,15 @@ func NewFpMetrics() *FpMetrics {
 				},
 				[]string{"fp_btc_pk_hex"},
 			),
-			fpTotalVotedBlocks: prometheus.NewGaugeVec(
-				prometheus.GaugeOpts{
+			fpTotalVotedBlocks: prometheus.NewCounterVec(
+				prometheus.CounterOpts{
 					Name: "fp_total_voted_blocks",
 					Help: "The total number of blocks voted by a finality provider.",
 				},
 				[]string{"fp_btc_pk_hex"},
 			),
-			fpTotalCommittedRandomness: prometheus.NewGaugeVec(
-				prometheus.GaugeOpts{
+			fpTotalCommittedRandomness: prometheus.NewCounterVec(
+				prometheus.CounterOpts{
 					Name: "fp_total_committed_randomness",
 					Help: "The total number of randomness commitments by a finality provider.",
 				},
