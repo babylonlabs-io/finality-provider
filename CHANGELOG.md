@@ -43,6 +43,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#725](https://github.com/babylonlabs-io/finality-provider/pull/725) chore: adds check for pk from bytes
 * [#726](https://github.com/babylonlabs-io/finality-provider/pull/726) chore: add lock in localmngr
 * [#730](https://github.com/babylonlabs-io/finality-provider/pull/730) chore: bump babylon to `v4.0.0-rc.3`
+* [#732](https://github.com/babylonlabs-io/finality-provider/pull/732) 
+* feat: add version metric
 
 ## v2.0.0-rc.5
 
