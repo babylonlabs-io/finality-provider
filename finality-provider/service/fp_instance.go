@@ -236,7 +236,10 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop(ctx context.Contex
 		case <-ticker.C:
 			fp.processAndSubmitSignatures(ctx)
 		case <-fp.quit:
-			fp.logger.Info("the finality signature submission loop is closing")
+			fp.logger.Info(
+				"the finality signature submission loop is closing",
+				zap.String("pk", fp.GetBtcPkHex()),
+			)
 
 			return
 		}
@@ -248,7 +251,10 @@ func (fp *FinalityProviderInstance) finalitySigSubmissionLoop(ctx context.Contex
 func (fp *FinalityProviderInstance) processAndSubmitSignatures(ctx context.Context) {
 	select {
 	case <-fp.quit:
-		fp.logger.Debug("processAndSubmitSignatures: the finality signature submission loop is closing")
+		fp.logger.Debug(
+			"processAndSubmitSignatures: the finality signature submission loop is closing",
+			zap.String("pk", fp.GetBtcPkHex()),
+		)
 
 		return
 	default:
@@ -342,7 +348,10 @@ func (fp *FinalityProviderInstance) randomnessCommitmentLoop(ctx context.Context
 		case <-ticker.C:
 			fp.processRandomnessCommitment(ctx)
 		case <-fp.quit:
-			fp.logger.Info("the randomness commitment loop is closing")
+			fp.logger.Info(
+				"the randomness commitment loop is closing",
+				zap.String("pk", fp.GetBtcPkHex()),
+			)
 
 			return
 		}
@@ -390,9 +399,17 @@ func (fp *FinalityProviderInstance) reportCriticalErr(err error) {
 		fpBtcPk: fp.GetBtcPkBIP340(),
 	}:
 	case <-fp.quit:
-		fp.logger.Debug("skipping error report due to context cancellation", zap.Error(err))
+		fp.logger.Debug(
+			"skipping error report due to context cancellation",
+			zap.String("pk", fp.GetBtcPkHex()),
+			zap.Error(err),
+		)
 	default:
-		fp.logger.Error("failed to report critical error (channel full)", zap.Error(err))
+		fp.logger.Error(
+			"failed to report critical error (channel full)",
+			zap.String("pk", fp.GetBtcPkHex()),
+			zap.Error(err),
+		)
 	}
 }
 
@@ -450,6 +467,7 @@ func (fp *FinalityProviderInstance) GetVotingPowerWithRetry(height uint64) (bool
 	}, RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 		fp.logger.Debug(
 			"failed to query the voting power",
+			zap.String("pk", fp.GetBtcPkHex()),
 			zap.Uint("attempt", n+1),
 			zap.Uint("max_attempts", RtyAttNum),
 			zap.Error(err),
