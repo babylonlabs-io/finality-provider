@@ -37,12 +37,13 @@ var (
 )
 
 type Config struct {
-	LogLevel             string          `long:"loglevel" description:"Logging level for all subsystems" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal"`
-	KeyringBackend       string          `long:"keyring-type" description:"Type of keyring to use"`
-	RPCListener          string          `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
-	HMACKey              string          `long:"hmackey" description:"The HMAC key for authentication with FPD. If not provided, will use HMAC_KEY environment variable."`
-	Metrics              *metrics.Config `group:"metrics" namespace:"metrics"`
-	GRPCMaxContentLength int             `long:"grpcmaxcontentlength" description:"The maximum size of the gRPC message in bytes."`
+	LogLevel               string          `long:"loglevel" description:"Logging level for all subsystems" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal"`
+	KeyringBackend         string          `long:"keyring-type" description:"Type of keyring to use"`
+	RPCListener            string          `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
+	HMACKey                string          `long:"hmackey" description:"The HMAC key for authentication with FPD. If not provided, will use HMAC_KEY environment variable."`
+	DisableUnsafeEndpoints bool            `long:"disable-unsafe-endpoints" description:"Disable unsafe RPC endpoints (e.g., UnsafeSignEOTS) that bypass slashing protection. Recommended for production."`
+	Metrics                *metrics.Config `group:"metrics" namespace:"metrics"`
+	GRPCMaxContentLength   int             `long:"grpcmaxcontentlength" description:"The maximum size of the gRPC message in bytes."`
 
 	DatabaseConfig *DBConfig `group:"dbconfig" namespace:"dbconfig"`
 }
@@ -138,12 +139,13 @@ func DefaultConfigWithHomePath(homePath string) *Config {
 
 func DefaultConfigWithHomePathAndPorts(homePath string, rpcPort, metricsPort int) *Config {
 	cfg := &Config{
-		LogLevel:             defaultLogLevel,
-		KeyringBackend:       defaultKeyringBackend,
-		DatabaseConfig:       DefaultDBConfigWithHomePath(homePath),
-		RPCListener:          defaultRpcListener,
-		Metrics:              metrics.DefaultEotsConfig(),
-		GRPCMaxContentLength: defaultMaxGRPCContentLength,
+		LogLevel:               defaultLogLevel,
+		KeyringBackend:         defaultKeyringBackend,
+		DatabaseConfig:         DefaultDBConfigWithHomePath(homePath),
+		RPCListener:            defaultRpcListener,
+		DisableUnsafeEndpoints: false, // default to false for backward compatibility
+		Metrics:                metrics.DefaultEotsConfig(),
+		GRPCMaxContentLength:   defaultMaxGRPCContentLength,
 	}
 	cfg.RPCListener = fmt.Sprintf("%s:%d", DefaultRPCHost, rpcPort)
 	cfg.Metrics.Port = metricsPort

@@ -46,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#732](https://github.com/babylonlabs-io/finality-provider/pull/732) feat: add version metric
 * [#734](https://github.com/babylonlabs-io/finality-provider/pull/734) chore: rm unused cfg val
 * [#735](https://github.com/babylonlabs-io/finality-provider/pull/735) chore: use counter prometeus
+* [#736](https://github.com/babylonlabs-io/finality-provider/pull/736) chore: disable flag on unsafe/test RPCs
 
 ## v2.0.0-rc.5
 
