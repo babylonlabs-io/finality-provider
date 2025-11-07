@@ -6,7 +6,7 @@ require (
 	cosmossdk.io/errors v1.0.2
 	cosmossdk.io/math v1.5.3
 	github.com/avast/retry-go/v4 v4.5.1
-	github.com/babylonlabs-io/babylon/v4 v4.0.0-rc.3
+	github.com/babylonlabs-io/babylon/v4 v4.0.0
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.5
 	github.com/btcsuite/btcd/btcutil v1.1.6
