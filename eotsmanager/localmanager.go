@@ -313,9 +313,6 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 
 	eotsPk, chainID := req.UID, req.ChainID
 
-	// CRITICAL SECURITY CHECK: Validate no duplicate heights in batch
-	// Duplicate heights would allow private key extraction via EOTS vulnerability:
-	// signing same height twice with different messages reveals the private key
 	heights := make([]uint64, 0, len(req.SignRequest))
 	for _, request := range req.SignRequest {
 		heights = append(heights, request.Height)
