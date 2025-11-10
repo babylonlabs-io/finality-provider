@@ -49,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#736](https://github.com/babylonlabs-io/finality-provider/pull/736) chore: disable flag on unsafe/test RPCs
 * [#737](https://github.com/babylonlabs-io/finality-provider/pull/737) chore: add fp identifier to logs
 * [#739](https://github.com/babylonlabs-io/finality-provider/pull/739) chore: bump babylon to `v4.0.0`
+* [#738](https://github.com/babylonlabs-io/finality-provider/pull/738) chore: prevent EOTS private key extraction via duplicate height validation
 
 ## v2.0.0-rc.5
 

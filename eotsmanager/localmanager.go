@@ -313,6 +313,15 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 
 	eotsPk, chainID := req.UID, req.ChainID
 
+	heights := make([]uint64, 0, len(req.SignRequest))
+	for _, request := range req.SignRequest {
+		heights = append(heights, request.Height)
+	}
+
+	if err := util.ValidateNoDuplicateHeights(heights); err != nil {
+		return nil, fmt.Errorf("%w: %w", eotstypes.ErrDuplicateHeight, err)
+	}
+
 	keyName, err := lm.es.GetEOTSKeyName(eotsPk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS key name: %w", err)
@@ -323,12 +332,7 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
 	}
 
-	// Extract all heights for batch lookup
-	heights := make([]uint64, 0, len(req.SignRequest))
-	for _, request := range req.SignRequest {
-		heights = append(heights, request.Height)
-	}
-
+	// Use heights extracted above for validation
 	existingRecords, err := lm.es.GetSignRecordsBatch(eotsPk, chainID, heights)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get existing sign records: %w", err)
