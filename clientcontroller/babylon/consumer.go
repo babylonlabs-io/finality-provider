@@ -20,6 +20,7 @@ import (
 	"github.com/babylonlabs-io/finality-provider/clientcontroller/api"
 	fpcfg "github.com/babylonlabs-io/finality-provider/finality-provider/config"
 	"github.com/babylonlabs-io/finality-provider/types"
+	"github.com/babylonlabs-io/finality-provider/util"
 )
 
 var _ api.ConsumerController = &BabylonConsumerController{}
@@ -240,8 +241,16 @@ func (bc *BabylonConsumerController) queryLatestBlocks(startKey []byte, count ui
 		return nil, fmt.Errorf("failed to query finalized blocks: %w", err)
 	}
 
+	// Validate no duplicate heights from RPC response (defense-in-depth)
+	// Malicious/buggy RPC could return duplicate heights causing EOTS key extraction
+	heights := make([]uint64, 0, len(res.Blocks))
 	for _, b := range res.Blocks {
+		heights = append(heights, b.Height)
 		blocks = append(blocks, types.NewBlockInfo(b.Height, b.AppHash, b.Finalized))
+	}
+
+	if err := util.ValidateNoDuplicateHeights(heights); err != nil {
+		return nil, fmt.Errorf("RPC returned invalid block list: %w", err)
 	}
 
 	return blocks, nil
