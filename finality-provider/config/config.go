@@ -43,7 +43,8 @@ const (
 	//    - Babylon Genesis' finalization delta: 300 blocks
 	// The above leads to a recommended default value of 300 * 60 = 18000 Babylon blocks.
 	// You should set this parameter depending on the network you connect to.
-	defaultTimestampingDelayBlocks = 18000
+	defaultTimestampingDelayBlocks      = 18000
+	defaultAdvancedResetLastVotedHeight = false
 )
 
 // Constants for system parameters validation limits
@@ -103,6 +104,8 @@ type Config struct {
 	RPCListener string `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
 
 	Metrics *metrics.Config `group:"metrics" namespace:"metrics"`
+
+	AdvancedResetLastVotedHeight bool `long:"advancedresetlastvotedheight" description:"WARNING: If set to 'true', resets the finality provider's last voted height to the calculated start height from poller. WARNING"`
 }
 
 func DefaultConfigWithHome(homePath string) Config {
@@ -111,22 +114,23 @@ func DefaultConfigWithHome(homePath string) Config {
 	bbnCfg.KeyDirectory = homePath
 	pollerCfg := DefaultChainPollerConfig()
 	cfg := Config{
-		ChainType:                   defaultChainType,
-		LogLevel:                    defaultLogLevel.String(),
-		DatabaseConfig:              DefaultDBConfigWithHomePath(homePath),
-		BabylonConfig:               &bbnCfg,
-		PollerConfig:                &pollerCfg,
-		TimestampingDelayBlocks:     defaultTimestampingDelayBlocks,
-		NumPubRand:                  defaultNumPubRand,
-		BatchSubmissionSize:         defaultBatchSubmissionSize,
-		SubmissionRetryInterval:     defaultSubmitRetryInterval,
-		SignatureSubmissionInterval: defaultSignatureSubmissionInterval,
-		MaxSubmissionRetries:        defaultMaxSubmissionRetries,
-		BitcoinNetwork:              defaultBitcoinNetwork,
-		BTCNetParams:                defaultBTCNetParams,
-		EOTSManagerAddress:          defaultEOTSManagerAddress,
-		RPCListener:                 DefaultRPCListener,
-		Metrics:                     metrics.DefaultFpConfig(),
+		ChainType:                    defaultChainType,
+		LogLevel:                     defaultLogLevel.String(),
+		DatabaseConfig:               DefaultDBConfigWithHomePath(homePath),
+		BabylonConfig:                &bbnCfg,
+		PollerConfig:                 &pollerCfg,
+		TimestampingDelayBlocks:      defaultTimestampingDelayBlocks,
+		NumPubRand:                   defaultNumPubRand,
+		BatchSubmissionSize:          defaultBatchSubmissionSize,
+		SubmissionRetryInterval:      defaultSubmitRetryInterval,
+		SignatureSubmissionInterval:  defaultSignatureSubmissionInterval,
+		MaxSubmissionRetries:         defaultMaxSubmissionRetries,
+		BitcoinNetwork:               defaultBitcoinNetwork,
+		BTCNetParams:                 defaultBTCNetParams,
+		EOTSManagerAddress:           defaultEOTSManagerAddress,
+		RPCListener:                  DefaultRPCListener,
+		Metrics:                      metrics.DefaultFpConfig(),
+		AdvancedResetLastVotedHeight: defaultAdvancedResetLastVotedHeight,
 	}
 
 	if err := cfg.Validate(); err != nil {
