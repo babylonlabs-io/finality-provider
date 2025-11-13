@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug Fixes
+
+* [#748](https://github.com/babylonlabs-io/finality-provider/pull/748) fix: hotfix advance start
+
 ## v1.0.0
 
 ## v1.0.0-rc.6
