@@ -124,6 +124,12 @@ func (fp *FinalityProviderInstance) Start() error {
 	fp.poller = poller
 	fp.quit = make(chan struct{})
 
+	if fp.cfg.AdvancedResetLastVotedHeight {
+		if err := fp.fpState.setLastVotedHeight(startHeight); err != nil {
+			return fmt.Errorf("failed to overwrite finality provider state with start height %d: %w", startHeight, err)
+		}
+	}
+
 	fp.wg.Add(2)
 	go fp.finalitySigSubmissionLoop()
 	go fp.randomnessCommitmentLoop()
@@ -274,7 +280,7 @@ func (fp *FinalityProviderInstance) processBlocksToVote(blocks []*types.BlockInf
 	var err error
 	for _, b := range blocks {
 		blk := *b
-		if blk.Height <= fp.GetLastVotedHeight() {
+		if blk.Height < fp.GetLastVotedHeight() {
 			fp.logger.Debug(
 				"the block height is lower than last processed height",
 				zap.String("pk", fp.GetBtcPkHex()),
