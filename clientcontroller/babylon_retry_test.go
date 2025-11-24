@@ -49,12 +49,14 @@ func (m *mockBabylonClient) ReliablySendMsgs(
 		if err != nil {
 			return nil, err
 		}
+
 		return &babylonclient.RelayerTxResponse{
 			TxHash: "mock-tx-hash",
 		}, nil
 	}
 
 	m.callCount++
+
 	return &babylonclient.RelayerTxResponse{
 		TxHash: "mock-tx-hash",
 	}, nil
@@ -66,6 +68,7 @@ func createTestMsgs(ids ...string) []sdk.Msg {
 	for i, id := range ids {
 		msgs[i] = &mockMsg{id: id}
 	}
+
 	return msgs
 }
 
@@ -75,6 +78,8 @@ func createMsgIndexError(index int, errMsg string) error {
 }
 
 func TestReliablySendMsgsResendingOnMsgErr_Success(t *testing.T) {
+	t.Parallel()
+
 	mockClient := &mockBabylonClient{
 		errors: []error{nil}, // Success on first try
 	}
@@ -101,6 +106,8 @@ func TestReliablySendMsgsResendingOnMsgErr_Success(t *testing.T) {
 }
 
 func TestReliablySendMsgsResendingOnMsgErr_SingleExpectedError(t *testing.T) {
+	t.Parallel()
+
 	duplicateVoteErr := sdkErr.Register("finality", 1, "duplicated finality signature")
 
 	mockClient := &mockBabylonClient{
@@ -135,11 +142,17 @@ func TestReliablySendMsgsResendingOnMsgErr_SingleExpectedError(t *testing.T) {
 	require.Len(t, mockClient.sentMsgs[0], 3)
 	// Verify second call had 2 messages (message at index 1 removed)
 	require.Len(t, mockClient.sentMsgs[1], 2)
-	require.Equal(t, "msg0", mockClient.sentMsgs[1][0].(*mockMsg).id)
-	require.Equal(t, "msg2", mockClient.sentMsgs[1][1].(*mockMsg).id)
+	msg0, ok := mockClient.sentMsgs[1][0].(*mockMsg)
+	require.True(t, ok)
+	require.Equal(t, "msg0", msg0.id)
+	msg2, ok := mockClient.sentMsgs[1][1].(*mockMsg)
+	require.True(t, ok)
+	require.Equal(t, "msg2", msg2.id)
 }
 
 func TestReliablySendMsgsResendingOnMsgErr_MultipleExpectedErrors(t *testing.T) {
+	t.Parallel()
+
 	duplicateVoteErr := sdkErr.Register("finality", 2, "duplicated finality signature")
 
 	mockClient := &mockBabylonClient{
@@ -179,6 +192,8 @@ func TestReliablySendMsgsResendingOnMsgErr_MultipleExpectedErrors(t *testing.T) 
 }
 
 func TestReliablySendMsgsResendingOnMsgErr_UnexpectedError(t *testing.T) {
+	t.Parallel()
+
 	duplicateVoteErr := sdkErr.Register("finality", 3, "duplicated finality signature")
 
 	mockClient := &mockBabylonClient{
@@ -210,6 +225,8 @@ func TestReliablySendMsgsResendingOnMsgErr_UnexpectedError(t *testing.T) {
 }
 
 func TestReliablySendMsgsResendingOnMsgErr_ExpectedThenUnexpectedError(t *testing.T) {
+	t.Parallel()
+
 	duplicateVoteErr := sdkErr.Register("finality", 4, "duplicated finality signature")
 
 	mockClient := &mockBabylonClient{
@@ -247,6 +264,8 @@ func TestReliablySendMsgsResendingOnMsgErr_ExpectedThenUnexpectedError(t *testin
 }
 
 func TestReliablySendMsgsResendingOnMsgErr_AllMessagesRemoved(t *testing.T) {
+	t.Parallel()
+
 	duplicateVoteErr := sdkErr.Register("finality", 5, "duplicated finality signature")
 
 	mockClient := &mockBabylonClient{
@@ -279,6 +298,8 @@ func TestReliablySendMsgsResendingOnMsgErr_AllMessagesRemoved(t *testing.T) {
 }
 
 func TestReliablySendMsgsResendingOnMsgErr_ErrorWithoutMessageIndex(t *testing.T) {
+	t.Parallel()
+
 	duplicateVoteErr := sdkErr.Register("finality", 6, "duplicated finality signature")
 
 	mockClient := &mockBabylonClient{
@@ -310,6 +331,8 @@ func TestReliablySendMsgsResendingOnMsgErr_ErrorWithoutMessageIndex(t *testing.T
 }
 
 func TestReliablySendMsgsResendingOnMsgErr_MaxRetriesReached(t *testing.T) {
+	t.Parallel()
+
 	duplicateVoteErr := sdkErr.Register("finality", 7, "duplicated finality signature")
 
 	// Create more errors than max retries (BatchRetries returns len(msgs))
