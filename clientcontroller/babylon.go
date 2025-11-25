@@ -829,7 +829,8 @@ func (bc *BabylonController) reliablySendMsgsResendingOnMsgErr(
 		// Combine expectedErrs and unrecoverableErrs for fail-fast behavior
 		// This allows ReliablySendMsgs to return immediately on expected errors
 		// rather than retrying, so we can handle them by removing the message
-		allUnrecoverable := append(unrecoverableErrs, expectedErrs...)
+		allUnrecoverable := append([]*sdkErr.Error{}, unrecoverableErrs...)
+		allUnrecoverable = append(allUnrecoverable, expectedErrs...)
 		res, errSendMsg := client.ReliablySendMsgs(ctx, msgs, nil, allUnrecoverable)
 		if errSendMsg != nil {
 			// concatenate the errors, to throw out if needed
