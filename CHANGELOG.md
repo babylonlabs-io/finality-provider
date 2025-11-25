@@ -37,6 +37,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Improvements
+
+* [#749](https://github.com/babylonlabs-io/finality-provider/pull/749) feat: add batch msg removal logic
+
+## v1.0.1
+
 ### Bug Fixes
 
 * [#748](https://github.com/babylonlabs-io/finality-provider/pull/748) fix: hotfix advance start

@@ -723,25 +723,40 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 	return res, nil
 }
 
-// TestSubmitFinalitySignatureAndExtractPrivKey is exposed for presentation/testing purpose to allow manual sending finality signature
-// this API is the same as SubmitBatchFinalitySignatures except that we don't constraint the voting height and update status
-// Note: this should not be used in the submission loop
-func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey(
-	b *types.BlockInfo, useSafeEOTSFunc bool,
+// TestSubmitBatchFinalitySignaturesAndExtractPrivKey is exposed for presentation/testing purpose to allow manual sending finality signatures
+// This allows testing batch submission with a mix of duplicate and new votes
+// NOTE: the input blocks should be in the ascending order of height
+func (fp *FinalityProviderInstance) TestSubmitBatchFinalitySignaturesAndExtractPrivKey(
+	blocks []*types.BlockInfo, useSafeEOTSFunc bool,
 ) (*types.TxResponse, *btcec.PrivateKey, error) {
-	// get public randomness
-	prList, err := fp.getPubRandList(b.Height, 1)
+	if len(blocks) == 0 {
+		return nil, nil, fmt.Errorf("should not submit batch finality signature with zero blocks")
+	}
+
+	if len(blocks) > math.MaxUint32 {
+		return nil, nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
+	}
+
+	// get public randomness list
+	numPubRand := len(blocks)
+	// #nosec G115 -- performed the conversion check above
+	prList, err := fp.getPubRandList(blocks[0].Height, uint32(numPubRand))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get public randomness list: %w", err)
 	}
-	pubRand := prList[0]
 
-	// get proof
-	proofBytes, err := fp.pubRandState.getPubRandProof(fp.btcPk.MustMarshal(), fp.GetChainID(), b.Height)
+	// get proof list
+	proofBytesList, err := fp.pubRandState.getPubRandProofList(
+		fp.btcPk.MustMarshal(),
+		fp.GetChainID(),
+		blocks[0].Height,
+		uint64(numPubRand),
+	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %w", err)
+		return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof list: %w", err)
 	}
 
+	// Determine which signer function to use
 	eotsSignerFunc := func(b *types.BlockInfo) (*bbntypes.SchnorrEOTSSig, error) {
 		msgToSign := getMsgToSignForVote(b.Height, b.Hash)
 		sig, err := fp.em.UnsafeSignEOTS(fp.btcPk.MustMarshal(), fp.GetChainID(), msgToSign, b.Height)
@@ -756,23 +771,27 @@ func (fp *FinalityProviderInstance) TestSubmitFinalitySignatureAndExtractPrivKey
 		eotsSignerFunc = fp.signFinalitySig
 	}
 
-	// sign block
-	eotsSig, err := eotsSignerFunc(b)
-	if err != nil {
-		return nil, nil, err
+	// sign all blocks
+	sigList := make([]*btcec.ModNScalar, 0, len(blocks))
+	for _, b := range blocks {
+		eotsSig, err := eotsSignerFunc(b)
+		if err != nil {
+			return nil, nil, err
+		}
+		sigList = append(sigList, eotsSig.ToModNScalar())
 	}
 
-	// send finality signature to the consumer chain
-	res, err := fp.cc.SubmitFinalitySig(fp.GetBtcPk(), b, pubRand, proofBytes, eotsSig.ToModNScalar())
+	// send batch finality signatures to the consumer chain
+	res, err := fp.cc.SubmitBatchFinalitySigs(fp.GetBtcPk(), blocks, prList, proofBytesList, sigList)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to send finality signature to the consumer chain: %w", err)
+		return nil, nil, fmt.Errorf("failed to send batch finality signatures to the consumer chain: %w", err)
 	}
 
 	if res.TxHash == "" {
 		return res, nil, nil
 	}
 
-	// try to extract the private key
+	// try to extract the private key if slashing occurred
 	var privKey *btcec.PrivateKey
 	for _, ev := range res.Events {
 		if strings.Contains(ev.EventType, "EventSlashedFinalityProvider") {

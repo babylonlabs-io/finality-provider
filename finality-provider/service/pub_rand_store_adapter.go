@@ -20,10 +20,6 @@ func (st *pubRandState) addPubRandProofList(
 	return st.s.AddPubRandProofList(chainID, pk, height, numPubRand, proofList)
 }
 
-func (st *pubRandState) getPubRandProof(pk, chainID []byte, height uint64) ([]byte, error) {
-	return st.s.GetPubRandProof(chainID, pk, height)
-}
-
 func (st *pubRandState) getPubRandProofList(pk, chainID []byte, height uint64, numPubRand uint64) ([][]byte, error) {
 	return st.s.GetPubRandProofList(chainID, pk, height, numPubRand)
 }
