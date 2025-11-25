@@ -499,8 +499,7 @@ func (bc *BabylonConsumerController) reliablySendMsgsResendingOnMsgErr(
 	unrecoverableErrs []*sdkErr.Error,
 ) (*types.TxResponse, error) {
 	var err error
-
-	maxRetries := BatchRetries(msgs, 10)
+	maxRetries := BatchRetries(msgs, bc.cfg.MaxRetriesBatchRemovingMsgs)
 	for i := uint64(0); i < maxRetries; i++ {
 		// Combine expectedErrs and unrecoverableErrs for fail-fast behavior
 		// This allows ReliablySendMsgs to return immediately on expected errors
@@ -541,18 +540,18 @@ func (bc *BabylonConsumerController) reliablySendMsgsResendingOnMsgErr(
 
 // BatchRetries returns the max number of retries it should execute based on the
 // amount of messages in the batch
-func BatchRetries(msgs []sdk.Msg, maxRetiresBatchRemovingMsgs uint64) uint64 {
+func BatchRetries(msgs []sdk.Msg, maxRetriesBatchRemovingMsgs uint64) uint64 {
 	maxRetriesByMsgLen := uint64(len(msgs))
 
-	if maxRetiresBatchRemovingMsgs == 0 {
+	if maxRetriesBatchRemovingMsgs == 0 {
 		return maxRetriesByMsgLen
 	}
 
-	if maxRetiresBatchRemovingMsgs > maxRetriesByMsgLen {
+	if maxRetriesBatchRemovingMsgs > maxRetriesByMsgLen {
 		return maxRetriesByMsgLen
 	}
 
-	return maxRetiresBatchRemovingMsgs
+	return maxRetriesBatchRemovingMsgs
 }
 
 // RemoveMsgAtIndex removes any msg inside the slice, based on the index is given
