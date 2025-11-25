@@ -826,18 +826,20 @@ func (bc *BabylonController) reliablySendMsgsResendingOnMsgErr(
 			client = bc.bbnClient
 		}
 
-		res, errSendMsg := client.ReliablySendMsgs(ctx, msgs, nil, unrecoverableErrs)
+		// Combine expectedErrs and unrecoverableErrs for fail-fast behavior
+		// This allows ReliablySendMsgs to return immediately on expected errors
+		// rather than retrying, so we can handle them by removing the message
+		allUnrecoverable := append(unrecoverableErrs, expectedErrs...)
+		res, errSendMsg := client.ReliablySendMsgs(ctx, msgs, nil, allUnrecoverable)
 		if errSendMsg != nil {
 			// concatenate the errors, to throw out if needed
 			err = errors.Join(err, errSendMsg)
 
-			if strings.Contains(errSendMsg.Error(), "message index: ") && errorContained(errSendMsg, expectedErrs) {
+			// Check if error contains a message index and is an expected error
+			// FailedMessageIndex already checks for "message index:" via regex
+			failedIndex, found := FailedMessageIndex(errSendMsg)
+			if found && errorContained(errSendMsg, expectedErrs) {
 				// remove the failed msg from the batch and send again
-				failedIndex, found := FailedMessageIndex(errSendMsg)
-				if !found {
-					return nil, errSendMsg
-				}
-
 				msgs = RemoveMsgAtIndex(msgs, failedIndex)
 
 				continue
