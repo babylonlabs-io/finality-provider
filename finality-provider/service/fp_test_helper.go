@@ -213,8 +213,13 @@ func (th *FinalityProviderTestHelper) SubmitBatchFinalitySignaturesAndExtractPri
 		return nil, nil, fmt.Errorf("should not submit batch finality signature with zero blocks")
 	}
 
+	if len(blocks) > int(^uint32(0)) {
+		return nil, nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
+	}
+
 	// get public randomness list
 	numPubRand := len(blocks)
+	// #nosec G115 -- performed the conversion check above
 	prList, err := th.fp.GetPubRandList(blocks[0].GetHeight(), uint32(numPubRand))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get public randomness list: %w", err)
