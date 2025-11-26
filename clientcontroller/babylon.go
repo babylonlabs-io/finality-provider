@@ -849,8 +849,9 @@ func (bc *BabylonController) reliablySendMsgsResendingOnMsgErr(
 			return nil, errSendMsg
 		}
 
+		// all msgs were removed from the batch
 		if res == nil {
-			return &types.TxResponse{}, nil
+			return nil, nil
 		}
 
 		return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
