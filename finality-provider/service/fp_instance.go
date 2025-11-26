@@ -716,6 +716,12 @@ func (fp *FinalityProviderInstance) SubmitBatchFinalitySignatures(blocks []*type
 		return nil, err
 	}
 
+	if res.TxHash == "" {
+		fp.logger.Info("no tx hash returned from the consumer chain, skip updating state")
+
+		return res, nil
+	}
+
 	// update DB
 	highBlock := blocks[len(blocks)-1]
 	fp.MustUpdateStateAfterFinalitySigSubmission(highBlock.Height)

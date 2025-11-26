@@ -816,7 +816,7 @@ func (bc *BabylonController) reliablySendMsgsResendingOnMsgErr(
 ) (*types.TxResponse, error) {
 	var err error
 
-	maxRetries := BatchRetries(msgs, 10)
+	maxRetries := BatchRetries(msgs, 0)
 	for i := uint64(0); i < maxRetries; i++ {
 		// Use testClient for testing, otherwise use bbnClient
 		var client babylonClient
@@ -849,8 +849,9 @@ func (bc *BabylonController) reliablySendMsgsResendingOnMsgErr(
 			return nil, errSendMsg
 		}
 
+		// all msgs were removed from the batch
 		if res == nil {
-			return &types.TxResponse{}, nil
+			return nil, nil
 		}
 
 		return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
