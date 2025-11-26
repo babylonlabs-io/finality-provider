@@ -32,6 +32,7 @@ const (
 	defaultMaxSubmissionRetries        = 20
 	defaultDataDirname                 = "data"
 	defaultMaxGRPCContentLength        = 16 * 1024 * 1024 // 16 MB
+	defaultUnsafeResetLastVotedHeight  = false
 )
 
 var (
@@ -72,6 +73,8 @@ type Config struct {
 	ContextSigningHeight uint64 `long:"contextsigningheight" description:"The height at which the context signing will start"`
 
 	GRPCMaxContentLength int `long:"grpcmaxcontentlength" description:"The maximum size of the gRPC message in bytes."`
+
+	AdvancedResetLastVotedHeight bool `long:"advancedresetlastvotedheight" description:"WARNING: If set to 'true', resets the finality provider's last voted height to the calculated start height from poller. WARNING"`
 }
 
 func DefaultConfigWithHome(homePath string) Config {
@@ -80,21 +83,22 @@ func DefaultConfigWithHome(homePath string) Config {
 	bbnCfg.KeyDirectory = homePath
 	pollerCfg := DefaultChainPollerConfig()
 	cfg := Config{
-		LogLevel:                    defaultLogLevel.String(),
-		DatabaseConfig:              DefaultDBConfigWithHomePath(homePath),
-		BabylonConfig:               &bbnCfg,
-		PollerConfig:                &pollerCfg,
-		NumPubRand:                  defaultNumPubRand,
-		TimestampingDelayBlocks:     defaultTimestampingDelayBlocks,
-		BatchSubmissionSize:         defaultBatchSubmissionSize,
-		RandomnessCommitInterval:    defaultRandomInterval,
-		SubmissionRetryInterval:     defaultSubmitRetryInterval,
-		SignatureSubmissionInterval: defaultSignatureSubmissionInterval,
-		MaxSubmissionRetries:        defaultMaxSubmissionRetries,
-		EOTSManagerAddress:          defaultEOTSManagerAddress,
-		RPCListener:                 DefaultRPCListener,
-		Metrics:                     metrics.DefaultFpConfig(),
-		GRPCMaxContentLength:        defaultMaxGRPCContentLength,
+		LogLevel:                     defaultLogLevel.String(),
+		DatabaseConfig:               DefaultDBConfigWithHomePath(homePath),
+		BabylonConfig:                &bbnCfg,
+		PollerConfig:                 &pollerCfg,
+		NumPubRand:                   defaultNumPubRand,
+		TimestampingDelayBlocks:      defaultTimestampingDelayBlocks,
+		BatchSubmissionSize:          defaultBatchSubmissionSize,
+		RandomnessCommitInterval:     defaultRandomInterval,
+		SubmissionRetryInterval:      defaultSubmitRetryInterval,
+		SignatureSubmissionInterval:  defaultSignatureSubmissionInterval,
+		MaxSubmissionRetries:         defaultMaxSubmissionRetries,
+		EOTSManagerAddress:           defaultEOTSManagerAddress,
+		RPCListener:                  DefaultRPCListener,
+		Metrics:                      metrics.DefaultFpConfig(),
+		GRPCMaxContentLength:         defaultMaxGRPCContentLength,
+		AdvancedResetLastVotedHeight: defaultUnsafeResetLastVotedHeight,
 	}
 
 	if err := cfg.Validate(); err != nil {
