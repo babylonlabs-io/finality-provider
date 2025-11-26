@@ -525,7 +525,7 @@ func (bc *BabylonConsumerController) reliablySendMsgsResendingOnMsgErr(
 		}
 
 		if res == nil {
-			return &types.TxResponse{}, nil
+			return nil, nil
 		}
 
 		return &types.TxResponse{TxHash: res.TxHash, Events: res.Events}, nil
