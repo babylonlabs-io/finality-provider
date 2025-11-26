@@ -952,3 +952,168 @@ func TestFpdBackupCmd(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, storeFp)
 }
+
+// TestBatchSubmissionWithDuplicates tests that when submitting a batch
+// of finality signatures where some are duplicates, the duplicates are
+// removed and the batch is retried with only the valid signatures
+func TestBatchSubmissionWithDuplicates(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	tm, fps := StartManagerWithFinalityProvider(t, 1, ctx)
+	defer func() {
+		cancel()
+		tm.Stop(t)
+	}()
+
+	fpIns := fps[0]
+
+	// 1. Setup: get FP activated
+	tm.WaitForFpPubRandTimestamped(t, fpIns)
+	_ = tm.InsertBTCDelegation(t, []*btcec.PublicKey{fpIns.GetBtcPk()}, e2eutils.StakingTime, e2eutils.StakingAmount)
+	delsResp := tm.WaitForNPendingDels(t, 1)
+	del, err := e2eutils.ParseRespBTCDelToBTCDel(delsResp[0])
+	require.NoError(t, err)
+	tm.InsertCovenantSigForDelegation(t, del)
+	_ = tm.WaitForNActiveDels(t, 1)
+
+	// 2. Let FP vote on a few blocks, then stop it
+	lastVotedHeight := tm.WaitForFpVoteCast(t, fpIns)
+	t.Logf("FP cast first vote at height %d", lastVotedHeight)
+
+	// Wait a bit for the FP to vote on more blocks
+	time.Sleep(3 * time.Second)
+
+	// Stop the FP to prevent more voting
+	err = fpIns.Stop()
+	require.NoError(t, err)
+	t.Logf("Stopped FP")
+
+	// Wait for pending operations to complete
+	time.Sleep(2 * time.Second)
+
+	// 3. Query the chain to find which blocks actually have votes from this FP
+	// We'll scan recent blocks to find which ones have votes
+	currentHeight, err := tm.BBNConsumerClient.QueryLatestBlock(t.Context())
+	require.NoError(t, err)
+
+	votedBlocks := make([]types.BlockDescription, 0)
+	unvotedBlocks := make([]types.BlockDescription, 0)
+
+	// Scan blocks starting from first voted height
+	for h := lastVotedHeight; h <= currentHeight.GetHeight(); h++ {
+		votes, err := tm.BBNConsumerClient.Client().VotesAtHeight(h)
+		require.NoError(t, err)
+
+		block, err := tm.BBNConsumerClient.QueryBlock(t.Context(), h)
+		require.NoError(t, err)
+
+		if len(votes.BtcPks) > 0 {
+			votedBlocks = append(votedBlocks, block)
+			t.Logf("Block %d has %d vote(s)", h, len(votes.BtcPks))
+		} else {
+			unvotedBlocks = append(unvotedBlocks, block)
+			t.Logf("Block %d has no votes", h)
+		}
+
+		// We need at least 2 voted blocks and 2 unvoted blocks
+		if len(votedBlocks) >= 2 && len(unvotedBlocks) >= 2 {
+			break
+		}
+	}
+
+	// If we don't have enough unvoted blocks, wait for more blocks to be produced
+	for len(unvotedBlocks) < 2 {
+		t.Logf("Waiting for more blocks to be produced (need %d more unvoted blocks)", 2-len(unvotedBlocks))
+		time.Sleep(1 * time.Second)
+
+		currentHeight, err = tm.BBNConsumerClient.QueryLatestBlock(t.Context())
+		require.NoError(t, err)
+
+		// Check new blocks
+		startHeight := uint64(1)
+		if len(votedBlocks) > 0 {
+			startHeight = votedBlocks[len(votedBlocks)-1].GetHeight() + 1
+		}
+		if len(unvotedBlocks) > 0 {
+			startHeight = unvotedBlocks[len(unvotedBlocks)-1].GetHeight() + 1
+		}
+
+		for h := startHeight; h <= currentHeight.GetHeight(); h++ {
+			votes, err := tm.BBNConsumerClient.Client().VotesAtHeight(h)
+			require.NoError(t, err)
+
+			if len(votes.BtcPks) == 0 {
+				block, err := tm.BBNConsumerClient.QueryBlock(t.Context(), h)
+				require.NoError(t, err)
+				unvotedBlocks = append(unvotedBlocks, block)
+				t.Logf("Found unvoted block at height %d", h)
+
+				if len(unvotedBlocks) >= 2 {
+					break
+				}
+			}
+		}
+	}
+
+	require.GreaterOrEqual(t, len(votedBlocks), 2, "need at least 2 voted blocks")
+	require.GreaterOrEqual(t, len(unvotedBlocks), 2, "need at least 2 unvoted blocks")
+
+	t.Logf("Found %d voted blocks and %d unvoted blocks", len(votedBlocks), len(unvotedBlocks))
+	t.Logf("Will create mixed batch with: duplicate heights [%d, %d], new heights [%d, %d]",
+		votedBlocks[0].GetHeight(), votedBlocks[1].GetHeight(),
+		unvotedBlocks[0].GetHeight(), unvotedBlocks[1].GetHeight())
+
+	// 4. Submit a mixed batch with duplicates and new votes
+	// This tests the reliablySendMsgsResendingOnMsgErr function's ability to handle
+	// a batch where some messages fail with expected errors (duplicates)
+	mixedBatch := []types.BlockDescription{
+		votedBlocks[0],   // duplicate
+		votedBlocks[1],   // duplicate
+		unvotedBlocks[0], // new vote
+		unvotedBlocks[1], // new vote
+	}
+
+	t.Logf("Submitting mixed batch with duplicate heights [%d, %d] and new heights [%d, %d]",
+		votedBlocks[0].GetHeight(), votedBlocks[1].GetHeight(),
+		unvotedBlocks[0].GetHeight(), unvotedBlocks[1].GetHeight())
+
+	// Use the batch submission method with useSafeEOTSFunc=false to allow duplicates
+	res, _, err := fpIns.NewTestHelper().SubmitBatchFinalitySignaturesAndExtractPrivKey(ctx, mixedBatch, false)
+	require.NoError(t, err)
+	require.NotNil(t, res, "batch submission should succeed")
+	require.NotEmpty(t, res.TxHash, "batch submission should return a tx hash")
+
+	t.Logf("Successfully submitted mixed batch, tx_hash: %s", res.TxHash)
+
+	// 5. Verify that votes exist for the new blocks
+	// This confirms the submissions were successful
+	require.Eventually(t, func() bool {
+		votes, err := tm.BBNConsumerClient.Client().VotesAtHeight(unvotedBlocks[0].GetHeight())
+		if err != nil {
+			t.Logf("Error querying votes for height %d: %v", unvotedBlocks[0].GetHeight(), err)
+			return false
+		}
+		if len(votes.BtcPks) > 0 {
+			t.Logf("✅ Found %d vote(s) for new block at height %d", len(votes.BtcPks), unvotedBlocks[0].GetHeight())
+			return true
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	require.Eventually(t, func() bool {
+		votes, err := tm.BBNConsumerClient.Client().VotesAtHeight(unvotedBlocks[1].GetHeight())
+		if err != nil {
+			t.Logf("Error querying votes for height %d: %v", unvotedBlocks[1].GetHeight(), err)
+			return false
+		}
+		if len(votes.BtcPks) > 0 {
+			t.Logf("✅ Found %d vote(s) for new block at height %d", len(votes.BtcPks), unvotedBlocks[1].GetHeight())
+			return true
+		}
+		return false
+	}, eventuallyWaitTimeOut, eventuallyPollTime)
+
+	t.Logf("✅ Batch submission with duplicates test passed: " +
+		"duplicates were handled gracefully and new votes were submitted successfully")
+}

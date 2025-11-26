@@ -335,6 +335,13 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 		return nil, fmt.Errorf("failed to submit finality signature to the consumer chain: %w", err)
 	}
 
+	// If no transaction was sent (all messages filtered), don't update state
+	if res.TxHash == "" {
+		ds.Logger.Info("no transaction sent - all messages were filtered")
+		
+		return res, nil
+	}
+
 	// update the metrics with voted blocks
 	for _, b := range validBlocks {
 		ds.Metrics.RecordFpVotedHeight(ds.GetBtcPkHex(), b.GetHeight())
