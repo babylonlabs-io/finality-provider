@@ -159,8 +159,16 @@ func (fp *FinalityProviderInstance) Start(ctx context.Context) error {
 	}
 
 	if fp.cfg.AdvancedResetLastVotedHeight {
+		// Set lastVotedHeight to startHeight - 1 to begin voting from StaticChainScanningStartHeight (inclusive).
+		// The filtering logic in finality_submitter.go (FilterBlocksForVoting) skips blocks where
+		// height <= lastVotedHeight, so setting it to startHeight - 1 ensures voting starts from startHeight.
 		if err := fp.fpState.SetLastVotedHeight(startHeight - 1); err != nil {
-			return fmt.Errorf("failed to overwrite finality provider state with start height %d: %w", startHeight, err)
+			fp.logger.Warn("resetting last voted height due to AdvancedResetLastVotedHeight flag",
+				zap.String("pk", fp.GetBtcPkHex()),
+				zap.Uint64("height", startHeight-1),
+			)
+
+			return fmt.Errorf("failed to overwrite finality provider state with last voted height %d: %w", startHeight-1, err)
 		}
 	}
 
