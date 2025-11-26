@@ -200,3 +200,99 @@ func (th *FinalityProviderTestHelper) MustUpdateStateAfterFinalitySigSubmission(
 		t.Fatalf("failed to update state after finality sig submission: %s", err.Error())
 	}
 }
+
+// SubmitBatchFinalitySignaturesAndExtractPrivKey is the batch version of SubmitFinalitySignatureAndExtractPrivKey
+// This allows testing batch submission with a mix of duplicate and new votes
+// NOTE: the input blocks should be in the ascending order of height
+func (th *FinalityProviderTestHelper) SubmitBatchFinalitySignaturesAndExtractPrivKey(
+	ctx context.Context,
+	blocks []types.BlockDescription,
+	useSafeEOTSFunc bool,
+) (*types.TxResponse, *btcec.PrivateKey, error) {
+	if len(blocks) == 0 {
+		return nil, nil, fmt.Errorf("should not submit batch finality signature with zero blocks")
+	}
+
+	if len(blocks) > int(^uint32(0)) {
+		return nil, nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
+	}
+
+	// get public randomness list
+	numPubRand := len(blocks)
+	// #nosec G115 -- performed the conversion check above
+	prList, err := th.fp.GetPubRandList(blocks[0].GetHeight(), uint32(numPubRand))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get public randomness list: %w", err)
+	}
+
+	// get proof list
+	proofBytesList := make([][]byte, 0, numPubRand)
+	for _, b := range blocks {
+		proofBytes, err := th.fp.pubRandState.getPubRandProof(th.fp.btcPk.MustMarshal(), th.fp.GetChainID(), b.GetHeight())
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %w", err)
+		}
+		proofBytesList = append(proofBytesList, proofBytes)
+	}
+
+	// Determine which signer function to use
+	eotsSignerFunc := func(_ context.Context, b types.BlockDescription) (*bbntypes.SchnorrEOTSSig, error) {
+		sig, err := th.fp.em.UnsafeSignEOTS(th.fp.btcPk.MustMarshal(), th.fp.GetChainID(), b.MsgToSign(""), b.GetHeight())
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign EOTS: %w", err)
+		}
+
+		return bbntypes.NewSchnorrEOTSSigFromModNScalar(sig), nil
+	}
+
+	if useSafeEOTSFunc {
+		eotsSignerFunc = th.fp.SignFinalitySig
+	}
+
+	// sign all blocks
+	sigList := make([]*btcec.ModNScalar, 0, len(blocks))
+	for _, b := range blocks {
+		eotsSig, err := eotsSignerFunc(ctx, b)
+		if err != nil {
+			return nil, nil, err
+		}
+		sigList = append(sigList, eotsSig.ToModNScalar())
+	}
+
+	// send batch finality signatures to the consumer chain
+	res, err := th.fp.consumerCon.SubmitBatchFinalitySigs(ctx, &ccapi.SubmitBatchFinalitySigsRequest{
+		FpPk:        th.fp.GetBtcPk(),
+		Blocks:      blocks,
+		PubRandList: prList,
+		ProofList:   proofBytesList,
+		Sigs:        sigList,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to send batch finality signatures to the consumer chain: %w", err)
+	}
+
+	if res.TxHash == "" {
+		return res, nil, nil
+	}
+
+	// try to extract the private key if slashing occurred
+	var privKey *btcec.PrivateKey
+	for _, ev := range res.Events {
+		if strings.Contains(ev.EventType, "EventSlashedFinalityProvider") {
+			evidenceStr := ev.Attributes["evidence"]
+			th.fp.logger.Debug("found slashing evidence")
+			var evidence ftypes.Evidence
+			if err := jsonpb.UnmarshalString(evidenceStr, &evidence); err != nil {
+				return nil, nil, fmt.Errorf("failed to decode evidence bytes to evidence: %s", err.Error())
+			}
+			privKey, err = evidence.ExtractBTCSK()
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to extract private key: %s", err.Error())
+			}
+
+			break
+		}
+	}
+
+	return res, privKey, nil
+}
