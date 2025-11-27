@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Improvements
 
 * [#751](https://github.com/babylonlabs-io/finality-provider/pull/751) feat: remove failing msg from batch
+* [#754](https://github.com/babylonlabs-io/finality-provider/pull/754) feat: adds logic for advanced reset
 
 ## v2.0.0
 
