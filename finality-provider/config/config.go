@@ -17,21 +17,22 @@ import (
 )
 
 const (
-	defaultLogLevel                    = zapcore.DebugLevel
-	defaultLogDirname                  = "logs"
-	defaultLogFilename                 = "fpd.log"
-	defaultFinalityProviderKeyName     = "finality-provider"
-	DefaultRPCPort                     = 12581
-	defaultConfigFileName              = "fpd.conf"
-	defaultNumPubRand                  = 50000 // support running of roughly 5 days with block production time as 10s
-	defaultTimestampingDelayBlocks     = 6000  // 100 BTC blocks * 600s / 10s
-	defaultBatchSubmissionSize         = 1000
-	defaultRandomInterval              = 30 * time.Second
-	defaultSubmitRetryInterval         = 1 * time.Second
-	defaultSignatureSubmissionInterval = 1 * time.Second
-	defaultMaxSubmissionRetries        = 20
-	defaultDataDirname                 = "data"
-	defaultMaxGRPCContentLength        = 16 * 1024 * 1024 // 16 MB
+	defaultLogLevel                     = zapcore.DebugLevel
+	defaultLogDirname                   = "logs"
+	defaultLogFilename                  = "fpd.log"
+	defaultFinalityProviderKeyName      = "finality-provider"
+	DefaultRPCPort                      = 12581
+	defaultConfigFileName               = "fpd.conf"
+	defaultNumPubRand                   = 50000 // support running of roughly 5 days with block production time as 10s
+	defaultTimestampingDelayBlocks      = 6000  // 100 BTC blocks * 600s / 10s
+	defaultBatchSubmissionSize          = 1000
+	defaultRandomInterval               = 30 * time.Second
+	defaultSubmitRetryInterval          = 1 * time.Second
+	defaultSignatureSubmissionInterval  = 1 * time.Second
+	defaultMaxSubmissionRetries         = 20
+	defaultDataDirname                  = "data"
+	defaultMaxGRPCContentLength         = 16 * 1024 * 1024 // 16 MB
+	defaultAdvancedResetLastVotedHeight = false
 )
 
 var (
@@ -72,6 +73,8 @@ type Config struct {
 	ContextSigningHeight uint64 `long:"contextsigningheight" description:"The height at which the context signing will start"`
 
 	GRPCMaxContentLength int `long:"grpcmaxcontentlength" description:"The maximum size of the gRPC message in bytes."`
+
+	AdvancedResetLastVotedHeight bool `long:"advancedresetlastvotedheight" description:"WARNING: If set to 'true', resets the finality provider's last voted height to the calculated start height from poller. WARNING"`
 }
 
 func DefaultConfigWithHome(homePath string) Config {
@@ -80,21 +83,22 @@ func DefaultConfigWithHome(homePath string) Config {
 	bbnCfg.KeyDirectory = homePath
 	pollerCfg := DefaultChainPollerConfig()
 	cfg := Config{
-		LogLevel:                    defaultLogLevel.String(),
-		DatabaseConfig:              DefaultDBConfigWithHomePath(homePath),
-		BabylonConfig:               &bbnCfg,
-		PollerConfig:                &pollerCfg,
-		NumPubRand:                  defaultNumPubRand,
-		TimestampingDelayBlocks:     defaultTimestampingDelayBlocks,
-		BatchSubmissionSize:         defaultBatchSubmissionSize,
-		RandomnessCommitInterval:    defaultRandomInterval,
-		SubmissionRetryInterval:     defaultSubmitRetryInterval,
-		SignatureSubmissionInterval: defaultSignatureSubmissionInterval,
-		MaxSubmissionRetries:        defaultMaxSubmissionRetries,
-		EOTSManagerAddress:          defaultEOTSManagerAddress,
-		RPCListener:                 DefaultRPCListener,
-		Metrics:                     metrics.DefaultFpConfig(),
-		GRPCMaxContentLength:        defaultMaxGRPCContentLength,
+		LogLevel:                     defaultLogLevel.String(),
+		DatabaseConfig:               DefaultDBConfigWithHomePath(homePath),
+		BabylonConfig:                &bbnCfg,
+		PollerConfig:                 &pollerCfg,
+		NumPubRand:                   defaultNumPubRand,
+		TimestampingDelayBlocks:      defaultTimestampingDelayBlocks,
+		BatchSubmissionSize:          defaultBatchSubmissionSize,
+		RandomnessCommitInterval:     defaultRandomInterval,
+		SubmissionRetryInterval:      defaultSubmitRetryInterval,
+		SignatureSubmissionInterval:  defaultSignatureSubmissionInterval,
+		MaxSubmissionRetries:         defaultMaxSubmissionRetries,
+		EOTSManagerAddress:           defaultEOTSManagerAddress,
+		RPCListener:                  DefaultRPCListener,
+		Metrics:                      metrics.DefaultFpConfig(),
+		GRPCMaxContentLength:         defaultMaxGRPCContentLength,
+		AdvancedResetLastVotedHeight: defaultAdvancedResetLastVotedHeight,
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -206,6 +210,21 @@ func (cfg *Config) Validate() error {
 
 	if cfg.GRPCMaxContentLength <= 0 {
 		return fmt.Errorf("invalid max content length: %d", cfg.GRPCMaxContentLength)
+	}
+
+	if cfg.AdvancedResetLastVotedHeight {
+		// Ensure StaticChainScanningStartHeight is set and > 0
+		// This prevents underflow when setting lastVotedHeight = startHeight - 1
+		if cfg.PollerConfig.StaticChainScanningStartHeight == 0 {
+			return fmt.Errorf("AdvancedResetLastVotedHeight requires StaticChainScanningStartHeight > 0, got: %d",
+				cfg.PollerConfig.StaticChainScanningStartHeight)
+		}
+
+		// error if AutoChainScanningMode is enabled (they conflict)
+		if cfg.PollerConfig.AutoChainScanningMode {
+			return fmt.Errorf("AdvancedResetLastVotedHeight cannot be used with AutoChainScanningMode; " +
+				"set AutoChainScanningMode to false and configure StaticChainScanningStartHeight")
+		}
 	}
 
 	// All good, return the sanitized result.
