@@ -338,7 +338,7 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	// If no transaction was sent (all messages filtered), don't update state
 	if res.TxHash == "" {
 		ds.Logger.Info("no transaction sent - all messages were filtered")
-		
+
 		return res, nil
 	}
 
