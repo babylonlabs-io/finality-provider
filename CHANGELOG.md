@@ -37,6 +37,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v2.0.2
+
+### Bug fixes
+
+* [#GHSA-4jmp-x7mh-rgmr](https://github.com/babylonlabs-io/finality-provider/security/advisories/GHSA-4jmp-x7mh-rgmr) fix: eots pk sk verification
+
+## v2.0.1
+
 ### Improvements
 
 * [#751](https://github.com/babylonlabs-io/finality-provider/pull/751) feat: remove failing msg from batch
