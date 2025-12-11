@@ -41,7 +41,7 @@ type Config struct {
 	KeyringBackend         string          `long:"keyring-type" description:"Type of keyring to use"`
 	RPCListener            string          `long:"rpclistener" description:"the listener for RPC connections, e.g., 127.0.0.1:1234"`
 	HMACKey                string          `long:"hmackey" description:"The HMAC key for authentication with FPD. If not provided, will use HMAC_KEY environment variable."`
-	DisableUnsafeEndpoints bool            `long:"disable-unsafe-endpoints" description:"Disable unsafe RPC endpoints (e.g., UnsafeSignEOTS) that bypass slashing protection. Recommended for production."`
+	DisableUnsafeEndpoints *bool           `long:"disable-unsafe-endpoints" description:"Disable unsafe RPC endpoints (e.g., UnsafeSignEOTS) that bypass slashing protection. Defaults to true (disabled) if not set."`
 	Metrics                *metrics.Config `group:"metrics" namespace:"metrics"`
 	GRPCMaxContentLength   int             `long:"grpcmaxcontentlength" description:"The maximum size of the gRPC message in bytes."`
 
@@ -129,6 +129,16 @@ func DataDir(homePath string) string {
 	return filepath.Join(homePath, defaultDataDirname)
 }
 
+// IsUnsafeEndpointsDisabled returns true if unsafe endpoints should be disabled.
+// Defaults to true (safe) if not explicitly set.
+func (cfg *Config) IsUnsafeEndpointsDisabled() bool {
+	if cfg.DisableUnsafeEndpoints == nil {
+		return true // Safe default: disabled
+	}
+
+	return *cfg.DisableUnsafeEndpoints
+}
+
 func DefaultConfig() *Config {
 	return DefaultConfigWithHomePath(DefaultEOTSDir)
 }
@@ -138,14 +148,15 @@ func DefaultConfigWithHomePath(homePath string) *Config {
 }
 
 func DefaultConfigWithHomePathAndPorts(homePath string, rpcPort, metricsPort int) *Config {
+	disableUnsafe := true
 	cfg := &Config{
 		LogLevel:               defaultLogLevel,
 		KeyringBackend:         defaultKeyringBackend,
 		DatabaseConfig:         DefaultDBConfigWithHomePath(homePath),
 		RPCListener:            defaultRpcListener,
-		DisableUnsafeEndpoints: false, // default to false for backward compatibility
 		Metrics:                metrics.DefaultEotsConfig(),
 		GRPCMaxContentLength:   defaultMaxGRPCContentLength,
+		DisableUnsafeEndpoints: &disableUnsafe,
 	}
 	cfg.RPCListener = fmt.Sprintf("%s:%d", DefaultRPCHost, rpcPort)
 	cfg.Metrics.Port = metricsPort
