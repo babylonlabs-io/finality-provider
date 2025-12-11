@@ -284,6 +284,12 @@ func (lm *LocalEOTSManager) SignEOTS(eotsPk []byte, chainID []byte, msg []byte, 
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
 	}
 
+	// Verify the retrieved private key corresponds to the requested public key
+	derivedPubKey := schnorr.SerializePubKey(privKey.PubKey())
+	if !bytes.Equal(derivedPubKey, eotsPk) {
+		return nil, fmt.Errorf("public key mismatch: requested key does not match stored key")
+	}
+
 	privRand, _, err := lm.getRandomnessPair(privKey, chainID, height)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get randomness pair: %w", err)
@@ -330,6 +336,12 @@ func (lm *LocalEOTSManager) SignBatchEOTS(req *SignBatchEOTSRequest) ([]SignData
 	privKey, err := lm.eotsPrivKeyFromKeyName(keyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOTS private key: %w", err)
+	}
+
+	// Verify the retrieved private key corresponds to the requested public key
+	derivedPubKey := schnorr.SerializePubKey(privKey.PubKey())
+	if !bytes.Equal(derivedPubKey, eotsPk) {
+		return nil, fmt.Errorf("public key mismatch: requested key does not match stored key")
 	}
 
 	// Use heights extracted above for validation
@@ -529,7 +541,18 @@ func (lm *LocalEOTSManager) getEOTSPrivKey(fpPk []byte) (*btcec.PrivateKey, erro
 		return nil, fmt.Errorf("failed to get EOTS key name: %w", err)
 	}
 
-	return lm.eotsPrivKeyFromKeyName(keyName)
+	privKey, err := lm.eotsPrivKeyFromKeyName(keyName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify the retrieved private key corresponds to the requested public key
+	derivedPubKey := schnorr.SerializePubKey(privKey.PubKey())
+	if !bytes.Equal(derivedPubKey, fpPk) {
+		return nil, fmt.Errorf("public key mismatch: requested key does not match stored key")
+	}
+
+	return privKey, nil
 }
 
 func (lm *LocalEOTSManager) eotsPrivKeyFromKeyName(keyName string) (*btcec.PrivateKey, error) {
