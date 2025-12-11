@@ -139,6 +139,8 @@ func StartManager(t *testing.T, ctx context.Context) *TestManager {
 	eotsCfg := eotsconfig.DefaultConfigWithHomePath(eotsHomeDir)
 	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
+	disableUnsafeEndpoints := false
+	eotsCfg.DisableUnsafeEndpoints = &disableUnsafeEndpoints
 	eh := NewEOTSServerHandler(t, eotsCfg, eotsHomeDir)
 	eh.Start(ctx)
 	cfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))

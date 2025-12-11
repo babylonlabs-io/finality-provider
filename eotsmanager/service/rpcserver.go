@@ -3,8 +3,11 @@ package service
 import (
 	"context"
 
+	"github.com/babylonlabs-io/finality-provider/eotsmanager/config"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/babylonlabs-io/finality-provider/eotsmanager"
 	"github.com/babylonlabs-io/finality-provider/eotsmanager/proto"
@@ -15,15 +18,18 @@ import (
 type rpcServer struct {
 	proto.UnimplementedEOTSManagerServer
 
-	em *eotsmanager.LocalEOTSManager
+	em  *eotsmanager.LocalEOTSManager
+	cfg *config.Config
 }
 
 // newRPCServer creates a new RPC sever from the set of input dependencies.
 func newRPCServer(
 	em *eotsmanager.LocalEOTSManager,
+	cfg *config.Config,
 ) *rpcServer {
 	return &rpcServer{
-		em: em,
+		em:  em,
+		cfg: cfg,
 	}
 }
 
@@ -75,6 +81,10 @@ func (r *rpcServer) SignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 // UnsafeSignEOTS only used for testing purposes. Doesn't offer slashing protection!
 func (r *rpcServer) UnsafeSignEOTS(_ context.Context, req *proto.SignEOTSRequest) (
 	*proto.SignEOTSResponse, error) {
+	if r.cfg.IsUnsafeEndpointsDisabled() {
+		return nil, status.Error(codes.PermissionDenied, //nolint:wrapcheck
+			"UnsafeSignEOTS endpoint is disabled in configuration for security reasons")
+	}
 	sig, err := r.em.UnsafeSignEOTS(req.Uid, req.ChainId, req.Msg, req.Height)
 	if err != nil {
 		return nil, err

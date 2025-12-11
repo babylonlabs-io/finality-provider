@@ -37,7 +37,7 @@ func NewEOTSManagerServer(cfg *config.Config, l *zap.Logger, em *eotsmanager.Loc
 	return &Server{
 		cfg:       cfg,
 		logger:    l,
-		rpcServer: newRPCServer(em),
+		rpcServer: newRPCServer(em, cfg),
 		db:        db,
 		quit:      make(chan struct{}, 1),
 	}
