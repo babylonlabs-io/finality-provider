@@ -37,6 +37,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## v1.0.4
+
+### Bug Fixes
+
+* [#GHSA-4jmp-x7mh-rgmr](https://github.com/babylonlabs-io/finality-provider/security/advisories/GHSA-4jmp-x7mh-rgmr) fix: eots pk sk verification
+
 ## v1.0.3
 
 ### Bug Fixes
