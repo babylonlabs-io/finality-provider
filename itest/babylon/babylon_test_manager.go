@@ -142,6 +142,9 @@ func StartManager(t *testing.T, ctx context.Context, eotsHmacKey string, fpHmacK
 	eotsCfg.RPCListener = fmt.Sprintf("127.0.0.1:%d", testutil.AllocateUniquePort(t))
 	eotsCfg.Metrics.Port = testutil.AllocateUniquePort(t)
 
+	disableUnsafeEndpoints := false
+	eotsCfg.DisableUnsafeEndpoints = &disableUnsafeEndpoints
+
 	// Set HMAC key for EOTS server if provided
 	if eotsHmacKey != "" {
 		eotsCfg.HMACKey = eotsHmacKey
