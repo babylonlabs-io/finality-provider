@@ -1,9 +1,4 @@
 # CODEOWNERS: https://help.github.com/articles/about-codeowners/
 
 # Primary repo maintainers
-*       @KonradStaniec
-*       @RafilxTenfen
-*       @GAtom22
-*       @Lazar955
-*       @gitferry
-*       @SebastianElvis
+*       @KonradStaniec @RafilxTenfen @GAtom22 @Lazar955 @gitferry @SebastianElvis
