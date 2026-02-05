@@ -2,3 +2,8 @@
 
 # Primary repo maintainers
 *       @KonradStaniec @RafilxTenfen @GAtom22 @Lazar955 @gitferry @SebastianElvis
+
+# DevOps team owns CI/CD and container configuration
+/.github/ @babylonlabs-io/devops
+/.github/CODEOWNERS @babylonlabs-io/devops
+**/Dockerfile @babylonlabs-io/devops
