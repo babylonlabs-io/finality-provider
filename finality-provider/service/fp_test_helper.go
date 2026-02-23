@@ -217,17 +217,22 @@ func (th *FinalityProviderTestHelper) SubmitBatchFinalitySignaturesAndExtractPri
 		return nil, nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
 	}
 
-	// get public randomness list
-	numPubRand := len(blocks)
+	// get public randomness list for the full height range (blocks may have gaps)
+	startHeight := blocks[0].GetHeight()
+	endHeight := blocks[len(blocks)-1].GetHeight()
+	heightSpan := endHeight - startHeight + 1
 	// #nosec G115 -- performed the conversion check above
-	prList, err := th.fp.GetPubRandList(blocks[0].GetHeight(), uint32(numPubRand))
+	allPrList, err := th.fp.GetPubRandList(startHeight, uint32(heightSpan))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get public randomness list: %w", err)
 	}
 
-	// get proof list
-	proofBytesList := make([][]byte, 0, numPubRand)
+	// build filtered pubrand and proof lists indexed by actual block height
+	prList := make([]*btcec.FieldVal, 0, len(blocks))
+	proofBytesList := make([][]byte, 0, len(blocks))
 	for _, b := range blocks {
+		offset := b.GetHeight() - startHeight
+		prList = append(prList, allPrList[offset])
 		proofBytes, err := th.fp.pubRandState.getPubRandProof(th.fp.btcPk.MustMarshal(), th.fp.GetChainID(), b.GetHeight())
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get public randomness inclusion proof: %w", err)
