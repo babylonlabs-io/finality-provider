@@ -102,6 +102,75 @@ func FuzzSubmitFinalitySigs(f *testing.F) {
 	})
 }
 
+func TestSubmitFinalitySigsNonConsecutiveBlocks(t *testing.T) {
+	t.Parallel()
+	r := rand.New(rand.NewSource(42))
+
+	randomStartingHeight := uint64(10)
+	// We need blocks up to startingHeight+7, so currentHeight must cover that range
+	currentHeight := randomStartingHeight + 10
+	startingBlock := types.NewBlockInfo(randomStartingHeight, testutil.GenRandomByteArray(r, 32), false)
+	mockBabylonController := testutil.PrepareMockedBabylonController(t)
+	mockConsumerController := testutil.PrepareMockedConsumerController(t, r, randomStartingHeight, currentHeight)
+	mockConsumerController.EXPECT().QueryLatestBlock(t.Context()).Return(types.NewBlockInfo(0, testutil.GenRandomByteArray(r, 32), false), nil).AnyTimes()
+	mockConsumerController.EXPECT().GetFpRandCommitContext().Return("").AnyTimes()
+	mockConsumerController.EXPECT().GetFpFinVoteContext().Return("").AnyTimes()
+	mockConsumerController.EXPECT().IsBSN().Return(false).AnyTimes()
+	_, fpIns, cleanUp := startFinalityProviderAppWithRegisteredFp(t, r, mockBabylonController, mockConsumerController, true, randomStartingHeight, testutil.TestPubRandNum)
+	defer cleanUp()
+
+	// commit pub rand
+	_, err := fpIns.CommitPubRand(t.Context(), startingBlock.GetHeight())
+	require.NoError(t, err)
+
+	// mock committed pub rand
+	lastCommittedHeight := randomStartingHeight + 25
+	lastCommittedPubRand := &babylon.BabylonPubRandCommit{
+		StartHeight: lastCommittedHeight,
+		NumPubRand:  1000,
+		Commitment:  datagen.GenRandomByteArray(r, 32),
+		EpochNum:    5,
+	}
+	mockConsumerController.EXPECT().QueryLastPubRandCommit(t.Context(), gomock.Any()).Return(lastCommittedPubRand, nil).AnyTimes()
+
+	// Heights where FP does NOT have voting power — this creates gaps
+	heightsWithoutPower := map[uint64]bool{
+		randomStartingHeight + 2: true,
+		randomStartingHeight + 4: true,
+		randomStartingHeight + 5: true,
+	}
+
+	// mock voting power: return false for gap heights, true otherwise
+	mockConsumerController.EXPECT().QueryFinalityProviderHasPower(t.Context(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, req *api.QueryFinalityProviderHasPowerRequest) (bool, error) {
+			if heightsWithoutPower[req.BlockHeight] {
+				return false, nil
+			}
+			return true, nil
+		}).AnyTimes()
+
+	// create consecutive blocks from startingHeight+1 to startingHeight+7
+	var blocks []types.BlockDescription
+	for h := randomStartingHeight + 1; h <= randomStartingHeight+7; h++ {
+		blocks = append(blocks, types.NewBlockInfo(h, testutil.GenRandomByteArray(r, 32), false))
+	}
+
+	// after FilterBlocksForVoting, the resulting blocks should be non-consecutive:
+	// [+1, +3, +6, +7] (gaps at +2, +4, +5)
+	expectedTxHash := testutil.GenRandomHexStr(r, 32)
+	mockConsumerController.EXPECT().
+		SubmitBatchFinalitySigs(t.Context(), gomock.Any()).
+		Return(&types.TxResponse{TxHash: expectedTxHash}, nil).AnyTimes()
+
+	providerRes, err := fpIns.NewTestHelper().SubmitBatchFinalitySignatures(t, blocks)
+	require.NoError(t, err)
+	require.NotNil(t, providerRes)
+	require.Equal(t, expectedTxHash, providerRes.TxHash)
+
+	// check the last_voted_height is the highest block
+	require.Equal(t, randomStartingHeight+7, fpIns.GetLastVotedHeight())
+}
+
 func FuzzDetermineStartHeight(f *testing.F) {
 	testutil.AddRandomSeedsToFuzzer(f, 10)
 	f.Fuzz(func(t *testing.T, seed int64) {

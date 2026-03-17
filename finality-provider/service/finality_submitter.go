@@ -266,20 +266,25 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 		return nil, fmt.Errorf("should not submit batch finality signature with zero block")
 	}
 
-	if len(blocks) > math.MaxUint32 {
-		return nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
+	// Compute the full height range covering all blocks (which may have gaps).
+	// We fetch pubrand/proofs for the entire consecutive range and index by offset.
+	startHeight := blocks[0].GetHeight()
+	endHeight := blocks[len(blocks)-1].GetHeight()
+	heightSpan := endHeight - startHeight + 1
+	if heightSpan > math.MaxUint32 {
+		return nil, fmt.Errorf("block height range too large: %d", heightSpan)
 	}
 
 	// #nosec G115 -- performed the conversion check above
-	numPubRand := uint32(len(blocks))
-	prList, err := ds.GetPubRandList(blocks[0].GetHeight(), numPubRand)
+	numPubRand := uint32(heightSpan)
+	prList, err := ds.GetPubRandList(startHeight, numPubRand)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get public randomness for height %d: %w", blocks[0].GetHeight(), err)
+		return nil, fmt.Errorf("failed to get public randomness for height %d: %w", startHeight, err)
 	}
 
-	proofBytesList, err := ds.ProofListGetterFunc(blocks[0].GetHeight(), uint64(numPubRand))
+	proofBytesList, err := ds.ProofListGetterFunc(startHeight, uint64(numPubRand))
 	if err != nil {
-		return nil, fmt.Errorf("failed to get public randomness inclusion proof for height %d: %w\nplease recover the randomness proof from db", blocks[0].GetHeight(), err)
+		return nil, fmt.Errorf("failed to get public randomness inclusion proof for height %d: %w\nplease recover the randomness proof from db", startHeight, err)
 	}
 
 	// Use batch signing for better performance
@@ -294,11 +299,12 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 	validProofList := make([][]byte, 0, len(blocks))
 	validSigList := make([]*btcec.ModNScalar, 0, len(blocks))
 
-	for i, block := range blocks {
+	for _, block := range blocks {
 		if sig, found := batchSigMap[block.GetHeight()]; found {
+			offset := block.GetHeight() - startHeight
 			validBlocks = append(validBlocks, block)
-			validPrList = append(validPrList, prList[i])
-			validProofList = append(validProofList, proofBytesList[i])
+			validPrList = append(validPrList, prList[offset])
+			validProofList = append(validProofList, proofBytesList[offset])
 			validSigList = append(validSigList, sig.ToModNScalar())
 		} else {
 			// Block was skipped due to double-sign
