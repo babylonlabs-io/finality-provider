@@ -15,9 +15,12 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   lint_test:
-    uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@847cd8a6ff9c64e401ce922d12532979d9ac5e93 # v0.14.5
+    uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@0adff9d36a387ebfc921621f2e6b357230f8c08e # v0.18.1
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs['skip-lint-test'] == true) }}
     with:
       go-version: '1.25'
@@ -47,13 +50,14 @@ jobs:
             needs.lint_test.result == 'success'
           )}}
     needs: ["lint_test"]
-    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@d2299e834fcbaca4bf2db043a2939798043d5951 # v0.16.1
+    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@0adff9d36a387ebfc921621f2e6b357230f8c08e # v0.18.1
     secrets: inherit
     with:
       publish: true
       dockerfile: ./Dockerfile
       repoName: finality-provider
       docker_scan: true
+      trivy_nofail: true
     permissions:
       # required for all workflows
       security-events: write

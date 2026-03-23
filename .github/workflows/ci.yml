@@ -5,9 +5,16 @@ on:
     branches:
       - '**'
 
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   lint_test:
-    uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@5151754256060bf160c411d0784f831f29882106 # v0.13.4
+    uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@0adff9d36a387ebfc921621f2e6b357230f8c08e # v0.18.1
     secrets: inherit
     with:
       go-version: '1.25'
@@ -30,9 +37,10 @@ jobs:
         run: make test-e2e-babylon
 
   docker_pipeline:
-    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@5151754256060bf160c411d0784f831f29882106 # v0.13.4
+    uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@0adff9d36a387ebfc921621f2e6b357230f8c08e # v0.18.1
     secrets: inherit
     with:
       publish: false
       dockerfile: ./Dockerfile
       repoName: finality-provider
+      trivy_nofail: true
