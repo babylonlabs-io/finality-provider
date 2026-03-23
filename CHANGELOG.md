@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug Fixes
+
+* [#779](https://github.com/babylonlabs-io/finality-provider/pull/779) fix: use `syscall.Stdin` to avoid gosec G115 uintptr->int overflow warning in `term.ReadPassword`
+
 ## v2.0.2
 
 ### Bug fixes
