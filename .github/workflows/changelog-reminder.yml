@@ -7,5 +7,5 @@ on:
 
 jobs:
   changelog_reminder:
-    uses: babylonlabs-io/.github/.github/workflows/reusable_changelog_reminder.yml@5151754256060bf160c411d0784f831f29882106 # v0.13.4
+    uses: babylonlabs-io/.github/.github/workflows/reusable_changelog_reminder.yml@98e4de18638b3d0738c9cbf7e7dfc6e34524db54 # v0.19.1 https://github.com/babylonlabs-io/.github/releases/tag/v0.19.1
     secrets: inherit
