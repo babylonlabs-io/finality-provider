@@ -146,6 +146,7 @@ func TestSubmitFinalitySigsNonConsecutiveBlocks(t *testing.T) {
 			if heightsWithoutPower[req.BlockHeight] {
 				return false, nil
 			}
+
 			return true, nil
 		}).AnyTimes()
 

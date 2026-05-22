@@ -32,6 +32,7 @@ func passwordReader(cmd *cobra.Command) (string, error) {
 
 	// TTY: interactive prompt
 	cmd.Print("Enter password to unlock keyring: ")
+	// #nosec G115 -- os.Stdin.Fd() returns a valid file descriptor that fits in an int
 	passphrase, err := term.ReadPassword(int(os.Stdin.Fd()))
 	cmd.Println()
 	if err != nil {

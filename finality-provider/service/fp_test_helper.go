@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 
@@ -213,14 +214,14 @@ func (th *FinalityProviderTestHelper) SubmitBatchFinalitySignaturesAndExtractPri
 		return nil, nil, fmt.Errorf("should not submit batch finality signature with zero blocks")
 	}
 
-	if len(blocks) > int(^uint32(0)) {
-		return nil, nil, fmt.Errorf("should not submit batch finality signature with too many blocks")
-	}
-
 	// get public randomness list for the full height range (blocks may have gaps)
 	startHeight := blocks[0].GetHeight()
 	endHeight := blocks[len(blocks)-1].GetHeight()
 	heightSpan := endHeight - startHeight + 1
+	if heightSpan > math.MaxUint32 {
+		return nil, nil, fmt.Errorf("block height range too large: %d", heightSpan)
+	}
+
 	// #nosec G115 -- performed the conversion check above
 	allPrList, err := th.fp.GetPubRandList(startHeight, uint32(heightSpan))
 	if err != nil {

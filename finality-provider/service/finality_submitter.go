@@ -301,6 +301,11 @@ func (ds *DefaultFinalitySubmitter) submitBatchFinalitySignaturesOnce(ctx contex
 
 	for _, block := range blocks {
 		if sig, found := batchSigMap[block.GetHeight()]; found {
+			// prList/proofBytesList are indexed by height offset from startHeight,
+			// not by position in the blocks slice. blocks may be non-consecutive
+			// (e.g. [100, 102, 103]) after filtering out heights without voting
+			// power, so we map each block to its pubrand/proof via the height
+			// offset to keep them aligned with the finality signature.
 			offset := block.GetHeight() - startHeight
 			validBlocks = append(validBlocks, block)
 			validPrList = append(validPrList, prList[offset])
