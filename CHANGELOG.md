@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Bug Fixes
 
 * [#779](https://github.com/babylonlabs-io/finality-provider/pull/779) fix: use `syscall.Stdin` to avoid gosec G115 uintptr->int overflow warning in `term.ReadPassword`
+* [#777](https://github.com/babylonlabs-io/finality-provider/pull/777) fix: align pubrand and proof indexing with actual block heights
 
 ## v2.0.2
 
