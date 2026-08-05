@@ -151,7 +151,7 @@ Parameters:
 This section explains the process of creating EOTS keys using the EOTS manager.
 
 The EOTS manager uses [Cosmos
-SDK](https://docs.cosmos.network/v0.50/user/run-node/keyring) backends for key
+SDK](https://docs.cosmos.network/sdk/latest/node/keyring) backends for key
 storage. Since this key is accessed by an automated daemon process, it must be
 stored unencrypted on disk and associated with the `test` keyring backend. This
 ensures that we can access the eots keys when requested to promptly submit
