@@ -38,7 +38,7 @@ FROM alpine:3.21 AS run
 
 RUN addgroup --gid 1138 -S finality-provider && adduser --uid 1138 -S finality-provider -G finality-provider
 
-RUN apk add --no-cache bash=5.2.37-r0 curl=8.14.1-r2 jq=1.7.1-r0
+RUN apk add --no-cache bash=5.2.37-r0 curl=8.14.1-r3 jq=1.7.1-r0
 
 COPY --from=builder /go/src/github.com/babylonlabs-io/finality-provider/build/ /bin/
 

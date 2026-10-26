@@ -15,6 +15,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   lint_test:
     uses: babylonlabs-io/.github/.github/workflows/reusable_go_lint_test.yml@98e4de18638b3d0738c9cbf7e7dfc6e34524db54 # v0.19.1 https://github.com/babylonlabs-io/.github/releases/tag/v0.19.1
@@ -48,14 +51,10 @@ jobs:
           )}}
     needs: ["lint_test"]
     uses: babylonlabs-io/.github/.github/workflows/reusable_docker_pipeline.yml@98e4de18638b3d0738c9cbf7e7dfc6e34524db54 # v0.19.1 https://github.com/babylonlabs-io/.github/releases/tag/v0.19.1
-    secrets: inherit
     with:
       publish: true
-      dockerfile: ./Dockerfile
-      repoName: finality-provider
-      docker_scan: true
     permissions:
-      # required for all workflows
+      contents: read
+      id-token: write
       security-events: write
-      # required to fetch internal or private CodeQL packs
       packages: read
