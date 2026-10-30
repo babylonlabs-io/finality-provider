@@ -12,22 +12,21 @@
 #       backported to both branches: `staging` and `production`.
 name: Backport
 on:
-  pull_request_target:
+  pull_request:
     types:
       - closed
       - labeled
 
 jobs:
   backport:
-    name: Backport
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
-    # Only react to merged PRs for security reasons.
-    # See https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target.
+    # Fork PRs use the Mergify backport rule; their workflow token is read-only.
     if: >
       github.event.pull_request.merged
+      && github.event.pull_request.head.repo.full_name == github.repository
       && (
         github.event.action == 'closed'
         || (
