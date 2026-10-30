@@ -1,6 +1,6 @@
 module github.com/babylonlabs-io/finality-provider/tools
 
-go 1.25.0
+go 1.26.10
 
 require (
 	github.com/babylonlabs-io/babylon-sdk/demo v0.0.0-20250819005731-171062db6830

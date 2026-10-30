@@ -17,8 +17,6 @@ jobs:
       run-unit-tests: true
       run-lint: true
       run-build: true
-      run-gosec: true
-      gosec-args: "-exclude-generated -exclude-dir=itest -exclude-dir=testutil ./..."
 
   e2e_babylon:
     runs-on: ubuntu-22.04
@@ -28,6 +26,8 @@ jobs:
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0 https://github.com/actions/setup-go/releases/tag/v5.6.0
         with:
           go-version: '1.26.10'
+      - name: Run gosec with the configured Go toolchain
+        run: go run github.com/securego/gosec/v2/cmd/gosec@v2.24.7 -exclude-generated -exclude-dir=itest -exclude-dir=testutil ./...
       - name: Run e2e Babylon tests
         run: make test-e2e-babylon
 
