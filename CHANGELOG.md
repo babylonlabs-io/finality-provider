@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
+* [#788](https://github.com/babylonlabs-io/finality-provider/pull/788) fix: build with the Go 1.26.10 toolchain for the crypto/x509 CA-distrust fix (CVE-2026-111943, GO-2026-6809); bump sonic to v1.15.0 for Go 1.26 toolchain compatibility
 * [#779](https://github.com/babylonlabs-io/finality-provider/pull/779) fix: use `syscall.Stdin` to avoid gosec G115 uintptr->int overflow warning in `term.ReadPassword`
 * [#777](https://github.com/babylonlabs-io/finality-provider/pull/777) fix: align pubrand and proof indexing with actual block heights
 

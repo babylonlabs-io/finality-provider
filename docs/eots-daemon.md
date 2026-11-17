@@ -19,7 +19,7 @@ responsible for managing your EOTS keys and producing EOTS signatures.
 
 ## 1. Install Finality Provider Toolset
 
-The finality provider toolset requires [Golang 1.23](https://go.dev/dl) to be
+The finality provider toolset requires [Golang 1.26.10](https://go.dev/dl) to be
 installed. Please follow the installation instructions
 [here](https://go.dev/dl). You can verify the installation with the following
 command:
